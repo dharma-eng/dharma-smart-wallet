@@ -109,45 +109,29 @@ $ yarn coverage
 ```
 
 ## Technical Details
-The upderlying infrastructure for this upgradeability pattern utilizes EVM assembly for the upgrade beacon contract and the proxy contracts that reference the upgrade beacon. A key benefit of using assembly is that the contracts are not susceptible to Solidity compiler bugs, and are therefore better candidates for formal verification. While these contracts *could* be implemented in Solidity, it is imperative that the proxies are especially efficient, both to deploy and to use, since *every* smart wallet contract will incur any overhead that the proxy pattern introduces. These contracts are well-suited to assembly since they have very specific, targeted behavior - on the other hand, Solidity is a better fit for complex contracts like the upgrade beacon manager and the actual smart wallet implementation.
+There are two potential ways to implement the upgrade beacon contract and the proxy contracts that reference the upgrade beacon: with Solidity code, or with raw EVM assembly.
 
-The EVM assembly laid out here is broken out into the following categories:
-- `pc`: program counter, or index of the opcode. Execution starts at `pc 0` and works through the code one `pc` at a time, except that the `JUMP` and `JUMPI` (conditional jump) opcodes will look for a `JUMPDEST` with the provided `pc` in order to move the program counter around.
-- `op`: the opcode.
-- `name`: the name of the opcode, as well as the data for `PUSH` statements.
-- `[stack]`: the stack immediately after executing the opcode, with the bottom stack items on the left and the top stack items on the right. (I order these backwards from convention, for whatever reason it feels more intuitive that way to me). Each stack item is a 32-byte value, and is the primary execution environment (think adding variables together, supplying arguments to functional opcodes, etc).
-- `<memory>`: memory immediately after executing the opcode. I'm only showing it when it's changed, to avoid cluttering things up too much. Memory is more granular than stack items, and can be accessed byte-by-byte. To specify calldata when making a call, or returndata when returning or reverting, you provide a memory range (size and offset in memory) as stack arguments. Memory is allocated as it is used for the first time in the given execution environment and is cleared as soon as you return from that execution environment. The size of that allocation can be retrieved via `MSIZE` - before memory has been used at all, `MSIZE` will just put a `0` on the stack.
-- `(storage)`: a sequential, persistent register of 32-byte values by "slot". This is a few orders of magnitude more expensive to use than memory.
-- `{return_buffer}`: a dedicated range that behaves similar to memory and contains the data returned from the last function `call`, `STATICCALL`, or `DELEGATECALL` - it is cleared out every time a new call is made. It's initially sized at zero, so `RETURNDATASIZE` before any calls have been made will just put `0` on the stack.
-- `~revert~` and `*return*` are to indicate the data that's returned when exiting the execution environment. If you return from a constructor (i.e. during contract creation), the return data becomes the new contract's runtime code.
+### Solidity Version
+A Solidity-only implementation is the clear winner in terms of ease of developer comprehension and readability of the codebase. Admittedly, the Solidity implementation still contains a fair bit of inline assembly, anyway - there's really no easy way around it. It's looking quite likely that we'll take this approach, but I'll lay out my rationale at the end for using some limited code segments with raw EVM opcodes if you're interested to learn a little more about the alternative path.
 
-Let's start with the upgrade beacon, as it is the easiest to understand.
 
-```
-Minimal Upgrade Beacon
+##### Upgrade Beacon
 - a dedicated controller can set an implementation address in storage
 - retrieves and returns that implementation address for any other caller
 
-Solidity implementation
 ```Solidity
 contract DharmaUpgradeBeacon {
   address private _implementation;
-  address private _controller;
-
-  /**
-   * @notice In the constructor, set the controller of this contract. This value
-   * can be hardcoded for the production version.
-   */
-  constructor(address controller) public {
-    _controller = controller;
-  }
+  address private constant _CONTROLLER = address(
+    0x1234512345123451234512345123451234512345
+  );
 
   /**
    * @notice In the fallback function, allow only the controller to update the
    * implementation address - for all other callers, return the current address.
    */
   function () external {
-    if (msg.sender == _controller) {
+    if (msg.sender == _CONTROLLER) {
       // assembly required as fallback functions do not natively take arguments.
       assembly {
         // set the first word from calldata as the new implementation.
@@ -167,11 +151,110 @@ contract DharmaUpgradeBeacon {
 }
 ```
 
+##### Upgrade Beacon Proxy (deployment)
+- gets current implementation contract address from the upgrade beacon via `STATICCALL`
+- `DELEGATECALL`s into the implementation contract, providing initialization args as calldata
+- ensures that the `DELEGATECALL` went smoothly, and if so returns the runtime code
+
+##### Upgrade Beacon Proxy (runtime)
+- gets current implementation contract address from the upgrade beacon via `STATICCALL`
+- `DELEGATECALL`s into the implementation contract, passing along calldata
+- returns or reverts based on `DELEGATECALL` status, supplying return buffer in either case
+
+```Solidity
+contract UpgradeBeaconProxy {
+  address private constant _UPGRADE_BEACON = address(
+    0x6789067890678906789067890678906789067890
+  );
+
+  constructor(bytes memory initializationCalldata) public payable {
+    // Get the current implementation address from the upgrade beacon.
+    address implementation = _getImplementation();
+
+    // Delegatecall into the implementation, supplying initialization calldata.
+    (ok, returnData) = implementation.delegatecall(initializationCalldata);
+
+    // If initialization failed, revert and include the revert message.
+    if (!ok) {
+      assembly {
+        returndatacopy(0, 0, returndatasize)
+        revert(0, returndatasize)
+      }
+    }
+  }
+
+  function () external payable {
+    // Get the current implementation address from the upgrade beacon.
+    address implementation = _getImplementation();
+
+    // Delegate execution to implementation contract provided by upgrade beacon.
+    _delegate(implementation);
+  }
+
+  /**
+   * @dev Returns the current implementation from the upgrade beacon.
+   * @return Address of the implementation.
+   */
+  function _getImplementation() internal view returns (address implementation) {
+    // Get the current implementation address from the upgrade beacon.
+    (bool ok, bytes memory returnData) = _UPGRADE_BEACON.staticcall("");
+    if (!ok) {
+      assembly {
+        returndatacopy(0, 0, returndatasize)
+        revert(0, returndatasize)
+      }
+    }
+    implementation = abi.decode(returnData, (address));
+  }
+
+  /**
+   * @dev Delegates execution to an implementation contract.
+   * This is a low level function that doesn't return to its internal call site.
+   * It will return to the external caller whatever the implementation returns.
+   * @param implementation Address to delegate.
+   */
+  function _delegate(address implementation) internal {
+    assembly {
+      // Copy msg.data. We take full control of memory in this inline assembly
+      // block because it will not return to Solidity code. We overwrite the
+      // Solidity scratch pad at memory position 0.
+      calldatacopy(0, 0, calldatasize)
+
+      // Call the implementation.
+      // out and outsize are 0 because we don't know the size yet.
+      let result := delegatecall(gas, implementation, 0, calldatasize, 0, 0)
+
+      // Copy the returned data.
+      returndatacopy(0, 0, returndatasize)
+
+      switch result
+      // delegatecall returns 0 on error.
+      case 0 { revert(0, returndatasize) }
+      default { return(0, returndatasize) }
+    }
+  }
+}
+```
+### Raw EVM Opcode Version
+
+If we care about cost savings *(which, honestly, we might not)*, it is important that the proxies are especially efficient, both to deploy and to use, since *every* smart wallet contract will incur any overhead that the proxy pattern introduces. These contracts are well-suited to assembly since they have very specific, targeted behavior.  Another key benefit of using assembly is that the contracts are not susceptible to Solidity compiler bugs, and are therefore better candidates for formal verification.
+
+Regardless, Solidity is a better fit for complex contracts like the upgrade beacon manager and the actual smart wallet implementation.
+
+- `pc`: program counter, or index of the opcode. Execution starts at `pc 0` and works through the code one `pc` at a time, except that the `JUMP` and `JUMPI` (conditional jump) opcodes will look for a `JUMPDEST` with the provided `pc` in order to move the program counter around.
+- `op`: the opcode.
+- `name`: the name of the opcode, as well as the data for `PUSH` statements.
+- `[stack]`: the stack immediately after executing the opcode, with the bottom stack items on the left and the top stack items on the right. (I order these backwards from convention, for whatever reason it feels more intuitive that way to me). Each stack item is a 32-byte value, and is the primary execution environment (think adding variables together, supplying arguments to functional opcodes, etc).
+- `<memory>`: memory immediately after executing the opcode. I'm only showing it when it's changed, to avoid cluttering things up too much. Memory is more granular than stack items, and can be accessed byte-by-byte. To specify calldata when making a call, or returndata when returning or reverting, you provide a memory range (size and offset in memory) as stack arguments. Memory is allocated as it is used for the first time in the given execution environment and is cleared as soon as you return from that execution environment. The size of that allocation can be retrieved via `MSIZE` - before memory has been used at all, `MSIZE` will just put a `0` on the stack.
+- `(storage)`: a sequential, persistent register of 32-byte values by "slot". This is a few orders of magnitude more expensive to use than memory.
+- `{return_buffer}`: a dedicated range that behaves similar to memory and contains the data returned from the last function `call`, `STATICCALL`, or `DELEGATECALL` - it is cleared out every time a new call is made. It's initially sized at zero, so `RETURNDATASIZE` before any calls have been made will just put `0` on the stack.
+- `~revert~` and `*return*` are to indicate the data that's returned when exiting the execution environment. If you return from a constructor (i.e. during contract creation), the return data becomes the new contract's runtime code.
+
 Raw EVM assembly version of Upgrade Beacon:
 - 37 bytes long when using standard addresses
 - only 32 bytes long if controller has a compact address with 5 leading zero bytes
-  - use PUSH15 instead of PUSH20
-  - add 5 to JUMPI program counter stack argument
+  - use `PUSH15` instead of `PUSH20`
+  - add 5 to `JUMPI` program counter stack argument
 ```
 0x5973<controller>3314602157545952593df35b355955
 
@@ -226,115 +309,15 @@ pc  op  name                      [stack] <memory> (storage) *return*
 36  55  SSTORE                    [] (new_implementation => slot_0)
 ```
 
-Upgrade Beacon Proxy: Solidity implementation
-```Solidity
-contract UpgradeBeaconProxy {
-  /**
-   * @dev Storage slot with the address of the upgrade beacon.
-   * This is the keccak-256 hash of "eip1967.proxy.upgradeBeacon" subtracted by
-   * 1, and is validated in the constructor.
-   * Note: we are currently supplying the upgrade beacon as an argument and
-   * setting it in unstructured storage, but for the production version we can
-   * instead deploy the upgrade beacon ahead of time and set it's address as a
-   * constant, since it does not change.
-   */
-  bytes32 internal constant UPGRADE_BEACON_SLOT = 0xe440fa59daa125604eafd5daa98aee77371c181c9615fbe21f4b96302321e8a7;
-
-  constructor(address upgradeBeacon, bytes memory initializationCalldata) public payable {
-    // Set the address of the upgrade beacon in unstructured storage - this way
-    // it will not interfere with standard storage written to by implementation.
-    assert(UPGRADE_BEACON_SLOT == bytes32(uint256(keccak256("eip1967.proxy.upgradeBeacon")) - 1));
-    bytes32 slot = UPGRADE_BEACON_SLOT;
-    assembly {
-      sstore(slot, upgradeBeacon)
-    }
-
-    // Get the current implementation address from the upgrade beacon.
-    (bool ok, bytes memory returnData) = upgradeBeacon.staticcall("");
-    if (!ok) {
-      assembly {
-        returndatacopy(0, 0, returndatasize)
-        revert(0, returndatasize)
-      }
-    }
-    address implementation = abi.decode(returnData, (address));
-
-    // Delegatecall into the implementation, supplying initialization calldata.
-    (ok, returnData) = implementation.delegatecall(initializationCalldata);
-    if (!ok) {
-      assembly {
-        returndatacopy(0, 0, returndatasize)
-        revert(0, returndatasize)
-      }
-    }
-  }
-
-  function () external payable {
-    // Get the current implementation address from the upgrade beacon.
-    (bool ok, bytes memory returnData) = _upgradeBeacon().staticcall("");
-    if (!ok) {
-      assembly {
-        returndatacopy(0, 0, returndatasize)
-        revert(0, returndatasize)
-      }
-    }
-    address implementation = abi.decode(returnData, (address));
-
-    // Delegate execution to implementation contract provided by upgrade beacon.
-    _delegate(implementation);
-  }
-
-  /**
-   * @dev Returns the address of the upgrade beacon.
-   * @return Address of the upgrade beacon.
-   */
-  function _upgradeBeacon() internal view returns (address upgradeBeacon) {
-    bytes32 slot = UPGRADE_BEACON_SLOT;
-    assembly {
-      upgradeBeacon := sload(slot)
-    }
-  }
-
-  /**
-   * @dev Delegates execution to an implementation contract.
-   * This is a low level function that doesn't return to its internal call site.
-   * It will return to the external caller whatever the implementation returns.
-   * @param implementation Address to delegate.
-   */
-  function _delegate(address implementation) internal {
-    assembly {
-      // Copy msg.data. We take full control of memory in this inline assembly
-      // block because it will not return to Solidity code. We overwrite the
-      // Solidity scratch pad at memory position 0.
-      calldatacopy(0, 0, calldatasize)
-
-      // Call the implementation.
-      // out and outsize are 0 because we don't know the size yet.
-      let result := delegatecall(gas, implementation, 0, calldatasize, 0, 0)
-
-      // Copy the returned data.
-      returndatacopy(0, 0, returndatasize)
-
-      switch result
-      // delegatecall returns 0 on error.
-      case 0 { revert(0, returndatasize) }
-      default { return(0, returndatasize) }
-    }
-  }
-}
-```
-
-Raw EVM for runtime code and contract creation code:
-```
 Minimal Upgrade Beacon Proxy (runtime code)
 - gets current implementation contract address from the upgrade beacon via `STATICCALL`
 - then proxy puts calldata in memory to supply as argument in `DELEGATECALL` to implementation
 - finally, proxy returns or reverts based on `DELEGATECALL` status, supplying return buffer in either case
 - 53 bytes long when using standard addresses
 - 48 bytes long when using an upgrade beacon with a compact address
-  - use PUSH15 instead of PUSH20
-  - add 5 to JUMPI program counter stack argument
-
+  - use `PUSH15` instead of `PUSH20`
+  - add 5 to `JUMPI` program counter stack argument
+```
 0x595959593659602059595973<upgrade_beacon>5afa1551368280375af43d3d93803e603357fd5bf3
 
 pc  op  name                      [stack] <memory> {return_buffer} *return* ~revert~
