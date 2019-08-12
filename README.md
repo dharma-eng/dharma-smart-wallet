@@ -127,11 +127,52 @@ Let's start with the upgrade beacon, as it is the easiest to understand.
 Minimal Upgrade Beacon
 - a dedicated controller can set an implementation address in storage
 - retrieves and returns that implementation address for any other caller
+
+Solidity implementation
+```Solidity
+contract DharmaUpgradeBeacon {
+  address private _implementation;
+  address private _controller;
+
+  /**
+   * @notice In the constructor, set the controller of this contract. This value
+   * can be hardcoded for the production version.
+   */
+  constructor(address controller) public {
+    _controller = controller;
+  }
+
+  /**
+   * @notice In the fallback function, allow only the controller to update the
+   * implementation address - for all other callers, return the current address.
+   */
+  function () external {
+    if (msg.sender == _controller) {
+      // assembly required as fallback functions do not natively take arguments.
+      assembly {
+        // set the first word from calldata as the new implementation.
+        sstore(0, calldataload(0))
+      }
+    } else {
+      // move implementation into memory so it can be accessed from assembly.
+      address implementation = _implementation;
+      // assembly required as fallback functions do not natively return values.
+      assembly {
+        // put the implementation into scratch space and return it.
+        mstore(0, implementation)
+        return(0, 32)
+      }
+    }
+  }
+}
+```
+
+Raw EVM assembly version of Upgrade Beacon:
 - 37 bytes long when using standard addresses
 - only 32 bytes long if controller has a compact address with 5 leading zero bytes
   - use PUSH15 instead of PUSH20
   - add 5 to JUMPI program counter stack argument
-
+```
 0x5973<controller>3314602157545952593df35b355955
 
 pc  op  name                      [stack] <memory> (storage) *return*
@@ -185,9 +226,107 @@ pc  op  name                      [stack] <memory> (storage) *return*
 36  55  SSTORE                    [] (new_implementation => slot_0)
 ```
 
-Next, here's the runtime code for the minimal upgradeable proxy itself:
+Upgrade Beacon Proxy: Solidity implementation
+```Solidity
+contract UpgradeBeaconProxy {
+  /**
+   * @dev Storage slot with the address of the upgrade beacon.
+   * This is the keccak-256 hash of "eip1967.proxy.upgradeBeacon" subtracted by
+   * 1, and is validated in the constructor.
+   * Note: we are currently supplying the upgrade beacon as an argument and
+   * setting it in unstructured storage, but for the production version we can
+   * instead deploy the upgrade beacon ahead of time and set it's address as a
+   * constant, since it does not change.
+   */
+  bytes32 internal constant UPGRADE_BEACON_SLOT = 0xe440fa59daa125604eafd5daa98aee77371c181c9615fbe21f4b96302321e8a7;
+
+  constructor(address upgradeBeacon, bytes memory initializationCalldata) public payable {
+    // Set the address of the upgrade beacon in unstructured storage - this way
+    // it will not interfere with standard storage written to by implementation.
+    assert(UPGRADE_BEACON_SLOT == bytes32(uint256(keccak256("eip1967.proxy.upgradeBeacon")) - 1));
+    bytes32 slot = UPGRADE_BEACON_SLOT;
+    assembly {
+      sstore(slot, upgradeBeacon)
+    }
+
+    // Get the current implementation address from the upgrade beacon.
+    (bool ok, bytes memory returnData) = upgradeBeacon.staticcall("");
+    if (!ok) {
+      assembly {
+        returndatacopy(0, 0, returndatasize)
+        revert(0, returndatasize)
+      }
+    }
+    address implementation = abi.decode(returnData, (address));
+
+    // Delegatecall into the implementation, supplying initialization calldata.
+    (ok, returnData) = implementation.delegatecall(initializationCalldata);
+    if (!ok) {
+      assembly {
+        returndatacopy(0, 0, returndatasize)
+        revert(0, returndatasize)
+      }
+    }
+  }
+
+  function () external payable {
+    // Get the current implementation address from the upgrade beacon.
+    (bool ok, bytes memory returnData) = _upgradeBeacon().staticcall("");
+    if (!ok) {
+      assembly {
+        returndatacopy(0, 0, returndatasize)
+        revert(0, returndatasize)
+      }
+    }
+    address implementation = abi.decode(returnData, (address));
+
+    // Delegate execution to implementation contract provided by upgrade beacon.
+    _delegate(implementation);
+  }
+
+  /**
+   * @dev Returns the address of the upgrade beacon.
+   * @return Address of the upgrade beacon.
+   */
+  function _upgradeBeacon() internal view returns (address upgradeBeacon) {
+    bytes32 slot = UPGRADE_BEACON_SLOT;
+    assembly {
+      upgradeBeacon := sload(slot)
+    }
+  }
+
+  /**
+   * @dev Delegates execution to an implementation contract.
+   * This is a low level function that doesn't return to its internal call site.
+   * It will return to the external caller whatever the implementation returns.
+   * @param implementation Address to delegate.
+   */
+  function _delegate(address implementation) internal {
+    assembly {
+      // Copy msg.data. We take full control of memory in this inline assembly
+      // block because it will not return to Solidity code. We overwrite the
+      // Solidity scratch pad at memory position 0.
+      calldatacopy(0, 0, calldatasize)
+
+      // Call the implementation.
+      // out and outsize are 0 because we don't know the size yet.
+      let result := delegatecall(gas, implementation, 0, calldatasize, 0, 0)
+
+      // Copy the returned data.
+      returndatacopy(0, 0, returndatasize)
+
+      switch result
+      // delegatecall returns 0 on error.
+      case 0 { revert(0, returndatasize) }
+      default { return(0, returndatasize) }
+    }
+  }
+}
 ```
-Minimal Upgradeable Proxy (runtime code)
+
+Raw EVM for runtime code and contract creation code:
+```
+Minimal Upgrade Beacon Proxy (runtime code)
 - gets current implementation contract address from the upgrade beacon via `STATICCALL`
 - then proxy puts calldata in memory to supply as argument in `DELEGATECALL` to implementation
 - finally, proxy returns or reverts based on `DELEGATECALL` status, supplying return buffer in either case
@@ -274,7 +413,7 @@ pc  op  name                      [stack] <memory> {return_buffer} *return* ~rev
 
 Lastly, when *deploying* these minimal upgradeable proxies, we want to be able to initialize them. In order to efficiently do so, the deployment code will get the same implementation address from the upgrade beacon, then `DELEGATECALL` into it and supply the abi-encoded constructor argument at the end of the creation code as calldata. Then, if that call succeeds, the deployment code will return the above minimal proxy code, thereby writing it to runtime and exiting. This is the actual code that the *factory* will supply in order to deploy new proxy contracts.
 
-Minimal Upgradeable Proxy (creation code)
+Minimal Upgrade Beacon Proxy (creation code)
 - gets current implementation contract address from the upgrade beacon via `STATICCALL`
 - `DELEGATECALL`s into the implementation contract, providing initialization args as calldata
 - ensures that the `DELEGATECALL` went smoothly, and if so returns the runtime code

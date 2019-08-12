@@ -1,12 +1,14 @@
 pragma solidity 0.5.10;
 
 import "../implementations/DharmaSmartWalletImplementationV1.sol";
+import "../UpgradeBeaconProxy.sol";
 
 
 /**
  * @title DharmaSmartWalletFactoryV1
  * @author 0age
- * @notice ...
+ * @notice This contract deploys new Dharma smart wallets as upgrade beacon
+ * proxies pointing to a shared implementation contract.
  */
 contract DharmaSmartWalletFactoryV1 {
   // Fires an event when a new smart wallet is created - this may not be needed.
@@ -66,13 +68,11 @@ contract DharmaSmartWalletFactoryV1 {
   ) internal returns (address spawnedContract) {
     // place creation code and constructor args of contract to spawn in memory.
     bytes memory initCode = abi.encodePacked(
-      bytes15(0x595959596076380359602059595973),
-      _dharmaSmartWalletUpgradeBeacon,
-      bytes32(0x5afa155182607683395af46038573d903d81803efd5b60356041819339f35959),
-      bytes10(0x59593659602059595973),
-      _dharmaSmartWalletUpgradeBeacon,
-      bytes21(0x5afa1551368280375af43d3d93803e603357fd5bf3),
-      initializationCalldata
+      type(UpgradeBeaconProxy).creationCode,
+      abi.encode(
+        _dharmaSmartWalletUpgradeBeacon,
+        initializationCalldata
+      )
     );
 
     // spawn the contract using `CREATE2`.
@@ -94,13 +94,11 @@ contract DharmaSmartWalletFactoryV1 {
   ) internal view returns (address target) {
     // place creation code and constructor args of contract to spawn in memory.
     bytes memory initCode = abi.encodePacked(
-      bytes15(0x595959596076380359602059595973),
-      _dharmaSmartWalletUpgradeBeacon,
-      bytes32(0x5afa155182607683395af46038573d903d81803efd5b60356041819339f35959),
-      bytes10(0x59593659602059595973),
-      _dharmaSmartWalletUpgradeBeacon,
-      bytes21(0x5afa1551368280375af43d3d93803e603357fd5bf3),
-      initializationCalldata
+      type(UpgradeBeaconProxy).creationCode,
+      abi.encode(
+        _dharmaSmartWalletUpgradeBeacon,
+        initializationCalldata
+      )
     );
 
     // get target address using the constructed initialization code.
