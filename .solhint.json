@@ -4,6 +4,8 @@
     "indent": ["warn", 2],
     "not-rely-on-time": false,
     "no-inline-assembly": false,
-    "avoid-low-level-calls": false
+    "avoid-low-level-calls": false,
+    "no-complex-fallback": false,
+    "payable-fallback": false
   }
 }

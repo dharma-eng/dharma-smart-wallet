@@ -3,10 +3,12 @@ var fs = require('fs')
 var util = require('ethereumjs-util')
 
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
+const DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
 const DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
 const DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 
+const UpgradeBeaconProxyArtifact = require('../../build/contracts/UpgradeBeaconProxy.json')
 const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
 
@@ -470,6 +472,13 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerArtifact.bytecode
   )
 
+  const DharmaUpgradeBeaconDeployer = new web3.eth.Contract(
+    DharmaUpgradeBeaconArtifact.abi
+  )
+  DharmaUpgradeBeaconDeployer.options.data = (
+    DharmaUpgradeBeaconArtifact.bytecode
+  )
+
   const DharmaUpgradeBeaconControllerManagerDeployer = new web3.eth.Contract(
     DharmaUpgradeBeaconControllerManagerArtifact.abi
   )
@@ -617,18 +626,21 @@ module.exports = {test: async function (provider, testingContext) {
     [address]
   )
 
+  /*
   const DharmaUpgradeBeaconDeployer = new web3.eth.Contract([])
   DharmaUpgradeBeaconDeployer.options.data = (
     '0x600b5981380380925939f35973' +
     DharmaUpgradeBeaconController.options.address.slice(2).toLowerCase() + 
     '3314602157545952593df35b355955'
   )
+  */
   
   const DharmaUpgradeBeacon = await runTest(
     `DharmaUpgradeBeacon contract deployment`,
     DharmaUpgradeBeaconDeployer,
     '',
-    'deploy'
+    'deploy',
+    [DharmaUpgradeBeaconController.options.address]
   )
 
   const DharmaSmartWalletImplementationV1 = await runTest(
@@ -833,12 +845,18 @@ module.exports = {test: async function (provider, testingContext) {
     [UserSmartWallet.options.address],
     true,
     value => {
+      /*
       assert.strictEqual(
         value,
         "0x595959593659602059595973" +
         DharmaUpgradeBeacon.options.address.slice(2).toLowerCase() +
         "5afa1551368280375af43d3d93803e603357fd5bf3"
       )
+      */
+      assert.strictEqual(
+        value,
+        UpgradeBeaconProxyArtifact.deployedBytecode
+      ) 
     }
   )
 
