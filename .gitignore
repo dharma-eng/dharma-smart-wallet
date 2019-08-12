@@ -1,0 +1,7 @@
+node_modules/
+build/
+.DS_Store
+ganache-output.log
+ganache-coverage-output.log
+coverage.json
+coverage/
