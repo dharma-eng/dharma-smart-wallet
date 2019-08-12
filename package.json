@@ -1,0 +1,27 @@
+{
+  "name": "dharma-smart-wallet",
+  "version": "0.0.1",
+  "description": "",
+  "dependencies": {
+    "@gnosis.pm/safe-contracts": "1.0.0",
+    "@openzeppelin/contracts": "2.3.0",
+    "ethereumjs-util": "^6.1.0",
+    "ganache-cli": "6.3.0",
+    "ganache-cli-coverage": "https://github.com/frangio/ganache-cli/releases/download/v6.4.1-coverage/ganache-cli-coverage-6.4.1.tgz",
+    "js-sha256": "^0.9.0",
+    "solhint": "^1.4.1",
+    "solidity-coverage": "0.6.0-beta.5",
+    "truffle": "^5.0.22",
+    "web3": "1.2.1"
+  },
+  "scripts": {
+    "all": "./node_modules/.bin/ganache-cli --gasLimit 8000000 -i 1234 2>&1 > ganache-output.log & echo 'local chain started.' && ./node_modules/.bin/truffle compile && node scripts/test/ci.js && ./node_modules/.bin/solhint 'contracts/**/*.sol'; kill -9 \"$(ps -ax | grep -m1 '[n]ode ./node_modules/.bin/ganache-cli' | awk '{print $1;}')\" && echo 'local chain stopped.'",
+    "build": "./node_modules/.bin/truffle compile",
+    "ci": "./node_modules/.bin/ganache-cli --gasLimit 8000000 -q & echo 'local chain started.' && ./node_modules/.bin/truffle compile && node scripts/test/ci.js && ./node_modules/.bin/solhint 'contracts/**/*.sol'",
+    "coverage": "./node_modules/.bin/ganache-cli-coverage --emitFreeLogs true --allowUnlimitedContractSize true --gasLimit 0xfffffffffff --port 8555 2>&1 > ganache-coverage-output.log & echo 'coverage chain started.' && ./node_modules/.bin/solidity-coverage; kill -9 \"$(ps -ax | grep -m1 '[n]ode ./node_modules/.bin/ganache-cli' | awk '{print $1;}')\" && echo 'coverage chain stopped.'",
+    "lint": "./node_modules/.bin/solhint 'contracts/**/*.sol'",
+    "start": "./node_modules/.bin/ganache-cli --gasLimit 8000000 -i 1234 2>&1 > ganache-output.log & echo 'local chain started.'",
+    "stop": "kill -9 \"$(ps -ax | grep -m1 '[n]ode ./node_modules/.bin/ganache-cli' | awk '{print $1;}')\" && echo 'local chain stopped.'",
+    "test": "./node_modules/.bin/truffle compile && node scripts/test/ci.js"
+  }
+}
