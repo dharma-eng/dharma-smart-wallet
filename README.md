@@ -40,14 +40,19 @@ The initial implementation for Dharma smart wallets will work as follows:
 - all smart wallet contract upgrades will originate from this contract
 - currently implemented using [Gnosis Safe](https://github.com/gnosis/safe-contracts/blob/development/contracts/GnosisSafe.sol)
 
-##### 2) Dharma Upgrade Beacon Manager
+##### 2) Dharma Upgrade Beacon Controller Manager
 - owned by the Dharma Upgrade Multisig
-- controls upgrades to the Dharma Smart Wallet Upgrade Beacon, and can also support other, future upgrade beacons
-- the only account able to modify the implementation on the Smart Wallet Upgrade Beacon
-- enforces configurable time-locks for each protected function, including upgrades (and could optionally include other precautionary conditions on upgrades)
-- currently uses a simple, custom implementation with no upgradeability, thought the manager *itself* could be upgradeable if desired
+- owns the Dharma Upgrade Beacon Controller, and can also support other, future upgrade beacon controllers
+- enforces configurable time-locks for each protected function, including upgrades and changes in controller ownership
+- uses a simple, custom timelock implementation with no upgradeability (to upgrade, transfer ownership of the upgrade beacon controller to a new owner)
 
-##### 3) Dharma Smart Wallet Upgrade Beacon
+##### 3) Dharma Upgrade Beacon Controller
+- initially owned by the Dharma Upgrade Beacon Controller Manager
+- the only account able to modify the implementation on the Smart Wallet Upgrade Beacon
+- uses a minimally simple implementation of an ownable contract
+- upgrades to upgradeability are accomplished by transferring ownership of this contract
+
+##### 4) Dharma Smart Wallet Upgrade Beacon
 - "owned" by the Dharma Upgrade Beacon Manager
 - maximally-concise contract that only does two things:
   - if the owner is the caller, take a supplied implementation address and set it in storage.
@@ -56,25 +61,25 @@ The initial implementation for Dharma smart wallets will work as follows:
 - any time this contract's stored implementation is updated, the update will immediately go out to all user smart wallets
 - implemented in raw EVM assembly - no Solidity compiler bugs and a vanishingly small attack surface.
 
-##### 4) Dharma Smart Wallet Factory V1
+##### 5) Dharma Smart Wallet Factory V1
 - public, unowned, non-upgradeable contract - can be called by anyone, and if there's an issue a new factory can easily be deployed
 - deploys and sets up new Dharma Smart Wallets as "minimal upgradable proxies" that get their implementation from the Dharma Smart Wallet Beacon
 - each smart wallet address can be known ahead of time based on the Dharma Key, so once users have a Dharma Key they can send funds to that address before the smart wallet has even been deployed
 - implemented in a "bare-metal" fashion so that contract deployments are as inexpensive as possible while still having an easy-to-use interface and emitting appropriate events
 
-##### 5) Smart Wallet Implementation Contract V1
+##### 6) Smart Wallet Implementation Contract V1
 - a contract that will contain all the logic of the global smart contract - **for now this contract is still just a stub!**
 - a new implementation contract is deployed every time an upgrade is going to take place
 - the multisig then instructs the upgrade manager contract to set the new implementation on an "upgrade beacon" contract (explained in the upgradeability RFC)
 - there are an important set of rules and limitations on how to structure implementation contracts that we won't get into here (but do let me know if you'd like to learn more about it)
 
-##### 6) Dharma Account Recovery Multisig
+##### 7) Dharma Account Recovery Multisig
 - controlled by a group of "support" accounts, where some threshold need to approve a transaction before it is triggered
 - has exclusive access to a dedicated smart wallet function that allows for a user's registered key to be reset
 - has a built-in time lock for added protection, and may be configurable by the user as part of future upgrades
 - recommendation: [Gnosis Safe](https://github.com/gnosis/safe-contracts/blob/development/contracts/GnosisSafe.sol)
 
-##### 7) Actual User Smart Wallets
+##### 8) Actual User Smart Walletsup
 - These all point to the same upgrade beacon - when the implementation is modified on that upgrade beacon, **all user smart wallets are upgraded at once**
 - They are much cheaper to deploy and set up than regular contracts
 - Using a smart wallet has a lot of advantages over using an externally-owned account (i.e. a regular key): you can have batch actions in one transaction, shared custody, account recovery, withdrawal limits, etc.

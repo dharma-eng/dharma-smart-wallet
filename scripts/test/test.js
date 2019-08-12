@@ -3,7 +3,8 @@ var fs = require('fs')
 var util = require('ethereumjs-util')
 
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
-const DharmaUpgradeBeaconManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconManager.json')
+const DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
+const DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 
 const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
@@ -462,11 +463,18 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaAccountRecoveryMultisigArtifact.bytecode
   )
 
-  const DharmaUpgradeBeaconManagerDeployer = new web3.eth.Contract(
-    DharmaUpgradeBeaconManagerArtifact.abi
+  const DharmaUpgradeBeaconControllerDeployer = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerArtifact.abi
   )
-  DharmaUpgradeBeaconManagerDeployer.options.data = (
-    DharmaUpgradeBeaconManagerArtifact.bytecode
+  DharmaUpgradeBeaconControllerDeployer.options.data = (
+    DharmaUpgradeBeaconControllerArtifact.bytecode
+  )
+
+  const DharmaUpgradeBeaconControllerManagerDeployer = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerManagerArtifact.abi
+  )
+  DharmaUpgradeBeaconControllerManagerDeployer.options.data = (
+    DharmaUpgradeBeaconControllerManagerArtifact.bytecode
   )
 
   const DharmaUpgradeMultisigDeployer = new web3.eth.Contract(
@@ -593,18 +601,26 @@ module.exports = {test: async function (provider, testingContext) {
     [[address], 1]
   )
 
-  const DharmaUpgradeBeaconManager = await runTest(
-    `DharmaUpgradeBeaconManager contract deployment`,
-    DharmaUpgradeBeaconManagerDeployer,
+  const DharmaUpgradeBeaconControllerManager = await runTest(
+    `DharmaUpgradeBeaconControllerManager contract deployment`,
+    DharmaUpgradeBeaconControllerManagerDeployer,
     '',
     'deploy',
-    [DharmaUpgradeMultisig.options.address]
+    [address]
+  )
+
+  const DharmaUpgradeBeaconController = await runTest(
+    `DharmaUpgradeBeaconController contract deployment`,
+    DharmaUpgradeBeaconControllerDeployer,
+    '',
+    'deploy',
+    [address]
   )
 
   const DharmaUpgradeBeaconDeployer = new web3.eth.Contract([])
   DharmaUpgradeBeaconDeployer.options.data = (
     '0x600b5981380380925939f35973' +
-    DharmaUpgradeBeaconManager.options.address.slice(2).toLowerCase() + 
+    DharmaUpgradeBeaconController.options.address.slice(2).toLowerCase() + 
     '3314602157545952593df35b355955'
   )
   
@@ -624,9 +640,9 @@ module.exports = {test: async function (provider, testingContext) {
 
   // TODO: do this the "right" way once everything is working correctly!
   await runTest(
-    'TEST-ONLY FUNCTION: OVERRIDE OWNER + TIMELOCK TO SET IMPLEMENTATION',
-    DharmaUpgradeBeaconManager,
-    'upgradeNoOwnerOrTimeLock',
+    'Dharma Upgrade Beacon Controller can set initial upgrade beacon implementation',
+    DharmaUpgradeBeaconController,
+    'upgrade',
     'send',
     [
       DharmaUpgradeBeacon.options.address,
@@ -640,9 +656,23 @@ module.exports = {test: async function (provider, testingContext) {
           DharmaUpgradeBeacon.options.address
         )
         assert.strictEqual(
-          receipt.events.Upgraded.returnValues.implementation,
+          receipt.events.Upgraded.returnValues.oldImplementation,
+          nullAddress
+        )
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
+          emptyHash
+        )
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.newImplementation,
           DharmaSmartWalletImplementationV1.options.address
         )
+        /* TODO
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.newImplementationCodeHash,
+          ...
+        )
+        */
       }
     }
   )
@@ -660,7 +690,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'DharmaUpgradeBeacon has the implementation set',
-    DharmaUpgradeBeaconManager,
+    DharmaUpgradeBeaconController,
     'getImplementation',
     'call',
     [DharmaUpgradeBeacon.options.address],
