@@ -53,7 +53,7 @@ The initial implementation for Dharma smart wallets will work as follows:
 - upgrades to upgradeability are accomplished by transferring ownership of this contract
 
 ##### 4) Dharma Smart Wallet Upgrade Beacon
-- "owned" by the Dharma Upgrade Beacon Manager
+- "owned" by the Dharma Upgrade Beacon Controller
 - maximally-concise contract that only does two things:
   - if the owner is the caller, take a supplied implementation address and set it in storage.
   - if any other account is the caller, read the implementation address from storage and return it.
