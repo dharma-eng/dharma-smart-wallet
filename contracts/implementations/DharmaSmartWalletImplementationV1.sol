@@ -1,15 +1,70 @@
 pragma solidity 0.5.10;
 
+import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 
 interface CTokenInterface {
   function mint(uint256 mintAmount) external returns (uint256 err);
 }
 
+
 interface USDCV1Interface {
   function isBlacklisted(address _account) external view returns (bool);
+  
   function paused() external view returns (bool);
+}
+
+
+interface DharmaSmartWalletImplementationV1Interface {
+  event NewDharmaKey(address dharmaKey);
+  
+  event CallSuccess(
+    bytes32 actionID,
+    uint256 nonce,
+    address to,
+    bytes data,
+    bytes returnData
+  );
+  
+  event CallFailure(
+    bytes32 actionID,
+    uint256 nonce,
+    address to,
+    bytes data,
+    string revertReason
+  );
+  
+  event ExternalError(address source, string revertReason);
+
+  function initialize(address dharmaKey) external;
+  
+  function executeAction(
+    address to,
+    bytes calldata data,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata dharmaKeySignature,
+    bytes calldata dharmaSecondaryKeySignature
+  ) external returns (bool ok, bytes memory returnData);
+
+  function getDharmaKey() external view returns (address dharmaKey);
+  
+  function getNonce() external view returns (uint256 nonce);
+  
+  function getNextActionID(
+    address to,
+    bytes calldata data,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID);
+  
+  function getActionID(
+    address to,
+    bytes calldata data,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID);
 }
 
 
@@ -21,7 +76,8 @@ interface USDCV1Interface {
  * and any Dai that has been sent to the address will automatically be deposited
  * into Compound at the time the wallet is deployed.
  */
-contract DharmaSmartWalletImplementationV1 {
+contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1Interface {
+  using Address for address;
   using ECDSA for bytes32;
   // WARNING: DO NOT REMOVE OR REORDER STORAGE WHEN WRITING NEW IMPLEMENTATIONS!
 
@@ -36,44 +92,42 @@ contract DharmaSmartWalletImplementationV1 {
 
   // END STORAGE DECLARATIONS - DO NOT REMOVE OR REPLACE STORAGE ABOVE HERE!
 
-  event NewDharmaKey(address dharmaKey);
-  event ActionSuccess(/* ... */);
-  event ActionFailure(/* ... */);
-  event ExternalError(address source, string revertReason);
+  // The smart wallet version will be used when constructing valid signatures.
+  uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 1;
 
   // The dharma secondary key is a hard-coded signing key controlled by Dharma,
   // used in conjunction with user's Dharma Key to make smart wallet actions.
   // Note that, in the event that Dharma's signing key is compromised, a new
   // smart wallet implementation will need to be deployed - we can avoid this by
   // retrieving this key from a dedicated registry controlled by Dharma.
-  address private constant _DHARMA_SECONDARY_KEY = address(
+  address internal constant _DHARMA_SECONDARY_KEY = address(
     0x1234567890123456789012345678901234567890
   );
 
-  CTokenInterface private constant _CDAI = CTokenInterface(
+  CTokenInterface internal constant _CDAI = CTokenInterface(
     0xF5DCe57282A584D2746FaF1593d3121Fcac444dC // mainnet
   );
 
-  CTokenInterface private constant _CUSDC = CTokenInterface(
+  CTokenInterface internal constant _CUSDC = CTokenInterface(
     0x39AA39c021dfbaE8faC545936693aC917d5E7563 // mainnet
   );
 
-  IERC20 private constant _DAI = IERC20(
+  IERC20 internal constant _DAI = IERC20(
     0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359 // mainnet
   );
 
-  IERC20 private constant _USDC = IERC20(
+  IERC20 internal constant _USDC = IERC20(
     0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 // mainnet
   );
 
-  USDCV1Interface private constant _USDC_NAUGHTY = USDCV1Interface(
+  USDCV1Interface internal constant _USDC_NAUGHTY = USDCV1Interface(
     0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 // mainnet
   );
 
   // Compound returns a value of 0 to indicate success, or lack of an error.
-  uint256 private constant _COMPOUND_SUCCESS = 0;
+  uint256 internal constant _COMPOUND_SUCCESS = 0;
 
-  function initialize(address dharmaKey) public {
+  function initialize(address dharmaKey) external {
     // Ensure that this function is only callable during contract construction.
     assembly { if extcodesize(address) { revert(0, 0) } }
 
@@ -94,15 +148,74 @@ contract DharmaSmartWalletImplementationV1 {
     }
   }
 
-  function getDharmaKey() public view returns (address dharmaKey) {
-    return _dharmaKey;
+  function executeAction(
+    address to,
+    bytes calldata data,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata dharmaKeySignature,
+    bytes calldata dharmaSecondaryKeySignature
+  ) external returns (bool ok, bytes memory returnData) {
+    // Ensure that action is valid and increment the nonce before proceeding.
+    bytes32 actionID = _validateActionAndIncrementNonce(
+      to,
+      data,
+      nonce,
+      minimumActionGas,
+      dharmaKeySignature,
+      dharmaSecondaryKeySignature
+    );
+
+    // Note: from this point on, there are no reverts (apart from out-of-gas or
+    // call-depth-exceeded) originating from this contract. However, the action
+    // itself may revert, in which case the function will return `false`, along
+    // with the revert reason encoded as bytes, and fire an ActionFailure event.
+
+    // Perform the action via low-level call and set return values using result.
+    (ok, returnData) = to.call(data);
+
+    // Emit a CallSuccess or CallFailure event based on the outcome of the call.
+    if (ok) {
+      // Note: while the call succeeded, the action itself may still have failed
+      // (for example, successful calls to Compound can still return an error).
+      emit CallSuccess(actionID, nonce, to, data, returnData);
+    } else {
+      // Note: while the call failed, the nonce will still be incremented, which
+      // will invalidate all supplied signatures.
+      emit CallFailure(actionID, nonce, to, data, string(returnData));
+    }
   }
 
-  function test() public pure returns (bool) {
+  function getDharmaKey() external view returns (address dharmaKey) {
+    dharmaKey = _dharmaKey;
+  }
+
+  function getNonce() external view returns (uint256 nonce) {
+    nonce = _nonce;
+  }
+
+  function getNextActionID(
+    address to,
+    bytes calldata data,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID) {
+    actionID = _getActionID(to, data, _nonce, minimumActionGas);
+  }
+
+  function getActionID(
+    address to,
+    bytes calldata data,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID) {
+    actionID = _getActionID(to, data, nonce, minimumActionGas);
+  }
+
+  function test() external pure returns (bool) {
     return true;
   }
 
-  function testRevert() public pure returns (bool) {
+  function testRevert() external pure returns (bool) {
     revert("This revert message should be visible.");
   }
 
@@ -213,5 +326,85 @@ contract DharmaSmartWalletImplementationV1 {
         );
       }
     }
+  }
+
+  function _validateActionAndIncrementNonce(
+    address to,
+    bytes memory data,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes memory dharmaKeySignature,
+    bytes memory dharmaSecondaryKeySignature
+  ) internal returns (bytes32 actionID) {
+    // Ensure that the action has the correct nonce.
+    require(_nonce == nonce, "Invalid action - incorrect nonce.");
+
+    // Ensure that the `to` address is a contract.
+    require(
+      to.isContract(),
+      "Invalid action - must supply a contract as the `to` argument."
+    );
+
+    // Place the dharma key into memory to avoid repeated SLOAD operations.
+    address dharmaKey = _dharmaKey;
+
+    // Ensure that there is in fact a dharma key set on the smart wallet.
+    require(dharmaKey != address(0), "Invalid action - no dharma key set.");
+
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getActionID(to, data, nonce, minimumActionGas);
+
+    // First, validate the Dharma Key signature unless it is `msg.sender`.
+    if (msg.sender != dharmaKey) {
+      require(
+        dharmaKey == actionID.toEthSignedMessageHash().recover(
+          dharmaKeySignature
+        ),
+        "Invalid action - invalid Dharma Key signature."
+      );
+    }
+
+    // Next, validate Dharma Secondary Key signature unless it is `msg.sender`.
+    if (msg.sender != _DHARMA_SECONDARY_KEY) {
+      require(
+        _DHARMA_SECONDARY_KEY == actionID.toEthSignedMessageHash().recover(
+          dharmaSecondaryKeySignature
+        ),
+        "Invalid action - invalid Dharma Secondary Key signature."
+      );
+    }
+
+    // Increment nonce in order to prevent reuse of signatures after the call.
+    _nonce++;
+
+    // Ensure that the current gas exceeds the minimum required action gas.
+    // This prevents griefing attacks where an attacker can invalidate a
+    // signature without providing enough gas for the action to succeed.
+    // To skip this requirement, supply zero for the minimumActionGas argument.
+    require(
+      gasleft() >= minimumActionGas,
+      "Invalid action - insufficient gas supplied by transaction submitter."
+    );
+  }
+
+  function _getActionID(
+    address to,
+    bytes memory data,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) internal view returns (bytes32 actionID) {
+    // The actionID is constructed according to EIP-191-0x45 to prevent replays.
+    actionID = keccak256(
+      abi.encodePacked(
+        address(this),
+        _DHARMA_SMART_WALLET_VERSION,
+        _dharmaKey,
+        _DHARMA_SECONDARY_KEY,
+        nonce,
+        minimumActionGas,
+        to,
+        data
+      )
+    );
   }
 }
