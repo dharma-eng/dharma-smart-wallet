@@ -1,4 +1,8 @@
-pragma solidity 0.5.10;
+pragma solidity 0.5.11;
+// WARNING - `executeActionWithAtomicBatchCalls` has a `bytes[]` argument that
+// requires ABIEncoderV2, and the alternatives are pretty convoluted. Consider
+// losing that function and ABIEncoderV2 for the V1 smart wallet implementation.
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
@@ -91,6 +95,11 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
   uint256 private _nonce;
 
   // END STORAGE DECLARATIONS - DO NOT REMOVE OR REPLACE STORAGE ABOVE HERE!
+  // ABIEncoderV2 uses an array of Calls for executing actions with batch calls
+  struct Call {
+    address to;
+    bytes data;
+  }
 
   // The smart wallet version will be used when constructing valid signatures.
   uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 1;
@@ -135,6 +144,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     _dharmaKey = dharmaKey;
     emit NewDharmaKey(dharmaKey);
 
+    /*
     // Approve the cDAI contract to transfer Dai on behalf of this contract.
     if (_setFullDaiApproval()) {
       // If the approval was successful, try to deposit any Dai on Compound.
@@ -146,6 +156,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
       // If the approval was successful, try to deposit any USDC on Compound.
       _depositUSDCOnCompound();
     }
+    */
   }
 
   function executeAction(
@@ -167,16 +178,16 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     );
 
     // Note: from this point on, there are no reverts (apart from out-of-gas or
-    // call-depth-exceeded) originating from this contract. However, the action
+    // call-depth-exceeded) originating from this action. However, the call
     // itself may revert, in which case the function will return `false`, along
-    // with the revert reason encoded as bytes, and fire an ActionFailure event.
+    // with the revert reason encoded as bytes, and fire an CallFailure event.
 
     // Perform the action via low-level call and set return values using result.
     (ok, returnData) = to.call(data);
 
     // Emit a CallSuccess or CallFailure event based on the outcome of the call.
     if (ok) {
-      // Note: while the call succeeded, the action itself may still have failed
+      // Note: while the call succeeded, the action may still have "failed"
       // (for example, successful calls to Compound can still return an error).
       emit CallSuccess(actionID, nonce, to, data, returnData);
     } else {
@@ -184,7 +195,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
       // will invalidate all supplied signatures.
       emit CallFailure(actionID, nonce, to, data, string(returnData));
     }
-  }
+  } 
 
   function getDharmaKey() external view returns (address dharmaKey) {
     dharmaKey = _dharmaKey;
@@ -199,7 +210,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     bytes calldata data,
     uint256 minimumActionGas
   ) external view returns (bytes32 actionID) {
-    actionID = _getActionID(to, data, _nonce, minimumActionGas);
+    actionID = _getActionIDWithOneCall(to, data, _nonce, minimumActionGas);
   }
 
   function getActionID(
@@ -208,7 +219,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     uint256 nonce,
     uint256 minimumActionGas
   ) external view returns (bytes32 actionID) {
-    actionID = _getActionID(to, data, nonce, minimumActionGas);
+    actionID = _getActionIDWithOneCall(to, data, nonce, minimumActionGas);
   }
 
   function test() external pure returns (bool) {
@@ -217,6 +228,52 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
 
   function testRevert() external pure returns (bool) {
     revert("This revert message should be visible.");
+  }
+
+  // Note: this must currently be implemented as a public function (instead
+  // of as the external one) due to an ABIEncoderV2 `UnimplementedFeatureError`
+  function executeActionWithAtomicBatchCalls(
+    Call[] memory calls,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes memory dharmaKeySignature,
+    bytes memory dharmaSecondaryKeySignature
+  ) public returns (bool[] memory ok, bytes[] memory returnData) {
+    // Ensure that action is valid and increment the nonce before proceeding.
+    bytes32 actionID = _validateActionWithAtomicBatchCallsAndIncrementNonce(
+      calls,
+      nonce,
+      minimumActionGas,
+      dharmaKeySignature,
+      dharmaSecondaryKeySignature
+    );
+
+    // Note: from this point on, there are no reverts (apart from out-of-gas or
+    // call-depth-exceeded) originating from this contract. However, one of the
+    // calls may revert, in which case the function will return `false`, along
+    // with the revert reason encoded as bytes, and fire an CallFailure event.
+    
+    ok = new bool[](calls.length);
+    returnData = new bytes[](calls.length);
+
+    for (uint256 i = 0; i < calls.length; i++) {
+      // Perform low-level call and set return values using result.
+      (ok[i], returnData[i]) = calls[i].to.call(calls[i].data);
+
+      // Emit CallSuccess or CallFailure event based on the outcome of the call.
+      if (ok[i]) {
+        // Note: while the call succeeded, the action may still have "failed"
+        // (i.e. a successful calls to Compound can still return an error).
+        emit CallSuccess(actionID, nonce, calls[i].to, calls[i].data, returnData[i]);
+      } else {
+        // Note: while the call failed, the nonce will still be incremented,
+        // which will invalidate all supplied signatures.
+        emit CallFailure(actionID, nonce, calls[i].to, calls[i].data, string(returnData[i]));
+
+        // exit early - any calls after the first failed call will not execute.
+        break;
+      }
+    }
   }
 
   function _setFullDaiApproval() internal returns (bool ok) {
@@ -339,20 +396,20 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     // Ensure that the action has the correct nonce.
     require(_nonce == nonce, "Invalid action - incorrect nonce.");
 
-    // Ensure that the `to` address is a contract.
-    require(
-      to.isContract(),
-      "Invalid action - must supply a contract as the `to` argument."
-    );
-
     // Place the dharma key into memory to avoid repeated SLOAD operations.
     address dharmaKey = _dharmaKey;
 
     // Ensure that there is in fact a dharma key set on the smart wallet.
     require(dharmaKey != address(0), "Invalid action - no dharma key set.");
 
+    // Ensure that the `to` address is a contract.
+    require(
+      to.isContract(),
+      "Invalid action - must supply a contract as the `to` argument."
+    );
+
     // Determine the actionID - this serves as the signature hash.
-    actionID = _getActionID(to, data, nonce, minimumActionGas);
+    actionID = _getActionIDWithOneCall(to, data, nonce, minimumActionGas);
 
     // First, validate the Dharma Key signature unless it is `msg.sender`.
     if (msg.sender != dharmaKey) {
@@ -387,7 +444,66 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     );
   }
 
-  function _getActionID(
+  function _validateActionWithAtomicBatchCallsAndIncrementNonce(
+    Call[] memory calls,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes memory dharmaKeySignature,
+    bytes memory dharmaSecondaryKeySignature
+  ) internal returns (bytes32 actionID) {
+    // Ensure that the action has the correct nonce.
+    require(_nonce == nonce, "Invalid action - incorrect nonce.");
+
+    // Place the dharma key into memory to avoid repeated SLOAD operations.
+    address dharmaKey = _dharmaKey;
+
+    // Ensure that there is in fact a dharma key set on the smart wallet.
+    require(dharmaKey != address(0), "Invalid action - no dharma key set.");
+
+    // Ensure that the `to` address is a contract for each call.
+    for (uint256 i = 0; i < calls.length; i++) {
+      require(
+        calls[i].to.isContract(),
+        "Invalid action - must supply a contract for each `to` argument."
+      );
+    }
+
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getActionIDWithBatchCall(calls, nonce, minimumActionGas);
+
+    // First, validate the Dharma Key signature unless it is `msg.sender`.
+    if (msg.sender != dharmaKey) {
+      require(
+        dharmaKey == actionID.toEthSignedMessageHash().recover(
+          dharmaKeySignature
+        ),
+        "Invalid action - invalid Dharma Key signature."
+      );
+    }
+
+    // Next, validate Dharma Secondary Key signature unless it is `msg.sender`.
+    if (msg.sender != _DHARMA_SECONDARY_KEY) {
+      require(
+        _DHARMA_SECONDARY_KEY == actionID.toEthSignedMessageHash().recover(
+          dharmaSecondaryKeySignature
+        ),
+        "Invalid action - invalid Dharma Secondary Key signature."
+      );
+    }
+
+    // Increment nonce in order to prevent reuse of signatures after the call.
+    _nonce++;
+
+    // Ensure that the current gas exceeds the minimum required action gas.
+    // This prevents griefing attacks where an attacker can invalidate a
+    // signature without providing enough gas for the action to succeed.
+    require(
+      gasleft() >= minimumActionGas,
+      "Invalid action - insufficient gas supplied by transaction submitter."
+    );
+  }
+
+  function _getActionIDWithOneCall(
     address to,
     bytes memory data,
     uint256 nonce,
@@ -402,8 +518,29 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
         _DHARMA_SECONDARY_KEY,
         nonce,
         minimumActionGas,
+        false, // isBatchCall = false
         to,
         data
+      )
+    );
+  }
+
+  function _getActionIDWithBatchCall(
+    Call[] memory calls,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) internal view returns (bytes32 actionID) {
+    // The actionID is constructed according to EIP-191-0x45 to prevent replays.
+    actionID = keccak256(
+      abi.encodePacked(
+        address(this),
+        _DHARMA_SMART_WALLET_VERSION,
+        _dharmaKey,
+        _DHARMA_SECONDARY_KEY,
+        nonce,
+        minimumActionGas,
+        true, // isBatchCall = true
+        abi.encode(calls)
       )
     );
   }

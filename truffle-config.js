@@ -13,11 +13,11 @@ module.exports = {
   },
   compilers: {
     solc: {
-       version: "0.5.10",
+       version: "0.5.11",
        settings: {
         optimizer: {
           enabled: true,
-          runs: 10000
+          runs: 200
         },
         evmVersion: "petersburg"
       }
