@@ -11,7 +11,9 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface CTokenInterface {
   function mint(uint256 mintAmount) external returns (uint256 err);
+  
   function redeemUnderlying(uint256 redeemAmount) external returns (uint256 err);
+  
   function getAccountSnapshot(address account) external view returns (
     uint256 err,
     uint256 cTokenBalance,
@@ -67,7 +69,27 @@ interface DharmaSmartWalletImplementationV1Interface {
   }
 
   function initialize(address dharmaKey) external;
+
+  function deposit() external;
+
+  function withdrawDai(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata dharmaKeySignature,
+    bytes calldata dharmaSecondaryKeySignature
+  ) external returns (bool ok);
   
+  function withdrawUSDC(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata dharmaKeySignature,
+    bytes calldata dharmaSecondaryKeySignature
+  ) external returns (bool ok);
+
   function executeAction(
     address to,
     bytes calldata data,
@@ -77,19 +99,70 @@ interface DharmaSmartWalletImplementationV1Interface {
     bytes calldata dharmaSecondaryKeySignature
   ) external returns (bool ok, bytes memory returnData);
 
+  function executeActionWithAtomicBatchCalls(
+    Call[] calldata calls,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata dharmaKeySignature,
+    bytes calldata dharmaSecondaryKeySignature
+  ) external returns (bool[] memory ok, bytes[] memory returnData);
+
+  function cancel(
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata signature
+  ) external;
+
   function getDharmaKey() external view returns (address dharmaKey);
   
   function getNonce() external view returns (uint256 nonce);
   
-  function getNextActionID(
+  function getNextDaiWithdrawalActionID(
+    uint256 amount,
+    address recipient,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID);
+
+  function getDaiWithdrawalActionID(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID);
+
+  function getNextUSDCWithdrawalActionID(
+    uint256 amount,
+    address recipient,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID);
+
+  function getUSDCWithdrawalActionID(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID);
+
+  function getNextGenericActionID(
     address to,
     bytes calldata data,
     uint256 minimumActionGas
   ) external view returns (bytes32 actionID);
-  
-  function getActionID(
+
+  function getGenericActionID(
     address to,
     bytes calldata data,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID);
+
+  function getNextGenericAtomicBatchActionID(
+    Call[] calldata calls,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID);
+
+  function getGenericAtomicBatchActionID(
+    Call[] calldata calls,
     uint256 nonce,
     uint256 minimumActionGas
   ) external view returns (bytes32 actionID);
@@ -232,7 +305,8 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     bytes calldata dharmaKeySignature,
     bytes calldata dharmaSecondaryKeySignature
   ) external returns (bool ok) {
-    bytes32 actionID = _validateWithdrawalActionAndIncrementNonce(
+    // Do not assign the actionID, since ExternalError does not log it.
+    _validateWithdrawalActionAndIncrementNonce(
       ActionType.DAIWithdrawal,
       amount,
       recipient,
@@ -281,7 +355,8 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     bytes calldata dharmaKeySignature,
     bytes calldata dharmaSecondaryKeySignature
   ) external returns (bool ok) {
-    bytes32 actionID = _validateWithdrawalActionAndIncrementNonce(
+    // Do not assign the actionID, since ExternalError does not log it.
+    _validateWithdrawalActionAndIncrementNonce(
       ActionType.USDCWithdrawal,
       amount,
       recipient,
@@ -426,20 +501,68 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     nonce = _nonce;
   }
 
-  function getNextActionID(
+  function getNextDaiWithdrawalActionID(
+    uint256 amount,
+    address recipient,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID) {
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getCustomActionID(
+      ActionType.DAIWithdrawal, amount, recipient, _nonce, minimumActionGas
+    );
+  }
+
+  function getDaiWithdrawalActionID(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID) {
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getCustomActionID(
+      ActionType.DAIWithdrawal, amount, recipient, nonce, minimumActionGas
+    );
+  }
+
+  function getNextUSDCWithdrawalActionID(
+    uint256 amount,
+    address recipient,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID) {
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getCustomActionID(
+      ActionType.USDCWithdrawal, amount, recipient, _nonce, minimumActionGas
+    );
+  }
+
+  function getUSDCWithdrawalActionID(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID) {
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getCustomActionID(
+      ActionType.DAIWithdrawal, amount, recipient, nonce, minimumActionGas
+    );
+  }
+
+  function getNextGenericActionID(
     address to,
     bytes calldata data,
     uint256 minimumActionGas
   ) external view returns (bytes32 actionID) {
+    // Determine the actionID - this serves as the signature hash.
     actionID = _getGenericActionID(to, data, _nonce, minimumActionGas);
   }
 
-  function getActionID(
+  function getGenericActionID(
     address to,
     bytes calldata data,
     uint256 nonce,
     uint256 minimumActionGas
   ) external view returns (bytes32 actionID) {
+    // Determine the actionID - this serves as the signature hash.
     actionID = _getGenericActionID(to, data, nonce, minimumActionGas);
   }
 
@@ -507,6 +630,25 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
         break;
       }
     }
+  }
+
+  // cannot be implemented as an external function: `UnimplementedFeatureError`
+  function getNextGenericAtomicBatchActionID(
+    Call[] memory calls,
+    uint256 minimumActionGas
+  ) public view returns (bytes32 actionID) {
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getGenericAtomicBatchActionID(calls, _nonce, minimumActionGas);
+  }
+
+  // cannot be implemented as an external function: `UnimplementedFeatureError`
+  function getGenericAtomicBatchActionID(
+    Call[] memory calls,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) public view returns (bytes32 actionID) {
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getGenericAtomicBatchActionID(calls, nonce, minimumActionGas);
   }
 
   function _setFullDaiApproval() internal returns (bool ok) {
