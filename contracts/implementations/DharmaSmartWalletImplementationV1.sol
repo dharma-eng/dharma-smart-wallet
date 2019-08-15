@@ -35,6 +35,7 @@ interface DharmaSmartWalletImplementationV1Interface {
   
   event CallSuccess(
     bytes32 actionID,
+    bool rolledBack,
     uint256 nonce,
     address to,
     bytes data,
@@ -62,10 +63,16 @@ interface DharmaSmartWalletImplementationV1Interface {
     Cancel
   }
 
-  // ABIEncoderV2 uses an array of Calls for executing actions with batch calls
+  // ABIEncoderV2 uses an array of Calls for executing generic batch calls
   struct Call {
     address to;
     bytes data;
+  }
+
+  // ABIEncoderV2 uses an array of CallReturns for handling generic batch calls
+  struct CallReturn {
+    bool ok;
+    bytes returnData;
   }
 
   function initialize(address dharmaKey) external;
@@ -485,7 +492,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     if (ok) {
       // Note: while the call succeeded, the action may still have "failed"
       // (for example, successful calls to Compound can still return an error).
-      emit CallSuccess(actionID, nonce, to, data, returnData);
+      emit CallSuccess(actionID, false, nonce, to, data, returnData);
     } else {
       // Note: while the call failed, the nonce will still be incremented, which
       // will invalidate all supplied signatures.
@@ -575,7 +582,10 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
   }
 
   // Note: this must currently be implemented as a public function (instead of
-  // as an external one) due to an ABIEncoderV2 `UnimplementedFeatureError`
+  // as an external one) due to an ABIEncoderV2 `UnimplementedFeatureError`.
+  // Also note that the returned `ok` boolean only signifies that a call was
+  // successfully completed during execution - the call will be rolled back
+  // unless EVERY call succeeded and therefore the whole `ok` array is true.
   function executeActionWithAtomicBatchCalls(
     Call[] memory calls,
     uint256 nonce,
@@ -597,23 +607,44 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     // calls may revert, in which case the function will return `false`, along
     // with the revert reason encoded as bytes, and fire an CallFailure event.
     
+    // Specify length of returned values in order to work with them in memory.
     ok = new bool[](calls.length);
     returnData = new bytes[](calls.length);
 
-    for (uint256 i = 0; i < calls.length; i++) {
-      // Perform low-level call and set return values using result.
-      (ok[i], returnData[i]) = calls[i].to.call(calls[i].data);
+    // Set self-call context to call _executeActionWithAtomicBatchCallsAtomic.
+    _selfCallContext = this.executeActionWithAtomicBatchCalls.selector;
 
+    // Make the atomic self-call - if any call fails, calls that preceded it
+    // will be rolled back and calls that follow it will not be made.
+    (bool externalOk, bytes memory rawCallResults) = address(this).call(
+      abi.encodeWithSelector(
+        this._executeActionWithAtomicBatchCallsAtomic.selector, calls
+      )
+    );
+
+    // Clear the self-call context.
+    delete _selfCallContext;
+
+    // Parse data returned from self-call into each call result and store / log.
+    CallReturn[] memory callResults = abi.decode(rawCallResults, (CallReturn[]));
+    for (uint256 i = 0; i < callResults.length; i++) {
+      Call memory currentCall = calls[i];
+
+      // Set the status and the return data / revert reason from the call.
+      ok[i] = callResults[i].ok;
+      returnData[i] = callResults[i].returnData;
+      
       // Emit CallSuccess or CallFailure event based on the outcome of the call.
-      if (ok[i]) {
+      if (callResults[i].ok) {
         // Note: while the call succeeded, the action may still have "failed"
         // (i.e. a successful calls to Compound can still return an error).
         emit CallSuccess(
           actionID,
+          !externalOk, // if another call failed this will have been rolled back
           nonce,
-          calls[i].to,
-          calls[i].data,
-          returnData[i]
+          currentCall.to,
+          currentCall.data,
+          callResults[i].returnData
         );
       } else {
         // Note: while the call failed, the nonce will still be incremented,
@@ -621,14 +652,44 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
         emit CallFailure(
           actionID,
           nonce,
-          calls[i].to,
-          calls[i].data,
-          string(returnData[i])
+          currentCall.to,
+          currentCall.data,
+          string(callResults[i].returnData)
         );
 
         // exit early - any calls after the first failed call will not execute.
         break;
       }
+    }
+  }
+
+  // Note: this must currently be implemented as a public function (instead of
+  // as an external one) due to an ABIEncoderV2 `UnimplementedFeatureError`
+  function _executeActionWithAtomicBatchCallsAtomic(
+    Call[] memory calls
+  ) public returns (CallReturn[] memory callResults) {
+    require(
+      msg.sender == address(this) &&
+      _selfCallContext == this.executeActionWithAtomicBatchCalls.selector,
+      "External accounts or unapproved internal functions cannot call this."
+    );
+
+    bool rollBack = false;
+    callResults = new CallReturn[](calls.length);
+
+    for (uint256 i = 0; i < calls.length; i++) {
+      // Perform low-level call and set return values using result.
+      (bool ok, bytes memory returnData) = calls[i].to.call(calls[i].data);
+      callResults[i] = CallReturn({ok: ok, returnData: returnData});
+      if (!ok) {
+        // exit early - any calls after the first failed call will not execute.
+        rollBack = true;
+        break;
+      }
+    }
+
+    if (rollBack) {
+      revert(string(abi.encode(callResults))); // Honestly not sure this'll work...
     }
   }
 
