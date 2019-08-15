@@ -11,6 +11,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface CTokenInterface {
   function mint(uint256 mintAmount) external returns (uint256 err);
+  function redeemUnderlying(uint256 redeemAmount) external returns (uint256 err);
+  function getAccountSnapshot(address account) external view returns (
+    uint256 err,
+    uint256 cTokenBalance,
+    uint256 borrowBalance,
+    uint256 exchangeRateMantissa
+  ); // balanceOfUnderlying = (cTokenBalance * exchangeRateMantissa) / 1e18
 }
 
 
@@ -41,6 +48,23 @@ interface DharmaSmartWalletImplementationV1Interface {
   );
   
   event ExternalError(address source, string revertReason);
+
+  // Actions, or protected methods (i.e. not deposits) each have an action type.
+  enum ActionType {
+    Generic,
+    GenericAtomicBatch,
+    DAIWithdrawal,
+    USDCWithdrawal,
+    ETHWithdrawal,
+    AccountRecovery,
+    Cancel
+  }
+
+  // ABIEncoderV2 uses an array of Calls for executing actions with batch calls
+  struct Call {
+    address to;
+    bytes data;
+  }
 
   function initialize(address dharmaKey) external;
   
@@ -94,12 +118,14 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
   // been accepted the nonce will be incremented.
   uint256 private _nonce;
 
+  // The self-call context flag is in storage slot 2. Some protected functions
+  // may only be called externally from calls originating from other methods on
+  // this contract, which enables appropriate exception handling on reverts.
+  // Another way to achieve this without needing any local storage would be to
+  // perform and handle a DELEGATECALL to another contract.
+  bytes4 private _selfCallContext;
+
   // END STORAGE DECLARATIONS - DO NOT REMOVE OR REPLACE STORAGE ABOVE HERE!
-  // ABIEncoderV2 uses an array of Calls for executing actions with batch calls
-  struct Call {
-    address to;
-    bytes data;
-  }
 
   // The smart wallet version will be used when constructing valid signatures.
   uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 1;
@@ -144,19 +170,214 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     _dharmaKey = dharmaKey;
     emit NewDharmaKey(dharmaKey);
 
-    /*
     // Approve the cDAI contract to transfer Dai on behalf of this contract.
     if (_setFullDaiApproval()) {
-      // If the approval was successful, try to deposit any Dai on Compound.
-      _depositDaiOnCompound();
+      // Get the current Dai balance on this contract.
+      uint256 daiBalance = _DAI.balanceOf(address(this));
+
+      // If there is any dai balance, try to deposit it on Compound.
+      if (daiBalance > 0) {
+        _depositDaiOnCompound(daiBalance);
+      }
     }
 
     // Approve the cUSDC contract to transfer USDC on behalf of this contract.
     if (_setFullUSDCApproval()) {
-      // If the approval was successful, try to deposit any USDC on Compound.
-      _depositUSDCOnCompound();
+      // Get the current USDC balance on this contract.
+      uint256 usdcBalance = _USDC.balanceOf(address(this));
+
+      // If there is any USDC balance, try to deposit it on Compound.
+      if (usdcBalance > 0) {
+        _depositUSDCOnCompound(usdcBalance);
+      }
     }
-    */
+
+    // Note: also call `enterMarkets` on the comptroller to enable borrows.
+  }
+
+  function deposit() external {
+    // Get the current Dai balance on this contract.
+    uint256 daiBalance = _DAI.balanceOf(address(this));
+
+    // try to deposit any Dai on Compound. (Full approval has already been set.)
+    if (daiBalance > 0) {
+      // Once borrows are enabled, first use funds to repay Dai borrow balance.
+      _depositDaiOnCompound(daiBalance);
+    }
+
+    // Get the current USDC balance on this contract.
+    uint256 usdcBalance = _USDC.balanceOf(address(this));
+
+    // If there is any USDC balance, check for adequate approval for cUSDC.
+    // Once borrows are enabled, first use funds to repay USDC borrow balance.
+    if (usdcBalance > 0) {
+      uint256 usdcAllowance = _USDC.allowance(address(this), address(_CUSDC));
+      // If allowance is insufficient, try to set it before depositing.
+      if (usdcAllowance < usdcBalance) {
+        if (_setFullUSDCApproval()) {
+          _depositUSDCOnCompound(usdcBalance);
+        }
+      // otherwise, go ahead and try the deposit.
+      } else {
+        _depositUSDCOnCompound(usdcBalance);
+      }
+    }
+  }
+
+  function withdrawDai(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata dharmaKeySignature,
+    bytes calldata dharmaSecondaryKeySignature
+  ) external returns (bool ok) {
+    bytes32 actionID = _validateWithdrawalActionAndIncrementNonce(
+      ActionType.DAIWithdrawal,
+      amount,
+      recipient,
+      nonce,
+      minimumActionGas,
+      dharmaKeySignature,
+      dharmaSecondaryKeySignature
+    );
+
+    // Set the self-call context so we can call _withdrawDaiAtomic.
+    _selfCallContext = this.withdrawDai.selector;
+
+    // Make the atomic self-call - if redeemUnderlying fails on cDAI, it will
+    // succeed but nothing will happen except firing an ExternalError event. If
+    // the second part of the self-call (the Dai transfer) fails, it will revert
+    // and roll back the first part of the call, and we'll fire an ExternalError
+    // event after returning from the failed call.
+    (ok, ) = address(this).call(abi.encodeWithSelector(
+      this._withdrawDaiAtomic.selector, amount, recipient
+    ));
+    if (!ok) {
+      emit ExternalError(address(_DAI), "DAI contract reverted on transfer.");
+    }
+
+    // Clear the self-call context.
+    delete _selfCallContext;
+  }
+
+  function _withdrawDaiAtomic(uint256 amount, address recipient) external {
+    require(
+      msg.sender == address(this) &&
+      _selfCallContext == this.withdrawDai.selector,
+      "External accounts or unapproved internal functions cannot call this."
+    );
+    if (_withdrawDaiFromCompound(amount)) {
+      // at this point dai transfer *should* never fail - wrap it just in case.
+      require(_DAI.transfer(recipient, amount));
+    }
+  }
+
+  function withdrawUSDC(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata dharmaKeySignature,
+    bytes calldata dharmaSecondaryKeySignature
+  ) external returns (bool ok) {
+    bytes32 actionID = _validateWithdrawalActionAndIncrementNonce(
+      ActionType.USDCWithdrawal,
+      amount,
+      recipient,
+      nonce,
+      minimumActionGas,
+      dharmaKeySignature,
+      dharmaSecondaryKeySignature
+    );
+
+    // Set the self-call context so we can call _withdrawUSDCAtomic.
+    _selfCallContext = this.withdrawUSDC.selector;
+
+    // Make the atomic self-call - if redeemUnderlying fails on cUSDC, it will
+    // succeed but nothing will happen except firing an ExternalError event. If
+    // the second part of the self-call (USDC transfer) fails, it will revert
+    // and roll back the first part of the call, and we'll fire an ExternalError
+    // event after returning from the failed call.
+    (ok, ) = address(this).call(abi.encodeWithSelector(
+      this._withdrawUSDCAtomic.selector, amount, recipient
+    ));
+    if (!ok) {
+      // find out *why* USDC transfer reverted (it doesn't give revert reasons).
+      if (_USDC_NAUGHTY.isBlacklisted(address(this))) {
+        emit ExternalError(
+          address(_USDC),
+          "transfer failed - USDC has blacklisted this user."
+        );
+      } else if (_USDC_NAUGHTY.paused()) {
+        emit ExternalError(
+          address(_USDC),
+          "transfer failed - USDC contract is currently paused."
+        );
+      } else {
+        emit ExternalError(
+          address(_USDC),
+          "USDC contract reverted on transfer."
+        );
+      }
+    }
+
+    // Clear the self-call context.
+    delete _selfCallContext;
+  }
+
+  function _withdrawUSDCAtomic(uint256 amount, address recipient) external {
+    require(
+      msg.sender == address(this) &&
+      _selfCallContext == this.withdrawUSDC.selector,
+      "External accounts or unapproved internal functions cannot call this."
+    );
+    if (_withdrawUSDCFromCompound(amount)) {
+      // ensure that the USDC transfer does not fail.
+      require(_USDC.transfer(recipient, amount));
+    }
+  }
+
+  // Allow either signatory to increment the nonce at any point - the current
+  // nonce needs to be provided when using a signature so as not to enable
+  // griefing attacks. All arguments can be omitted if called directly.
+  function cancel(
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata signature
+  ) external {
+    address dharmaKey = _dharmaKey;
+    if (msg.sender == dharmaKey || msg.sender == _DHARMA_SECONDARY_KEY) {
+      _nonce++;
+    } else {
+      // Ensure that the action has the correct nonce.
+      require(_nonce == nonce, "Invalid action - incorrect nonce.");
+
+      // Ensure that the current gas exceeds the minimum required action gas.
+      // This prevents griefing attacks where an attacker can invalidate a
+      // signature without providing enough gas for the action to succeed.
+      require(
+        gasleft() >= minimumActionGas,
+        "Invalid action - insufficient gas supplied by transaction submitter."
+      );
+
+      bytes32 actionID = _getCustomActionID(
+        ActionType.Cancel,
+        0,
+        address(0),
+        nonce,
+        minimumActionGas
+      );
+
+      // Either signature may be used to submit a cancellation action.
+      address signingKey = actionID.toEthSignedMessageHash().recover(signature);
+      if (
+        (dharmaKey != address(0) && dharmaKey == signingKey) || 
+        _DHARMA_SECONDARY_KEY == signingKey
+      ) {
+        _nonce++;
+      }
+    }
   }
 
   function executeAction(
@@ -210,7 +431,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     bytes calldata data,
     uint256 minimumActionGas
   ) external view returns (bytes32 actionID) {
-    actionID = _getActionIDWithOneCall(to, data, _nonce, minimumActionGas);
+    actionID = _getGenericActionID(to, data, _nonce, minimumActionGas);
   }
 
   function getActionID(
@@ -219,7 +440,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     uint256 nonce,
     uint256 minimumActionGas
   ) external view returns (bytes32 actionID) {
-    actionID = _getActionIDWithOneCall(to, data, nonce, minimumActionGas);
+    actionID = _getGenericActionID(to, data, nonce, minimumActionGas);
   }
 
   function test() external pure returns (bool) {
@@ -230,8 +451,8 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     revert("This revert message should be visible.");
   }
 
-  // Note: this must currently be implemented as a public function (instead
-  // of as the external one) due to an ABIEncoderV2 `UnimplementedFeatureError`
+  // Note: this must currently be implemented as a public function (instead of
+  // as an external one) due to an ABIEncoderV2 `UnimplementedFeatureError`
   function executeActionWithAtomicBatchCalls(
     Call[] memory calls,
     uint256 nonce,
@@ -264,11 +485,23 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
       if (ok[i]) {
         // Note: while the call succeeded, the action may still have "failed"
         // (i.e. a successful calls to Compound can still return an error).
-        emit CallSuccess(actionID, nonce, calls[i].to, calls[i].data, returnData[i]);
+        emit CallSuccess(
+          actionID,
+          nonce,
+          calls[i].to,
+          calls[i].data,
+          returnData[i]
+        );
       } else {
         // Note: while the call failed, the nonce will still be incremented,
         // which will invalidate all supplied signatures.
-        emit CallFailure(actionID, nonce, calls[i].to, calls[i].data, string(returnData[i]));
+        emit CallFailure(
+          actionID,
+          nonce,
+          calls[i].to,
+          calls[i].data,
+          string(returnData[i])
+        );
 
         // exit early - any calls after the first failed call will not execute.
         break;
@@ -285,41 +518,113 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     // Note: handling the failure on dai approvals is unnecessary.
   }
 
-  function _depositDaiOnCompound() internal {
-    // Get the current Dai balance on this contract.
-    uint256 daiBalance = _DAI.balanceOf(address(this));
+  function _depositDaiOnCompound(uint256 daiBalance) internal {
+    // Attempt to mint the Dai balance on the cDAI contract.
+    (bool ok, bytes memory data) = address(_CDAI).call(abi.encodeWithSelector(
+      _CDAI.mint.selector, daiBalance
+    ));
 
-    // Only try to deposit the Dai on Compound if there is a non-zero balance.
-    if (daiBalance > 0) {
-      // Attempt to mint the Dai balance on the cDAI contract.
-      (bool ok, bytes memory data) = address(_CDAI).call(abi.encodeWithSelector(
-        _CDAI.mint.selector, daiBalance
-      ));
-
-      // Log an external error if something went wrong with the attempt.
-      if (ok) {
-        uint256 compoundError = abi.decode(data, (uint256));
-        if (compoundError != _COMPOUND_SUCCESS) {
-          emit ExternalError(
-            address(_CDAI),
-            string(
-              abi.encodePacked(
-                "Compound cDAI contract returned error code ",
-                uint8((compoundError / 10) + 48),
-                uint8((compoundError % 10) + 48),
-                " while attempting to deposit dai."
-              )
-            )
-          );
-        }
-      } else {
+    // Log an external error if something went wrong with the attempt.
+    if (ok) {
+      uint256 compoundError = abi.decode(data, (uint256));
+      if (compoundError != _COMPOUND_SUCCESS) {
         emit ExternalError(
           address(_CDAI),
           string(
-            abi.encodePacked("Compound cDAI contract reverted on mint: ", data)
+            abi.encodePacked(
+              "Compound cDAI contract returned error code ",
+              uint8((compoundError / 10) + 48),
+              uint8((compoundError % 10) + 48),
+              " while attempting to deposit dai."
+            )
           )
         );
       }
+    } else {
+      emit ExternalError(
+        address(_CDAI),
+        string(
+          abi.encodePacked("Compound cDAI contract reverted on mint: ", data)
+        )
+      );
+    }
+  }
+
+  function _withdrawDaiFromCompound(
+    uint256 daiToWithdraw
+  ) internal returns (bool success) {
+    // Attempt to mint the Dai balance on the cDAI contract.
+    (bool ok, bytes memory data) = address(_CDAI).call(abi.encodeWithSelector(
+      _CDAI.redeemUnderlying.selector, daiToWithdraw
+    ));
+
+    // Log an external error if something went wrong with the attempt.
+    if (ok) {
+      uint256 compoundError = abi.decode(data, (uint256));
+      if (compoundError != _COMPOUND_SUCCESS) {
+        emit ExternalError(
+          address(_CDAI),
+          string(
+            abi.encodePacked(
+              "Compound cDAI contract returned error code ",
+              uint8((compoundError / 10) + 48),
+              uint8((compoundError % 10) + 48),
+              " while attempting to redeem Dai."
+            )
+          )
+        );
+      } else {
+        success = true;
+      }
+    } else {
+      emit ExternalError(
+        address(_CDAI),
+        string(
+          abi.encodePacked(
+            "Compound cDAI contract reverted on redeemUnderlying: ",
+            data
+          )
+        )
+      );
+    }
+  }
+
+  function _withdrawUSDCFromCompound(
+    uint256 usdcToWithdraw
+  ) internal returns (bool success) {
+    // Attempt to mint the Dai balance on the cDAI contract.
+    (bool ok, bytes memory data) = address(_CDAI).call(abi.encodeWithSelector(
+      _CUSDC.redeemUnderlying.selector, usdcToWithdraw
+    ));
+
+    // Log an external error if something went wrong with the attempt.
+    if (ok) {
+      uint256 compoundError = abi.decode(data, (uint256));
+      if (compoundError != _COMPOUND_SUCCESS) {
+        emit ExternalError(
+          address(_CDAI),
+          string(
+            abi.encodePacked(
+              "Compound cUSDC contract returned error code ",
+              uint8((compoundError / 10) + 48),
+              uint8((compoundError % 10) + 48),
+              " while attempting to redeem USDC."
+            )
+          )
+        );
+      } else {
+        success = true;
+      }
+    } else {
+      emit ExternalError(
+        address(_CUSDC),
+        string(
+          abi.encodePacked(
+            "Compound cUSDC contract reverted on redeemUnderlying: ",
+            data
+          )
+        )
+      );
     }
   }
 
@@ -347,42 +652,67 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     }
   }
 
-  function _depositUSDCOnCompound() internal {
-    // Get the current USDC balance on this contract.
-    uint256 usdcBalance = _USDC.balanceOf(address(this));
+  function _depositUSDCOnCompound(uint256 usdcBalance) internal {
+    // Attempt to mint the USDC balance on the cUSDC contract.
+    (bool ok, bytes memory data) = address(_CUSDC).call(abi.encodeWithSelector(
+      _CUSDC.mint.selector, usdcBalance
+    ));
 
-    // Only try to deposit the USDC on Compound if there is a non-zero balance.
-    if (usdcBalance > 0) {
-      // Attempt to mint the USDC balance on the cUSDC contract.
-      (bool ok, bytes memory data) = address(_CUSDC).call(abi.encodeWithSelector(
-        _CUSDC.mint.selector, usdcBalance
-      ));
-
-      // Log an external error if something went wrong with the attempt.
-      if (ok) {
-        uint256 compoundError = abi.decode(data, (uint256));
-        if (compoundError != _COMPOUND_SUCCESS) {
-          emit ExternalError(
-            address(_CUSDC),
-            string(
-              abi.encodePacked(
-                "Compound cUSDC contract returned error code ",
-                uint8((compoundError / 10) + 48),
-                uint8((compoundError % 10) + 48),
-                " while attempting to deposit USDC."
-              )
-            )
-          );
-        }
-      } else {
+    // Log an external error if something went wrong with the attempt.
+    if (ok) {
+      uint256 compoundError = abi.decode(data, (uint256));
+      if (compoundError != _COMPOUND_SUCCESS) {
         emit ExternalError(
           address(_CUSDC),
           string(
-            abi.encodePacked("Compound cUSDC contract reverted on mint: ", data)
+            abi.encodePacked(
+              "Compound cUSDC contract returned error code ",
+              uint8((compoundError / 10) + 48),
+              uint8((compoundError % 10) + 48),
+              " while attempting to deposit USDC."
+            )
           )
         );
       }
+    } else {
+      emit ExternalError(
+        address(_CUSDC),
+        string(
+          abi.encodePacked("Compound cUSDC contract reverted on mint: ", data)
+        )
+      );
     }
+  }
+
+  function _validateWithdrawalActionAndIncrementNonce(
+    ActionType actionType,
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes memory dharmaKeySignature,
+    bytes memory dharmaSecondaryKeySignature
+  ) internal returns (bytes32 actionID) {
+    // Ensure that the action has the correct nonce.
+    require(_nonce == nonce, "Invalid action - incorrect nonce.");
+
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getCustomActionID(actionType, amount, recipient, nonce, minimumActionGas);
+
+    _verifySignaturesAndIncrementNonce(
+      actionID,
+      dharmaKeySignature,
+      dharmaSecondaryKeySignature
+    );
+
+    // Ensure that the current gas exceeds the minimum required action gas.
+    // This prevents griefing attacks where an attacker can invalidate a
+    // signature without providing enough gas for the action to succeed.
+    // To skip this requirement, supply zero for the minimumActionGas argument.
+    require(
+      gasleft() >= minimumActionGas,
+      "Invalid action - insufficient gas supplied by transaction submitter."
+    );
   }
 
   function _validateActionAndIncrementNonce(
@@ -396,12 +726,6 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     // Ensure that the action has the correct nonce.
     require(_nonce == nonce, "Invalid action - incorrect nonce.");
 
-    // Place the dharma key into memory to avoid repeated SLOAD operations.
-    address dharmaKey = _dharmaKey;
-
-    // Ensure that there is in fact a dharma key set on the smart wallet.
-    require(dharmaKey != address(0), "Invalid action - no dharma key set.");
-
     // Ensure that the `to` address is a contract.
     require(
       to.isContract(),
@@ -409,30 +733,13 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     );
 
     // Determine the actionID - this serves as the signature hash.
-    actionID = _getActionIDWithOneCall(to, data, nonce, minimumActionGas);
+    actionID = _getGenericActionID(to, data, nonce, minimumActionGas);
 
-    // First, validate the Dharma Key signature unless it is `msg.sender`.
-    if (msg.sender != dharmaKey) {
-      require(
-        dharmaKey == actionID.toEthSignedMessageHash().recover(
-          dharmaKeySignature
-        ),
-        "Invalid action - invalid Dharma Key signature."
-      );
-    }
-
-    // Next, validate Dharma Secondary Key signature unless it is `msg.sender`.
-    if (msg.sender != _DHARMA_SECONDARY_KEY) {
-      require(
-        _DHARMA_SECONDARY_KEY == actionID.toEthSignedMessageHash().recover(
-          dharmaSecondaryKeySignature
-        ),
-        "Invalid action - invalid Dharma Secondary Key signature."
-      );
-    }
-
-    // Increment nonce in order to prevent reuse of signatures after the call.
-    _nonce++;
+    _verifySignaturesAndIncrementNonce(
+      actionID,
+      dharmaKeySignature,
+      dharmaSecondaryKeySignature
+    );
 
     // Ensure that the current gas exceeds the minimum required action gas.
     // This prevents griefing attacks where an attacker can invalidate a
@@ -454,12 +761,6 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     // Ensure that the action has the correct nonce.
     require(_nonce == nonce, "Invalid action - incorrect nonce.");
 
-    // Place the dharma key into memory to avoid repeated SLOAD operations.
-    address dharmaKey = _dharmaKey;
-
-    // Ensure that there is in fact a dharma key set on the smart wallet.
-    require(dharmaKey != address(0), "Invalid action - no dharma key set.");
-
     // Ensure that the `to` address is a contract for each call.
     for (uint256 i = 0; i < calls.length; i++) {
       require(
@@ -469,11 +770,35 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     }
 
     // Determine the actionID - this serves as the signature hash.
-    actionID = _getActionIDWithBatchCall(calls, nonce, minimumActionGas);
+    actionID = _getGenericAtomicBatchActionID(calls, nonce, minimumActionGas);
+
+    _verifySignaturesAndIncrementNonce(
+      actionID,
+      dharmaKeySignature,
+      dharmaSecondaryKeySignature
+    );
+
+    // Ensure that the current gas exceeds the minimum required action gas.
+    // This prevents griefing attacks where an attacker can invalidate a
+    // signature without providing enough gas for the action to succeed.
+    require(
+      gasleft() >= minimumActionGas,
+      "Invalid action - insufficient gas supplied by transaction submitter."
+    );
+  }
+
+  function _verifySignaturesAndIncrementNonce(
+    bytes32 actionID,
+    bytes memory dharmaKeySignature,
+    bytes memory dharmaSecondaryKeySignature
+  ) internal {
+    // Place the dharma key into memory to avoid repeated SLOAD operations.
+    address dharmaKey = _dharmaKey;
 
     // First, validate the Dharma Key signature unless it is `msg.sender`.
     if (msg.sender != dharmaKey) {
       require(
+        dharmaKey != address(0) &&
         dharmaKey == actionID.toEthSignedMessageHash().recover(
           dharmaKeySignature
         ),
@@ -493,17 +818,9 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
 
     // Increment nonce in order to prevent reuse of signatures after the call.
     _nonce++;
-
-    // Ensure that the current gas exceeds the minimum required action gas.
-    // This prevents griefing attacks where an attacker can invalidate a
-    // signature without providing enough gas for the action to succeed.
-    require(
-      gasleft() >= minimumActionGas,
-      "Invalid action - insufficient gas supplied by transaction submitter."
-    );
   }
 
-  function _getActionIDWithOneCall(
+  function _getGenericActionID(
     address to,
     bytes memory data,
     uint256 nonce,
@@ -518,14 +835,14 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
         _DHARMA_SECONDARY_KEY,
         nonce,
         minimumActionGas,
-        false, // isBatchCall = false
+        ActionType.Generic,
         to,
         data
       )
     );
   }
 
-  function _getActionIDWithBatchCall(
+  function _getGenericAtomicBatchActionID(
     Call[] memory calls,
     uint256 nonce,
     uint256 minimumActionGas
@@ -539,8 +856,31 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
         _DHARMA_SECONDARY_KEY,
         nonce,
         minimumActionGas,
-        true, // isBatchCall = true
+        ActionType.GenericAtomicBatch,
         abi.encode(calls)
+      )
+    );
+  }
+
+  function _getCustomActionID(
+    ActionType actionType,
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) internal view returns (bytes32 actionID) {
+    // The actionID is constructed according to EIP-191-0x45 to prevent replays.
+    actionID = keccak256(
+      abi.encodePacked(
+        address(this),
+        _DHARMA_SMART_WALLET_VERSION,
+        _dharmaKey,
+        _DHARMA_SECONDARY_KEY,
+        nonce,
+        minimumActionGas,
+        actionType,
+        amount,
+        recipient
       )
     );
   }
