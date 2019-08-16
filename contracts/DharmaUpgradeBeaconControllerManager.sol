@@ -3,7 +3,7 @@ pragma solidity 0.5.11;
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./DharmaUpgradeBeaconController.sol";
-
+import "./implementations/AdharmaSmartWalletImplementation.sol";
 
 /**
  * @title DharmaUpgradeBeaconControllerManager
@@ -50,6 +50,22 @@ contract DharmaUpgradeBeaconControllerManager is Ownable {
   // Implement a timelock interval for each timelocked function.
   mapping(bytes4 => uint256) private _timelockIntervals;
 
+  // store the Adharma Contingency implementation. Note that this is specific to
+  // smart wallets, and should not be invoked on other upgrade beacons.
+  address private _adharmaImplementation;
+
+  // store a safeguard against accidentally triggering the Adharma Contingency.
+  bool private _adharmaContingencyArmed;
+
+  // store timestamp and last implementation in case of Adharma Contingency.
+  // Note that this is specific to a particular controller and beacon.
+  struct AdharmaContingency {
+    bool activated;
+    address lastImplementation;
+    uint256 activationTime;
+  }
+  mapping(address => mapping (address => AdharmaContingency)) private _adharmaContingency;
+
   /**
    * @notice In the constructor, set the initial owner of this contract and the
    * initial minimum timelock interval values.
@@ -64,6 +80,10 @@ contract DharmaUpgradeBeaconControllerManager is Ownable {
     _timelockIntervals[this.modifyTimelockInterval.selector] = 4 weeks;
     _timelockIntervals[this.upgrade.selector] = 7 days;
     _timelockIntervals[this.freeze.selector] = 3 days;
+
+    // Deploy the Adharma Smart Wallet implementation in case of emergencies.
+    _adharmaImplementation = address(new AdharmaSmartWalletImplementation());
+    _adharmaContingencyArmed = false;
   }
 
   /**
@@ -215,6 +235,117 @@ contract DharmaUpgradeBeaconControllerManager is Ownable {
     
     // Update the timelock interval on the provided function.
     _timelockIntervals[functionSelector] = newTimelockInterval;
+  }
+
+  /**
+   * @notice Arm the Adharma Contingency upgrade. This is required as an extra
+   * safeguard against accidentally triggering the Adharma Contingency.
+   */
+  function armAdharmaContingency(
+    bool armed
+  ) public onlyOwner {
+    // Arm (or disarm) the Adharma Contingency.
+    _adharmaContingencyArmed = armed;
+  }
+
+  /**
+   * @notice Trigger the Adharma Contingency upgrade. This requires that the
+   * owner first call `armAdharmaContingency` and set `armed` to `true`. This is
+   * only to be invoked in cases of a time-sensitive emergency.
+   */
+  function activateAdharmaContingency(
+    address controller,
+    address beacon
+  ) public onlyOwner {
+    // Ensure that the Adharma Contingency has been armed.
+    require(
+      _adharmaContingencyArmed,
+      "Adharma Contingency is not armed - are SURE you meant to call this?"
+    );
+
+    // Try to get current implementation contract, defaulting to null address.
+    address currentImplementation;
+    (bool ok, bytes memory returnData) = beacon.call("");
+    if (ok && returnData.length == 32) {
+      currentImplementation = abi.decode(returnData, (address));
+    } else {
+      currentImplementation = address(0);
+    }
+
+    // Record the last implementation in case it needs to be restored.
+    _adharmaContingency[controller][beacon] = AdharmaContingency({
+      activated: true,
+      lastImplementation: currentImplementation,
+      activationTime: now
+    });
+
+    // Trigger the upgrade to the Adharma Smart Wallet implementation contract.
+    DharmaUpgradeBeaconController(controller).upgrade(
+      beacon,
+      _adharmaImplementation
+    );
+
+    // Disarm the Adharma Contingency so that it is not mistakenly retriggered.
+    _adharmaContingencyArmed = false;
+  }
+
+  /**
+   * @notice Roll back a Adharma Contingency upgrade. This requires that the
+   * contingency is currently activated. 
+   */
+  function rollbackAdharmaContingency(
+    address controller,
+    address beacon
+  ) public onlyOwner {
+    // Ensure that the Adharma Contingency is currently active.
+    require(
+      _adharmaContingency[controller][beacon].activated,
+      "Adharma Contingency is not currently activated."
+    );
+
+    // Ensure that there is an implementation address to roll back to.
+    require(
+      _adharmaContingency[controller][beacon].lastImplementation != address(0),
+      "No prior implementation to roll back to."
+    );
+
+    // Upgrade to the implementation contract before the contingency.
+    DharmaUpgradeBeaconController(controller).upgrade(
+      beacon,
+      _adharmaContingency[controller][beacon].lastImplementation
+    );
+
+    // Exit the contingency state.
+    delete _adharmaContingency[controller][beacon];
+  }
+
+  /**
+   * @notice Exit the Adharma Contingency by upgrading to a new contract. This
+   * requires that the contingency is currently activated and that at least 48
+   * hours has elapsed since it was activated.
+   */
+  function exitAdharmaContingency(
+    address controller,
+    address beacon,
+    address implementation
+  ) public onlyOwner {
+    // Ensure that the Adharma Contingency is currently active.
+    require(
+      _adharmaContingency[controller][beacon].activated,
+      "Adharma Contingency is not currently activated."
+    );
+
+    // Ensure that at least 48 hours has elapsed since the contingency commenced.
+    require(
+      now > _adharmaContingency[controller][beacon].activationTime + 48 hours,
+      "Cannot exit contingency with a new upgrade until 48 hours have elapsed."
+    );
+
+    // Trigger the upgrade to the Adharma Smart Wallet implementation contract.
+    DharmaUpgradeBeaconController(controller).upgrade(beacon, implementation);
+
+    // Exit the contingency state.
+    delete _adharmaContingency[controller][beacon];
   }
 
   /**

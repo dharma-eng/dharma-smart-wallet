@@ -1,6 +1,6 @@
 {
   "name": "dharma-smart-wallet",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "",
   "dependencies": {
     "@gnosis.pm/safe-contracts": "1.0.0",
