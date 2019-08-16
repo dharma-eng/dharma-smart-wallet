@@ -689,7 +689,8 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     }
 
     if (rollBack) {
-      revert(string(abi.encode(callResults))); // Honestly not sure this'll work...
+      // cast to string - need to determine if ABIEncoderV2 encodes length first
+      assembly { revert(add(32, callResults), mload(callResults)) }
     }
   }
 
