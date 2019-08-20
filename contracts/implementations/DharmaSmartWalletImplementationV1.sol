@@ -219,6 +219,12 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     0x1234567890123456789012345678901234567890
   );
 
+  // Account recovery is facilitated using a hard-coded recovery manager,
+  // controlled by Dharma and implementing appropriate timelocks.
+  address internal constant _ACCOUNT_RECOVERY_MANAGER = address(
+    0x1111222233334444555566667777888899990000
+  );
+
   CTokenInterface internal constant _CDAI = CTokenInterface(
     0xF5DCe57282A584D2746FaF1593d3121Fcac444dC // mainnet
   );
@@ -245,6 +251,8 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
   function initialize(address dharmaKey) external {
     // Ensure that this function is only callable during contract construction.
     assembly { if extcodesize(address) { revert(0, 0) } }
+
+    require(dharmaKey != address(0), "No key provided.");
 
     // Set up the user's dharma key and emit a corresponding event.
     _dharmaKey = dharmaKey;
@@ -498,7 +506,21 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
       // will invalidate all supplied signatures.
       emit CallFailure(actionID, nonce, to, data, string(returnData));
     }
-  } 
+  }
+
+  // Allow the account recovery manager to change the Dharma Key.
+  function recover(address newDharmaKey) external {
+    require(
+      msg.sender == _ACCOUNT_RECOVERY_MANAGER,
+      "Only the account recovery manager may call this function."
+    );
+
+    require(newDharmaKey != address(0), "No key provided.");
+
+    // Set up the user's new dharma key and emit a corresponding event.
+    _dharmaKey = newDharmaKey;
+    emit NewDharmaKey(newDharmaKey);
+  }
 
   function getDharmaKey() external view returns (address dharmaKey) {
     dharmaKey = _dharmaKey;
