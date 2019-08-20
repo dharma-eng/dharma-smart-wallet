@@ -2,7 +2,7 @@ pragma solidity 0.5.11;
 
 
 /**
- * @title DharmaSmartWalletFactoryV1
+ * @title UpgradeBeaconProxy
  * @author 0age
  * @notice This contract delegates all logic, including initialization, to an
  * implementation contract provided by an "upgrade beacon" contract.
