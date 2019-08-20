@@ -9,6 +9,17 @@ import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
+interface ComptrollerInterface {
+  function enterMarkets(
+    address[] calldata cTokens
+  ) external returns (uint256[] memory errs);
+  
+  function getAccountLiquidity(
+    address account
+  ) external view returns (uint256 err, uint256 liquidity, uint256 shortfall);
+}
+
+
 interface CTokenInterface {
   function mint(uint256 mintAmount) external returns (uint256 err);
   
@@ -225,6 +236,10 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     0x1111222233334444555566667777888899990000
   );
 
+  ComptrollerInterface internal constant _COMPTROLLER = ComptrollerInterface(
+    0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B
+  );
+
   CTokenInterface internal constant _CDAI = CTokenInterface(
     0xF5DCe57282A584D2746FaF1593d3121Fcac444dC // mainnet
   );
@@ -280,7 +295,8 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
       }
     }
 
-    // Note: also call `enterMarkets` on the comptroller to enable borrows.
+    // Call comptroller to (try to) enable borrowing against DAI + USDC assets.
+    _enterMarkets();
   }
 
   function deposit() external {
@@ -906,6 +922,48 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
         address(_CUSDC),
         string(
           abi.encodePacked("Compound cUSDC contract reverted on mint: ", data)
+        )
+      );
+    }
+  }
+
+  function _enterMarkets() internal {
+    address[] memory marketsToEnter = new address[](2);
+    marketsToEnter[0] = address(_CDAI);
+    marketsToEnter[1] = address(_CUSDC);
+
+    // Attempt to mint the USDC balance on the cUSDC contract.
+    (bool ok, bytes memory data) = address(_COMPTROLLER).call(abi.encodeWithSelector(
+      _COMPTROLLER.enterMarkets.selector, marketsToEnter
+    ));
+
+    // Log an external error if something went wrong with the attempt.
+    if (ok) {
+      uint256[] memory compoundErrors = abi.decode(data, (uint256[]));
+      for (uint256 i = 0; i < compoundErrors.length; i++) {
+        uint256 compoundError = compoundErrors[i];
+        if (compoundError != _COMPOUND_SUCCESS) {
+          emit ExternalError(
+            address(_COMPTROLLER),
+            string(
+              abi.encodePacked(
+                "Compound comptroller contract returned error code ",
+                uint8((compoundError / 10) + 48),
+                uint8((compoundError % 10) + 48),
+                " while attempting to enter a market."
+              )
+            )
+          );
+        }
+      }
+    } else {
+      emit ExternalError(
+        address(_CUSDC),
+        string(
+          abi.encodePacked(
+            "Compound comptroller contract reverted on enterMarkets: ",
+            data
+          )
         )
       );
     }
