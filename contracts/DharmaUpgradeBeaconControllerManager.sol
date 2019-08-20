@@ -66,6 +66,10 @@ contract DharmaUpgradeBeaconControllerManager is Ownable {
   }
   mapping(address => mapping (address => AdharmaContingency)) private _adharmaContingency;
 
+  // Track the last heartbeat timestamp as well as the current heartbeat address
+  uint256 private _lastHeartbeat;
+  address private _heartbeater;
+
   /**
    * @notice In the constructor, set the initial owner of this contract and the
    * initial minimum timelock interval values.
@@ -84,6 +88,10 @@ contract DharmaUpgradeBeaconControllerManager is Ownable {
     // Deploy the Adharma Smart Wallet implementation in case of emergencies.
     _adharmaImplementation = address(new AdharmaSmartWalletImplementation());
     _adharmaContingencyArmed = false;
+
+    // Set the owner as the initial heartbeater.
+    _heartbeater = owner;
+    _lastHeartbeat = now;
   }
 
   /**
@@ -238,12 +246,32 @@ contract DharmaUpgradeBeaconControllerManager is Ownable {
   }
 
   /**
+   * @notice Send a new heartbeat.
+   */
+  function heartbeat() public {
+    require(msg.sender == _heartbeater, "Must be called from the heartbeater.");
+    _lastHeartbeat = now;
+  }
+
+  /**
+   * @notice Set a new heartbeater.
+   */
+  function newHeartbeater(address heartbeater) public onlyOwner {
+    _heartbeater = heartbeater;
+  }
+
+  /**
    * @notice Arm the Adharma Contingency upgrade. This is required as an extra
    * safeguard against accidentally triggering the Adharma Contingency.
    */
-  function armAdharmaContingency(
-    bool armed
-  ) public onlyOwner {
+  function armAdharmaContingency(bool armed) public {
+    // Determine if 90 days have passed since the last heartbeat.
+    (bool expired, ) = heartbeatStatus();
+    require(
+      isOwner() || expired,
+      "only callable by the owner or after 90 days without a heartbeat."
+    );
+
     // Arm (or disarm) the Adharma Contingency.
     _adharmaContingencyArmed = armed;
   }
@@ -251,12 +279,20 @@ contract DharmaUpgradeBeaconControllerManager is Ownable {
   /**
    * @notice Trigger the Adharma Contingency upgrade. This requires that the
    * owner first call `armAdharmaContingency` and set `armed` to `true`. This is
-   * only to be invoked in cases of a time-sensitive emergency.
+   * only to be invoked in cases of a time-sensitive emergency, or if the owner
+   * has become inactive for over 90 days.
    */
   function activateAdharmaContingency(
     address controller,
     address beacon
-  ) public onlyOwner {
+  ) public {
+    // Determine if 90 days have passed since the last heartbeat.
+    (bool expired, ) = heartbeatStatus();
+    require(
+      isOwner() || expired,
+      "only callable by the owner or after 90 days without a heartbeat."
+    );
+
     // Ensure that the Adharma Contingency has been armed.
     require(
       _adharmaContingencyArmed,
@@ -381,6 +417,15 @@ contract DharmaUpgradeBeaconControllerManager is Ownable {
    */
   function getTimelockInterval(bytes4 functionSelector) public view returns (uint256) {
     return _timelockIntervals[functionSelector];
+  }
+
+  /**
+   * @notice Determine if the deadman's switch has expired and the expiration
+   * time (90 days from the last heartbeat).
+   */
+  function heartbeatStatus() public view returns (bool expired, uint256 expirationTime) {
+    expirationTime = _lastHeartbeat + 90 days;
+    expired = now > expirationTime;
   }
 
   /**
