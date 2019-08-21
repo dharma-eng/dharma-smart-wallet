@@ -424,9 +424,9 @@ module.exports = {test: async function (provider, testingContext) {
     gasPrice: 1
   })
 
-  // submit the initial create2 deployment transaction
+  // submit the initial create2 deployment transaction if needed
   console.log('submitting initial create2 contract deployment transaction...')
-  await web3.eth.sendSignedTransaction(keylessCreate2DeploymentTransaction);
+  await web3.eth.sendSignedTransaction(keylessCreate2DeploymentTransaction).catch(error => {console.log('skipping...')});
 
   // construct the payload passed to create2 in order to verify correct behavior
   let create2payload = (
