@@ -41,6 +41,13 @@ interface CTokenInterface {
 }
 
 
+interface CEtherInterface {
+  function mint() external payable;
+  
+  function redeemUnderlying(uint256 redeemAmount) external returns (uint256 err);
+}
+
+
 interface USDCV1Interface {
   function isBlacklisted(address _account) external view returns (bool);
   
@@ -79,7 +86,7 @@ interface DharmaSmartWalletImplementationV1Interface {
     ETHWithdrawal,
     DAIBorrow,
     USDCBorrow,
-    ETHBorrow,
+    // ETHBorrow, // Note: this is not implemented - ETH is just for collateral
     Cancel
   }
 
@@ -95,7 +102,9 @@ interface DharmaSmartWalletImplementationV1Interface {
     bytes returnData;
   }
 
-  function initialize(address dharmaKey) external;
+  function () external payable;
+
+  function initialize(address dharmaKey) external payable;
 
   function repayAndDeposit() external;
 
@@ -129,6 +138,15 @@ interface DharmaSmartWalletImplementationV1Interface {
   function withdrawUSDC(
     uint256 amount,
     address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata dharmaKeySignature,
+    bytes calldata dharmaSecondaryKeySignature
+  ) external returns (bool ok);
+
+  function withdrawEther(
+    uint256 amount,
+    address payable recipient,
     uint256 nonce,
     uint256 minimumActionGas,
     bytes calldata dharmaKeySignature,
@@ -208,6 +226,19 @@ interface DharmaSmartWalletImplementationV1Interface {
   ) external view returns (bytes32 actionID);
 
   function getUSDCBorrowActionID(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID);
+
+  function getNextEtherWithdrawalActionID(
+    uint256 amount,
+    address recipient,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID);
+
+  function getEtherWithdrawalActionID(
     uint256 amount,
     address recipient,
     uint256 nonce,
@@ -301,6 +332,10 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     0x39AA39c021dfbaE8faC545936693aC917d5E7563 // mainnet
   );
 
+  CEtherInterface internal constant _CETH = CEtherInterface(
+    0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5 // mainnet
+  );
+
   IERC20 internal constant _DAI = IERC20(
     0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359 // mainnet
   );
@@ -316,7 +351,20 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
   // Compound returns a value of 0 to indicate success, or lack of an error.
   uint256 internal constant _COMPOUND_SUCCESS = 0;
 
-  function initialize(address dharmaKey) external {
+  // Automatically deposit ETH if enough gas is supplied to fallback function.
+  // TODO: determine the appropriate value to use!
+  uint256 internal constant _AUTOMATIC_ETH_DEPOSIT_GAS = 100000;
+
+  function () external payable {
+    if (
+      gasleft() > _AUTOMATIC_ETH_DEPOSIT_GAS &&
+      msg.sender != address(_CETH)
+    ) {
+      _depositEtherOnCompound();
+    }
+  }
+
+  function initialize(address dharmaKey) external payable {
     // Ensure that this function is only callable during contract construction.
     assembly { if extcodesize(address) { revert(0, 0) } }
 
@@ -344,7 +392,10 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
       _depositUSDCOnCompound(usdcBalance);
     }
 
-    // Call comptroller to (try to) enable borrowing against DAI + USDC assets.
+    // Try to deposit any Ether balance on Compound.
+    _depositEtherOnCompound();
+
+    // Call comptroller to (try to) enable borrowing against DAI + USDC + ETH.
     _enterMarkets();
   }
 
@@ -385,6 +436,9 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
         _depositUSDCOnCompound(remainingUsdc);
       }
     }
+
+    // Deposit any Ether balance on this contract.
+    _depositEtherOnCompound();
   }
 
   function borrowDai(
@@ -438,6 +492,63 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     if (_borrowDaiFromCompound(amount)) {
       // at this point dai transfer *should* never fail - wrap it just in case.
       require(_DAI.transfer(recipient, amount));
+      success = true;
+    }
+  }
+
+  function withdrawEther(
+    uint256 amount,
+    address payable recipient,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata dharmaKeySignature,
+    bytes calldata dharmaSecondaryKeySignature
+  ) external returns (bool ok) {
+    // Do not assign the actionID, since ExternalError does not log it.
+    _validateCustomActionAndIncrementNonce(
+      ActionType.ETHWithdrawal,
+      amount,
+      recipient,
+      nonce,
+      minimumActionGas,
+      dharmaKeySignature,
+      dharmaSecondaryKeySignature
+    );
+
+    // Set the self-call context so we can call _withdrawEtherAtomic.
+    _selfCallContext = this.withdrawEther.selector;
+
+    // Make the atomic self-call - if redeemUnderlying fails on cDAI, it will
+    // succeed but nothing will happen except firing an ExternalError event. If
+    // the second part of the self-call (the Dai transfer) fails, it will revert
+    // and roll back the first part of the call, and we'll fire an ExternalError
+    // event after returning from the failed call.
+    bytes memory returnData;
+    (ok, returnData) = address(this).call(abi.encodeWithSelector(
+      this._withdrawEtherAtomic.selector, amount, recipient
+    ));
+    if (!ok) {
+      emit ExternalError(address(this), "Ether transfer was unsuccessful.");
+    } else {
+      // Ensure that ok == false in the event the withdrawal failed.
+      ok = abi.decode(returnData, (bool));
+    }
+
+    // Clear the self-call context.
+    delete _selfCallContext;
+  }
+
+  function _withdrawEtherAtomic(
+    uint256 amount,
+    address payable recipient
+  ) external returns (bool success) {
+    require(
+      msg.sender == address(this) &&
+      _selfCallContext == this.withdrawEther.selector,
+      "External accounts or unapproved internal functions cannot call this."
+    );
+    if (_withdrawEtherFromCompound(amount)) {
+      recipient.transfer(amount);
       success = true;
     }
   }
@@ -787,6 +898,29 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     );
   }
 
+  function getNextEtherWithdrawalActionID(
+    uint256 amount,
+    address recipient,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID) {
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getCustomActionID(
+      ActionType.ETHWithdrawal, amount, recipient, _nonce, minimumActionGas
+    );
+  }
+
+  function getEtherWithdrawalActionID(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID) {
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getCustomActionID(
+      ActionType.ETHWithdrawal, amount, recipient, nonce, minimumActionGas
+    );
+  }
+
   function getNextDaiBorrowActionID(
     uint256 amount,
     address recipient,
@@ -1128,6 +1262,45 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     }
   }
 
+  function _withdrawEtherFromCompound(
+    uint256 etherToWithdraw
+  ) internal returns (bool success) {
+    // Attempt to mint the Dai balance on the cEther contract.
+    (bool ok, bytes memory data) = address(_CETH).call(abi.encodeWithSelector(
+      _CETH.redeemUnderlying.selector, etherToWithdraw
+    ));
+
+    // Log an external error if something went wrong with the attempt.
+    if (ok) {
+      uint256 compoundError = abi.decode(data, (uint256));
+      if (compoundError != _COMPOUND_SUCCESS) {
+        emit ExternalError(
+          address(_CETH),
+          string(
+            abi.encodePacked(
+              "Compound cEther contract returned error code ",
+              uint8((compoundError / 10) + 48),
+              uint8((compoundError % 10) + 48),
+              " while attempting to redeem Ether."
+            )
+          )
+        );
+      } else {
+        success = true;
+      }
+    } else {
+      emit ExternalError(
+        address(_CETH),
+        string(
+          abi.encodePacked(
+            "Compound cEther contract reverted on redeemUnderlying: ",
+            data
+          )
+        )
+      );
+    }
+  }
+
   function _withdrawDaiFromCompound(
     uint256 daiToWithdraw
   ) internal returns (bool success) {
@@ -1254,6 +1427,26 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     }
   }
 
+  function _depositEtherOnCompound() internal {
+    uint256 balance = address(this).balance;
+    if (balance > 0) {
+      // Attempt to mint the full ETH balance on the cEther contract.
+      (bool ok, bytes memory data) = address(_CETH).call.value(balance)(
+        abi.encodeWithSelector(_CETH.mint.selector)
+      );
+
+      // Log an external error if something went wrong with the attempt.
+      if (!ok) {
+        emit ExternalError(
+          address(_CETH),
+          string(
+            abi.encodePacked("Compound cEther contract reverted on mint: ", data)
+          )
+        );
+      }
+    }
+  }
+
   function _borrowUSDCFromCompound(
     uint256 usdcToBorrow
   ) internal returns (bool success) {
@@ -1357,9 +1550,10 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
   }
 
   function _enterMarkets() internal {
-    address[] memory marketsToEnter = new address[](2);
+    address[] memory marketsToEnter = new address[](3);
     marketsToEnter[0] = address(_CDAI);
     marketsToEnter[1] = address(_CUSDC);
+    marketsToEnter[1] = address(_CETH);
 
     // Attempt to mint the USDC balance on the cUSDC contract.
     (bool ok, bytes memory data) = address(_COMPTROLLER).call(abi.encodeWithSelector(
@@ -1387,7 +1581,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
       }
     } else {
       emit ExternalError(
-        address(_CUSDC),
+        address(_COMPTROLLER),
         string(
           abi.encodePacked(
             "Compound comptroller contract reverted on enterMarkets: ",

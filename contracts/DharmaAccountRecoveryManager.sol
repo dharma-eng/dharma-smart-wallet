@@ -100,7 +100,7 @@ contract DharmaAccountRecoveryManager is Ownable {
    * @param wallet Address of the smart wallet to recover a key on.
    * @param newDharmaKey Address of the new signing key for the user.
    */
-  function recover(address wallet, address newDharmaKey) public onlyOwner {
+  function recover(address payable wallet, address newDharmaKey) public onlyOwner {
     // Ensure that the timelock has been set and is completed.
     _enforceTimelock(this.recover.selector, abi.encode(wallet, newDharmaKey));
     
