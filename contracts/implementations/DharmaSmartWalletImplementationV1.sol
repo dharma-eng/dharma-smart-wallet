@@ -24,6 +24,10 @@ interface CTokenInterface {
   function mint(uint256 mintAmount) external returns (uint256 err);
   
   function redeemUnderlying(uint256 redeemAmount) external returns (uint256 err);
+
+  function borrow(uint256 borrowAmount) external returns (uint256 err);
+
+  function repayBorrow(uint256 borrowAmount) external returns (uint256 err);
   
   function getAccountSnapshot(address account) external view returns (
     uint256 err,
@@ -70,7 +74,9 @@ interface DharmaSmartWalletImplementationV1Interface {
     DAIWithdrawal,
     USDCWithdrawal,
     ETHWithdrawal,
-    AccountRecovery,
+    DAIBorrow,
+    USDCBorrow,
+    ETHBorrow,
     Cancel
   }
 
@@ -328,6 +334,56 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     }
   }
 
+  function borrowDai(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata dharmaKeySignature,
+    bytes calldata dharmaSecondaryKeySignature
+  ) external returns (bool ok) {
+    // Do not assign the actionID, since ExternalError does not log it.
+    _validateCustomActionAndIncrementNonce(
+      ActionType.DAIBorrow,
+      amount,
+      recipient,
+      nonce,
+      minimumActionGas,
+      dharmaKeySignature,
+      dharmaSecondaryKeySignature
+    );
+
+    // Set the self-call context so we can call _borrowDaiAtomic.
+    _selfCallContext = this.borrowDai.selector;
+
+    // Make the atomic self-call - if borrow fails on cDAI, it will succeed but
+    // nothing will happen except firing an ExternalError event. If the second
+    // part of the self-call (the Dai transfer) fails, it will revert and roll
+    // back the first part of the call, and we'll fire an ExternalError event
+    // after returning from the failed call.
+    (ok, ) = address(this).call(abi.encodeWithSelector(
+      this._borrowDaiAtomic.selector, amount, recipient
+    ));
+    if (!ok) {
+      emit ExternalError(address(_DAI), "DAI contract reverted on transfer.");
+    }
+
+    // Clear the self-call context.
+    delete _selfCallContext;
+  }
+
+  function _borrowDaiAtomic(uint256 amount, address recipient) external {
+    require(
+      msg.sender == address(this) &&
+      _selfCallContext == this.borrowDai.selector,
+      "External accounts or unapproved internal functions cannot call this."
+    );
+    if (_borrowDaiFromCompound(amount)) {
+      // at this point dai transfer *should* never fail - wrap it just in case.
+      require(_DAI.transfer(recipient, amount));
+    }
+  }
+
   function withdrawDai(
     uint256 amount,
     address recipient,
@@ -337,7 +393,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     bytes calldata dharmaSecondaryKeySignature
   ) external returns (bool ok) {
     // Do not assign the actionID, since ExternalError does not log it.
-    _validateWithdrawalActionAndIncrementNonce(
+    _validateCustomActionAndIncrementNonce(
       ActionType.DAIWithdrawal,
       amount,
       recipient,
@@ -378,6 +434,72 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     }
   }
 
+  function borrowUSDC(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata dharmaKeySignature,
+    bytes calldata dharmaSecondaryKeySignature
+  ) external returns (bool ok) {
+    // Do not assign the actionID, since ExternalError does not log it.
+    _validateCustomActionAndIncrementNonce(
+      ActionType.USDCBorrow,
+      amount,
+      recipient,
+      nonce,
+      minimumActionGas,
+      dharmaKeySignature,
+      dharmaSecondaryKeySignature
+    );
+
+    // Set the self-call context so we can call _borrowUSDCAtomic.
+    _selfCallContext = this.borrowUSDC.selector;
+
+    // Make the atomic self-call - if borrow fails on cUSDC, it will succeed but
+    // nothing will happen except firing an ExternalError event. If the second
+    // part of the self-call (USDC transfer) fails, it will revert and roll back
+    // the first part of the call, and we'll fire an ExternalError event after
+    // returning from the failed call.
+    (ok, ) = address(this).call(abi.encodeWithSelector(
+      this._borrowUSDCAtomic.selector, amount, recipient
+    ));
+    if (!ok) {
+      // find out *why* USDC transfer reverted (it doesn't give revert reasons).
+      if (_USDC_NAUGHTY.isBlacklisted(address(this))) {
+        emit ExternalError(
+          address(_USDC),
+          "transfer failed - USDC has blacklisted this user."
+        );
+      } else if (_USDC_NAUGHTY.paused()) {
+        emit ExternalError(
+          address(_USDC),
+          "transfer failed - USDC contract is currently paused."
+        );
+      } else {
+        emit ExternalError(
+          address(_USDC),
+          "USDC contract reverted on transfer."
+        );
+      }
+    }
+
+    // Clear the self-call context.
+    delete _selfCallContext;
+  }
+
+  function _borrowUSDCAtomic(uint256 amount, address recipient) external {
+    require(
+      msg.sender == address(this) &&
+      _selfCallContext == this.borrowUSDC.selector,
+      "External accounts or unapproved internal functions cannot call this."
+    );
+    if (_borrowUSDCFromCompound(amount)) {
+      // ensure that the USDC transfer does not fail.
+      require(_USDC.transfer(recipient, amount));
+    }
+  }
+
   function withdrawUSDC(
     uint256 amount,
     address recipient,
@@ -387,7 +509,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     bytes calldata dharmaSecondaryKeySignature
   ) external returns (bool ok) {
     // Do not assign the actionID, since ExternalError does not log it.
-    _validateWithdrawalActionAndIncrementNonce(
+    _validateCustomActionAndIncrementNonce(
       ActionType.USDCWithdrawal,
       amount,
       recipient,
@@ -793,6 +915,45 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     }
   }
 
+  function _borrowDaiFromCompound(
+    uint256 daiToBorrow
+  ) internal returns (bool success) {
+    // Attempt to borrow the Dai amount from the cDAI contract.
+    (bool ok, bytes memory data) = address(_CDAI).call(abi.encodeWithSelector(
+      _CDAI.borrow.selector, daiToBorrow
+    ));
+
+    // Log an external error if something went wrong with the attempt.
+    if (ok) {
+      uint256 compoundError = abi.decode(data, (uint256));
+      if (compoundError != _COMPOUND_SUCCESS) {
+        emit ExternalError(
+          address(_CDAI),
+          string(
+            abi.encodePacked(
+              "Compound cDAI contract returned error code ",
+              uint8((compoundError / 10) + 48),
+              uint8((compoundError % 10) + 48),
+              " while attempting to borrow Dai."
+            )
+          )
+        );
+      } else {
+        success = true;
+      }
+    } else {
+      emit ExternalError(
+        address(_CDAI),
+        string(
+          abi.encodePacked(
+            "Compound cDAI contract reverted on borrow: ",
+            data
+          )
+        )
+      );
+    }
+  }
+
   function _withdrawDaiFromCompound(
     uint256 daiToWithdraw
   ) internal returns (bool success) {
@@ -825,6 +986,45 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
         string(
           abi.encodePacked(
             "Compound cDAI contract reverted on redeemUnderlying: ",
+            data
+          )
+        )
+      );
+    }
+  }
+
+  function _borrowUSDCFromCompound(
+    uint256 usdcToBorrow
+  ) internal returns (bool success) {
+    // Attempt to borrow the USDC amount from the cUSDC contract.
+    (bool ok, bytes memory data) = address(_CUSDC).call(abi.encodeWithSelector(
+      _CUSDC.borrow.selector, usdcToBorrow
+    ));
+
+    // Log an external error if something went wrong with the attempt.
+    if (ok) {
+      uint256 compoundError = abi.decode(data, (uint256));
+      if (compoundError != _COMPOUND_SUCCESS) {
+        emit ExternalError(
+          address(_CUSDC),
+          string(
+            abi.encodePacked(
+              "Compound cUSDC contract returned error code ",
+              uint8((compoundError / 10) + 48),
+              uint8((compoundError % 10) + 48),
+              " while attempting to borrow USDC."
+            )
+          )
+        );
+      } else {
+        success = true;
+      }
+    } else {
+      emit ExternalError(
+        address(_CUSDC),
+        string(
+          abi.encodePacked(
+            "Compound cUSDC contract reverted on borrow: ",
             data
           )
         )
@@ -969,7 +1169,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     }
   }
 
-  function _validateWithdrawalActionAndIncrementNonce(
+  function _validateCustomActionAndIncrementNonce(
     ActionType actionType,
     uint256 amount,
     address recipient,
