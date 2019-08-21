@@ -1,5 +1,6 @@
 pragma solidity 0.5.11;
 
+
 /**
  * @title AdharmaSmartWalletImplementation
  * @author 0age
@@ -13,6 +14,9 @@ pragma solidity 0.5.11;
 contract AdharmaSmartWalletImplementation {
   // The user's key is still held in storage slot zero.
   address private _key;
+
+  // the smart wallet can still receive funds, though it is inadvisable.
+  function () external payable {}
 
   // Keep the initializer function on the contract in case a smart wallet has
   // not yet been deployed but the account still contains user funds.
@@ -37,7 +41,4 @@ contract AdharmaSmartWalletImplementation {
     (ok, returnData) = to.call.value(amount)(data);
     require(ok, string(returnData));
   }
-
-  // the smart wallet can still receive funds, though it is inadvisable.
-  function () external payable {}
 }

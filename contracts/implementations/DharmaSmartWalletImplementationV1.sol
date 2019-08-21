@@ -331,10 +331,8 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
       // Get the current Dai balance on this contract.
       uint256 daiBalance = _DAI.balanceOf(address(this));
 
-      // If there is any dai balance, try to deposit it on Compound.
-      if (daiBalance > 0) {
-        _depositDaiOnCompound(daiBalance);
-      }
+      // Try to deposit any dai balance on Compound.
+      _depositDaiOnCompound(daiBalance);
     }
 
     // Approve the cUSDC contract to transfer USDC on behalf of this contract.
@@ -342,10 +340,8 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
       // Get the current USDC balance on this contract.
       uint256 usdcBalance = _USDC.balanceOf(address(this));
 
-      // If there is any USDC balance, try to deposit it on Compound.
-      if (usdcBalance > 0) {
-        _depositUSDCOnCompound(usdcBalance);
-      }
+      // Try to deposit any USDC balance on Compound.
+      _depositUSDCOnCompound(usdcBalance);
     }
 
     // Call comptroller to (try to) enable borrowing against DAI + USDC assets.
@@ -361,9 +357,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
       uint256 remainingDai = _repayDaiOnCompound(daiBalance);
 
       // Then deposit any remaining Dai.
-      if (remainingDai > 0) {
-        _depositDaiOnCompound(remainingDai);
-      }
+      _depositDaiOnCompound(remainingDai);
     }
 
     // Get the current USDC balance on this contract.
@@ -379,20 +373,16 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
           // First use funds to try to repay Dai borrow balance.
           uint256 remainingUsdc = _repayUSDCOnCompound(usdcBalance);
 
-          // Then deposit any remaining Dai.
-          if (remainingUsdc > 0) {
-            _depositUSDCOnCompound(remainingUsdc);
-          }
+          // Then deposit any remaining USDC.
+          _depositUSDCOnCompound(remainingUsdc);
         }
       // otherwise, go ahead and try the repayment and/or deposit.
       } else {
         // First use funds to try to repay Dai borrow balance.
         uint256 remainingUsdc = _repayUSDCOnCompound(usdcBalance);
 
-        // Then deposit any remaining Dai.
-        if (remainingUsdc > 0) {
-          _depositUSDCOnCompound(remainingUsdc);
-        }
+        // Then deposit any remaining USDC.
+        _depositUSDCOnCompound(remainingUsdc);
       }
     }
   }
@@ -424,18 +414,22 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     // part of the self-call (the Dai transfer) fails, it will revert and roll
     // back the first part of the call, and we'll fire an ExternalError event
     // after returning from the failed call.
-    (ok, ) = address(this).call(abi.encodeWithSelector(
+    bytes memory returnData;
+    (ok, returnData) = address(this).call(abi.encodeWithSelector(
       this._borrowDaiAtomic.selector, amount, recipient
     ));
     if (!ok) {
       emit ExternalError(address(_DAI), "DAI contract reverted on transfer.");
+    } else {
+      // Ensure that ok == false in the event the borrow failed.
+      ok = abi.decode(returnData, (bool));
     }
 
     // Clear the self-call context.
     delete _selfCallContext;
   }
 
-  function _borrowDaiAtomic(uint256 amount, address recipient) external {
+  function _borrowDaiAtomic(uint256 amount, address recipient) external returns (bool success) {
     require(
       msg.sender == address(this) &&
       _selfCallContext == this.borrowDai.selector,
@@ -444,6 +438,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     if (_borrowDaiFromCompound(amount)) {
       // at this point dai transfer *should* never fail - wrap it just in case.
       require(_DAI.transfer(recipient, amount));
+      success = true;
     }
   }
 
@@ -474,18 +469,22 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     // the second part of the self-call (the Dai transfer) fails, it will revert
     // and roll back the first part of the call, and we'll fire an ExternalError
     // event after returning from the failed call.
-    (ok, ) = address(this).call(abi.encodeWithSelector(
+    bytes memory returnData;
+    (ok, returnData) = address(this).call(abi.encodeWithSelector(
       this._withdrawDaiAtomic.selector, amount, recipient
     ));
     if (!ok) {
       emit ExternalError(address(_DAI), "DAI contract reverted on transfer.");
+    } else {
+      // Ensure that ok == false in the event the withdrawal failed.
+      ok = abi.decode(returnData, (bool));
     }
 
     // Clear the self-call context.
     delete _selfCallContext;
   }
 
-  function _withdrawDaiAtomic(uint256 amount, address recipient) external {
+  function _withdrawDaiAtomic(uint256 amount, address recipient) external returns (bool success) {
     require(
       msg.sender == address(this) &&
       _selfCallContext == this.withdrawDai.selector,
@@ -494,6 +493,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     if (_withdrawDaiFromCompound(amount)) {
       // at this point dai transfer *should* never fail - wrap it just in case.
       require(_DAI.transfer(recipient, amount));
+      success = true;
     }
   }
 
@@ -524,7 +524,8 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     // part of the self-call (USDC transfer) fails, it will revert and roll back
     // the first part of the call, and we'll fire an ExternalError event after
     // returning from the failed call.
-    (ok, ) = address(this).call(abi.encodeWithSelector(
+    bytes memory returnData;
+    (ok, returnData) = address(this).call(abi.encodeWithSelector(
       this._borrowUSDCAtomic.selector, amount, recipient
     ));
     if (!ok) {
@@ -545,13 +546,16 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
           "USDC contract reverted on transfer."
         );
       }
+    } else {
+      // Ensure that ok == false in the event the borrow failed.
+      ok = abi.decode(returnData, (bool));
     }
 
     // Clear the self-call context.
     delete _selfCallContext;
   }
 
-  function _borrowUSDCAtomic(uint256 amount, address recipient) external {
+  function _borrowUSDCAtomic(uint256 amount, address recipient) external returns (bool success) {
     require(
       msg.sender == address(this) &&
       _selfCallContext == this.borrowUSDC.selector,
@@ -560,6 +564,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     if (_borrowUSDCFromCompound(amount)) {
       // ensure that the USDC transfer does not fail.
       require(_USDC.transfer(recipient, amount));
+      success = true;
     }
   }
 
@@ -590,7 +595,8 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     // the second part of the self-call (USDC transfer) fails, it will revert
     // and roll back the first part of the call, and we'll fire an ExternalError
     // event after returning from the failed call.
-    (ok, ) = address(this).call(abi.encodeWithSelector(
+    bytes memory returnData;
+    (ok, returnData) = address(this).call(abi.encodeWithSelector(
       this._withdrawUSDCAtomic.selector, amount, recipient
     ));
     if (!ok) {
@@ -611,13 +617,16 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
           "USDC contract reverted on transfer."
         );
       }
+    } else {
+      // Ensure that ok == false in the event the withdrawal failed.
+      ok = abi.decode(returnData, (bool));
     }
 
     // Clear the self-call context.
     delete _selfCallContext;
   }
 
-  function _withdrawUSDCAtomic(uint256 amount, address recipient) external {
+  function _withdrawUSDCAtomic(uint256 amount, address recipient) external returns (bool success) {
     require(
       msg.sender == address(this) &&
       _selfCallContext == this.withdrawUSDC.selector,
@@ -626,6 +635,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     if (_withdrawUSDCFromCompound(amount)) {
       // ensure that the USDC transfer does not fail.
       require(_USDC.transfer(recipient, amount));
+      success = true;
     }
   }
 
@@ -1046,34 +1056,36 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
   }
 
   function _depositDaiOnCompound(uint256 daiBalance) internal {
-    // Attempt to mint the Dai balance on the cDAI contract.
-    (bool ok, bytes memory data) = address(_CDAI).call(abi.encodeWithSelector(
-      _CDAI.mint.selector, daiBalance
-    ));
+    if (daiBalance > 0) {
+      // Attempt to mint the Dai balance on the cDAI contract.
+      (bool ok, bytes memory data) = address(_CDAI).call(abi.encodeWithSelector(
+        _CDAI.mint.selector, daiBalance
+      ));
 
-    // Log an external error if something went wrong with the attempt.
-    if (ok) {
-      uint256 compoundError = abi.decode(data, (uint256));
-      if (compoundError != _COMPOUND_SUCCESS) {
+      // Log an external error if something went wrong with the attempt.
+      if (ok) {
+        uint256 compoundError = abi.decode(data, (uint256));
+        if (compoundError != _COMPOUND_SUCCESS) {
+          emit ExternalError(
+            address(_CDAI),
+            string(
+              abi.encodePacked(
+                "Compound cDAI contract returned error code ",
+                uint8((compoundError / 10) + 48),
+                uint8((compoundError % 10) + 48),
+                " while attempting to deposit dai."
+              )
+            )
+          );
+        }
+      } else {
         emit ExternalError(
           address(_CDAI),
           string(
-            abi.encodePacked(
-              "Compound cDAI contract returned error code ",
-              uint8((compoundError / 10) + 48),
-              uint8((compoundError % 10) + 48),
-              " while attempting to deposit dai."
-            )
+            abi.encodePacked("Compound cDAI contract reverted on mint: ", data)
           )
         );
       }
-    } else {
-      emit ExternalError(
-        address(_CDAI),
-        string(
-          abi.encodePacked("Compound cDAI contract reverted on mint: ", data)
-        )
-      );
     }
   }
 
@@ -1209,34 +1221,36 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
   }
 
   function _depositUSDCOnCompound(uint256 usdcBalance) internal {
-    // Attempt to mint the USDC balance on the cUSDC contract.
-    (bool ok, bytes memory data) = address(_CUSDC).call(abi.encodeWithSelector(
-      _CUSDC.mint.selector, usdcBalance
-    ));
+    if (usdcBalance > 0) {
+      // Attempt to mint the USDC balance on the cUSDC contract.
+      (bool ok, bytes memory data) = address(_CUSDC).call(abi.encodeWithSelector(
+        _CUSDC.mint.selector, usdcBalance
+      ));
 
-    // Log an external error if something went wrong with the attempt.
-    if (ok) {
-      uint256 compoundError = abi.decode(data, (uint256));
-      if (compoundError != _COMPOUND_SUCCESS) {
+      // Log an external error if something went wrong with the attempt.
+      if (ok) {
+        uint256 compoundError = abi.decode(data, (uint256));
+        if (compoundError != _COMPOUND_SUCCESS) {
+          emit ExternalError(
+            address(_CUSDC),
+            string(
+              abi.encodePacked(
+                "Compound cUSDC contract returned error code ",
+                uint8((compoundError / 10) + 48),
+                uint8((compoundError % 10) + 48),
+                " while attempting to deposit USDC."
+              )
+            )
+          );
+        }
+      } else {
         emit ExternalError(
           address(_CUSDC),
           string(
-            abi.encodePacked(
-              "Compound cUSDC contract returned error code ",
-              uint8((compoundError / 10) + 48),
-              uint8((compoundError % 10) + 48),
-              " while attempting to deposit USDC."
-            )
+            abi.encodePacked("Compound cUSDC contract reverted on mint: ", data)
           )
         );
       }
-    } else {
-      emit ExternalError(
-        address(_CUSDC),
-        string(
-          abi.encodePacked("Compound cUSDC contract reverted on mint: ", data)
-        )
-      );
     }
   }
 

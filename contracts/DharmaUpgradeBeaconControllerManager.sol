@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./DharmaUpgradeBeaconController.sol";
 import "./implementations/AdharmaSmartWalletImplementation.sol";
 
+
 /**
  * @title DharmaUpgradeBeaconControllerManager
  * @author 0age
@@ -64,6 +65,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable {
     address lastImplementation;
     uint256 activationTime;
   }
+
   mapping(address => mapping (address => AdharmaContingency)) private _adharmaContingency;
 
   // Track the last heartbeat timestamp as well as the current heartbeat address
