@@ -28,6 +28,9 @@ interface CTokenInterface {
   function borrow(uint256 borrowAmount) external returns (uint256 err);
 
   function repayBorrow(uint256 borrowAmount) external returns (uint256 err);
+
+  // NOTE: we could use borrowBalanceStored if interest has already been accrued
+  function borrowBalanceCurrent(address account) external returns (uint256 err);
   
   function getAccountSnapshot(address account) external view returns (
     uint256 err,
@@ -94,7 +97,7 @@ interface DharmaSmartWalletImplementationV1Interface {
 
   function initialize(address dharmaKey) external;
 
-  function deposit() external;
+  function repayAndDeposit() external;
 
   function withdrawDai(
     uint256 amount,
@@ -305,14 +308,18 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     _enterMarkets();
   }
 
-  function deposit() external {
+  function repayAndDeposit() external {
     // Get the current Dai balance on this contract.
     uint256 daiBalance = _DAI.balanceOf(address(this));
 
-    // try to deposit any Dai on Compound. (Full approval has already been set.)
     if (daiBalance > 0) {
-      // Once borrows are enabled, first use funds to repay Dai borrow balance.
-      _depositDaiOnCompound(daiBalance);
+      // First use funds to try to repay Dai borrow balance.
+      uint256 remainingDai = _repayDaiOnCompound(daiBalance);
+
+      // Then deposit any remaining Dai.
+      if (remainingDai > 0) {
+        _depositDaiOnCompound(remainingDai);
+      }
     }
 
     // Get the current USDC balance on this contract.
@@ -325,11 +332,23 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
       // If allowance is insufficient, try to set it before depositing.
       if (usdcAllowance < usdcBalance) {
         if (_setFullUSDCApproval()) {
-          _depositUSDCOnCompound(usdcBalance);
+          // First use funds to try to repay Dai borrow balance.
+          uint256 remainingUsdc = _repayUSDCOnCompound(usdcBalance);
+
+          // Then deposit any remaining Dai.
+          if (remainingUsdc > 0) {
+            _depositUSDCOnCompound(remainingUsdc);
+          }
         }
-      // otherwise, go ahead and try the deposit.
+      // otherwise, go ahead and try the repayment and/or deposit.
       } else {
-        _depositUSDCOnCompound(usdcBalance);
+        // First use funds to try to repay Dai borrow balance.
+        uint256 remainingUsdc = _repayUSDCOnCompound(usdcBalance);
+
+        // Then deposit any remaining Dai.
+        if (remainingUsdc > 0) {
+          _depositUSDCOnCompound(remainingUsdc);
+        }
       }
     }
   }
@@ -883,6 +902,59 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     // Note: handling the failure on dai approvals is unnecessary.
   }
 
+  function _repayDaiOnCompound(
+    uint256 daiBalance
+  ) internal returns (uint256 remainingDaiBalance) {
+    // TODO: handle errors originating from this call (reverts on MathError).
+    uint256 daiBorrowBalance = _CDAI.borrowBalanceCurrent(address(this));
+
+    // Skip repayment if there is no borrow balance.
+    if (daiBorrowBalance == 0) {
+      return daiBalance;
+    }
+
+    uint256 daiBorrowBalanceToRepay;
+    if (daiBorrowBalance > daiBalance) {
+      daiBorrowBalanceToRepay = daiBalance;
+    } else {
+      daiBorrowBalanceToRepay = daiBorrowBalance;
+    }
+    // Note: SafeMath not needed since daiBalance >= daiBorrowBalanceToRepay
+    remainingDaiBalance = daiBalance - daiBorrowBalanceToRepay;
+
+    // Attempt to repay the Dai balance on the cDAI contract.
+    (bool ok, bytes memory data) = address(_CDAI).call(abi.encodeWithSelector(
+      _CDAI.repayBorrow.selector, daiBalance
+    ));
+
+    // Log an external error if something went wrong with the attempt.
+    if (ok) {
+      uint256 compoundError = abi.decode(data, (uint256));
+      if (compoundError != _COMPOUND_SUCCESS) {
+        emit ExternalError(
+          address(_CDAI),
+          string(
+            abi.encodePacked(
+              "Compound cDAI contract returned error code ",
+              uint8((compoundError / 10) + 48),
+              uint8((compoundError % 10) + 48),
+              " while attempting to repay dai borrow."
+            )
+          )
+        );
+        remainingDaiBalance = daiBalance;
+      }
+    } else {
+      emit ExternalError(
+        address(_CDAI),
+        string(
+          abi.encodePacked("Compound cDAI contract reverted on repay: ", data)
+        )
+      );
+      remainingDaiBalance = daiBalance;
+    }
+  }
+
   function _depositDaiOnCompound(uint256 daiBalance) internal {
     // Attempt to mint the Dai balance on the cDAI contract.
     (bool ok, bytes memory data) = address(_CDAI).call(abi.encodeWithSelector(
@@ -993,6 +1065,91 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     }
   }
 
+  function _repayUSDCOnCompound(
+    uint256 usdcBalance
+  ) internal returns (uint256 remainingUsdcBalance) {
+    // TODO: handle errors originating from this call (reverts on MathError).
+    uint256 usdcBorrowBalance = _CUSDC.borrowBalanceCurrent(address(this));
+
+    // Skip repayment if there is no borrow balance.
+    if (usdcBorrowBalance == 0) {
+      return usdcBalance;
+    }
+
+    uint256 usdcBorrowBalanceToRepay;
+    if (usdcBorrowBalance > usdcBalance) {
+      usdcBorrowBalanceToRepay = usdcBalance;
+    } else {
+      usdcBorrowBalanceToRepay = usdcBorrowBalance;
+    }
+    // Note: SafeMath not needed since usdcBalance >= usdcBorrowBalanceToRepay
+    remainingUsdcBalance = usdcBalance - usdcBorrowBalanceToRepay;
+
+    // Attempt to repay the Dai balance on the cUSDC contract.
+    (bool ok, bytes memory data) = address(_CUSDC).call(abi.encodeWithSelector(
+      _CUSDC.repayBorrow.selector, usdcBorrowBalanceToRepay
+    ));
+
+    // Log an external error if something went wrong with the attempt.
+    if (ok) {
+      uint256 compoundError = abi.decode(data, (uint256));
+      if (compoundError != _COMPOUND_SUCCESS) {
+        emit ExternalError(
+          address(_CUSDC),
+          string(
+            abi.encodePacked(
+              "Compound cUSDC contract returned error code ",
+              uint8((compoundError / 10) + 48),
+              uint8((compoundError % 10) + 48),
+              " while attempting to repay USDC borrow."
+            )
+          )
+        );
+        remainingUsdcBalance = usdcBalance;
+      }
+    } else {
+      emit ExternalError(
+        address(_CUSDC),
+        string(
+          abi.encodePacked("Compound cUSDC contract reverted on repay: ", data)
+        )
+      );
+      remainingUsdcBalance = usdcBalance;
+    }
+  }
+
+  function _depositUSDCOnCompound(uint256 usdcBalance) internal {
+    // Attempt to mint the USDC balance on the cUSDC contract.
+    (bool ok, bytes memory data) = address(_CUSDC).call(abi.encodeWithSelector(
+      _CUSDC.mint.selector, usdcBalance
+    ));
+
+    // Log an external error if something went wrong with the attempt.
+    if (ok) {
+      uint256 compoundError = abi.decode(data, (uint256));
+      if (compoundError != _COMPOUND_SUCCESS) {
+        emit ExternalError(
+          address(_CUSDC),
+          string(
+            abi.encodePacked(
+              "Compound cUSDC contract returned error code ",
+              uint8((compoundError / 10) + 48),
+              uint8((compoundError % 10) + 48),
+              " while attempting to deposit USDC."
+            )
+          )
+        );
+      }
+    } else {
+      emit ExternalError(
+        address(_CUSDC),
+        string(
+          abi.encodePacked("Compound cUSDC contract reverted on mint: ", data)
+        )
+      );
+    }
+  }
+
   function _borrowUSDCFromCompound(
     uint256 usdcToBorrow
   ) internal returns (bool success) {
@@ -1092,38 +1249,6 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
       } else {
         emit ExternalError(address(_USDC), "USDC approval failed.");        
       }
-    }
-  }
-
-  function _depositUSDCOnCompound(uint256 usdcBalance) internal {
-    // Attempt to mint the USDC balance on the cUSDC contract.
-    (bool ok, bytes memory data) = address(_CUSDC).call(abi.encodeWithSelector(
-      _CUSDC.mint.selector, usdcBalance
-    ));
-
-    // Log an external error if something went wrong with the attempt.
-    if (ok) {
-      uint256 compoundError = abi.decode(data, (uint256));
-      if (compoundError != _COMPOUND_SUCCESS) {
-        emit ExternalError(
-          address(_CUSDC),
-          string(
-            abi.encodePacked(
-              "Compound cUSDC contract returned error code ",
-              uint8((compoundError / 10) + 48),
-              uint8((compoundError % 10) + 48),
-              " while attempting to deposit USDC."
-            )
-          )
-        );
-      }
-    } else {
-      emit ExternalError(
-        address(_CUSDC),
-        string(
-          abi.encodePacked("Compound cUSDC contract reverted on mint: ", data)
-        )
-      );
     }
   }
 
