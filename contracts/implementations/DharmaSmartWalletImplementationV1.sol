@@ -99,6 +99,15 @@ interface DharmaSmartWalletImplementationV1Interface {
 
   function repayAndDeposit() external;
 
+  function borrowDai(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata dharmaKeySignature,
+    bytes calldata dharmaSecondaryKeySignature
+  ) external returns (bool ok);
+
   function withdrawDai(
     uint256 amount,
     address recipient,
@@ -108,6 +117,15 @@ interface DharmaSmartWalletImplementationV1Interface {
     bytes calldata dharmaSecondaryKeySignature
   ) external returns (bool ok);
   
+  function borrowUSDC(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata dharmaKeySignature,
+    bytes calldata dharmaSecondaryKeySignature
+  ) external returns (bool ok);
+
   function withdrawUSDC(
     uint256 amount,
     address recipient,
@@ -164,6 +182,32 @@ interface DharmaSmartWalletImplementationV1Interface {
   ) external view returns (bytes32 actionID);
 
   function getUSDCWithdrawalActionID(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID);
+
+  function getNextDaiBorrowActionID(
+    uint256 amount,
+    address recipient,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID);
+
+  function getDaiBorrowActionID(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID);
+
+  function getNextUSDCBorrowActionID(
+    uint256 amount,
+    address recipient,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID);
+
+  function getUSDCBorrowActionID(
     uint256 amount,
     address recipient,
     uint256 nonce,
@@ -729,7 +773,53 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
   ) external view returns (bytes32 actionID) {
     // Determine the actionID - this serves as the signature hash.
     actionID = _getCustomActionID(
-      ActionType.DAIWithdrawal, amount, recipient, nonce, minimumActionGas
+      ActionType.USDCWithdrawal, amount, recipient, nonce, minimumActionGas
+    );
+  }
+
+  function getNextDaiBorrowActionID(
+    uint256 amount,
+    address recipient,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID) {
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getCustomActionID(
+      ActionType.DAIBorrow, amount, recipient, _nonce, minimumActionGas
+    );
+  }
+
+  function getDaiBorrowActionID(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID) {
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getCustomActionID(
+      ActionType.DAIBorrow, amount, recipient, nonce, minimumActionGas
+    );
+  }
+
+  function getNextUSDCBorrowActionID(
+    uint256 amount,
+    address recipient,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID) {
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getCustomActionID(
+      ActionType.USDCBorrow, amount, recipient, _nonce, minimumActionGas
+    );
+  }
+
+  function getUSDCBorrowActionID(
+    uint256 amount,
+    address recipient,
+    uint256 nonce,
+    uint256 minimumActionGas
+  ) external view returns (bytes32 actionID) {
+    // Determine the actionID - this serves as the signature hash.
+    actionID = _getCustomActionID(
+      ActionType.USDCBorrow, amount, recipient, nonce, minimumActionGas
     );
   }
 
