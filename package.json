@@ -21,7 +21,7 @@
     "coverage": "./node_modules/.bin/ganache-cli-coverage --emitFreeLogs true --allowUnlimitedContractSize true --gasLimit 0xfffffffffff --port 8555 2>&1 > ganache-coverage-output.log & echo 'coverage chain started.' && ./node_modules/.bin/solidity-coverage; kill -9 \"$(ps -ax | grep -m1 '[n]ode ./node_modules/.bin/ganache-cli' | awk '{print $1;}')\" && echo 'coverage chain stopped.'",
     "lint": "./node_modules/.bin/solhint 'contracts/**/*.sol'",
     "start": "./node_modules/.bin/ganache-cli --gasLimit 8000000 -i 1234 2>&1 > ganache-output.log & echo 'local chain started.'",
-    "forkStart": "./node_modules/.bin/ganache-cli --port 8545 --gasLimit 8000000 --fork https://mainnet.infura.io/v3/e7faf3dd07254d76859ec8c7c3259d9d@8396520 -u '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe' -u '0x76B03EB651153a81fA1f212f2f59329B4180A46F' -u '0x1680E0ab0823De2C5B2D09847Aed70aA4d8a2f32' 2>&1 > ganache-output.log & echo 'fork chain started on port 8545.'",
+    "forkStart": "./node_modules/.bin/ganache-cli --port 8545 --gasLimit 8000000 --fork https://mainnet.infura.io/v3/e7faf3dd07254d76859ec8c7c3259d9d@8396520 -u '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe' -u '0x76B03EB651153a81fA1f212f2f59329B4180A46F' -u '0x035e742A7E62253C606b9028eeB65178B44F1e7E' 2>&1 > ganache-output.log & echo 'fork chain started on port 8545.'",
     "stop": "kill -9 \"$(ps -ax | grep -m1 '[n]ode ./node_modules/.bin/ganache-cli' | awk '{print $1;}')\" && echo 'local chain stopped.'",
     "test": "./node_modules/.bin/truffle compile && node scripts/test/ci.js"
   }

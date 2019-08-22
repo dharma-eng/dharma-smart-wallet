@@ -14,6 +14,7 @@ const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts
 
 const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
 const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
+const IERC20Artifact = require('../../build/contracts/IERC20.json')
 
 const nullAddress = '0x0000000000000000000000000000000000000000'
 const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000'
@@ -22,6 +23,10 @@ const emptyHash = '0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d8
 const keylessCreate2DeployerAddress = '0x4c8D290a1B368ac4728d83a9e8321fC3af2b39b1'
 const keylessCreate2DeploymentTransaction = '0xf87e8085174876e800830186a08080ad601f80600e600039806000f350fe60003681823780368234f58015156014578182fd5b80825250506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222'
 const keylessCreate2Address = '0x7A0D94F55792C434d74a40883C6ed8545E406D12'
+
+const eth_whale = '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe'
+const dai_whale = '0x76B03EB651153a81fA1f212f2f59329B4180A46F'
+const usdc_whale = '0x035e742A7E62253C606b9028eeB65178B44F1e7E'
 
 // used to wait for more confirmations
 function longer() {
@@ -526,6 +531,26 @@ module.exports = {test: async function (provider, testingContext) {
     targetCodeCheckAddress
   )
 
+  const DAI = new web3.eth.Contract(
+    IERC20Artifact.abi,
+    "0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359" // mainnet
+  )
+
+  const USDC = new web3.eth.Contract(
+    IERC20Artifact.abi,
+    "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // mainnet
+  )
+
+  const CDAI = new web3.eth.Contract(
+    IERC20Artifact.abi,
+    "0xF5DCe57282A584D2746FaF1593d3121Fcac444dC" // mainnet
+  )
+
+  const CUSDC = new web3.eth.Contract(
+    IERC20Artifact.abi,
+    "0x39AA39c021dfbaE8faC545936693aC917d5E7563" // mainnet
+  )
+
   const MockCodeCheck = await runTest(
     `MockCodeCheck contract deployment`,
     MockCodeCheckDeployer,
@@ -811,6 +836,67 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
+  await web3.eth.sendTransaction({
+    from: eth_whale,
+    to: targetWalletAddress,
+    value: web3.utils.toWei('100', 'ether'),
+    gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+    gasPrice: 1
+  })
+  console.log(' ✓Eth Whale can deposit eth into the yet-to-be-deployed smart wallet')
+
+  await runTest(
+    'Dai Whale can deposit dai into the yet-to-be-deployed smart wallet',
+    DAI,
+    'transfer',
+    'send',
+    [targetWalletAddress, web3.utils.toWei('100', 'ether')],
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.from,
+          dai_whale
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.to,
+          targetWalletAddress
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.value,
+          web3.utils.toWei('100', 'ether')
+        )
+      }
+    },
+    dai_whale
+  )
+
+  await runTest(
+    'USDC Whale can deposit usdc into the yet-to-be-deployed smart wallet',
+    USDC,
+    'transfer',
+    'send',
+    [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.from,
+          usdc_whale
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.to,
+          targetWalletAddress
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.value,
+          web3.utils.toWei('100', 'lovelace')
+        )
+      }
+    },
+    usdc_whale
+  )
+
   await runTest(
     'DharmaSmartWalletFactoryV1 can deploy a new smart wallet using a Dharma Key',
     DharmaSmartWalletFactoryV1,
@@ -819,6 +905,8 @@ module.exports = {test: async function (provider, testingContext) {
     [address],
     true,
     receipt => {
+      console.log(receipt.status, receipt.gasUsed)
+      console.log(receipt.events)
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.SmartWalletDeployed.returnValues.wallet,
