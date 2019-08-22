@@ -843,7 +843,7 @@ module.exports = {test: async function (provider, testingContext) {
     gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
     gasPrice: 1
   })
-  console.log(' ✓Eth Whale can deposit eth into the yet-to-be-deployed smart wallet')
+  console.log(' ✓ Eth Whale can deposit eth into the yet-to-be-deployed smart wallet')
 
   await runTest(
     'Dai Whale can deposit dai into the yet-to-be-deployed smart wallet',
@@ -923,6 +923,80 @@ module.exports = {test: async function (provider, testingContext) {
   const UserSmartWallet = new web3.eth.Contract(
     DharmaSmartWalletImplementationV1Artifact.abi,
     targetWalletAddress
+  )
+
+  await web3.eth.sendTransaction({
+    from: eth_whale,
+    to: targetWalletAddress,
+    value: web3.utils.toWei('100', 'ether'),
+    gas: (testingContext !== 'coverage') ? '0xfffff' : gasLimit - 1,
+    gasPrice: 1
+  })
+  console.log(' ✓ Eth Whale can deposit eth into the deployed smart wallet')
+
+  await runTest(
+    'Dai Whale can deposit dai into the deployed smart wallet',
+    DAI,
+    'transfer',
+    'send',
+    [targetWalletAddress, web3.utils.toWei('100', 'ether')],
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.from,
+          dai_whale
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.to,
+          targetWalletAddress
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.value,
+          web3.utils.toWei('100', 'ether')
+        )
+      }
+    },
+    dai_whale
+  )
+
+  await runTest(
+    'USDC Whale can deposit usdc into the deployed smart wallet',
+    USDC,
+    'transfer',
+    'send',
+    [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.from,
+          usdc_whale
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.to,
+          targetWalletAddress
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.value,
+          web3.utils.toWei('100', 'lovelace')
+        )
+      }
+    },
+    usdc_whale
+  )
+
+  await runTest(
+    'new user smart wallet can trigger repayAndDeposit to deposit all new funds',
+    UserSmartWallet,
+    'repayAndDeposit',
+    'send',
+    [],
+    true,
+    receipt => {
+      console.log(receipt.status, receipt.gasUsed)
+      console.log(receipt.events)
+    }
   )
 
   await runTest(
