@@ -646,7 +646,8 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
           address(_USDC),
           "transfer failed - USDC has blacklisted this user."
         );
-      } else if (_USDC_NAUGHTY.paused()) {
+      }
+      if (_USDC_NAUGHTY.paused()) {
         emit ExternalError(
           address(_USDC),
           "transfer failed - USDC contract is currently paused."
@@ -717,7 +718,8 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
           address(_USDC),
           "transfer failed - USDC has blacklisted this user."
         );
-      } else if (_USDC_NAUGHTY.paused()) {
+      }
+      if (_USDC_NAUGHTY.paused()) {
         emit ExternalError(
           address(_USDC),
           "transfer failed - USDC contract is currently paused."
@@ -1538,7 +1540,8 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
           address(_USDC),
           "approval failed - USDC has blacklisted this user."
         );
-      } else if (_USDC_NAUGHTY.paused()) {
+      }
+      if (_USDC_NAUGHTY.paused()) {
         emit ExternalError(
           address(_USDC),
           "approval failed - USDC contract is currently paused."
