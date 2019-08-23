@@ -113,6 +113,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   using Address for address;
   using ECDSA for bytes32;
   // WARNING: DO NOT REMOVE OR REORDER STORAGE WHEN WRITING NEW IMPLEMENTATIONS!
+  // Note: One way to protect against this is to inherit V0 on V1.
 
   // The dharma key associated with this account is in storage slot 0.
   // It is the core differentiator when it comes to the account in question.
@@ -128,12 +129,12 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   // this contract, which enables appropriate exception handling on reverts.
   // Another way to achieve this without needing any local storage would be to
   // perform and handle a DELEGATECALL to another contract.
-  bytes4 private _selfCallContext;
+  bytes4 internal _selfCallContext;
 
   // END STORAGE DECLARATIONS - DO NOT REMOVE OR REPLACE STORAGE ABOVE HERE!
 
   // The smart wallet version will be used when constructing valid signatures.
-  uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 0;
+  uint256 private constant _DHARMA_SMART_WALLET_VERSION = 0;
 
   // The dharma secondary key is a hard-coded signing key controlled by Dharma,
   // used in conjunction with user's Dharma Key to make smart wallet actions.
@@ -178,8 +179,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     require(dharmaKey != address(0), "No key provided.");
 
     // Set up the user's dharma key and emit a corresponding event.
-    _dharmaKey = dharmaKey;
-    emit NewDharmaKey(dharmaKey);
+    _setDharmaKey(dharmaKey);
 
     // Approve the cDAI contract to transfer Dai on behalf of this contract.
     if (_setFullDaiApproval()) {
@@ -199,7 +199,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       _depositUSDCOnCompound(usdcBalance);
     }
 
-    // Call comptroller to (try to) enable borrowing against DAI + USDC + ETH.
+    // Enter DAI + USDC + ETH markets now to avoid a need to reinitialize later.
     _enterMarkets();
   }
 
@@ -207,10 +207,8 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     // Get the current Dai balance on this contract.
     uint256 daiBalance = _DAI.balanceOf(address(this));
 
-    if (daiBalance > 0) {
-      // Deposit any available Dai.
-      _depositDaiOnCompound(daiBalance);
-    }
+    // Deposit any available Dai.
+    _depositDaiOnCompound(daiBalance);
 
     // Get the current USDC balance on this contract.
     uint256 usdcBalance = _USDC.balanceOf(address(this));
@@ -366,9 +364,8 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     uint256 minimumActionGas,
     bytes calldata signature
   ) external {
-    address dharmaKey = _dharmaKey;
-    if (msg.sender == dharmaKey || msg.sender == _DHARMA_SECONDARY_KEY) {
-      _nonce++;
+    if (msg.sender == _DHARMA_SECONDARY_KEY) {
+      _incrementNonce();
     } else {
       // Ensure that the action has the correct nonce.
       require(_nonce == nonce, "Invalid action - incorrect nonce.");
@@ -390,13 +387,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       );
 
       // Either signature may be used to submit a cancellation action.
-      address signingKey = actionID.toEthSignedMessageHash().recover(signature);
-      if (
-        (dharmaKey != address(0) && dharmaKey == signingKey) || 
-        _DHARMA_SECONDARY_KEY == signingKey
-      ) {
-        _nonce++;
-      }
+      _verifySignatureAndIncrementNonce(actionID, signature);
     }
   }
 
@@ -460,6 +451,15 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
 
   function testRevert() external pure returns (bool) {
     revert("This revert message should be visible.");
+  }
+
+  function _setDharmaKey(address dharmaKey) internal {
+    _dharmaKey = dharmaKey;
+    emit NewDharmaKey(dharmaKey);
+  }
+
+  function _incrementNonce() internal {
+    _nonce++;
   }
 
   function _setFullDaiApproval() internal returns (bool ok) {
@@ -698,11 +698,16 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     require(_nonce == nonce, "Invalid action - incorrect nonce.");
 
     // Determine the actionID - this serves as the signature hash.
-    actionID = _getCustomActionID(actionType, amount, recipient, nonce, minimumActionGas);
+    actionID = _getCustomActionID(
+      actionType,
+      amount,
+      recipient,
+      nonce,
+      minimumActionGas
+    );
 
-    _verifySignaturesAndIncrementNonce(
+    _verifySignatureAndIncrementNonce(
       actionID,
-      dharmaKeySignature,
       dharmaSecondaryKeySignature
     );
 
@@ -714,28 +719,16 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       gasleft() >= minimumActionGas,
       "Invalid action - insufficient gas supplied by transaction submitter."
     );
+
+    // Avoid unused variable warning - dharma key is not used for txs in V0.
+    dharmaKeySignature;
   }
 
-  function _verifySignaturesAndIncrementNonce(
+  function _verifySignatureAndIncrementNonce(
     bytes32 actionID,
-    bytes memory dharmaKeySignature,
     bytes memory dharmaSecondaryKeySignature
   ) internal {
-    // Place the dharma key into memory to avoid repeated SLOAD operations.
-    address dharmaKey = _dharmaKey;
-
-    // First, validate the Dharma Key signature unless it is `msg.sender`.
-    if (msg.sender != dharmaKey) {
-      require(
-        dharmaKey != address(0) &&
-        dharmaKey == actionID.toEthSignedMessageHash().recover(
-          dharmaKeySignature
-        ),
-        "Invalid action - invalid Dharma Key signature."
-      );
-    }
-
-    // Next, validate Dharma Secondary Key signature unless it is `msg.sender`.
+    // Validate Dharma Secondary Key signature unless it is `msg.sender`.
     if (msg.sender != _DHARMA_SECONDARY_KEY) {
       require(
         _DHARMA_SECONDARY_KEY == actionID.toEthSignedMessageHash().recover(
@@ -746,7 +739,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     }
 
     // Increment nonce in order to prevent reuse of signatures after the call.
-    _nonce++;
+    _incrementNonce();
   }
 
   function _getCustomActionID(
@@ -770,5 +763,13 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
         recipient
       )
     );
+  }
+
+  function _getDharmaKey() internal view returns (address dharmaKey) {
+    dharmaKey = _dharmaKey;
+  }
+
+  function _getNonce() internal view returns (uint256 nonce) {
+    nonce = _nonce;
   }
 }
