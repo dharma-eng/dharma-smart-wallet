@@ -75,7 +75,7 @@ interface DharmaSmartWalletImplementationV1Interface {
     string revertReason
   );
   
-  event ExternalError(address source, string revertReason);
+  event ExternalError(address indexed source, string revertReason);
 
   // Actions, or protected methods (i.e. not deposits) each have an action type.
   enum ActionType {
@@ -1556,7 +1556,7 @@ contract DharmaSmartWalletImplementationV1 is DharmaSmartWalletImplementationV1I
     address[] memory marketsToEnter = new address[](3);
     marketsToEnter[0] = address(_CDAI);
     marketsToEnter[1] = address(_CUSDC);
-    marketsToEnter[1] = address(_CETH);
+    marketsToEnter[2] = address(_CETH);
 
     // Attempt to mint the USDC balance on the cUSDC contract.
     (bool ok, bytes memory data) = address(_COMPTROLLER).call(abi.encodeWithSelector(

@@ -19,6 +19,7 @@ const IERC20Artifact = require('../../build/contracts/IERC20.json')
 const nullAddress = '0x0000000000000000000000000000000000000000'
 const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000'
 const emptyHash = '0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470'
+const FULL_APPROVAL = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
 
 const keylessCreate2DeployerAddress = '0x4c8D290a1B368ac4728d83a9e8321fC3af2b39b1'
 const keylessCreate2DeploymentTransaction = '0xf87e8085174876e800830186a08080ad601f80600e600039806000f350fe60003681823780368234f58015156014578182fd5b80825250506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222'
@@ -27,6 +28,184 @@ const keylessCreate2Address = '0x7A0D94F55792C434d74a40883C6ed8545E406D12'
 const eth_whale = '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe'
 const dai_whale = '0x76B03EB651153a81fA1f212f2f59329B4180A46F'
 const usdc_whale = '0x035e742A7E62253C606b9028eeB65178B44F1e7E'
+
+const DAI_MAINNET_ADDRESS = '0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359'
+const USDC_MAINNET_ADDRESS = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
+const CDAI_MAINNET_ADDRESS = '0xF5DCe57282A584D2746FaF1593d3121Fcac444dC'
+const CUSDC_MAINNET_ADDRESS = '0x39AA39c021dfbaE8faC545936693aC917d5E7563'
+const CETH_MAINNET_ADDRESS = '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5'
+const COMPTROLLER_MAINNET_ADDRESS = '0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B'
+
+const contractNames = {}
+contractNames[DAI_MAINNET_ADDRESS] = 'DAI'
+contractNames[USDC_MAINNET_ADDRESS] = 'USDC'
+contractNames[CDAI_MAINNET_ADDRESS] = 'CDAI'
+contractNames[CUSDC_MAINNET_ADDRESS] = 'CUSDC'
+contractNames[CETH_MAINNET_ADDRESS] = 'CETH'
+contractNames[COMPTROLLER_MAINNET_ADDRESS] = 'Comptroller'
+
+// keccak256 of NewDharmaKey(address) -> dharmaKey
+const NEW_DHARMA_KEY_TOPIC = '0xc85cb9f33f88ea30edde920e5b888fbfbb6c8d84054c2ecc53ace52a7df75cdb'
+const NEW_DHARMA_KEY_ABI = [
+  {
+    type: 'address',
+    name: 'dharmaKey'
+  }
+]
+
+// keccak256 of ExternalError(address,string) -> source, revertReason
+const EXTERNAL_ERROR_TOPIC = '0x5bbd5ab79029b89a22c80c7b7bfdc2f0c8e3f0d2a7330c7148cabc044250674b'
+const EXTERNAL_ERROR_ABI = [
+  {
+    type: 'address',
+    name: 'source',
+    indexed: true
+  }, {
+    type: 'string',
+    name: 'revertReason'
+  }
+]
+
+// keccak256 of SmartWalletDeployed(address,address) -> wallet, dharmaKey
+const SMART_WALLET_DEPLOYED_TOPIC = '0x6e60d84846384a1994833ed675b0a0f76bef64943304debf6e42a9706d1a7dd7'
+const SMART_WALLET_DEPLOYED_ABI = [
+  {
+    type: 'address',
+    name: 'wallet'
+  }, {
+    type: 'address',
+    name: 'dharmaKey'
+  }
+]
+
+// keccak256 of Approval(address,address,uint256) -> owner, spender, value
+const APPROVAL_TOPIC = '0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925'
+const APPROVAL_ABI = [
+  {
+    type: 'address',
+    name: 'owner',
+    indexed: true
+  }, {
+    type: 'address',
+    name: 'spender',
+    indexed: true
+  }, {
+    type: 'uint256',
+    name: 'value'
+  }
+]
+
+// keccak256 of Transfer(address,address,uint256) -> to, from, value
+const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+const TRANSFER_ABI = [
+  {
+    type: 'address',
+    name: 'from',
+    indexed: true
+  }, {
+    type: 'address',
+    name: 'to',
+    indexed: true
+  }, {
+    type: 'uint256',
+    name: 'value'
+  }
+]
+
+// keccak256 of Mint(address,uint256,uint256) -> minter, mintTokens, mintAmount
+const MINT_TOPIC = '0x4c209b5fc8ad50758f13e2e1088ba56a560dff690a1c6fef26394f4c03821c4f'
+const MINT_ABI = [
+  {
+    type: 'address',
+    name: 'minter'
+  }, {
+    type: 'uint256',
+    name: 'mintTokens'
+  }, {
+    type: 'uint256',
+    name: 'mintAmount'
+  }
+]
+
+// keccak256 of Redeem(address,uint256,uint256) -> redeemer, redeemTokens, redeemAmount
+const REDEEM_TOPIC = '0xe5b754fb1abb7f01b499791d0b820ae3b6af3424ac1c59768edb53f4ec31a929'
+const REDEEM_ABI = [
+  {
+    type: 'address',
+    name: 'redeemer'
+  }, {
+    type: 'uint256',
+    name: 'redeemTokens'
+  }, {
+    type: 'uint256',
+    name: 'redeemAmount'
+  }
+]
+
+// keccak256 of MarketEntered(address,address) -> cToken, account
+const MARKET_ENTERED_TOPIC = '0x3ab23ab0d51cccc0c3085aec51f99228625aa1a922b3a8ca89a26b0f2027a1a5'
+const MARKET_ENTERED_ABI = [
+  {
+    type: 'address',
+    name: 'cToken'
+  }, {
+    type: 'address',
+    name: 'account'
+  }
+]
+
+// keccak256 of AccrueInterest(uint256,uint256,uint256) -> interestAccumulated, borrowIndex, totalBorrows
+const ACCRUE_INTEREST_TOPIC = '0x875352fb3fadeb8c0be7cbbe8ff761b308fa7033470cd0287f02f3436fd76cb9'
+const ACCRUE_INTEREST_ABI = [
+  {
+    type: 'uint256',
+    name: 'interestAccumulated'
+  }, {
+    type: 'uint256',
+    name: 'borrowIndex'
+  }, {
+    type: 'uint256',
+    name: 'totalBorrows'
+  }
+]
+
+const eventDetails = {}
+eventDetails[NEW_DHARMA_KEY_TOPIC] = {
+  name: 'NewDharmaKey',
+  abi: NEW_DHARMA_KEY_ABI
+}
+eventDetails[EXTERNAL_ERROR_TOPIC] = {
+  name: 'ExternalError',
+  abi: EXTERNAL_ERROR_ABI
+}
+eventDetails[SMART_WALLET_DEPLOYED_TOPIC] = {
+  name: 'SmartWalletDeployed',
+  abi: SMART_WALLET_DEPLOYED_ABI
+}
+eventDetails[APPROVAL_TOPIC] = {
+  name: 'Approval',
+  abi: APPROVAL_ABI
+}
+eventDetails[TRANSFER_TOPIC] = {
+  name: 'Transfer',
+  abi: TRANSFER_ABI
+}
+eventDetails[MINT_TOPIC] = {
+  name: 'Mint',
+  abi: MINT_ABI
+}
+eventDetails[REDEEM_TOPIC] = {
+  name: 'Redeem',
+  abi: REDEEM_ABI
+}
+eventDetails[MARKET_ENTERED_TOPIC] = {
+  name: 'MarketEntered',
+  abi: MARKET_ENTERED_ABI
+}
+eventDetails[ACCRUE_INTEREST_TOPIC] = {
+  name: 'AccrueInterest',
+  abi: ACCRUE_INTEREST_ABI
+}
 
 // used to wait for more confirmations
 function longer() {
@@ -431,7 +610,9 @@ module.exports = {test: async function (provider, testingContext) {
 
   // submit the initial create2 deployment transaction if needed
   console.log('submitting initial create2 contract deployment transaction...')
-  await web3.eth.sendSignedTransaction(keylessCreate2DeploymentTransaction).catch(error => {console.log('skipping...')});
+  await web3.eth.sendSignedTransaction(keylessCreate2DeploymentTransaction)
+    .catch(error => {console.log('skipping...')}
+  );
 
   // construct the payload passed to create2 in order to verify correct behavior
   let create2payload = (
@@ -531,25 +712,13 @@ module.exports = {test: async function (provider, testingContext) {
     targetCodeCheckAddress
   )
 
-  const DAI = new web3.eth.Contract(
-    IERC20Artifact.abi,
-    "0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359" // mainnet
-  )
+  const DAI = new web3.eth.Contract(IERC20Artifact.abi, DAI_MAINNET_ADDRESS)
 
-  const USDC = new web3.eth.Contract(
-    IERC20Artifact.abi,
-    "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // mainnet
-  )
+  const USDC = new web3.eth.Contract(IERC20Artifact.abi, USDC_MAINNET_ADDRESS)
 
-  const CDAI = new web3.eth.Contract(
-    IERC20Artifact.abi,
-    "0xF5DCe57282A584D2746FaF1593d3121Fcac444dC" // mainnet
-  )
+  const CDAI = new web3.eth.Contract(IERC20Artifact.abi, CDAI_MAINNET_ADDRESS)
 
-  const CUSDC = new web3.eth.Contract(
-    IERC20Artifact.abi,
-    "0x39AA39c021dfbaE8faC545936693aC917d5E7563" // mainnet
-  )
+  const CUSDC = new web3.eth.Contract(IERC20Artifact.abi, CUSDC_MAINNET_ADDRESS)
 
   const MockCodeCheck = await runTest(
     `MockCodeCheck contract deployment`,
@@ -572,36 +741,6 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'Deployed MockCodeCheck has correct extcodehash',
-    MockCodeCheck,
-    'hash',
-    'call',
-    [MockCodeCheck.options.address],
-    true,
-    value => {
-      assert.strictEqual(
-        value,
-        web3.utils.keccak256(
-          MockCodeCheckArtifact.deployedBytecode,
-          {encoding: 'hex'}
-        )
-      )
-    }
-  )
-
-  await runTest(
-    'Deployed MockCodeCheckTwo code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [MockCodeCheck.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, MockCodeCheckArtifact.deployedBytecode)
-    }
-  )
-
-  await runTest(
-    'Deployed MockCodeCheckTwo has correct extcodehash',
     MockCodeCheck,
     'hash',
     'call',
@@ -836,6 +975,9 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
+  contractNames[DharmaSmartWalletFactoryV1.options.address] = 'Smart Wallet Factory'
+  contractNames[targetWalletAddress] = 'Smart Wallet'
+
   await web3.eth.sendTransaction({
     from: eth_whale,
     to: targetWalletAddress,
@@ -905,17 +1047,68 @@ module.exports = {test: async function (provider, testingContext) {
     [address],
     true,
     receipt => {
-      console.log(receipt.status, receipt.gasUsed)
-      console.log(receipt.events)
+      //console.log(receipt.status, receipt.gasUsed)
       if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.SmartWalletDeployed.returnValues.wallet,
-          targetWalletAddress
-        )
-        assert.strictEqual(
-          receipt.events.SmartWalletDeployed.returnValues.dharmaKey,
-          address
-        )
+        let events = []
+        Object.values(receipt.events).forEach((value) => {
+          const log = eventDetails[value.raw.topics[0]]
+          const decoded = web3.eth.abi.decodeLog(log.abi, value.raw.data, value.raw.topics)        
+          events.push({
+            address: contractNames[value.address],
+            eventName: log.name,
+            returnValues: decoded
+          })
+        })
+
+        assert.strictEqual(events[0].address, 'Smart Wallet')
+        assert.strictEqual(events[0].eventName, 'NewDharmaKey')
+        assert.strictEqual(events[0].returnValues.dharmaKey, address)
+
+        assert.strictEqual(events[1].address, 'DAI')
+        assert.strictEqual(events[1].eventName, 'Approval')
+        assert.strictEqual(events[1].returnValues.value, FULL_APPROVAL)
+
+        assert.strictEqual(events[2].address, 'CDAI')
+        assert.strictEqual(events[2].eventName, 'AccrueInterest')
+
+        assert.strictEqual(events[3].address, 'DAI')
+        assert.strictEqual(events[3].eventName, 'Transfer')
+        assert.strictEqual(events[3].returnValues.value, web3.utils.toWei('100', 'ether'))
+
+        assert.strictEqual(events[4].address, 'CDAI')
+        assert.strictEqual(events[4].eventName, 'Mint')
+        assert.strictEqual(events[4].returnValues.mintTokens, web3.utils.toWei('100', 'ether'))  
+
+        assert.strictEqual(events[5].address, 'CDAI')
+        assert.strictEqual(events[5].eventName, 'Transfer')
+
+        assert.strictEqual(events[6].address, 'USDC')
+        assert.strictEqual(events[6].eventName, 'Approval')
+        assert.strictEqual(events[6].returnValues.value, FULL_APPROVAL)
+
+        assert.strictEqual(events[7].address, 'CUSDC')
+        assert.strictEqual(events[7].eventName, 'AccrueInterest')
+
+        assert.strictEqual(events[8].address, 'USDC')
+        assert.strictEqual(events[8].eventName, 'Transfer')
+        assert.strictEqual(events[8].returnValues.value, web3.utils.toWei('100', 'lovelace'))
+
+        assert.strictEqual(events[9].address, 'CUSDC')
+        assert.strictEqual(events[9].eventName, 'Mint')
+        assert.strictEqual(events[9].returnValues.mintTokens, web3.utils.toWei('100', 'lovelace')) 
+
+        assert.strictEqual(events[10].address, 'CUSDC')
+        assert.strictEqual(events[10].eventName, 'Transfer')
+
+        assert.strictEqual(events[11].address, 'CETH')
+        assert.strictEqual(events[11].eventName, 'AccrueInterest')
+
+        assert.strictEqual(events[12].address, 'CETH')
+        assert.strictEqual(events[12].eventName, 'Mint')
+        assert.strictEqual(events[12].returnValues.mintTokens, web3.utils.toWei('100', 'ether'))
+
+        assert.strictEqual(events[13].address, 'CETH')
+        assert.strictEqual(events[13].eventName, 'Transfer')       
       }
     }
   )
@@ -929,7 +1122,7 @@ module.exports = {test: async function (provider, testingContext) {
     from: eth_whale,
     to: targetWalletAddress,
     value: web3.utils.toWei('100', 'ether'),
-    gas: (testingContext !== 'coverage') ? '0xfffff' : gasLimit - 1,
+    gas: (testingContext !== 'coverage') ? '0xffff' : gasLimit - 1,
     gasPrice: 1
   })
   console.log(' ✓ Eth Whale can deposit eth into the deployed smart wallet')
@@ -994,8 +1187,55 @@ module.exports = {test: async function (provider, testingContext) {
     [],
     true,
     receipt => {
-      console.log(receipt.status, receipt.gasUsed)
-      console.log(receipt.events)
+      //console.log(receipt.status, receipt.gasUsed)
+      if (testingContext !== 'coverage') {
+        let events = []
+        Object.values(receipt.events).forEach((value) => {
+          const log = eventDetails[value.raw.topics[0]]
+          const decoded = web3.eth.abi.decodeLog(log.abi, value.raw.data, value.raw.topics)        
+          events.push({
+            address: contractNames[value.address],
+            eventName: log.name,
+            returnValues: decoded
+          })
+        })
+     
+        assert.strictEqual(events[0].address, 'CDAI')
+        assert.strictEqual(events[0].eventName, 'AccrueInterest')
+
+        assert.strictEqual(events[1].address, 'CDAI')
+        assert.strictEqual(events[1].eventName, 'AccrueInterest')
+        assert.strictEqual(events[1].returnValues.interestAccumulated, '0')
+
+        assert.strictEqual(events[2].address, 'DAI')
+        assert.strictEqual(events[2].eventName, 'Transfer')
+        assert.strictEqual(events[2].returnValues.value, web3.utils.toWei('100', 'ether'))
+
+        assert.strictEqual(events[3].address, 'CDAI')
+        assert.strictEqual(events[3].eventName, 'Mint')
+        assert.strictEqual(events[3].returnValues.mintTokens, web3.utils.toWei('100', 'ether'))
+
+        assert.strictEqual(events[4].address, 'CDAI')
+        assert.strictEqual(events[4].eventName, 'Transfer')
+
+        assert.strictEqual(events[5].address, 'CUSDC')
+        assert.strictEqual(events[5].eventName, 'AccrueInterest')
+
+        assert.strictEqual(events[6].address, 'CUSDC')
+        assert.strictEqual(events[6].eventName, 'AccrueInterest')
+        assert.strictEqual(events[6].returnValues.interestAccumulated, '0')
+
+        assert.strictEqual(events[7].address, 'USDC')
+        assert.strictEqual(events[7].eventName, 'Transfer')
+        assert.strictEqual(events[7].returnValues.value, web3.utils.toWei('100', 'lovelace'))
+
+        assert.strictEqual(events[8].address, 'CUSDC')
+        assert.strictEqual(events[8].eventName, 'Mint')
+        assert.strictEqual(events[8].returnValues.mintTokens, web3.utils.toWei('100', 'lovelace'))
+
+        assert.strictEqual(events[9].address, 'CUSDC')
+        assert.strictEqual(events[9].eventName, 'Transfer')
+      }
     }
   )
 
@@ -1007,18 +1247,7 @@ module.exports = {test: async function (provider, testingContext) {
     [UserSmartWallet.options.address],
     true,
     value => {
-      /*
-      assert.strictEqual(
-        value,
-        "0x595959593659602059595973" +
-        DharmaUpgradeBeacon.options.address.slice(2).toLowerCase() +
-        "5afa1551368280375af43d3d93803e603357fd5bf3"
-      )
-      */
-      assert.strictEqual(
-        value,
-        UpgradeBeaconProxyArtifact.deployedBytecode
-      ) 
+      assert.strictEqual(value, UpgradeBeaconProxyArtifact.deployedBytecode) 
     }
   )
 
