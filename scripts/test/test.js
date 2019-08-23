@@ -10,6 +10,7 @@ const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgra
 
 const UpgradeBeaconProxyArtifact = require('../../build/contracts/UpgradeBeaconProxy.json')
 const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
+const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
 
 const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
@@ -686,6 +687,13 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaSmartWalletFactoryV1Artifact.bytecode
   )
 
+  const DharmaSmartWalletImplementationV0Deployer = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV0Artifact.abi
+  )
+  DharmaSmartWalletImplementationV0Deployer.options.data = (
+    DharmaSmartWalletImplementationV0Artifact.bytecode
+  )
+
   const DharmaSmartWalletImplementationV1Deployer = new web3.eth.Contract(
     DharmaSmartWalletImplementationV1Artifact.abi
   )
@@ -807,6 +815,13 @@ module.exports = {test: async function (provider, testingContext) {
     [DharmaUpgradeBeaconController.options.address]
   )
 
+  const DharmaSmartWalletImplementationV0 = await runTest(
+    `DharmaSmartWalletImplementationV0 contract deployment`,
+    DharmaSmartWalletImplementationV0Deployer,
+    '',
+    'deploy'
+  )
+
   const DharmaSmartWalletImplementationV1 = await runTest(
     `DharmaSmartWalletImplementationV1 contract deployment`,
     DharmaSmartWalletImplementationV1Deployer,
@@ -822,7 +837,7 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [
       DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV1.options.address
+      DharmaSmartWalletImplementationV0.options.address
     ],
     true,
     receipt => {
@@ -841,7 +856,7 @@ module.exports = {test: async function (provider, testingContext) {
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.newImplementation,
-          DharmaSmartWalletImplementationV1.options.address
+          DharmaSmartWalletImplementationV0.options.address
         )
         /* TODO
         assert.strictEqual(
@@ -860,7 +875,7 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy',
     [
       DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV1.options.address
+      DharmaSmartWalletImplementationV0.options.address
     ]
   )
 
@@ -872,7 +887,7 @@ module.exports = {test: async function (provider, testingContext) {
     [DharmaUpgradeBeacon.options.address],
     true,
     value => {
-      assert.strictEqual(value, DharmaSmartWalletImplementationV1.options.address)
+      assert.strictEqual(value, DharmaSmartWalletImplementationV0.options.address)
     }
   )
 
@@ -891,7 +906,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   const DharmaSmartWalletImplementationTest = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV1Artifact.abi,
+    DharmaSmartWalletImplementationV0Artifact.abi,
     DharmaSmartWalletNoFactoryNoConstructor.options.address
   )
 
@@ -925,7 +940,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   const DharmaSmartWalletImplementationTestWithConstructor = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV1Artifact.abi,
+    DharmaSmartWalletImplementationV0Artifact.abi,
     DharmaSmartWalletNoFactory.options.address
   )
 
@@ -1098,23 +1113,13 @@ module.exports = {test: async function (provider, testingContext) {
         assert.strictEqual(events[9].returnValues.mintTokens, web3.utils.toWei('100', 'lovelace')) 
 
         assert.strictEqual(events[10].address, 'CUSDC')
-        assert.strictEqual(events[10].eventName, 'Transfer')
-
-        assert.strictEqual(events[11].address, 'CETH')
-        assert.strictEqual(events[11].eventName, 'AccrueInterest')
-
-        assert.strictEqual(events[12].address, 'CETH')
-        assert.strictEqual(events[12].eventName, 'Mint')
-        assert.strictEqual(events[12].returnValues.mintTokens, web3.utils.toWei('100', 'ether'))
-
-        assert.strictEqual(events[13].address, 'CETH')
-        assert.strictEqual(events[13].eventName, 'Transfer')       
+        assert.strictEqual(events[10].eventName, 'Transfer')     
       }
     }
   )
 
   const UserSmartWallet = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV1Artifact.abi,
+    DharmaSmartWalletImplementationV0Artifact.abi,
     targetWalletAddress
   )
 
@@ -1124,8 +1129,9 @@ module.exports = {test: async function (provider, testingContext) {
     value: web3.utils.toWei('100', 'ether'),
     gas: (testingContext !== 'coverage') ? '0xffff' : gasLimit - 1,
     gasPrice: 1
+  }).catch(error => {
+    console.log(' ✓ Eth Whale can no longer deposit eth into the deployed smart wallet')
   })
-  console.log(' ✓ Eth Whale can deposit eth into the deployed smart wallet')
 
   await runTest(
     'Dai Whale can deposit dai into the deployed smart wallet',
@@ -1203,38 +1209,30 @@ module.exports = {test: async function (provider, testingContext) {
         assert.strictEqual(events[0].address, 'CDAI')
         assert.strictEqual(events[0].eventName, 'AccrueInterest')
 
-        assert.strictEqual(events[1].address, 'CDAI')
-        assert.strictEqual(events[1].eventName, 'AccrueInterest')
-        assert.strictEqual(events[1].returnValues.interestAccumulated, '0')
+        assert.strictEqual(events[1].address, 'DAI')
+        assert.strictEqual(events[1].eventName, 'Transfer')
+        assert.strictEqual(events[1].returnValues.value, web3.utils.toWei('100', 'ether'))
 
-        assert.strictEqual(events[2].address, 'DAI')
-        assert.strictEqual(events[2].eventName, 'Transfer')
-        assert.strictEqual(events[2].returnValues.value, web3.utils.toWei('100', 'ether'))
+        assert.strictEqual(events[2].address, 'CDAI')
+        assert.strictEqual(events[2].eventName, 'Mint')
+        assert.strictEqual(events[2].returnValues.mintTokens, web3.utils.toWei('100', 'ether'))
 
         assert.strictEqual(events[3].address, 'CDAI')
-        assert.strictEqual(events[3].eventName, 'Mint')
-        assert.strictEqual(events[3].returnValues.mintTokens, web3.utils.toWei('100', 'ether'))
+        assert.strictEqual(events[3].eventName, 'Transfer')
 
-        assert.strictEqual(events[4].address, 'CDAI')
-        assert.strictEqual(events[4].eventName, 'Transfer')
+        assert.strictEqual(events[4].address, 'CUSDC')
+        assert.strictEqual(events[4].eventName, 'AccrueInterest')
 
-        assert.strictEqual(events[5].address, 'CUSDC')
-        assert.strictEqual(events[5].eventName, 'AccrueInterest')
+        assert.strictEqual(events[5].address, 'USDC')
+        assert.strictEqual(events[5].eventName, 'Transfer')
+        assert.strictEqual(events[5].returnValues.value, web3.utils.toWei('100', 'lovelace'))
 
         assert.strictEqual(events[6].address, 'CUSDC')
-        assert.strictEqual(events[6].eventName, 'AccrueInterest')
-        assert.strictEqual(events[6].returnValues.interestAccumulated, '0')
+        assert.strictEqual(events[6].eventName, 'Mint')
+        assert.strictEqual(events[6].returnValues.mintTokens, web3.utils.toWei('100', 'lovelace'))
 
-        assert.strictEqual(events[7].address, 'USDC')
+        assert.strictEqual(events[7].address, 'CUSDC')
         assert.strictEqual(events[7].eventName, 'Transfer')
-        assert.strictEqual(events[7].returnValues.value, web3.utils.toWei('100', 'lovelace'))
-
-        assert.strictEqual(events[8].address, 'CUSDC')
-        assert.strictEqual(events[8].eventName, 'Mint')
-        assert.strictEqual(events[8].returnValues.mintTokens, web3.utils.toWei('100', 'lovelace'))
-
-        assert.strictEqual(events[9].address, 'CUSDC')
-        assert.strictEqual(events[9].eventName, 'Transfer')
       }
     }
   )
