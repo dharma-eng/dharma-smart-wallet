@@ -9,6 +9,8 @@ interface CTokenInterface {
   function mint(uint256 mintAmount) external returns (uint256 err);
   
   function redeemUnderlying(uint256 redeemAmount) external returns (uint256 err);
+
+  function balanceOfUnderlying(address account) external returns (uint256 balance);
 }
 
 
@@ -31,14 +33,15 @@ interface DharmaSmartWalletImplementationV0Interface {
 
   // Actions, or protected methods (i.e. not deposits) each have an action type.
   enum ActionType {
+    Cancel,
+    SetDharmaKey,
     Generic,
     GenericAtomicBatch,
     DAIWithdrawal,
     USDCWithdrawal,
     ETHWithdrawal,
     DAIBorrow,
-    USDCBorrow,
-    Cancel
+    USDCBorrow
   }
 
   function initialize(address dharmaKey) external payable;
@@ -69,30 +72,33 @@ interface DharmaSmartWalletImplementationV0Interface {
     bytes calldata signature
   ) external;
 
+  function setDharmaKey(
+    address dharmaKey,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata signature
+  ) external;
+
+  function getBalances() external returns (
+    uint256 daiBalance,
+    uint256 usdcBalance,
+    uint256 cDaiUnderlyingBalance,
+    uint256 cUsdcUnderlyingBalance
+  );
+
   function getDharmaKey() external view returns (address dharmaKey);
   
   function getNonce() external view returns (uint256 nonce);
   
-  function getNextDaiWithdrawalActionID(
+  function getNextCustomActionID(
+    ActionType action,
     uint256 amount,
     address recipient,
     uint256 minimumActionGas
   ) external view returns (bytes32 actionID);
 
-  function getDaiWithdrawalActionID(
-    uint256 amount,
-    address recipient,
-    uint256 nonce,
-    uint256 minimumActionGas
-  ) external view returns (bytes32 actionID);
-
-  function getNextUSDCWithdrawalActionID(
-    uint256 amount,
-    address recipient,
-    uint256 minimumActionGas
-  ) external view returns (bytes32 actionID);
-
-  function getUSDCWithdrawalActionID(
+  function getCustomActionID(
+    ActionType action,
     uint256 amount,
     address recipient,
     uint256 nonce,
@@ -134,7 +140,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   // END STORAGE DECLARATIONS - DO NOT REMOVE OR REPLACE STORAGE ABOVE HERE!
 
   // The smart wallet version will be used when constructing valid signatures.
-  uint256 private constant _DHARMA_SMART_WALLET_VERSION = 0;
+  uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 0;
 
   // The dharma secondary key is a hard-coded signing key controlled by Dharma,
   // used in conjunction with user's Dharma Key to make smart wallet actions.
@@ -322,17 +328,18 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
           address(_USDC),
           "transfer failed - USDC has blacklisted this user."
         );
-      }
-      if (_USDC_NAUGHTY.paused()) {
-        emit ExternalError(
-          address(_USDC),
-          "transfer failed - USDC contract is currently paused."
-        );
-      } else {
-        emit ExternalError(
-          address(_USDC),
-          "USDC contract reverted on transfer."
-        );
+      } else { // Note: `else if` breaks coverage.
+        if (_USDC_NAUGHTY.paused()) {
+          emit ExternalError(
+            address(_USDC),
+            "transfer failed - USDC contract is currently paused."
+          );
+        } else {
+          emit ExternalError(
+            address(_USDC),
+            "USDC contract reverted on transfer."
+          );
+        }
       }
     } else {
       // Ensure that ok == false in the event the withdrawal failed.
@@ -356,9 +363,9 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     }
   }
 
-  // Allow either signatory to increment the nonce at any point - the current
-  // nonce needs to be provided when using a signature so as not to enable
-  // griefing attacks. All arguments can be omitted if called directly.
+  // Allow signatory to increment the nonce at any point - the current nonce
+  // needs to be provided when using a signature so as not to enable griefing
+  // attacks. All arguments can be omitted if called directly.
   function cancel(
     uint256 nonce,
     uint256 minimumActionGas,
@@ -391,6 +398,61 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     }
   }
 
+  // Allow signatory to set a new Dharma Key - the current nonce needs to be
+  // provided when using a signature so as not to enable griefing attacks. All
+  // arguments (except for the dharma key) can be omitted if called directly.
+  function setDharmaKey(
+    address dharmaKey,
+    uint256 nonce,
+    uint256 minimumActionGas,
+    bytes calldata signature
+  ) external {
+    // This function is only callable with one signature in V0.
+    require(
+      _DHARMA_SMART_WALLET_VERSION == 0,
+      "This function is no longer callable by a single signatory."
+    );
+
+    if (msg.sender == _DHARMA_SECONDARY_KEY) {
+      _incrementNonce();
+    } else {
+      // Ensure that the action has the correct nonce.
+      require(_nonce == nonce, "Invalid action - incorrect nonce.");
+
+      // Ensure that the current gas exceeds the minimum required action gas.
+      // This prevents griefing attacks where an attacker can invalidate a
+      // signature without providing enough gas for the action to succeed.
+      require(
+        gasleft() >= minimumActionGas,
+        "Invalid action - insufficient gas supplied by transaction submitter."
+      );
+
+      bytes32 actionID = _getCustomActionID(
+        ActionType.SetDharmaKey,
+        0,
+        dharmaKey,
+        nonce,
+        minimumActionGas
+      );
+
+      _verifySignatureAndIncrementNonce(actionID, signature);
+
+      _setDharmaKey(dharmaKey);
+    }
+  }
+
+  function getBalances() external returns (
+    uint256 daiBalance,
+    uint256 usdcBalance,
+    uint256 cDaiUnderlyingBalance,
+    uint256 cUsdcUnderlyingBalance
+  ) {
+    daiBalance = _DAI.balanceOf(address(this));
+    usdcBalance = _USDC.balanceOf(address(this));
+    cDaiUnderlyingBalance = _CDAI.balanceOfUnderlying(address(this));
+    cUsdcUnderlyingBalance = _CUSDC.balanceOfUnderlying(address(this));
+  }
+
   function getDharmaKey() external view returns (address dharmaKey) {
     dharmaKey = _dharmaKey;
   }
@@ -399,18 +461,20 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     nonce = _nonce;
   }
 
-  function getNextDaiWithdrawalActionID(
+  function getNextCustomActionID(
+    ActionType action,
     uint256 amount,
     address recipient,
     uint256 minimumActionGas
   ) external view returns (bytes32 actionID) {
     // Determine the actionID - this serves as the signature hash.
     actionID = _getCustomActionID(
-      ActionType.DAIWithdrawal, amount, recipient, _nonce, minimumActionGas
+      action, amount, recipient, _nonce, minimumActionGas
     );
   }
 
-  function getDaiWithdrawalActionID(
+  function getCustomActionID(
+    ActionType action,
     uint256 amount,
     address recipient,
     uint256 nonce,
@@ -418,30 +482,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   ) external view returns (bytes32 actionID) {
     // Determine the actionID - this serves as the signature hash.
     actionID = _getCustomActionID(
-      ActionType.DAIWithdrawal, amount, recipient, nonce, minimumActionGas
-    );
-  }
-
-  function getNextUSDCWithdrawalActionID(
-    uint256 amount,
-    address recipient,
-    uint256 minimumActionGas
-  ) external view returns (bytes32 actionID) {
-    // Determine the actionID - this serves as the signature hash.
-    actionID = _getCustomActionID(
-      ActionType.USDCWithdrawal, amount, recipient, _nonce, minimumActionGas
-    );
-  }
-
-  function getUSDCWithdrawalActionID(
-    uint256 amount,
-    address recipient,
-    uint256 nonce,
-    uint256 minimumActionGas
-  ) external view returns (bytes32 actionID) {
-    // Determine the actionID - this serves as the signature hash.
-    actionID = _getCustomActionID(
-      ActionType.USDCWithdrawal, amount, recipient, nonce, minimumActionGas
+      action, amount, recipient, nonce, minimumActionGas
     );
   }
 
@@ -557,14 +598,15 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
           address(_USDC),
           "approval failed - USDC has blacklisted this user."
         );
-      }
-      if (_USDC_NAUGHTY.paused()) {
-        emit ExternalError(
-          address(_USDC),
-          "approval failed - USDC contract is currently paused."
-        );
-      } else {
-        emit ExternalError(address(_USDC), "USDC approval failed.");        
+      } else { // Note: `else if` breaks coverage.
+        if (_USDC_NAUGHTY.paused()) {
+          emit ExternalError(
+            address(_USDC),
+            "approval failed - USDC contract is currently paused."
+          );
+        } else {
+          emit ExternalError(address(_USDC), "USDC approval failed.");        
+        }
       }
     }
   }
