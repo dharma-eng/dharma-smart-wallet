@@ -29,17 +29,10 @@ contract UpgradeBeaconProxy {
     }
 
     // Get the current implementation address from the upgrade beacon.
-    (bool ok, bytes memory returnData) = upgradeBeacon.staticcall("");
-    if (!ok) {
-      assembly {
-        returndatacopy(0, 0, returndatasize)
-        revert(0, returndatasize)
-      }
-    }
-    address implementation = abi.decode(returnData, (address));
+    address implementation = _getImplementation(_upgradeBeacon());
 
     // Delegatecall into the implementation, supplying initialization calldata.
-    (ok, returnData) = implementation.delegatecall(initializationCalldata);
+    (bool ok, ) = implementation.delegatecall(initializationCalldata);
     if (!ok) {
       assembly {
         returndatacopy(0, 0, returndatasize)
@@ -49,18 +42,25 @@ contract UpgradeBeaconProxy {
   }
 
   function () external payable {
+    // Delegate execution to implementation contract provided by upgrade beacon.
+    _delegate(_getImplementation(_upgradeBeacon()));
+  }
+
+  /**
+   * @dev Returns the implementation set on the upgrade beacon.
+   * @return Implementation set on the upgrade beacon.
+   */
+  function _getImplementation(
+    address upgradeBeacon
+  ) internal view returns (address implementation) {
     // Get the current implementation address from the upgrade beacon.
     (bool ok, bytes memory returnData) = _upgradeBeacon().staticcall("");
-    if (!ok) {
-      assembly {
-        returndatacopy(0, 0, returndatasize)
-        revert(0, returndatasize)
-      }
-    }
-    address implementation = abi.decode(returnData, (address));
+    
+    // Revert and pass along revert message if call to upgrade beacon reverts.
+    require(ok, string(returnData));
 
-    // Delegate execution to implementation contract provided by upgrade beacon.
-    _delegate(implementation);
+    // Set the implementation to the address returned from the upgrade beacon.
+    implementation = abi.decode(returnData, (address));
   }
 
   /**
@@ -95,7 +95,7 @@ contract UpgradeBeaconProxy {
       returndatacopy(0, 0, returndatasize)
 
       switch result
-      // delegatecall returns 0 on error.
+      // Delegatecall returns 0 on error.
       case 0 { revert(0, returndatasize) }
       default { return(0, returndatasize) }
     }

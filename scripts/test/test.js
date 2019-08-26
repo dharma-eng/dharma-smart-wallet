@@ -14,6 +14,8 @@ const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
 
 const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
+const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
+const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
 const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
 
@@ -668,6 +670,12 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconArtifact.bytecode
   )
 
+  const BadBeaconDeployer = new web3.eth.Contract(BadBeaconArtifact.abi)
+  BadBeaconDeployer.options.data = BadBeaconArtifact.bytecode
+
+  const BadBeaconTwoDeployer = new web3.eth.Contract(BadBeaconTwoArtifact.abi)
+  BadBeaconTwoDeployer.options.data = BadBeaconTwoArtifact.bytecode
+
   const DharmaUpgradeBeaconControllerManagerDeployer = new web3.eth.Contract(
     DharmaUpgradeBeaconControllerManagerArtifact.abi
   )
@@ -680,6 +688,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   DharmaUpgradeMultisigDeployer.options.data = (
     DharmaUpgradeMultisigArtifact.bytecode
+  )
+
+  const UpgradeBeaconProxyDeployer = new web3.eth.Contract(
+    UpgradeBeaconProxyArtifact.abi
+  )
+  UpgradeBeaconProxyDeployer.options.data = (
+    UpgradeBeaconProxyArtifact.bytecode
   )
 
   const DharmaSmartWalletFactoryV1Deployer = new web3.eth.Contract(
@@ -713,9 +728,7 @@ module.exports = {test: async function (provider, testingContext) {
   const MockCodeCheckDeployer = new web3.eth.Contract(
     MockCodeCheckArtifact.abi
   )
-  MockCodeCheckDeployer.options.data = (
-    MockCodeCheckArtifact.bytecode
-  )
+  MockCodeCheckDeployer.options.data = MockCodeCheckArtifact.bytecode
 
   const MockCodeCheckTwo = new web3.eth.Contract(
     MockCodeCheckArtifact.abi,
@@ -817,6 +830,20 @@ module.exports = {test: async function (provider, testingContext) {
     [DharmaUpgradeBeaconController.options.address]
   )
 
+  const BadBeacon = await runTest(
+    `Mock Bad Beacon contract deployment`,
+    BadBeaconDeployer,
+    '',
+    'deploy'
+  )
+
+  const BadBeaconTwo = await runTest(
+    `Mock Bad Beacon Two contract deployment`,
+    BadBeaconTwoDeployer,
+    '',
+    'deploy'
+  )
+
   const DharmaSmartWalletImplementationV0 = await runTest(
     `DharmaSmartWalletImplementationV0 contract deployment`,
     DharmaSmartWalletImplementationV0Deployer,
@@ -831,9 +858,152 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
-  // TODO: do this the "right" way once everything is working correctly!
+  const FailedUpgradeBeaconProxy = await runTest(
+    `Cannot deploy UpgradeBeaconProxy contract using a bad beacon`,
+    UpgradeBeaconProxyDeployer,
+    '',
+    'deploy',
+    [BadBeacon.options.address, "0x"],
+    false
+  )
+
+  await runTest(
+    'Dharma Upgrade Beacon Controller cannot set null address as implementation',
+    DharmaUpgradeBeaconController,
+    'upgrade',
+    'send',
+    [
+      DharmaUpgradeBeacon.options.address,
+      nullAddress
+    ],
+    false
+  )
+
+  await runTest(
+    'Dharma Upgrade Beacon Controller cannot set null address as implementation',
+    DharmaUpgradeBeaconController,
+    'upgrade',
+    'send',
+    [
+      DharmaUpgradeBeacon.options.address,
+      nullAddress
+    ],
+    false
+  )
+
+  await runTest(
+    'Dharma Upgrade Beacon Controller cannot set non-contract as implementation',
+    DharmaUpgradeBeaconController,
+    'upgrade',
+    'send',
+    [
+      DharmaUpgradeBeacon.options.address,
+      address
+    ],
+    false
+  )
+
+  await runTest(
+    'Dharma Upgrade Beacon Controller cannot support a "bad" beacon that throws',
+    DharmaUpgradeBeaconController,
+    'upgrade',
+    'send',
+    [
+      BadBeacon.options.address,
+      DharmaSmartWalletImplementationV0.options.address
+    ],
+    false
+  )
+
+  await runTest(
+    'Dharma Upgrade Beacon Controller cannot upgrade a non-upgradeable beacon',
+    DharmaUpgradeBeaconController,
+    'upgrade',
+    'send',
+    [
+      BadBeaconTwo.options.address,
+      DharmaSmartWalletImplementationV0.options.address
+    ],
+    false
+  )
+
   await runTest(
     'Dharma Upgrade Beacon Controller can set initial upgrade beacon implementation',
+    DharmaUpgradeBeaconController,
+    'upgrade',
+    'send',
+    [
+      DharmaUpgradeBeacon.options.address,
+      DharmaSmartWalletImplementationV0.options.address
+    ],
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.upgradeBeacon,
+          DharmaUpgradeBeacon.options.address
+        )
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.oldImplementation,
+          nullAddress
+        )
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
+          emptyHash
+        )
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.newImplementation,
+          DharmaSmartWalletImplementationV0.options.address
+        )
+        /* TODO
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.newImplementationCodeHash,
+          ...
+        )
+        */
+      }
+    }
+  )
+
+  await runTest(
+    'Dharma Upgrade Beacon Controller can clear upgrade beacon implementation',
+    DharmaUpgradeBeaconController,
+    'freeze',
+    'send',
+    [
+      DharmaUpgradeBeacon.options.address
+    ],
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.upgradeBeacon,
+          DharmaUpgradeBeacon.options.address
+        )
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.oldImplementation,
+          DharmaSmartWalletImplementationV0.options.address
+        )
+        /* TODO
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
+          ...
+        )
+        */
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.newImplementation,
+          nullAddress
+        )
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.newImplementationCodeHash,
+          emptyHash
+        )
+      }
+    }
+  )
+
+  await runTest(
+    'Dharma Upgrade Beacon Controller can reset upgrade beacon implementation',
     DharmaUpgradeBeaconController,
     'upgrade',
     'send',
@@ -1057,6 +1227,15 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'DharmaSmartWalletFactoryV1 cannot deploy a new smart wallet with no key',
+    DharmaSmartWalletFactoryV1,
+    'newSmartWallet',
+    'send',
+    [nullAddress],
+    false
+  )
+
+  await runTest(
     'DharmaSmartWalletFactoryV1 can deploy a new smart wallet using a Dharma Key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
@@ -1123,6 +1302,19 @@ module.exports = {test: async function (provider, testingContext) {
   const UserSmartWallet = new web3.eth.Contract(
     DharmaSmartWalletImplementationV0Artifact.abi,
     targetWalletAddress
+  )
+
+  await runTest(
+    'DharmaSmartWalletFactoryV1 gets a new smart wallet address with same key',
+    DharmaSmartWalletFactoryV1,
+    'getNextSmartWallet',
+    'call',
+    [address],
+    true,
+    value => {
+      // TODO: verify against expected value
+      assert.ok(targetWalletAddress !== value)
+    }
   )
 
   await web3.eth.sendTransaction({
