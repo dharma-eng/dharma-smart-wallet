@@ -18,6 +18,7 @@ const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
 const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
 const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
+const ImmutableCreate2FactoryArtifact = require('../../build/contracts/ImmutableCreate2Factory.json')
 
 const nullAddress = '0x0000000000000000000000000000000000000000'
 const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000'
@@ -28,7 +29,69 @@ const keylessCreate2DeployerAddress = '0x4c8D290a1B368ac4728d83a9e8321fC3af2b39b
 const keylessCreate2DeploymentTransaction = '0xf87e8085174876e800830186a08080ad601f80600e600039806000f350fe60003681823780368234f58015156014578182fd5b80825250506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222'
 const keylessCreate2Address = '0x7A0D94F55792C434d74a40883C6ed8545E406D12'
 
-const ImmutableCreate2Factory = '0x0000000000FFe8B47B3e2130213B802212439497'
+const InefficientImmutableCreate2FactoryAddress = '0xcfA3A7637547094fF06246817a35B8333C315196'
+const ImmutableCreate2FactoryAddress = '0x0000000000FFe8B47B3e2130213B802212439497'
+
+const immutableCreate2FactoryCreationCode = (
+  '0x608060405234801561001057600080fd5b50610833806100206000396000f3fe60806040' +
+  '526004361061003f5760003560e01c806308508b8f1461004457806364e030871461009857' +
+  '806385cf97ab14610138578063a49a7c90146101bc575b600080fd5b348015610050576000' +
+  '80fd5b506100846004803603602081101561006757600080fd5b503573ffffffffffffffff' +
+  'ffffffffffffffffffffffff166101ec565b604080519115158252519081900360200190f3' +
+  '5b61010f600480360360408110156100ae57600080fd5b8135919081019060408101602082' +
+  '01356401000000008111156100d057600080fd5b8201836020820111156100e257600080fd' +
+  '5b8035906020019184600183028401116401000000008311171561010457600080fd5b5090' +
+  '92509050610217565b6040805173ffffffffffffffffffffffffffffffffffffffff909216' +
+  '8252519081900360200190f35b34801561014457600080fd5b5061010f6004803603604081' +
+  '101561015b57600080fd5b8135919081019060408101602082013564010000000081111561' +
+  '017d57600080fd5b82018360208201111561018f57600080fd5b8035906020019184600183' +
+  '02840111640100000000831117156101b157600080fd5b509092509050610592565b348015' +
+  '6101c857600080fd5b5061010f600480360360408110156101df57600080fd5b5080359060' +
+  '20013561069e565b73ffffffffffffffffffffffffffffffffffffffff1660009081526020' +
+  '819052604090205460ff1690565b600083606081901c33148061024c57507fffffffffffff' +
+  'ffffffffffffffffffffffffffff0000000000000000000000008116155b6102a157604051' +
+  '7f08c379a00000000000000000000000000000000000000000000000000000000081526004' +
+  '01808060200182810382526045815260200180610774604591396060019150506040518091' +
+  '0390fd5b606084848080601f01602080910402602001604051908101604052809392919081' +
+  '81526020018383808284376000920182905250604051855195965090943094508b93508692' +
+  '506020918201918291908401908083835b6020831061033557805182527fffffffffffffff' +
+  'ffffffffffffffffffffffffffffffffffffffffffffffffe0909201916020918201910161' +
+  '02f8565b51815160209384036101000a7fffffffffffffffffffffffffffffffffffffffff' +
+  'ffffffffffffffffffffffff018019909216911617905260408051929094018281037fffff' +
+  'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe001835280855282' +
+  '51928201929092207fff000000000000000000000000000000000000000000000000000000' +
+  '000000008383015260609890981b7fffffffffffffffffffffffffffffffffffffffff0000' +
+  '00000000000000000000166021830152603582019690965260558082019790975282518082' +
+  '03909701875260750182525084519484019490942073ffffffffffffffffffffffffffffff' +
+  'ffffffffff81166000908152938490529390922054929350505060ff16156104a757604051' +
+  '7f08c379a00000000000000000000000000000000000000000000000000000000081526004' +
+  '0180806020018281038252603f815260200180610735603f91396040019150506040518091' +
+  '0390fd5b81602001825188818334f5955050508073ffffffffffffffffffffffffffffffff' +
+  'ffffffff168473ffffffffffffffffffffffffffffffffffffffff161461053a576040517f' +
+  '08c379a0000000000000000000000000000000000000000000000000000000008152600401' +
+  '8080602001828103825260468152602001806107b960469139606001915050604051809103' +
+  '90fd5b50505073ffffffffffffffffffffffffffffffffffffffff81166000908152602081' +
+  '90526040902080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffff' +
+  'ffffff001660011790559392505050565b6000308484846040516020018083838082843760' +
+  '408051919093018181037fffffffffffffffffffffffffffffffffffffffffffffffffffff' +
+  'ffffffffffe001825280845281516020928301207fff000000000000000000000000000000' +
+  '000000000000000000000000000000008383015260609990991b7fffffffffffffffffffff' +
+  'ffffffffffffffffffff000000000000000000000000166021820152603581019790975260' +
+  '558088019890985282518088039098018852607590960182525085519585019590952073ff' +
+  'ffffffffffffffffffffffffffffffffffffff811660009081529485905294909320549394' +
+  '50505060ff909116159050610697575060005b9392505050565b604080517fff0000000000' +
+  '00000000000000000000000000000000000000000000000000006020808301919091523060' +
+  '601b6021830152603582018590526055808301859052835180840390910181526075909201' +
+  '835281519181019190912073ffffffffffffffffffffffffffffffffffffffff8116600090' +
+  '8152918290529190205460ff161561072e575060005b9291505056fe496e76616c69642063' +
+  '6f6e7472616374206372656174696f6e202d20636f6e74726163742068617320616c726561' +
+  '6479206265656e206465706c6f7965642e496e76616c69642073616c74202d206669727374' +
+  '203230206279746573206f66207468652073616c74206d757374206d617463682063616c6c' +
+  '696e6720616464726573732e4661696c656420746f206465706c6f7920636f6e7472616374' +
+  '207573696e672070726f76696465642073616c7420616e6420696e697469616c697a617469' +
+  '6f6e20636f64652ea265627a7a723058202bdc55310d97c4088f18acf04253db593f091405' +
+  '9f0c781a9df3624dcef0d1cf64736f6c634300050a0032'
+)
 
 const eth_whale = '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe'
 const dai_whale = '0x76B03EB651153a81fA1f212f2f59329B4180A46F'
@@ -619,6 +682,37 @@ module.exports = {test: async function (provider, testingContext) {
     .catch(error => {console.log('skipping...')}
   );
 
+  console.log('submitting inefficient create2 factory deployment through initial create2 contract...')
+  await web3.eth.sendTransaction({
+    from: originalAddress,
+    to: keylessCreate2Address,
+    value: '0',
+    gas: (testingContext !== 'coverage') ? '608261' : gasLimit - 1,
+    gasPrice: 1,
+    data: immutableCreate2FactoryCreationCode
+  }).catch(error => {console.log('skipping...')});
+
+  const InefficientImmutableCreate2Factory = new web3.eth.Contract(
+    ImmutableCreate2FactoryArtifact.abi,
+    InefficientImmutableCreate2FactoryAddress
+  )
+
+  console.log('submitting create2 factory through inefficient create2 contract...')
+  await InefficientImmutableCreate2Factory.methods['safeCreate2'](
+    '0x0000000000000000000000000000000000000000f4b0218f13a6440a6f020000',
+    immutableCreate2FactoryCreationCode
+  ).send({
+    from: originalAddress,
+    value: '0',
+    gas: '630838',
+    gasPrice: '1'
+  }).catch(error => {console.log('skipping...')});
+
+  const ImmutableCreate2Factory = new web3.eth.Contract(
+    ImmutableCreate2FactoryArtifact.abi,
+    ImmutableCreate2FactoryAddress
+  )
+
   // construct the payload passed to create2 in order to verify correct behavior
   let create2payload = (
     '0xff' +
@@ -768,6 +862,52 @@ module.exports = {test: async function (provider, testingContext) {
     'hash',
     'call',
     [MockCodeCheck.options.address],
+    true,
+    value => {
+      assert.strictEqual(
+        value,
+        web3.utils.keccak256(
+          MockCodeCheckArtifact.deployedBytecode,
+          {encoding: 'hex'}
+        )
+      )
+    }
+  )
+
+  let MockCodeCheck3Address;
+  await runTest(
+    `MockCodeCheck contract address check through immutable create2 factory`,
+    ImmutableCreate2Factory,
+    'findCreate2Address',
+    'call',
+    [
+      nullBytes32,
+      MockCodeCheckArtifact.bytecode
+    ],
+    true,
+    value => {
+      MockCodeCheck3Address = value
+    }
+  ) 
+
+  await runTest(
+    `MockCodeCheck contract deployment through immutable create2 factory`,
+    ImmutableCreate2Factory,
+    'safeCreate2',
+    'send',
+    [
+      nullBytes32,
+      MockCodeCheckArtifact.bytecode
+    ],
+    true
+  )
+
+  await runTest(
+    'Deployed MockCodeCheck has correct extcodehash',
+    MockCodeCheck,
+    'hash',
+    'call',
+    [MockCodeCheck3Address],
     true,
     value => {
       assert.strictEqual(
