@@ -661,6 +661,10 @@ module.exports = {test: async function (provider, testingContext) {
     '0xfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeed'
   )
 
+  let initialControllerOwner = await setupNewDefaultAddress(
+    '0x58e0348ce225c18ece7f2d6a069afa340365019481903b221481706d291a66bf'
+  )
+
   let deployGas
   let latestBlock = await web3.eth.getBlock('latest')
   const gasLimit = latestBlock.gasLimit
@@ -671,6 +675,15 @@ module.exports = {test: async function (provider, testingContext) {
   await web3.eth.sendTransaction({
     from: originalAddress,
     to: keylessCreate2DeployerAddress,
+    value: web3.utils.toWei('0.01', 'ether'),
+    gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+    gasPrice: 1
+  })
+
+  console.log('funding initial controller owner address...')
+  await web3.eth.sendTransaction({
+    from: originalAddress,
+    to: initialControllerOwner,
     value: web3.utils.toWei('0.01', 'ether'),
     gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
     gasPrice: 1
@@ -921,6 +934,99 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   // BEGIN ACTUAL DEPLOYMENT TESTS
+
+  await runTest(
+    `UpgradeBeaconEnvoy contract address check through immutable create2 factory`,
+    ImmutableCreate2Factory,
+    'findCreate2Address',
+    'call',
+    [
+      '0x0000000000000000000000000000000000000000d650dd943248d70031000000',
+      '0x600b5981380380925939f3363659595959355afa15f3'
+    ],
+    true,
+    value => {
+      assert.strictEqual(value, '0x000000004b394cEbf1425C4C28E5016B6ddBd8C3')
+    }
+  ) 
+
+  await runTest(
+    `Upgrade Beacon Envoy contract deployment through immutable create2 factory`,
+    ImmutableCreate2Factory,
+    'safeCreate2',
+    'send',
+    [
+      '0x0000000000000000000000000000000000000000d650dd943248d70031000000',
+      '0x600b5981380380925939f3363659595959355afa15f3'
+    ],
+    true
+  )
+
+  await runTest(
+    'Deployed Upgrade Beacon Envoy code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    ['0x000000004b394cEbf1425C4C28E5016B6ddBd8C3'],
+    true,
+    value => {
+      assert.strictEqual(value, '0x363659595959355afa15f3')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController contract address check through immutable create2 factory`,
+    ImmutableCreate2Factory,
+    'findCreate2Address',
+    'call',
+    [
+      '0x0000000000000000000000000000000000000000a771d29115d60d001e000000',
+      DharmaUpgradeBeaconControllerArtifact.bytecode + 
+      '000000000000000000000000990774Aa5DFB8a2600EB78101C1eeAa8d6104623'
+    ],
+    true,
+    value => {
+      assert.strictEqual(value, '0x000000004B982c329903E699A304013079FD15aF')
+    }
+  ) 
+
+  await runTest(
+    `DharmaUpgradeBeaconController contract deployment through immutable create2 factory`,
+    ImmutableCreate2Factory,
+    'safeCreate2',
+    'send',
+    [
+      '0x0000000000000000000000000000000000000000a771d29115d60d001e000000',
+      DharmaUpgradeBeaconControllerArtifact.bytecode + 
+      '000000000000000000000000990774Aa5DFB8a2600EB78101C1eeAa8d6104623'
+    ],
+    true
+  )
+
+  const DharmaUpgradeBeaconController = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerArtifact.abi,
+    '0x000000004B982c329903E699A304013079FD15aF'
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController contract deployment`,
+    DharmaUpgradeBeaconControllerDeployer,
+    '',
+    'deploy',
+    [address]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController can transfer owner`,
+    DharmaUpgradeBeaconController,
+    'transferOwnership',
+    'send',
+    [address],
+    true,
+    receipt => {},
+    initialControllerOwner
+  )
+
   const DharmaUpgradeMultisig = await runTest(
     `DharmaUpgradeMultisig contract deployment`,
     DharmaUpgradeMultisigDeployer,
@@ -940,14 +1046,6 @@ module.exports = {test: async function (provider, testingContext) {
   const DharmaUpgradeBeaconControllerManager = await runTest(
     `DharmaUpgradeBeaconControllerManager contract deployment`,
     DharmaUpgradeBeaconControllerManagerDeployer,
-    '',
-    'deploy',
-    [address]
-  )
-
-  const DharmaUpgradeBeaconController = await runTest(
-    `DharmaUpgradeBeaconController contract deployment`,
-    DharmaUpgradeBeaconControllerDeployer,
     '',
     'deploy',
     [address]

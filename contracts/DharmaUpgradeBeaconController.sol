@@ -24,8 +24,10 @@ contract DharmaUpgradeBeaconController is Ownable {
     bytes32 newImplementationCodeHash
   );
 
-  // Note this address will eventually be a constant & we'll just check runtime.
-  address private _upgradeBeaconEnvoy;
+  // The upgrade beacon envoy enables this contract to check the implementation. 
+  address private constant _UPGRADE_BEACON_ENVOY = address(
+    0x000000004b394cEbf1425C4C28E5016B6ddBd8C3
+  );
 
   /**
    * @notice In the constructor, set the initial owner of this contract. We're
@@ -39,18 +41,13 @@ contract DharmaUpgradeBeaconController is Ownable {
     // Set the supplied account as the initial owner of this contract.
     _transferOwnership(owner);
     
-    // Deploy upgrade beacon envoy. Note: this could be deployed independently.
-    address upgradeBeaconEnvoy;
-    bytes22 upgradeBeaconEnvoyCreationCode = bytes22(
-      0x600b5981380380925939f3363659595959355afa15f3
-    );
-    assembly {
-      // write 22-byte beacon envoy creation code to scratch space and deploy.
-      mstore(0, upgradeBeaconEnvoyCreationCode)
-      upgradeBeaconEnvoy := create(0, 0, 22)
-    }
-    assert(address(upgradeBeaconEnvoy) != address(0));
-    _upgradeBeaconEnvoy = address(upgradeBeaconEnvoy);
+    // Ensure the upgrade beacon envoy has the expected runtime code.
+    address envoy = _UPGRADE_BEACON_ENVOY;
+    bytes32 envoyCodeHash;
+    assembly { envoyCodeHash := extcodehash(envoy)}
+    assert(envoyCodeHash == keccak256(abi.encodePacked(bytes11(
+      0x363659595959355afa15f3
+    ))));
   }
 
   /**
@@ -67,9 +64,7 @@ contract DharmaUpgradeBeaconController is Ownable {
 
     // Ensure that the implementation contract has code via extcodesize.
     uint256 size;
-    assembly {
-      size := extcodesize(implementation)
-    }
+    assembly { size := extcodesize(implementation) }
     require(size > 0, "Implementation must have contract code.");
     
     // Update the upgrade beacon with the new implementation address.
@@ -95,8 +90,9 @@ contract DharmaUpgradeBeaconController is Ownable {
    */
   function getImplementation(address beacon) public view returns (address) {
     // Perform a staticcall into the envoy, supplying the beacon in calldata.
-    // Note: we can declare `bytes memory returnData` to avoid inline assembly.
-    (bool success, bytes memory returnData) = _upgradeBeaconEnvoy.staticcall(abi.encode(beacon));
+    (bool success, bytes memory returnData) = _UPGRADE_BEACON_ENVOY.staticcall(
+      abi.encode(beacon)
+    );
 
     // Revert with message on failure (i.e. if the beacon or envoy is incorrect)
     require(success, string(returnData));
