@@ -3,8 +3,10 @@ var fs = require('fs')
 var util = require('ethereumjs-util')
 
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
-const DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
-const DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
+
+let DharmaUpgradeBeaconArtifact;
+let DharmaUpgradeBeaconControllerArtifact;
+
 const DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 
@@ -281,6 +283,14 @@ function longer() {
 }
 
 module.exports = {test: async function (provider, testingContext) {
+  if (testingContext === 'coverage') {
+    DharmaUpgradeBeaconArtifact = require('../../../build/contracts/DharmaUpgradeBeacon.json')
+    DharmaUpgradeBeaconControllerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconController.json')
+  } else {
+    DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
+    DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
+  }
+
   var web3 = provider
   let passed = 0
   let failed = 0

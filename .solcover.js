@@ -14,6 +14,7 @@ module.exports = {
     'openzeppelin-upgradeability/upgradeability/UpgradeabilityProxy.sol',
     'openzeppelin-upgradeability/utils/Address.sol',
     'mock/MockCodeCheck.sol',
-    'test/UpgradeBeaconImplementationCheck.sol'
+    'test/UpgradeBeaconImplementationCheck.sol',
+    'helpers/ImmutableCreate2Factory.sol'
   ]
 }
