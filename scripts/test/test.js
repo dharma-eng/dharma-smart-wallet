@@ -1027,6 +1027,55 @@ module.exports = {test: async function (provider, testingContext) {
     initialControllerOwner
   )
 
+  const FailedUpgradeBeaconProxy = await runTest(
+    `Cannot deploy UpgradeBeaconProxy contract using an undeployed beacon`,
+    UpgradeBeaconProxyDeployer,
+    '',
+    'deploy',
+    ["0x"],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeacon contract address check through immutable create2 factory`,
+    ImmutableCreate2Factory,
+    'findCreate2Address',
+    'call',
+    [
+      '0x0000000000000000000000000000000000000000ae008aaa694aaa00ca000000',
+      DharmaUpgradeBeaconArtifact.bytecode
+    ],
+    true,
+    value => {
+      assert.strictEqual(value, '0x000000006B8a7e3a9bfdf9Fa5102770F031628f1')
+    }
+  ) 
+
+  await runTest(
+    `DharmaUpgradeBeacon contract deployment through immutable create2 factory`,
+    ImmutableCreate2Factory,
+    'safeCreate2',
+    'send',
+    [
+      '0x0000000000000000000000000000000000000000ae008aaa694aaa00ca000000',
+      DharmaUpgradeBeaconArtifact.bytecode
+    ],
+    true
+  )
+
+  const DharmaUpgradeBeacon = new web3.eth.Contract(
+    DharmaUpgradeBeaconArtifact.abi,
+    '0x000000006B8a7e3a9bfdf9Fa5102770F031628f1'
+  )
+
+  await runTest(
+    `DharmaUpgradeBeacon contract deployment`,
+    DharmaUpgradeBeaconDeployer,
+    '',
+    'deploy',
+    []
+  )
+
   const DharmaUpgradeMultisig = await runTest(
     `DharmaUpgradeMultisig contract deployment`,
     DharmaUpgradeMultisigDeployer,
@@ -1060,12 +1109,12 @@ module.exports = {test: async function (provider, testingContext) {
   )
   */
   
-  const DharmaUpgradeBeacon = await runTest(
+  await runTest(
     `DharmaUpgradeBeacon contract deployment`,
     DharmaUpgradeBeaconDeployer,
     '',
     'deploy',
-    [DharmaUpgradeBeaconController.options.address]
+    []
   )
 
   const BadBeacon = await runTest(
@@ -1094,15 +1143,6 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaSmartWalletImplementationV1Deployer,
     '',
     'deploy'
-  )
-
-  const FailedUpgradeBeaconProxy = await runTest(
-    `Cannot deploy UpgradeBeaconProxy contract using a bad beacon`,
-    UpgradeBeaconProxyDeployer,
-    '',
-    'deploy',
-    [BadBeacon.options.address, "0x"],
-    false
   )
 
   await runTest(
@@ -1383,7 +1423,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaSmartWalletFactoryV1Deployer,
     '',
     'deploy',
-    [DharmaUpgradeBeacon.options.address]
+    []
   )
 
   let targetWalletAddress;

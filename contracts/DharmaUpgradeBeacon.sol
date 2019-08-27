@@ -8,23 +8,20 @@ pragma solidity 0.5.11;
  * Dharma smart wallets and lets a controller update that address in storage.
  */
 contract DharmaUpgradeBeacon {
+  // The implementation address is held in storage slot zero.
   address private _implementation;
-  address private _controller;
 
-  /**
-   * @notice In the constructor, set the controller of this contract. This value
-   * can be hardcoded for the production version.
-   */
-  constructor(address controller) public {
-    _controller = controller;
-  }
+  // The controller that can update the implementation is set as a constant.
+  address private constant _CONTROLLER = address(
+    0x000000004B982c329903E699A304013079FD15aF
+  );
 
   /**
    * @notice In the fallback function, allow only the controller to update the
    * implementation address - for all other callers, return the current address.
    */
   function () external {
-    if (msg.sender == _controller) {
+    if (msg.sender == _CONTROLLER) {
       // assembly required as fallback functions do not natively take arguments.
       assembly {
         // set the first word from calldata as the new implementation.

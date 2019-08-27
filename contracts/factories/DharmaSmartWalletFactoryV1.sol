@@ -1,6 +1,6 @@
 pragma solidity 0.5.11;
 
-import "../implementations/DharmaSmartWalletImplementationV1.sol";
+import "../implementations/DharmaSmartWalletImplementationV0.sol";
 import "../UpgradeBeaconProxy.sol";
 
 
@@ -14,17 +14,9 @@ contract DharmaSmartWalletFactoryV1 {
   // Fires an event when a new smart wallet is created - this may not be needed.
   event SmartWalletDeployed(address wallet, address dharmaKey);
 
-  // NOTE: setting this value in storage is unnecessary - we should deploy the
-  // upgrade beacon first and use a constant (here now for easier testing)
-  address private _dharmaSmartWalletUpgradeBeacon;
-  
-  constructor(address dharmaSmartWalletUpgradeBeacon) public {
-    _dharmaSmartWalletUpgradeBeacon = dharmaSmartWalletUpgradeBeacon;
-  }
-
   function newSmartWallet(address dharmaKey) public returns (address wallet) {
     // Construct initialization calldata as initialize selector and dharma key.
-    DharmaSmartWalletImplementationV1 implementation;
+    DharmaSmartWalletImplementationV0 implementation;
     bytes memory initializationCalldata = abi.encodeWithSelector(
       implementation.initialize.selector,
       dharmaKey
@@ -43,7 +35,7 @@ contract DharmaSmartWalletFactoryV1 {
     address dharmaKey
   ) public view returns (address wallet) {
     // Construct initialization calldata as initialize selector and dharma key.
-    DharmaSmartWalletImplementationV1 implementation;
+    DharmaSmartWalletImplementationV0 implementation;
     bytes memory initializationCalldata = abi.encodeWithSelector(
       implementation.initialize.selector,
       dharmaKey
@@ -69,10 +61,7 @@ contract DharmaSmartWalletFactoryV1 {
     // place creation code and constructor args of contract to spawn in memory.
     bytes memory initCode = abi.encodePacked(
       type(UpgradeBeaconProxy).creationCode,
-      abi.encode(
-        _dharmaSmartWalletUpgradeBeacon,
-        initializationCalldata
-      )
+      abi.encode(initializationCalldata)
     );
 
     // spawn the contract using `CREATE2`.
@@ -95,10 +84,7 @@ contract DharmaSmartWalletFactoryV1 {
     // place creation code and constructor args of contract to spawn in memory.
     bytes memory initCode = abi.encodePacked(
       type(UpgradeBeaconProxy).creationCode,
-      abi.encode(
-        _dharmaSmartWalletUpgradeBeacon,
-        initializationCalldata
-      )
+      abi.encode(initializationCalldata)
     );
 
     // get target address using the constructed initialization code.

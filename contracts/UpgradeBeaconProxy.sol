@@ -5,31 +5,17 @@ pragma solidity 0.5.11;
  * @title UpgradeBeaconProxy
  * @author 0age
  * @notice This contract delegates all logic, including initialization, to an
- * implementation contract provided by an "upgrade beacon" contract.
+ * implementation contract provided by the "upgrade beacon" contract.
  */
 contract UpgradeBeaconProxy {
-  /**
-   * @dev Storage slot with the address of the upgrade beacon.
-   * This is the keccak-256 hash of "eip1967.proxy.upgradeBeacon" subtracted by
-   * 1, and is validated in the constructor.
-   * Note: we are currently supplying the upgrade beacon as an argument and
-   * setting it in unstructured storage, but for the production version we can
-   * instead deploy the upgrade beacon ahead of time and set it's address as a
-   * constant, since it does not change.
-   */
-  bytes32 internal constant UPGRADE_BEACON_SLOT = 0xe440fa59daa125604eafd5daa98aee77371c181c9615fbe21f4b96302321e8a7;
+  // Set the upgrade beacon as a constant (i.e. not in contract storage).
+  address private constant _UPGRADE_BEACON = address(
+    0x000000006B8a7e3a9bfdf9Fa5102770F031628f1
+  );
 
-  constructor(address upgradeBeacon, bytes memory initializationCalldata) public payable {
-    // Set the address of the upgrade beacon in unstructured storage - this way
-    // it will not interfere with standard storage written to by implementation.
-    assert(UPGRADE_BEACON_SLOT == bytes32(uint256(keccak256("eip1967.proxy.upgradeBeacon")) - 1));
-    bytes32 slot = UPGRADE_BEACON_SLOT;
-    assembly {
-      sstore(slot, upgradeBeacon)
-    }
-
+  constructor(bytes memory initializationCalldata) public payable {
     // Get the current implementation address from the upgrade beacon.
-    address implementation = _getImplementation(_upgradeBeacon());
+    address implementation = _getImplementation();
 
     // Delegatecall into the implementation, supplying initialization calldata.
     (bool ok, ) = implementation.delegatecall(initializationCalldata);
@@ -43,35 +29,22 @@ contract UpgradeBeaconProxy {
 
   function () external payable {
     // Delegate execution to implementation contract provided by upgrade beacon.
-    _delegate(_getImplementation(_upgradeBeacon()));
+    _delegate(_getImplementation());
   }
 
   /**
    * @dev Returns the implementation set on the upgrade beacon.
    * @return Implementation set on the upgrade beacon.
    */
-  function _getImplementation(
-    address upgradeBeacon
-  ) internal view returns (address implementation) {
+  function _getImplementation() internal view returns (address implementation) {
     // Get the current implementation address from the upgrade beacon.
-    (bool ok, bytes memory returnData) = _upgradeBeacon().staticcall("");
+    (bool ok, bytes memory returnData) = _UPGRADE_BEACON.staticcall("");
     
     // Revert and pass along revert message if call to upgrade beacon reverts.
     require(ok, string(returnData));
 
     // Set the implementation to the address returned from the upgrade beacon.
     implementation = abi.decode(returnData, (address));
-  }
-
-  /**
-   * @dev Returns the address of the upgrade beacon.
-   * @return Address of the upgrade beacon.
-   */
-  function _upgradeBeacon() internal view returns (address upgradeBeacon) {
-    bytes32 slot = UPGRADE_BEACON_SLOT;
-    assembly {
-      upgradeBeacon := sload(slot)
-    }
   }
 
   /**
