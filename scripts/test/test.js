@@ -6,6 +6,7 @@ const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/Dha
 
 let DharmaUpgradeBeaconArtifact;
 let DharmaUpgradeBeaconControllerArtifact;
+let DharmaUpgradeBeaconEnvoyArtifact;
 
 const DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
@@ -286,9 +287,11 @@ module.exports = {test: async function (provider, testingContext) {
   if (testingContext === 'coverage') {
     DharmaUpgradeBeaconArtifact = require('../../../build/contracts/DharmaUpgradeBeacon.json')
     DharmaUpgradeBeaconControllerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconController.json')
+    DharmaUpgradeBeaconEnvoyArtifact = require('../../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
   } else {
     DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
     DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
+    DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
   }
 
   var web3 = provider
@@ -951,12 +954,12 @@ module.exports = {test: async function (provider, testingContext) {
     'findCreate2Address',
     'call',
     [
-      '0x0000000000000000000000000000000000000000d650dd943248d70031000000',
-      '0x600b5981380380925939f3363659595959355afa15f3'
+      '0x00000000000000000000000000000000000000003b4cf3f5b304150b79010000',
+      DharmaUpgradeBeaconEnvoyArtifact.bytecode
     ],
     true,
     value => {
-      assert.strictEqual(value, '0x000000004b394cEbf1425C4C28E5016B6ddBd8C3')
+      assert.strictEqual(value, '0x000000000067503c398F4c9652530DBC4eA95C02')
     }
   ) 
 
@@ -966,8 +969,8 @@ module.exports = {test: async function (provider, testingContext) {
     'safeCreate2',
     'send',
     [
-      '0x0000000000000000000000000000000000000000d650dd943248d70031000000',
-      '0x600b5981380380925939f3363659595959355afa15f3'
+      '0x00000000000000000000000000000000000000003b4cf3f5b304150b79010000',
+      DharmaUpgradeBeaconEnvoyArtifact.bytecode
     ],
     true
   )
@@ -977,10 +980,10 @@ module.exports = {test: async function (provider, testingContext) {
     MockCodeCheck,
     'code',
     'call',
-    ['0x000000004b394cEbf1425C4C28E5016B6ddBd8C3'],
+    ['0x000000000067503c398F4c9652530DBC4eA95C02'],
     true,
     value => {
-      assert.strictEqual(value, '0x363659595959355afa15f3')
+      assert.strictEqual(value, DharmaUpgradeBeaconEnvoyArtifact.deployedBytecode)
     }
   )
 
@@ -990,13 +993,13 @@ module.exports = {test: async function (provider, testingContext) {
     'findCreate2Address',
     'call',
     [
-      '0x0000000000000000000000000000000000000000a771d29115d60d001e000000',
+      '0x00000000000000000000000000000000000000005aa398eb9566310e02000000',
       DharmaUpgradeBeaconControllerArtifact.bytecode + 
       '000000000000000000000000990774Aa5DFB8a2600EB78101C1eeAa8d6104623'
     ],
     true,
     value => {
-      assert.strictEqual(value, '0x000000004B982c329903E699A304013079FD15aF')
+      assert.strictEqual(value, '0x00000000003284ACb9aDEb78A2dDe0A8499932b9')
     }
   ) 
 
@@ -1006,7 +1009,7 @@ module.exports = {test: async function (provider, testingContext) {
     'safeCreate2',
     'send',
     [
-      '0x0000000000000000000000000000000000000000a771d29115d60d001e000000',
+      '0x00000000000000000000000000000000000000005aa398eb9566310e02000000',
       DharmaUpgradeBeaconControllerArtifact.bytecode + 
       '000000000000000000000000990774Aa5DFB8a2600EB78101C1eeAa8d6104623'
     ],
@@ -1015,7 +1018,19 @@ module.exports = {test: async function (provider, testingContext) {
 
   const DharmaUpgradeBeaconController = new web3.eth.Contract(
     DharmaUpgradeBeaconControllerArtifact.abi,
-    '0x000000004B982c329903E699A304013079FD15aF'
+    '0x00000000003284ACb9aDEb78A2dDe0A8499932b9'
+  )
+
+  await runTest(
+    'Deployed Upgrade Beacon Controller code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [DharmaUpgradeBeaconController.options.address],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaUpgradeBeaconControllerArtifact.deployedBytecode)
+    }
   )
 
   await runTest(
@@ -1052,12 +1067,12 @@ module.exports = {test: async function (provider, testingContext) {
     'findCreate2Address',
     'call',
     [
-      '0x0000000000000000000000000000000000000000ae008aaa694aaa00ca000000',
+      '0x0000000000000000000000000000000000000000795c924476188b0e6c020000',
       DharmaUpgradeBeaconArtifact.bytecode
     ],
     true,
     value => {
-      assert.strictEqual(value, '0x000000006B8a7e3a9bfdf9Fa5102770F031628f1')
+      assert.strictEqual(value, '0x0000000000b45D6593312ac9fdE193F3D0633644')
     }
   ) 
 
@@ -1067,7 +1082,7 @@ module.exports = {test: async function (provider, testingContext) {
     'safeCreate2',
     'send',
     [
-      '0x0000000000000000000000000000000000000000ae008aaa694aaa00ca000000',
+      '0x0000000000000000000000000000000000000000795c924476188b0e6c020000',
       DharmaUpgradeBeaconArtifact.bytecode
     ],
     true
@@ -1075,7 +1090,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   const DharmaUpgradeBeacon = new web3.eth.Contract(
     DharmaUpgradeBeaconArtifact.abi,
-    '0x000000006B8a7e3a9bfdf9Fa5102770F031628f1'
+    '0x0000000000b45D6593312ac9fdE193F3D0633644'
   )
 
   await runTest(

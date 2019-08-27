@@ -13,29 +13,26 @@ contract DharmaUpgradeBeacon {
 
   // The controller that can update the implementation is set as a constant.
   address private constant _CONTROLLER = address(
-    0x000000004B982c329903E699A304013079FD15aF
+    0x00000000003284ACb9aDEb78A2dDe0A8499932b9
   );
 
   /**
    * @notice In the fallback function, allow only the controller to update the
    * implementation address - for all other callers, return the current address.
+   * Note that this requires inline assembly, as Solidity fallback functions do
+   * not natively take arguments or return values.
    */
   function () external {
-    if (msg.sender == _CONTROLLER) {
-      // assembly required as fallback functions do not natively take arguments.
+    // Return implementation address for all callers other than the controller.
+    if (msg.sender != _CONTROLLER) {
+      // Load implementation from storage slot zero into memory and return it.
       assembly {
-        // set the first word from calldata as the new implementation.
-        sstore(0, calldataload(0))
-      }
-    } else {
-      // move implementation into memory so it can be accessed from assembly.
-      address implementation = _implementation;
-      // assembly required as fallback functions do not natively return values.
-      assembly {
-        // put the implementation into scratch space and return it.
-        mstore(0, implementation)
+        mstore(0, sload(0))
         return(0, 32)
       }
+    } else {
+      // Set implementation - put first word in calldata in storage slot zero.
+      assembly { sstore(0, calldataload(0)) }
     }
   }
 }
