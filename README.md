@@ -254,7 +254,7 @@ Raw EVM assembly version of Upgrade Beacon:
 - 37 bytes long when using standard addresses
 - only 32 bytes long if controller has a compact address with 5 leading zero bytes
   - use `PUSH15` instead of `PUSH20`
-  - add 5 to `JUMPI` program counter stack argument
+  - subtract 5 from `JUMPI` program counter stack argument
 ```
 0x5973<controller>3314602157545952593df35b355955
 
@@ -316,7 +316,7 @@ Minimal Upgrade Beacon Proxy (runtime code)
 - 53 bytes long when using standard addresses
 - 48 bytes long when using an upgrade beacon with a compact address
   - use `PUSH15` instead of `PUSH20`
-  - add 5 to `JUMPI` program counter stack argument
+  - subtract 5 from `JUMPI` program counter stack argument
 ```
 0x595959593659602059595973<upgrade_beacon>5afa1551368280375af43d3d93803e603357fd5bf3
 

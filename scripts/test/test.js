@@ -31,9 +31,11 @@ const FULL_APPROVAL = '115792089237316195423570985008687907853269984665640564039
 const keylessCreate2DeployerAddress = '0x4c8D290a1B368ac4728d83a9e8321fC3af2b39b1'
 const keylessCreate2DeploymentTransaction = '0xf87e8085174876e800830186a08080ad601f80600e600039806000f350fe60003681823780368234f58015156014578182fd5b80825250506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222'
 const keylessCreate2Address = '0x7A0D94F55792C434d74a40883C6ed8545E406D12'
+const keylessCreate2Runtime = '0x60003681823780368234f58015156014578182fd5b80825250506014600cf3'
 
 const InefficientImmutableCreate2FactoryAddress = '0xcfA3A7637547094fF06246817a35B8333C315196'
 const ImmutableCreate2FactoryAddress = '0x0000000000FFe8B47B3e2130213B802212439497'
+const ImmutableCreate2FactoryRuntimeHash = '0x767db8f19b71e367540fa372e8e81e4dcb7ca8feede0ae58a0c0bd08b7320dee'
 
 const immutableCreate2FactoryCreationCode = (
   '0x608060405234801561001057600080fd5b50610833806100206000396000f3fe60806040' +
@@ -106,6 +108,10 @@ const CDAI_MAINNET_ADDRESS = '0xF5DCe57282A584D2746FaF1593d3121Fcac444dC'
 const CUSDC_MAINNET_ADDRESS = '0x39AA39c021dfbaE8faC545936693aC917d5E7563'
 const CETH_MAINNET_ADDRESS = '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5'
 const COMPTROLLER_MAINNET_ADDRESS = '0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B'
+
+const UPGRADE_BEACON_ENVOY_ADDRESS = '0x000000000067503c398F4c9652530DBC4eA95C02'
+const UPGRADE_BEACON_CONTROLLER_ADDRESS = '0x00000000003284ACb9aDEb78A2dDe0A8499932b9'
+const UPGRADE_BEACON_ADDRESS = '0x0000000000b45D6593312ac9fdE193F3D0633644'
 
 const contractNames = {}
 contractNames[DAI_MAINNET_ADDRESS] = 'DAI'
@@ -299,7 +305,139 @@ module.exports = {test: async function (provider, testingContext) {
   let failed = 0
   let gasUsage = {}
   let counts = {}
-  console.log('running tests...')
+
+  const DharmaUpgradeBeaconController = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerArtifact.abi,
+    UPGRADE_BEACON_CONTROLLER_ADDRESS
+  )
+
+  const DharmaUpgradeBeacon = new web3.eth.Contract(
+    DharmaUpgradeBeaconArtifact.abi,
+    UPGRADE_BEACON_ADDRESS
+  )
+
+  const DharmaAccountRecoveryMultisigDeployer = new web3.eth.Contract(
+    DharmaAccountRecoveryMultisigArtifact.abi
+  )
+  DharmaAccountRecoveryMultisigDeployer.options.data = (
+    DharmaAccountRecoveryMultisigArtifact.bytecode
+  )
+
+  const DharmaUpgradeBeaconControllerDeployer = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerArtifact.abi
+  )
+  DharmaUpgradeBeaconControllerDeployer.options.data = (
+    DharmaUpgradeBeaconControllerArtifact.bytecode
+  )
+
+  const DharmaUpgradeBeaconDeployer = new web3.eth.Contract(
+    DharmaUpgradeBeaconArtifact.abi
+  )
+  DharmaUpgradeBeaconDeployer.options.data = (
+    DharmaUpgradeBeaconArtifact.bytecode
+  )
+
+  const BadBeaconDeployer = new web3.eth.Contract(BadBeaconArtifact.abi)
+  BadBeaconDeployer.options.data = BadBeaconArtifact.bytecode
+
+  const BadBeaconTwoDeployer = new web3.eth.Contract(BadBeaconTwoArtifact.abi)
+  BadBeaconTwoDeployer.options.data = BadBeaconTwoArtifact.bytecode
+
+  const DharmaUpgradeBeaconControllerManagerDeployer = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerManagerArtifact.abi
+  )
+  DharmaUpgradeBeaconControllerManagerDeployer.options.data = (
+    DharmaUpgradeBeaconControllerManagerArtifact.bytecode
+  )
+
+  const DharmaUpgradeMultisigDeployer = new web3.eth.Contract(
+    DharmaUpgradeMultisigArtifact.abi
+  )
+  DharmaUpgradeMultisigDeployer.options.data = (
+    DharmaUpgradeMultisigArtifact.bytecode
+  )
+
+  const UpgradeBeaconProxyDeployer = new web3.eth.Contract(
+    UpgradeBeaconProxyArtifact.abi
+  )
+  UpgradeBeaconProxyDeployer.options.data = (
+    UpgradeBeaconProxyArtifact.bytecode
+  )
+
+  const DharmaSmartWalletFactoryV1Deployer = new web3.eth.Contract(
+    DharmaSmartWalletFactoryV1Artifact.abi
+  )
+  DharmaSmartWalletFactoryV1Deployer.options.data = (
+    DharmaSmartWalletFactoryV1Artifact.bytecode
+  )
+
+  const DharmaSmartWalletImplementationV0Deployer = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV0Artifact.abi
+  )
+  DharmaSmartWalletImplementationV0Deployer.options.data = (
+    DharmaSmartWalletImplementationV0Artifact.bytecode
+  )
+
+  const DharmaSmartWalletImplementationV1Deployer = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV1Artifact.abi
+  )
+  DharmaSmartWalletImplementationV1Deployer.options.data = (
+    DharmaSmartWalletImplementationV1Artifact.bytecode
+  )
+
+  const UpgradeBeaconImplementationCheckDeployer = new web3.eth.Contract(
+    UpgradeBeaconImplementationCheckArtifact.abi
+  )
+  UpgradeBeaconImplementationCheckDeployer.options.data = (
+    UpgradeBeaconImplementationCheckArtifact.bytecode
+  )
+
+  const InefficientImmutableCreate2Factory = new web3.eth.Contract(
+    ImmutableCreate2FactoryArtifact.abi,
+    InefficientImmutableCreate2FactoryAddress
+  )
+
+  const ImmutableCreate2Factory = new web3.eth.Contract(
+    ImmutableCreate2FactoryArtifact.abi,
+    ImmutableCreate2FactoryAddress
+  )
+
+  const MockCodeCheckDeployer = new web3.eth.Contract(
+    MockCodeCheckArtifact.abi
+  )
+  MockCodeCheckDeployer.options.data = MockCodeCheckArtifact.bytecode
+
+  // construct the payload passed to create2 in order to verify correct behavior
+  const testCreate2payload = (
+    '0xff' +
+    keylessCreate2Address.slice(2) +
+    '0000000000000000000000000000000000000000000000000000000000000000' +
+    web3.utils.keccak256(
+      MockCodeCheckArtifact.bytecode,
+      {encoding: 'hex'}
+    ).slice(2)
+  )
+
+  // determine the target address using the payload
+  const targetCodeCheckAddress = web3.utils.toChecksumAddress(
+    '0x' + web3.utils.keccak256(
+      testCreate2payload,
+      {encoding: "hex"}
+    ).slice(12).substring(14)
+  )
+
+  const MockCodeCheckTwo = new web3.eth.Contract(
+    MockCodeCheckArtifact.abi,
+    targetCodeCheckAddress
+  )
+
+  const DAI = new web3.eth.Contract(IERC20Artifact.abi, DAI_MAINNET_ADDRESS)
+
+  const USDC = new web3.eth.Contract(IERC20Artifact.abi, USDC_MAINNET_ADDRESS)
+
+  const CDAI = new web3.eth.Contract(IERC20Artifact.abi, CDAI_MAINNET_ADDRESS)
+
+  const CUSDC = new web3.eth.Contract(IERC20Artifact.abi, CUSDC_MAINNET_ADDRESS)
 
   // get available addresses and assign them to various roles
   const addresses = await web3.eth.getAccounts()
@@ -309,6 +447,34 @@ module.exports = {test: async function (provider, testingContext) {
   }
 
   const originalAddress = addresses[0]
+
+  let address = await setupNewDefaultAddress(
+    '0xfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeed'
+  )
+
+  let initialControllerOwner = await setupNewDefaultAddress(
+    '0x58e0348ce225c18ece7f2d6a069afa340365019481903b221481706d291a66bf'
+  )
+
+  console.log('funding initial create2 contract deployer address...')
+  await web3.eth.sendTransaction({
+    from: originalAddress,
+    to: keylessCreate2DeployerAddress,
+    value: web3.utils.toWei('0.01', 'ether'),
+    gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+    gasPrice: 1
+  })
+
+  console.log('funding initial controller owner address...')
+  await web3.eth.sendTransaction({
+    from: originalAddress,
+    to: initialControllerOwner,
+    value: web3.utils.toWei('0.001', 'ether'),
+    gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+    gasPrice: 1
+  })
+
+  console.log('running tests...')
 
   // ************************** helper functions **************************** //
   async function send(
@@ -602,7 +768,7 @@ module.exports = {test: async function (provider, testingContext) {
     if (txCount > 0) {
       console.warn(
         `warning: ${pubKey.address} has already been used, which may cause ` +
-        'some tests to fail.'
+        'some tests to fail or to be skipped.'
       )
     }
 
@@ -670,198 +836,10 @@ module.exports = {test: async function (provider, testingContext) {
   }
 
   // *************************** deploy contracts *************************** //
-  let address = await setupNewDefaultAddress(
-    '0xfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeed'
-  )
-
-  let initialControllerOwner = await setupNewDefaultAddress(
-    '0x58e0348ce225c18ece7f2d6a069afa340365019481903b221481706d291a66bf'
-  )
-
   let deployGas
   let latestBlock = await web3.eth.getBlock('latest')
   const gasLimit = latestBlock.gasLimit
   let selfAddress
-
-  // fund the initial create2 deployer address
-  console.log('funding initial create2 contract deployer address...')
-  await web3.eth.sendTransaction({
-    from: originalAddress,
-    to: keylessCreate2DeployerAddress,
-    value: web3.utils.toWei('0.01', 'ether'),
-    gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
-    gasPrice: 1
-  })
-
-  console.log('funding initial controller owner address...')
-  await web3.eth.sendTransaction({
-    from: originalAddress,
-    to: initialControllerOwner,
-    value: web3.utils.toWei('0.01', 'ether'),
-    gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
-    gasPrice: 1
-  })
-
-  // submit the initial create2 deployment transaction if needed
-  console.log('submitting initial create2 contract deployment transaction...')
-  await web3.eth.sendSignedTransaction(keylessCreate2DeploymentTransaction)
-    .catch(error => {console.log('skipping...')}
-  );
-
-  console.log('submitting inefficient create2 factory deployment through initial create2 contract...')
-  await web3.eth.sendTransaction({
-    from: originalAddress,
-    to: keylessCreate2Address,
-    value: '0',
-    gas: (testingContext !== 'coverage') ? '608261' : gasLimit - 1,
-    gasPrice: 1,
-    data: immutableCreate2FactoryCreationCode
-  }).catch(error => {console.log('skipping...')});
-
-  const InefficientImmutableCreate2Factory = new web3.eth.Contract(
-    ImmutableCreate2FactoryArtifact.abi,
-    InefficientImmutableCreate2FactoryAddress
-  )
-
-  console.log('submitting create2 factory through inefficient create2 contract...')
-  await InefficientImmutableCreate2Factory.methods['safeCreate2'](
-    '0x0000000000000000000000000000000000000000f4b0218f13a6440a6f020000',
-    immutableCreate2FactoryCreationCode
-  ).send({
-    from: originalAddress,
-    value: '0',
-    gas: '630838',
-    gasPrice: '1'
-  }).catch(error => {console.log('skipping...')});
-
-  const ImmutableCreate2Factory = new web3.eth.Contract(
-    ImmutableCreate2FactoryArtifact.abi,
-    ImmutableCreate2FactoryAddress
-  )
-
-  // construct the payload passed to create2 in order to verify correct behavior
-  let create2payload = (
-    '0xff' +
-    keylessCreate2Address.slice(2) +
-    '0000000000000000000000000000000000000000000000000000000000000000' +
-    web3.utils.keccak256(
-      MockCodeCheckArtifact.bytecode,
-      {encoding: 'hex'}
-    ).slice(2)
-  )
-
-  // determine the target address using the payload
-  let targetCodeCheckAddress = web3.utils.toChecksumAddress(
-    '0x' + web3.utils.keccak256(
-      create2payload,
-      {encoding: "hex"}
-    ).slice(12).substring(14)
-  )
-
-  // deploy a mock code check contract using the initial create2 deployer
-  console.log('deploying test contract via create2 contract...')
-  const DeploymentTx = await web3.eth.sendTransaction({
-    from: originalAddress,
-    to: keylessCreate2Address,
-    value: 0,
-    gas: (testingContext !== 'coverage') ? 1500051 : gasLimit - 1,
-    gasPrice: 1,
-    data: MockCodeCheckArtifact.bytecode
-  })
-
-  const DharmaAccountRecoveryMultisigDeployer = new web3.eth.Contract(
-    DharmaAccountRecoveryMultisigArtifact.abi
-  )
-  DharmaAccountRecoveryMultisigDeployer.options.data = (
-    DharmaAccountRecoveryMultisigArtifact.bytecode
-  )
-
-  const DharmaUpgradeBeaconControllerDeployer = new web3.eth.Contract(
-    DharmaUpgradeBeaconControllerArtifact.abi
-  )
-  DharmaUpgradeBeaconControllerDeployer.options.data = (
-    DharmaUpgradeBeaconControllerArtifact.bytecode
-  )
-
-  const DharmaUpgradeBeaconDeployer = new web3.eth.Contract(
-    DharmaUpgradeBeaconArtifact.abi
-  )
-  DharmaUpgradeBeaconDeployer.options.data = (
-    DharmaUpgradeBeaconArtifact.bytecode
-  )
-
-  const BadBeaconDeployer = new web3.eth.Contract(BadBeaconArtifact.abi)
-  BadBeaconDeployer.options.data = BadBeaconArtifact.bytecode
-
-  const BadBeaconTwoDeployer = new web3.eth.Contract(BadBeaconTwoArtifact.abi)
-  BadBeaconTwoDeployer.options.data = BadBeaconTwoArtifact.bytecode
-
-  const DharmaUpgradeBeaconControllerManagerDeployer = new web3.eth.Contract(
-    DharmaUpgradeBeaconControllerManagerArtifact.abi
-  )
-  DharmaUpgradeBeaconControllerManagerDeployer.options.data = (
-    DharmaUpgradeBeaconControllerManagerArtifact.bytecode
-  )
-
-  const DharmaUpgradeMultisigDeployer = new web3.eth.Contract(
-    DharmaUpgradeMultisigArtifact.abi
-  )
-  DharmaUpgradeMultisigDeployer.options.data = (
-    DharmaUpgradeMultisigArtifact.bytecode
-  )
-
-  const UpgradeBeaconProxyDeployer = new web3.eth.Contract(
-    UpgradeBeaconProxyArtifact.abi
-  )
-  UpgradeBeaconProxyDeployer.options.data = (
-    UpgradeBeaconProxyArtifact.bytecode
-  )
-
-  const DharmaSmartWalletFactoryV1Deployer = new web3.eth.Contract(
-    DharmaSmartWalletFactoryV1Artifact.abi
-  )
-  DharmaSmartWalletFactoryV1Deployer.options.data = (
-    DharmaSmartWalletFactoryV1Artifact.bytecode
-  )
-
-  const DharmaSmartWalletImplementationV0Deployer = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV0Artifact.abi
-  )
-  DharmaSmartWalletImplementationV0Deployer.options.data = (
-    DharmaSmartWalletImplementationV0Artifact.bytecode
-  )
-
-  const DharmaSmartWalletImplementationV1Deployer = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV1Artifact.abi
-  )
-  DharmaSmartWalletImplementationV1Deployer.options.data = (
-    DharmaSmartWalletImplementationV1Artifact.bytecode
-  )
-
-  const UpgradeBeaconImplementationCheckDeployer = new web3.eth.Contract(
-    UpgradeBeaconImplementationCheckArtifact.abi
-  )
-  UpgradeBeaconImplementationCheckDeployer.options.data = (
-    UpgradeBeaconImplementationCheckArtifact.bytecode
-  )
-
-  const MockCodeCheckDeployer = new web3.eth.Contract(
-    MockCodeCheckArtifact.abi
-  )
-  MockCodeCheckDeployer.options.data = MockCodeCheckArtifact.bytecode
-
-  const MockCodeCheckTwo = new web3.eth.Contract(
-    MockCodeCheckArtifact.abi,
-    targetCodeCheckAddress
-  )
-
-  const DAI = new web3.eth.Contract(IERC20Artifact.abi, DAI_MAINNET_ADDRESS)
-
-  const USDC = new web3.eth.Contract(IERC20Artifact.abi, USDC_MAINNET_ADDRESS)
-
-  const CDAI = new web3.eth.Contract(IERC20Artifact.abi, CDAI_MAINNET_ADDRESS)
-
-  const CUSDC = new web3.eth.Contract(IERC20Artifact.abi, CUSDC_MAINNET_ADDRESS)
 
   const MockCodeCheck = await runTest(
     `MockCodeCheck contract deployment`,
@@ -900,126 +878,213 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  let MockCodeCheck3Address;
+  let currentKeylessCreate2Runtime;
   await runTest(
-    `MockCodeCheck contract address check through immutable create2 factory`,
-    ImmutableCreate2Factory,
-    'findCreate2Address',
+    'Current runtime code at address of initial create2 factory can be retrieved',
+    MockCodeCheck,
+    'code',
     'call',
-    [
-      nullBytes32,
-      MockCodeCheckArtifact.bytecode
-    ],
+    [keylessCreate2Address],
     true,
     value => {
-      MockCodeCheck3Address = value
+      currentKeylessCreate2Runtime = value
     }
-  ) 
-
-  await runTest(
-    `MockCodeCheck contract deployment through immutable create2 factory`,
-    ImmutableCreate2Factory,
-    'safeCreate2',
-    'send',
-    [
-      nullBytes32,
-      MockCodeCheckArtifact.bytecode
-    ],
-    true
   )
 
+  // submit the initial create2 deployment transaction if needed
+  if (currentKeylessCreate2Runtime !== keylessCreate2Runtime) {
+    console.log(' ✓ submitting initial create2 contract deployment transaction...')
+    await web3.eth.sendSignedTransaction(keylessCreate2DeploymentTransaction);
+    passed++
+
+    // deploy a mock code check contract using the initial create2 deployer
+    console.log(' ✓ deploying test contract via create2 contract...')
+    const DeploymentTx = await web3.eth.sendTransaction({
+      from: originalAddress,
+      to: keylessCreate2Address,
+      value: 0,
+      gas: (testingContext !== 'coverage') ? 1500051 : gasLimit - 1,
+      gasPrice: 1,
+      data: MockCodeCheckArtifact.bytecode
+    })
+    passed++
+  } else {
+    console.log(' ✓ initial create2 contract already deployed, skipping...')
+  }
+
+  let currentInefficientImmutableCreate2FactoryRuntimeHash;
   await runTest(
-    'Deployed MockCodeCheck has correct extcodehash',
+    'Current runtime hash at address of inefficient immutable create2 factory can be retrieved',
     MockCodeCheck,
     'hash',
     'call',
-    [MockCodeCheck3Address],
+    [InefficientImmutableCreate2FactoryAddress],
     true,
     value => {
-      assert.strictEqual(
-        value,
-        web3.utils.keccak256(
-          MockCodeCheckArtifact.deployedBytecode,
-          {encoding: 'hex'}
-        )
-      )
+      currentInefficientImmutableCreate2FactoryRuntimeHash = value
     }
   )
+
+  // submit the inefficient immutable create2 deployment transaction if needed  
+  if (currentInefficientImmutableCreate2FactoryRuntimeHash !== ImmutableCreate2FactoryRuntimeHash) {
+    console.log(' ✓ submitting inefficient immutable create2 factory deployment through initial create2 contract...')
+    await web3.eth.sendTransaction({
+      from: originalAddress,
+      to: keylessCreate2Address,
+      value: '0',
+      gas: (testingContext !== 'coverage') ? '608261' : gasLimit - 1,
+      gasPrice: 1,
+      data: immutableCreate2FactoryCreationCode
+    });
+    passed++
+  } else {
+    console.log(' ✓ inefficient immutable create2 factory contract already deployed, skipping...')
+  }
+
+  let currentImmutableCreate2FactoryRuntimeHash;
+  await runTest(
+    'Current runtime hash at address of immutable create2 factory can be retrieved',
+    MockCodeCheck,
+    'hash',
+    'call',
+    [ImmutableCreate2FactoryAddress],
+    true,
+    value => {
+      currentImmutableCreate2FactoryRuntimeHash = value
+    }
+  )  
+
+  // submit the immutable create2 deployment transaction if needed  
+  if (currentImmutableCreate2FactoryRuntimeHash !== ImmutableCreate2FactoryRuntimeHash) {
+    await runTest(
+      `submitting immutable create2 factory deployment through initial create2 contract...`,
+      InefficientImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        '0x0000000000000000000000000000000000000000f4b0218f13a6440a6f020000',
+        immutableCreate2FactoryCreationCode
+      ],
+      true
+    )
+  } else {
+    console.log(' ✓ immutable create2 factory contract already deployed, skipping...')
+  }
 
   // BEGIN ACTUAL DEPLOYMENT TESTS
 
+  let currentUpgradeBeaconEnvoyCode;
   await runTest(
-    `UpgradeBeaconEnvoy contract address check through immutable create2 factory`,
-    ImmutableCreate2Factory,
-    'findCreate2Address',
+    'Checking Upgrade Beacon Envoy runtime code',
+    MockCodeCheck,
+    'code',
     'call',
-    [
-      '0x00000000000000000000000000000000000000003b4cf3f5b304150b79010000',
-      DharmaUpgradeBeaconEnvoyArtifact.bytecode
-    ],
+    [UPGRADE_BEACON_ENVOY_ADDRESS],
     true,
     value => {
-      assert.strictEqual(value, '0x000000000067503c398F4c9652530DBC4eA95C02')
+      currentUpgradeBeaconEnvoyCode = value;
     }
-  ) 
-
-  await runTest(
-    `Upgrade Beacon Envoy contract deployment through immutable create2 factory`,
-    ImmutableCreate2Factory,
-    'safeCreate2',
-    'send',
-    [
-      '0x00000000000000000000000000000000000000003b4cf3f5b304150b79010000',
-      DharmaUpgradeBeaconEnvoyArtifact.bytecode
-    ],
-    true
   )
+
+  if (
+    currentUpgradeBeaconEnvoyCode !== DharmaUpgradeBeaconEnvoyArtifact.deployedBytecode
+  ) {
+    await runTest(
+      `UpgradeBeaconEnvoy contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        '0x00000000000000000000000000000000000000003b4cf3f5b304150b79010000',
+        DharmaUpgradeBeaconEnvoyArtifact.bytecode
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, UPGRADE_BEACON_ENVOY_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `Upgrade Beacon Envoy contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        '0x00000000000000000000000000000000000000003b4cf3f5b304150b79010000',
+        DharmaUpgradeBeaconEnvoyArtifact.bytecode
+      ]
+    )
+  }
 
   await runTest(
     'Deployed Upgrade Beacon Envoy code is correct',
     MockCodeCheck,
     'code',
     'call',
-    ['0x000000000067503c398F4c9652530DBC4eA95C02'],
+    [UPGRADE_BEACON_ENVOY_ADDRESS],
     true,
     value => {
       assert.strictEqual(value, DharmaUpgradeBeaconEnvoyArtifact.deployedBytecode)
     }
   )
 
+  let currentUpgradeBeaconControllerCode;
   await runTest(
-    `DharmaUpgradeBeaconController contract address check through immutable create2 factory`,
-    ImmutableCreate2Factory,
-    'findCreate2Address',
+    'Checking Upgrade Beacon Controller runtime code',
+    MockCodeCheck,
+    'code',
     'call',
-    [
-      '0x00000000000000000000000000000000000000005aa398eb9566310e02000000',
-      DharmaUpgradeBeaconControllerArtifact.bytecode + 
-      '000000000000000000000000990774Aa5DFB8a2600EB78101C1eeAa8d6104623'
-    ],
+    [UPGRADE_BEACON_CONTROLLER_ADDRESS],
     true,
     value => {
-      assert.strictEqual(value, '0x00000000003284ACb9aDEb78A2dDe0A8499932b9')
+      currentUpgradeBeaconControllerCode = value;
     }
-  ) 
-
-  await runTest(
-    `DharmaUpgradeBeaconController contract deployment through immutable create2 factory`,
-    ImmutableCreate2Factory,
-    'safeCreate2',
-    'send',
-    [
-      '0x00000000000000000000000000000000000000005aa398eb9566310e02000000',
-      DharmaUpgradeBeaconControllerArtifact.bytecode + 
-      '000000000000000000000000990774Aa5DFB8a2600EB78101C1eeAa8d6104623'
-    ],
-    true
   )
 
-  const DharmaUpgradeBeaconController = new web3.eth.Contract(
-    DharmaUpgradeBeaconControllerArtifact.abi,
-    '0x00000000003284ACb9aDEb78A2dDe0A8499932b9'
-  )
+  if (
+    currentUpgradeBeaconControllerCode !== DharmaUpgradeBeaconControllerArtifact.deployedBytecode
+  ) {
+    await runTest(
+      `DharmaUpgradeBeaconController contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        '0x00000000000000000000000000000000000000005aa398eb9566310e02000000',
+        DharmaUpgradeBeaconControllerArtifact.bytecode + 
+        '000000000000000000000000990774Aa5DFB8a2600EB78101C1eeAa8d6104623'
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, UPGRADE_BEACON_CONTROLLER_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaUpgradeBeaconController contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        '0x00000000000000000000000000000000000000005aa398eb9566310e02000000',
+        DharmaUpgradeBeaconControllerArtifact.bytecode + 
+        '000000000000000000000000990774Aa5DFB8a2600EB78101C1eeAa8d6104623'
+      ]
+    )
+
+    await runTest(
+      `DharmaUpgradeBeaconController can transfer owner`,
+      DharmaUpgradeBeaconController,
+      'transferOwnership',
+      'send',
+      [address],
+      true,
+      receipt => {},
+      initialControllerOwner
+    )
+  }
+
+  // TODO: override mainnet owner if set to some other account
 
   await runTest(
     'Deployed Upgrade Beacon Controller code is correct',
@@ -1041,19 +1106,8 @@ module.exports = {test: async function (provider, testingContext) {
     [address]
   )
 
-  await runTest(
-    `DharmaUpgradeBeaconController can transfer owner`,
-    DharmaUpgradeBeaconController,
-    'transferOwnership',
-    'send',
-    [address],
-    true,
-    receipt => {},
-    initialControllerOwner
-  )
-
   const FailedUpgradeBeaconProxy = await runTest(
-    `Cannot deploy UpgradeBeaconProxy contract using an undeployed beacon`,
+    `failure when deploying UpgradeBeaconProxy contract using an undeployed beacon`,
     UpgradeBeaconProxyDeployer,
     '',
     'deploy',
@@ -1061,37 +1115,48 @@ module.exports = {test: async function (provider, testingContext) {
     false
   )
 
+  let currentUpgradeBeaconCode;
   await runTest(
-    `DharmaUpgradeBeacon contract address check through immutable create2 factory`,
-    ImmutableCreate2Factory,
-    'findCreate2Address',
+    'Checking Upgrade Beacon runtime code',
+    MockCodeCheck,
+    'code',
     'call',
-    [
-      '0x0000000000000000000000000000000000000000795c924476188b0e6c020000',
-      DharmaUpgradeBeaconArtifact.bytecode
-    ],
+    [UPGRADE_BEACON_ADDRESS],
     true,
     value => {
-      assert.strictEqual(value, '0x0000000000b45D6593312ac9fdE193F3D0633644')
+      currentUpgradeBeaconCode = value;
     }
-  ) 
-
-  await runTest(
-    `DharmaUpgradeBeacon contract deployment through immutable create2 factory`,
-    ImmutableCreate2Factory,
-    'safeCreate2',
-    'send',
-    [
-      '0x0000000000000000000000000000000000000000795c924476188b0e6c020000',
-      DharmaUpgradeBeaconArtifact.bytecode
-    ],
-    true
   )
 
-  const DharmaUpgradeBeacon = new web3.eth.Contract(
-    DharmaUpgradeBeaconArtifact.abi,
-    '0x0000000000b45D6593312ac9fdE193F3D0633644'
-  )
+  if (
+    currentUpgradeBeaconCode !== DharmaUpgradeBeaconArtifact.deployedBytecode
+  ) {
+    await runTest(
+      `DharmaUpgradeBeacon contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        '0x0000000000000000000000000000000000000000795c924476188b0e6c020000',
+        DharmaUpgradeBeaconArtifact.bytecode
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, UPGRADE_BEACON_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaUpgradeBeacon contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        '0x0000000000000000000000000000000000000000795c924476188b0e6c020000',
+        DharmaUpgradeBeaconArtifact.bytecode
+      ]
+    )
+  }
 
   await runTest(
     `DharmaUpgradeBeacon contract deployment`,
@@ -1128,9 +1193,9 @@ module.exports = {test: async function (provider, testingContext) {
   /*
   const DharmaUpgradeBeaconDeployer = new web3.eth.Contract([])
   DharmaUpgradeBeaconDeployer.options.data = (
-    '0x600b5981380380925939f35973' +
-    DharmaUpgradeBeaconController.options.address.slice(2).toLowerCase() + 
-    '3314602157545952593df35b355955'
+    '0x600b5981380380925939f3596e' +
+    DharmaUpgradeBeaconController.options.address.slice(12).toLowerCase() + 
+    '3314601c57545952593df35b355955'
   )
   */
   
@@ -1183,18 +1248,6 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'Dharma Upgrade Beacon Controller cannot set null address as implementation',
-    DharmaUpgradeBeaconController,
-    'upgrade',
-    'send',
-    [
-      DharmaUpgradeBeacon.options.address,
-      nullAddress
-    ],
-    false
-  )
-
-  await runTest(
     'Dharma Upgrade Beacon Controller cannot set non-contract as implementation',
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -1228,6 +1281,38 @@ module.exports = {test: async function (provider, testingContext) {
       DharmaSmartWalletImplementationV0.options.address
     ],
     false
+  )
+
+  await runTest(
+    'Dharma Upgrade Beacon Controller is inaccessible from a non-owner',
+    DharmaUpgradeBeaconController,
+    'freeze',
+    'send',
+    [DharmaUpgradeBeacon.options.address],
+    false,
+    receipt => {},
+    originalAddress
+  )
+
+  await runTest(
+    'Dharma Upgrade Beacon Controller is accessible from the owner',
+    DharmaUpgradeBeaconController,
+    'freeze',
+    'send',
+    [DharmaUpgradeBeacon.options.address],
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.newImplementation,
+          nullAddress
+        )
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.newImplementationCodeHash,
+          emptyHash
+        )
+      }
+    }
   )
 
   await runTest(
@@ -1368,9 +1453,9 @@ module.exports = {test: async function (provider, testingContext) {
 
   const DharmaSmartWalletNoFactoryNoConstructorDeployer = new web3.eth.Contract([])
   DharmaSmartWalletNoFactoryNoConstructorDeployer.options.data = (
-    '0x600b5981380380925939f3595959593659602059595973' +
-    DharmaUpgradeBeacon.options.address.slice(2).toLowerCase() + 
-    '5afa1551368280375af43d3d93803e603357fd5bf3'
+    '0x600b5981380380925939f359595959365960205959596e' +
+    DharmaUpgradeBeacon.options.address.slice(12).toLowerCase() + 
+    '5afa1551368280375af43d3d93803e602e57fd5bf3'
   )
 
   const DharmaSmartWalletNoFactoryNoConstructor = await runTest(
@@ -1396,6 +1481,38 @@ module.exports = {test: async function (provider, testingContext) {
       assert.ok(value)
     }
   )
+
+  let currentDaiCode;
+  await runTest(
+    'Checking for required external contracts...',
+    MockCodeCheck,
+    'code',
+    'call',
+    [DAI_MAINNET_ADDRESS],
+    true,
+    value => {
+      currentDaiCode = value;
+    }
+  )
+
+  if (!currentDaiCode) {
+    console.log(
+      `completed ${passed + failed} test${passed + failed === 1 ? '' : 's'} ` +
+      `with ${failed} failure${failed === 1 ? '' : 's'}.`
+    )
+
+    console.log(
+      'Note that the full test suite cannot be executed locally - instead, ' +
+      'run against a fork of mainnet using `yarn forkStart` and `yarn test`.'
+    )
+
+    if (failed > 0) {
+      process.exit(1)
+    }
+
+    // exit.
+    return 0
+  }
 
   const DharmaSmartWalletNoFactoryDeployer = new web3.eth.Contract([])
   DharmaSmartWalletNoFactoryDeployer.options.data = (
