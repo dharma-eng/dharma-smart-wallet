@@ -82,8 +82,8 @@ interface DharmaSmartWalletImplementationV0Interface {
   function getBalances() external returns (
     uint256 daiBalance,
     uint256 usdcBalance,
-    uint256 cDaiUnderlyingBalance,
-    uint256 cUsdcUnderlyingBalance
+    uint256 cDaiUnderlyingDaiBalance,
+    uint256 cUsdcUnderlyingUsdcBalance
   );
 
   function getDharmaKey() external view returns (address dharmaKey);

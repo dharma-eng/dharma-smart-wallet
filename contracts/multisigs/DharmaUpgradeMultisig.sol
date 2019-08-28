@@ -6,7 +6,7 @@ import "@gnosis.pm/safe-contracts/contracts/GnosisSafe.sol";
 /**
  * @title DharmaUpgradeMultisig
  * @notice This contract is an example of a multisig that will control the
- * Dharma upgrade manager.
+ * Dharma Upgrade Beacon Controller Manager and the Dharma Key Registry.
  */
 contract DharmaUpgradeMultisig is GnosisSafe {
   constructor(address[] memory owners, uint256 threshold) public {
