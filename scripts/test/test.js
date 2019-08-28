@@ -446,6 +446,8 @@ module.exports = {test: async function (provider, testingContext) {
     process.exit(1)
   }
 
+  let latestBlock = await web3.eth.getBlock('latest')
+
   const originalAddress = addresses[0]
 
   let address = await setupNewDefaultAddress(
@@ -455,6 +457,8 @@ module.exports = {test: async function (provider, testingContext) {
   let initialControllerOwner = await setupNewDefaultAddress(
     '0x58e0348ce225c18ece7f2d6a069afa340365019481903b221481706d291a66bf'
   )
+
+  const gasLimit = latestBlock.gasLimit
 
   console.log('funding initial create2 contract deployer address...')
   await web3.eth.sendTransaction({
@@ -837,8 +841,6 @@ module.exports = {test: async function (provider, testingContext) {
 
   // *************************** deploy contracts *************************** //
   let deployGas
-  let latestBlock = await web3.eth.getBlock('latest')
-  const gasLimit = latestBlock.gasLimit
   let selfAddress
 
   const MockCodeCheck = await runTest(
