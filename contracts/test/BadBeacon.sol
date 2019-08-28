@@ -6,6 +6,6 @@ pragma solidity 0.5.11;
  */
 contract BadBeacon {
   function () external {
-  	revert("This is not a working upgrade beacon.");
+    revert("This is not a working upgrade beacon.");
   }
 }

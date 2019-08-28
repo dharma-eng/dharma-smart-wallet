@@ -2,7 +2,11 @@ pragma solidity 0.5.11;
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./implementations/DharmaSmartWalletImplementationV1.sol";
+
+
+interface DharmaSmartWalletRecovery {
+  function recover(address newDharmaKey) external;
+}
 
 
 /**
@@ -105,7 +109,7 @@ contract DharmaAccountRecoveryManager is Ownable {
     _enforceTimelock(this.recover.selector, abi.encode(wallet, newDharmaKey));
     
     // Call the specified smart wallet and supply the new key.
-    DharmaSmartWalletImplementationV1(wallet).recover(newDharmaKey);
+    DharmaSmartWalletRecovery(wallet).recover(newDharmaKey);
   }
 
   /**

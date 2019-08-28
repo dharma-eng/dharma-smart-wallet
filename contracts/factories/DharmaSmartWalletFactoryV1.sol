@@ -169,5 +169,5 @@ contract DharmaSmartWalletFactoryV1 {
       // Otherwise, increment the nonce and derive a new salt.
       nonce++;
     }
-  }  
+  }
 }

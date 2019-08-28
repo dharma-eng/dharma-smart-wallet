@@ -8,6 +8,7 @@
     "avoid-call-value": false,
     "no-complex-fallback": false,
     "payable-fallback": false,
+    "avoid-tx-origin": false,
     "no-empty-blocks": false,
     "function-max-lines": 70
   }
