@@ -12,8 +12,8 @@ import "@openzeppelin/contracts/cryptography/ECDSA.sol";
  * a particular Dharma Smart Wallet instance needs to validate a signature, it
  * will first retrieve the public address for the secondary signing key
  * associated with that wallet from the Dharma Key Registry. If a specific key
- * has not been set for that smart wallet, it will return the global public key;
- * otherwise, it will return the specific signing key. (Either of these options
+ * has not been set for that smart wallet, it will return the global public key.
+ * Otherwise, it will return the specific signing key. (Either of these options
  * can also be retrieved directly.)
  */
 contract DharmaKeyRegistryV1 is Ownable {
@@ -26,12 +26,15 @@ contract DharmaKeyRegistryV1 is Ownable {
   mapping (address => address) private _specificKeys;
 
   /**
-   * @notice In the constructor, set an initial global key (the initial owner
-   * will also be set to msg.sender).
+   * @notice In the constructor, set the initial global key and the initial
+   * owner to tx.origin.
    */
   constructor() public {
     // Initially set the global key to the account of the transaction submitter.
     _globalKey = tx.origin;
+
+    // Also set the initial owner to the account of the transaction submitter.
+    _transferOwnership(tx.origin);
   }
 
   /**

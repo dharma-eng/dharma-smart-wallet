@@ -26,6 +26,11 @@ interface ComptrollerInterface {
 }
 
 
+interface DharmaKeyRegistryInterface {
+  function getGlobalKey() external view returns (address globalKey);
+}
+
+
 interface DharmaSmartWalletImplementationV0Interface {
   event NewDharmaKey(address dharmaKey);
   
@@ -104,6 +109,8 @@ interface DharmaSmartWalletImplementationV0Interface {
     uint256 nonce,
     uint256 minimumActionGas
   ) external view returns (bytes32 actionID);
+
+  function getVersion() external pure returns (uint256 version);
 }
 
 
@@ -133,8 +140,9 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   // The self-call context flag is in storage slot 2. Some protected functions
   // may only be called externally from calls originating from other methods on
   // this contract, which enables appropriate exception handling on reverts.
-  // Another way to achieve this without needing any local storage would be to
-  // perform and handle a DELEGATECALL to another contract.
+  // Another, more complex way to achieve this without needing any local storage
+  // would be to perform and handle a call into a dedicated contract and back.
+  // Any storage set here should be cleared before execution environment exits.
   bytes4 internal _selfCallContext;
 
   // END STORAGE DECLARATIONS - DO NOT REMOVE OR REPLACE STORAGE ABOVE HERE!
@@ -142,13 +150,10 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   // The smart wallet version will be used when constructing valid signatures.
   uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 0;
 
-  // The dharma secondary key is a hard-coded signing key controlled by Dharma,
+  // The dharma secondary key is a signing key held in the Dharma Key Registry,
   // used in conjunction with user's Dharma Key to make smart wallet actions.
-  // Note that, in the event that Dharma's signing key is compromised, a new
-  // smart wallet implementation will need to be deployed - we can avoid this by
-  // retrieving this key from a dedicated registry controlled by Dharma.
-  address internal constant _DHARMA_SECONDARY_KEY = address(
-    0x1234567890123456789012345678901234567890
+  DharmaKeyRegistryInterface internal constant _DHARMA_KEY_REGISTRY = (
+    DharmaKeyRegistryInterface(0x00000000006c7f32F0cD1eA4C1383558eb68802D)
   );
 
   ComptrollerInterface internal constant _COMPTROLLER = ComptrollerInterface(
@@ -371,7 +376,9 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     uint256 minimumActionGas,
     bytes calldata signature
   ) external {
-    if (msg.sender == _DHARMA_SECONDARY_KEY) {
+    address secondaryKey = _getSecondaryKey();
+
+    if (msg.sender == secondaryKey) {
       _incrementNonce();
     } else {
       // Ensure that the action has the correct nonce.
@@ -390,11 +397,12 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
         0,
         address(0),
         nonce,
-        minimumActionGas
+        minimumActionGas,
+        secondaryKey
       );
 
       // Either signature may be used to submit a cancellation action.
-      _verifySignatureAndIncrementNonce(actionID, signature);
+      _verifySignatureAndIncrementNonce(actionID, signature, secondaryKey);
     }
   }
 
@@ -413,7 +421,9 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       "This function is no longer callable by a single signatory."
     );
 
-    if (msg.sender == _DHARMA_SECONDARY_KEY) {
+    address secondaryKey = _getSecondaryKey();
+
+    if (msg.sender == secondaryKey) {
       _incrementNonce();
     } else {
       // Ensure that the action has the correct nonce.
@@ -432,10 +442,11 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
         0,
         dharmaKey,
         nonce,
-        minimumActionGas
+        minimumActionGas,
+        secondaryKey
       );
 
-      _verifySignatureAndIncrementNonce(actionID, signature);
+      _verifySignatureAndIncrementNonce(actionID, signature, secondaryKey);
 
       _setDharmaKey(dharmaKey);
     }
@@ -444,13 +455,13 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   function getBalances() external returns (
     uint256 daiBalance,
     uint256 usdcBalance,
-    uint256 cDaiUnderlyingBalance,
-    uint256 cUsdcUnderlyingBalance
+    uint256 cDaiUnderlyingDaiBalance,
+    uint256 cUsdcUnderlyingUsdcBalance
   ) {
     daiBalance = _DAI.balanceOf(address(this));
     usdcBalance = _USDC.balanceOf(address(this));
-    cDaiUnderlyingBalance = _CDAI.balanceOfUnderlying(address(this));
-    cUsdcUnderlyingBalance = _CUSDC.balanceOfUnderlying(address(this));
+    cDaiUnderlyingDaiBalance = _CDAI.balanceOfUnderlying(address(this));
+    cUsdcUnderlyingUsdcBalance = _CUSDC.balanceOfUnderlying(address(this));
   }
 
   function getDharmaKey() external view returns (address dharmaKey) {
@@ -469,7 +480,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   ) external view returns (bytes32 actionID) {
     // Determine the actionID - this serves as the signature hash.
     actionID = _getCustomActionID(
-      action, amount, recipient, _nonce, minimumActionGas
+      action, amount, recipient, _nonce, minimumActionGas, _getSecondaryKey()
     );
   }
 
@@ -482,8 +493,12 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   ) external view returns (bytes32 actionID) {
     // Determine the actionID - this serves as the signature hash.
     actionID = _getCustomActionID(
-      action, amount, recipient, nonce, minimumActionGas
+      action, amount, recipient, nonce, minimumActionGas, _getSecondaryKey()
     );
+  }
+
+  function getVersion() external pure returns (uint256 version) {
+    version = _DHARMA_SMART_WALLET_VERSION;
   }
 
   function test() external pure returns (bool) {
@@ -739,18 +754,22 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     // Ensure that the action has the correct nonce.
     require(_nonce == nonce, "Invalid action - incorrect nonce.");
 
+    address secondaryKey = _getSecondaryKey();
+
     // Determine the actionID - this serves as the signature hash.
     actionID = _getCustomActionID(
       actionType,
       amount,
       recipient,
       nonce,
-      minimumActionGas
+      minimumActionGas,
+      secondaryKey
     );
 
     _verifySignatureAndIncrementNonce(
       actionID,
-      dharmaSecondaryKeySignature
+      dharmaSecondaryKeySignature,
+      secondaryKey
     );
 
     // Ensure that the current gas exceeds the minimum required action gas.
@@ -768,12 +787,13 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
 
   function _verifySignatureAndIncrementNonce(
     bytes32 actionID,
-    bytes memory dharmaSecondaryKeySignature
+    bytes memory dharmaSecondaryKeySignature,
+    address secondaryKey
   ) internal {
     // Validate Dharma Secondary Key signature unless it is `msg.sender`.
-    if (msg.sender != _DHARMA_SECONDARY_KEY) {
+    if (msg.sender != secondaryKey) {
       require(
-        _DHARMA_SECONDARY_KEY == actionID.toEthSignedMessageHash().recover(
+        secondaryKey == actionID.toEthSignedMessageHash().recover(
           dharmaSecondaryKeySignature
         ),
         "Invalid action - invalid Dharma Secondary Key signature."
@@ -789,7 +809,8 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     uint256 amount,
     address recipient,
     uint256 nonce,
-    uint256 minimumActionGas
+    uint256 minimumActionGas,
+    address secondaryKey
   ) internal view returns (bytes32 actionID) {
     // The actionID is constructed according to EIP-191-0x45 to prevent replays.
     actionID = keccak256(
@@ -797,7 +818,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
         address(this),
         _DHARMA_SMART_WALLET_VERSION,
         _dharmaKey,
-        _DHARMA_SECONDARY_KEY,
+        secondaryKey,
         nonce,
         minimumActionGas,
         actionType,
@@ -809,6 +830,10 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
 
   function _getDharmaKey() internal view returns (address dharmaKey) {
     dharmaKey = _dharmaKey;
+  }
+
+  function _getSecondaryKey() internal view returns (address secondaryKey) {
+    secondaryKey = _DHARMA_KEY_REGISTRY.getGlobalKey();
   }
 
   function _getNonce() internal view returns (uint256 nonce) {

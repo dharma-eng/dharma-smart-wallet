@@ -7,12 +7,12 @@ const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/Dha
 let DharmaUpgradeBeaconArtifact;
 let DharmaUpgradeBeaconControllerArtifact;
 let DharmaUpgradeBeaconEnvoyArtifact;
+let DharmaKeyRegistryV1Artifact;
 
 const DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 
 const UpgradeBeaconProxyArtifact = require('../../build/contracts/UpgradeBeaconProxy.json')
-const DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
 
 const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
@@ -114,6 +114,7 @@ const COMPTROLLER_MAINNET_ADDRESS = '0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B'
 const UPGRADE_BEACON_ENVOY_ADDRESS = '0x000000000067503c398F4c9652530DBC4eA95C02'
 const UPGRADE_BEACON_CONTROLLER_ADDRESS = '0x00000000003284ACb9aDEb78A2dDe0A8499932b9'
 const UPGRADE_BEACON_ADDRESS = '0x0000000000b45D6593312ac9fdE193F3D0633644'
+const KEY_REGISTRY_ADDRESS = '0x00000000006c7f32F0cD1eA4C1383558eb68802D'
 
 const contractNames = {}
 contractNames[DAI_MAINNET_ADDRESS] = 'DAI'
@@ -296,10 +297,12 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconArtifact = require('../../../build/contracts/DharmaUpgradeBeacon.json')
     DharmaUpgradeBeaconControllerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconController.json')
     DharmaUpgradeBeaconEnvoyArtifact = require('../../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
+    DharmaKeyRegistryV1Artifact = require('../../../build/contracts/DharmaKeyRegistryV1.json')
   } else {
     DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
     DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
     DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
+    DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
   }
 
   var web3 = provider
@@ -1197,51 +1200,48 @@ module.exports = {test: async function (provider, testingContext) {
     []
   )
 
-  const DharmaUpgradeMultisig = await runTest(
-    `DharmaUpgradeMultisig contract deployment`,
-    DharmaUpgradeMultisigDeployer,
-    '',
-    'deploy',
-    [[address], 1]
-  )
-
-  const DharmaAccountRecoveryMultisig = await runTest(
-    `DharmaAccountRecoveryMultisig contract deployment`,
-    DharmaAccountRecoveryMultisigDeployer,
-    '',
-    'deploy',
-    [[address], 1]
-  )
-
-  const DharmaUpgradeBeaconControllerManager = await runTest(
-    `DharmaUpgradeBeaconControllerManager contract deployment`,
-    DharmaUpgradeBeaconControllerManagerDeployer,
-    '',
-    'deploy',
-    [address]
-  )
-  
+  let currentKeyRegistryCode;
   await runTest(
-    `DharmaUpgradeBeacon contract deployment`,
-    DharmaUpgradeBeaconDeployer,
-    '',
-    'deploy',
-    []
+    'Checking Key Registry runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [KEY_REGISTRY_ADDRESS],
+    true,
+    value => {
+      currentKeyRegistryCode = value;
+    }
   )
 
-  const BadBeacon = await runTest(
-    `Mock Bad Beacon contract deployment`,
-    BadBeaconDeployer,
-    '',
-    'deploy'
-  )
+  if (
+    currentKeyRegistryCode !== DharmaKeyRegistryV1Artifact.deployedBytecode
+  ) {
+    await runTest(
+      `DharmaKeyRegistryV1 Code contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        '0x0000000000000000000000000000000000000000003e4b8475edaa0ebb0b0000',
+        DharmaKeyRegistryV1Artifact.bytecode
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, KEY_REGISTRY_ADDRESS)
+      }
+    )
 
-  const BadBeaconTwo = await runTest(
-    `Mock Bad Beacon Two contract deployment`,
-    BadBeaconTwoDeployer,
-    '',
-    'deploy'
-  )
+    await runTest(
+      `DharmaKeyRegistryV1 contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        '0x0000000000000000000000000000000000000000003e4b8475edaa0ebb0b0000',
+        DharmaKeyRegistryV1Artifact.bytecode
+      ]
+    )
+  }
 
   DharmaKeyRegistryV1 = await runTest(
     `DharmaKeyRegistryV1 contract deployment`,
@@ -1415,7 +1415,76 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  // TODO: test transferring ownership on Dharma Key Registry V1
+  await runTest(
+    'Dharma Key Registry V1 can set a new owner',
+    DharmaKeyRegistryV1,
+    'transferOwnership',
+    'send',
+    [
+      address
+    ],
+    true,
+    receipt => {},
+    originalAddress
+  )
+
+  await runTest(
+    'Dharma Key Registry V1 gets the new owner',
+    DharmaKeyRegistryV1,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  const DharmaUpgradeMultisig = await runTest(
+    `DharmaUpgradeMultisig contract deployment`,
+    DharmaUpgradeMultisigDeployer,
+    '',
+    'deploy',
+    [[address], 1]
+  )
+
+  const DharmaAccountRecoveryMultisig = await runTest(
+    `DharmaAccountRecoveryMultisig contract deployment`,
+    DharmaAccountRecoveryMultisigDeployer,
+    '',
+    'deploy',
+    [[address], 1]
+  )
+
+  const DharmaUpgradeBeaconControllerManager = await runTest(
+    `DharmaUpgradeBeaconControllerManager contract deployment`,
+    DharmaUpgradeBeaconControllerManagerDeployer,
+    '',
+    'deploy',
+    [address]
+  )
+  
+  await runTest(
+    `DharmaUpgradeBeacon contract deployment`,
+    DharmaUpgradeBeaconDeployer,
+    '',
+    'deploy',
+    []
+  )
+
+  const BadBeacon = await runTest(
+    `Mock Bad Beacon contract deployment`,
+    BadBeaconDeployer,
+    '',
+    'deploy'
+  )
+
+  const BadBeaconTwo = await runTest(
+    `Mock Bad Beacon Two contract deployment`,
+    BadBeaconTwoDeployer,
+    '',
+    'deploy'
+  )
 
   const DharmaSmartWalletImplementationV0 = await runTest(
     `DharmaSmartWalletImplementationV0 contract deployment`,
