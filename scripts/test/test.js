@@ -12,6 +12,8 @@ const DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contra
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 
 const UpgradeBeaconProxyArtifact = require('../../build/contracts/UpgradeBeaconProxy.json')
+const DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
+
 const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
@@ -362,6 +364,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   UpgradeBeaconProxyDeployer.options.data = (
     UpgradeBeaconProxyArtifact.bytecode
+  )
+
+  const DharmaKeyRegistryV1Deployer = new web3.eth.Contract(
+    DharmaKeyRegistryV1Artifact.abi
+  )
+  DharmaKeyRegistryV1Deployer.options.data = (
+    DharmaKeyRegistryV1Artifact.bytecode
   )
 
   const DharmaSmartWalletFactoryV1Deployer = new web3.eth.Contract(
@@ -839,6 +848,26 @@ module.exports = {test: async function (provider, testingContext) {
     return deployGas
   }
 
+  function signHashedPrefixedHashedHexString(hexString, account) {
+    const hashedPrefixedHashedmessage = web3.utils.keccak256(
+      // prefix => "\x19Ethereum Signed Message:\n32"
+      "0x19457468657265756d205369676e6564204d6573736167653a0a3332" +
+      web3.utils.keccak256(hexString, {encoding: "hex"}).slice(2),
+      {encoding: "hex"}
+    )
+
+    const sig = util.ecsign(
+      util.toBuffer(hashedPrefixedHashedmessage),
+      util.toBuffer(web3.eth.accounts.wallet[account].privateKey)
+    )
+
+    return (
+      util.bufferToHex(sig.r) +
+      util.bufferToHex(sig.s).slice(2) +
+      web3.utils.toHex(sig.v).slice(2)
+    )
+  }
+
   // *************************** deploy contracts *************************** //
   let deployGas
   let selfAddress
@@ -1191,15 +1220,6 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy',
     [address]
   )
-
-  /*
-  const DharmaUpgradeBeaconDeployer = new web3.eth.Contract([])
-  DharmaUpgradeBeaconDeployer.options.data = (
-    '0x600b5981380380925939f3596e' +
-    DharmaUpgradeBeaconController.options.address.slice(12).toLowerCase() + 
-    '3314601c57545952593df35b355955'
-  )
-  */
   
   await runTest(
     `DharmaUpgradeBeacon contract deployment`,
@@ -1222,6 +1242,180 @@ module.exports = {test: async function (provider, testingContext) {
     '',
     'deploy'
   )
+
+  DharmaKeyRegistryV1 = await runTest(
+    `DharmaKeyRegistryV1 contract deployment`,
+    DharmaKeyRegistryV1Deployer,
+    '',
+    'deploy',
+    [],
+    true,
+    receipt => {},
+    originalAddress
+  )
+
+  await runTest(
+    'Dharma Key Registry V1 gets the initial global key correctly',
+    DharmaKeyRegistryV1,
+    'getGlobalKey',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, originalAddress)
+    }
+  )
+
+  await runTest(
+    'Dharma Key Registry V1 attempt to get an unset specific key throws',
+    DharmaKeyRegistryV1,
+    'getSpecificKey',
+    'call',
+    [address],
+    false
+  )
+
+  await runTest(
+    'Dharma Key Registry V1 gets the global key when requesting unset key',
+    DharmaKeyRegistryV1,
+    'getKey',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, originalAddress)
+    }
+  )
+
+  await runTest(
+    'Dharma Key Registry V1 cannot set a new empty global key',
+    DharmaKeyRegistryV1,
+    'setGlobalKey',
+    'send',
+    [
+      nullAddress,
+      '0x'
+    ],
+    false,
+    receipt => {},
+    originalAddress
+  )
+
+  const message = (
+    DharmaKeyRegistryV1.options.address +
+    address.slice(2) +
+    web3.utils.asciiToHex(
+      "This signature demonstrates that the supplied signing key is valid."
+    ).slice(2)
+  )
+
+  const signature = signHashedPrefixedHashedHexString(message, address)
+
+  const badSignature = signHashedPrefixedHashedHexString('0x12', address)
+
+  await runTest(
+    'Dharma Key Registry V1 cannot set a new global key with a bad signature',
+    DharmaKeyRegistryV1,
+    'setGlobalKey',
+    'send',
+    [
+      address,
+      badSignature
+    ],
+    false,
+    receipt => {},
+    originalAddress
+  )
+
+  await runTest(
+    'Dharma Key Registry V1 cannot set a new global key unless called by owner',
+    DharmaKeyRegistryV1,
+    'setGlobalKey',
+    'send',
+    [
+      address,
+      signature
+    ],
+    false
+  )
+
+  await runTest(
+    'Dharma Key Registry V1 can set a new global key correctly',
+    DharmaKeyRegistryV1,
+    'setGlobalKey',
+    'send',
+    [
+      address,
+      signature
+    ],
+    true,
+    receipt => {},
+    originalAddress
+  )
+
+  await runTest(
+    'Dharma Key Registry V1 gets the new global key correctly',
+    DharmaKeyRegistryV1,
+    'getGlobalKey',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  await runTest(
+    'Dharma Key Registry V1 cannot set a new specific key unless called by owner',
+    DharmaKeyRegistryV1,
+    'setSpecificKey',
+    'send',
+    [
+      address,
+      DharmaKeyRegistryV1.options.address
+    ],
+    false
+  )
+
+  await runTest(
+    'Dharma Key Registry V1 can set a new specific key',
+    DharmaKeyRegistryV1,
+    'setSpecificKey',
+    'send',
+    [
+      address,
+      DharmaKeyRegistryV1.options.address
+    ],
+    true,
+    receipt => {},
+    originalAddress
+  )
+
+  await runTest(
+    'Dharma Key Registry V1 gets the new specific key correctly',
+    DharmaKeyRegistryV1,
+    'getSpecificKey',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaKeyRegistryV1.options.address)
+    }
+  )
+
+  await runTest(
+    'Dharma Key Registry V1 gets the specific key when requesting set key',
+    DharmaKeyRegistryV1,
+    'getKey',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaKeyRegistryV1.options.address)
+    }
+  )
+
+  // TODO: test transferring ownership on Dharma Key Registry V1
 
   const DharmaSmartWalletImplementationV0 = await runTest(
     `DharmaSmartWalletImplementationV0 contract deployment`,
