@@ -135,7 +135,6 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   using Address for address;
   using ECDSA for bytes32;
   // WARNING: DO NOT REMOVE OR REORDER STORAGE WHEN WRITING NEW IMPLEMENTATIONS!
-  // Note: One way to protect against this is to inherit V0 on V1.
 
   // The Dharma key associated with this account is in storage slot 0.
   // It is the core differentiator when it comes to the account in question.
@@ -154,7 +153,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   // Any storage set here should be cleared before execution environment exits.
   bytes4 internal _selfCallContext;
 
-  // END STORAGE DECLARATIONS - DO NOT REMOVE OR REPLACE STORAGE ABOVE HERE!
+  // END STORAGE DECLARATIONS - DO NOT REMOVE OR REORDER STORAGE ABOVE HERE!
 
   // The smart wallet version will be used when constructing valid signatures.
   uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 0;
@@ -281,7 +280,19 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * minimum action gas, plus the gas that will be spent before the gas check is
    * reached - usually somewhere around 25,000 gas. If the withdrawal fails, an
    * ExternalError with additional details on what went wrong will be emitted.
-   * @param amount ...
+   * Note that some dust may still be left over, even in the event of a max
+   * withdrawal, due to the fact that Dai has a higher precision than cDAI.
+   * @param amount uint256 The amount of Dai to withdraw.
+   * @param recipient address The account to transfer the withdrawn Dai to.
+   * @param minimumActionGas uint256 The minimum amount of gas that must be
+   * provided to this call - be aware that additional gas must still be included
+   * to account for the cost of overhead incurred up until the start of this
+   * function call.
+   * @param dharmaKeySignature bytes Unused in V0.
+   * @param dharmaSecondaryKeySignature bytes A signature that resolves to the
+   * public key returned for this account from the Dharma Key Registry. A unique
+   * hash returned from `getCustomActionID` is prefixed and hashed to create the
+   * signed message.
    * @return True if the withdrawal succeeded, otherwise false.
    */
   function withdrawDai(
