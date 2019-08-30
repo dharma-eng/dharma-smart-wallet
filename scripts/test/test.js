@@ -2442,6 +2442,27 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'UserSmartWallet relay cannot call with bad signature to withdraw USDC',
+    UserSmartWallet,
+    'withdrawUSDC',
+    'send',
+    [
+      FULL_APPROVAL,
+      address,
+      4,
+      0,
+      '0x',
+      '0xffffffff' + usdcWithdrawalSignature.slice(10)
+    ],
+    false,
+    receipt => {
+      // TODO: verify logs
+      //console.log(receipt)
+    },
+    originalAddress
+  )
+
+  await runTest(
     'UserSmartWallet relay can call with signature to withdraw USDC',
     UserSmartWallet,
     'withdrawUSDC',
@@ -2487,7 +2508,7 @@ module.exports = {test: async function (provider, testingContext) {
     'getNextCustomActionID',
     'call',
     [
-      4, // USDCWithdrawal,
+      4, // DaiWithdrawal,
       FULL_APPROVAL,
       address,
       0
@@ -2501,6 +2522,27 @@ module.exports = {test: async function (provider, testingContext) {
   const daiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     address
+  )
+
+  await runTest(
+    'UserSmartWallet relay cannot call with bad signature to withdraw dai',
+    UserSmartWallet,
+    'withdrawDai',
+    'send',
+    [
+      FULL_APPROVAL,
+      address,
+      5,
+      0,
+      '0x',
+      '0xffffffff' + daiWithdrawalSignature.slice(10)
+    ],
+    false,
+    receipt => {
+      // TODO: verify logs
+      //console.log(receipt)
+    },
+    originalAddress
   )
 
   await runTest(
