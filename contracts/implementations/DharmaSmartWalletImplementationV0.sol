@@ -737,7 +737,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       uint256 compoundError = abi.decode(data, (uint256));
       if (compoundError != _COMPOUND_SUCCESS) {
         emit ExternalError(
-          address(_CDAI),
+          address(_CUSDC),
           string(
             abi.encodePacked(
               "Compound cUSDC contract returned error code ",
