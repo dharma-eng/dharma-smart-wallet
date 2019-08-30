@@ -292,12 +292,11 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     bytes calldata dharmaSecondaryKeySignature
   ) external returns (bool ok) {
     // Ensure either caller or supplied signature is valid and increment nonce.
-    _validateCustomActionAndIncrementNonce(
+    _validateActionAndIncrementNonce(
       ActionType.DAIWithdrawal,
       amount,
       recipient,
       minimumActionGas,
-      dharmaKeySignature,
       dharmaSecondaryKeySignature
     );
 
@@ -362,12 +361,11 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     bytes calldata dharmaSecondaryKeySignature
   ) external returns (bool ok) {
     // Ensure either caller or supplied signature is valid and increment nonce.
-    _validateCustomActionAndIncrementNonce(
+    _validateActionAndIncrementNonce(
       ActionType.USDCWithdrawal,
       amount,
       recipient,
       minimumActionGas,
-      dharmaKeySignature,
       dharmaSecondaryKeySignature
     );
 
@@ -429,26 +427,14 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     uint256 minimumActionGas,
     bytes calldata signature
   ) external {
-    // Get the secondary public key that will be used to verify the signature.
-    address secondaryKey = _getSecondaryKey();
-
-    // Increment nonce and exit if the caller matches the retrieved key.
-    if (msg.sender == secondaryKey) {
-      _incrementNonce();
-      return;
-    }
-
-    // Ensure that the minimum action gas is supplied correctly.
-    _checkMinimumActionGas(minimumActionGas);
-
-    // Determine the actionID - this serves as the signature hash.
-    bytes32 actionID = _getCustomActionID(
-      ActionType.Cancel, 0, address(0), _nonce, minimumActionGas, secondaryKey
+    // Ensure either caller or supplied signature is valid and increment nonce.
+    _validateActionAndIncrementNonce(
+      ActionType.Cancel,
+      0,
+      address(0),
+      minimumActionGas,
+      signature
     );
-
-    // Ensure that the signature is valid - if so, increment the nonce.
-    _verifySignatureAndIncrementNonce(actionID, signature, secondaryKey);
-
   }
 
   // Allow signatory to set a new Dharma Key - the current nonce needs to be
@@ -460,26 +446,16 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     uint256 minimumActionGas,
     bytes calldata signature
   ) external {
-    // Get the secondary public key that will be used to verify the signature.
-    address secondaryKey = _getSecondaryKey();
-
-    // Increment nonce, set Dharma key and exit if caller matches retrieved key.
-    if (msg.sender == secondaryKey) {
-      _incrementNonce();
-      _setDharmaKey(dharmaKey);
-      return;
-    }
-
-    // Ensure that the minimum action gas are supplied correctly.
-    _checkMinimumActionGas(minimumActionGas);
-
-    // Determine the actionID - this serves as the signature hash.
-    bytes32 actionID = _getCustomActionID(
-      ActionType.SetDharmaKey, 0, dharmaKey, _nonce, minimumActionGas, secondaryKey
+    // Ensure either caller or supplied signature is valid and increment nonce.
+    _validateActionAndIncrementNonce(
+      ActionType.SetDharmaKey,
+      0,
+      dharmaKey,
+      minimumActionGas,
+      signature
     );
 
-    // Ensure that the signature is valid - if so, increment nonce and set key.
-    _verifySignatureAndIncrementNonce(actionID, signature, secondaryKey);
+    // Set new Dharma key on the smart wallet and emit a corresponding event.
     _setDharmaKey(dharmaKey);
   }
 
@@ -617,16 +593,25 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     );
   }
 
-  function _validateCustomActionAndIncrementNonce(
+  function _validateActionAndIncrementNonce(
     ActionType actionType,
     uint256 amount,
     address recipient,
     uint256 minimumActionGas,
-    bytes memory dharmaKeySignature,
     bytes memory dharmaSecondaryKeySignature
   ) internal returns (bytes32 actionID) {
-    // Ensure that the minimum action gas is supplied correctly.
-    _checkMinimumActionGas(minimumActionGas);
+    // Ensure that the current gas exceeds the minimum required action gas.
+    // This prevents griefing attacks where an attacker can invalidate a
+    // signature without providing enough gas for the action to succeed. Also
+    // note that some gas will be spent before this check is reached - supplying
+    // ~30,000 additional gas should suffice when submitting transactions. To
+    // skip this requirement, supply zero for the minimumActionGas argument.
+    if (minimumActionGas != 0) {
+      require(
+        gasleft() >= minimumActionGas,
+        "Invalid action - insufficient gas supplied by transaction submitter."
+      );
+    }
 
     // Get the secondary public key that will be used to verify the signature.
     address secondaryKey = _getSecondaryKey();
@@ -640,9 +625,6 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     _verifySignatureAndIncrementNonce(
       actionID, dharmaSecondaryKeySignature, secondaryKey
     );
-
-    // Avoid unused variable warning - Dharma key is not used for txs in V0.
-    dharmaKeySignature;
   }
 
   function _verifySignatureAndIncrementNonce(
@@ -832,23 +814,6 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
           )
         );
       }
-    }
-  }
-
-  function _checkMinimumActionGas(
-    uint256 minimumActionGas
-  ) internal view {
-    // Ensure that the current gas exceeds the minimum required action gas.
-    // This prevents griefing attacks where an attacker can invalidate a
-    // signature without providing enough gas for the action to succeed. Also
-    // note that some gas will be spent before this check is reached - supplying
-    // ~30,000 additional gas should suffice when submitting transactions. To
-    // skip this requirement, supply zero for the minimumActionGas argument.
-    if (minimumActionGas != 0) {
-      require(
-        gasleft() >= minimumActionGas,
-        "Invalid action - insufficient gas supplied by transaction submitter."
-      );
     }
   }
 
