@@ -115,6 +115,7 @@ const UPGRADE_BEACON_ENVOY_ADDRESS = '0x000000000067503c398F4c9652530DBC4eA95C02
 const UPGRADE_BEACON_CONTROLLER_ADDRESS = '0x00000000003284ACb9aDEb78A2dDe0A8499932b9'
 const UPGRADE_BEACON_ADDRESS = '0x0000000000b45D6593312ac9fdE193F3D0633644'
 const KEY_REGISTRY_ADDRESS = '0x00000000006c7f32F0cD1eA4C1383558eb68802D'
+const FACTORY_ADDRESS = '0x9C19000013172900000000a6Ec51bF00ADfF97AA'
 
 const contractNames = {}
 contractNames[DAI_MAINNET_ADDRESS] = 'DAI'
@@ -374,6 +375,11 @@ module.exports = {test: async function (provider, testingContext) {
   )
   DharmaKeyRegistryV1Deployer.options.data = (
     DharmaKeyRegistryV1Artifact.bytecode
+  )
+
+  const DharmaSmartWalletFactoryV1 = new web3.eth.Contract(
+    DharmaSmartWalletFactoryV1Artifact.abi,
+    FACTORY_ADDRESS
   )
 
   const DharmaSmartWalletFactoryV1Deployer = new web3.eth.Contract(
@@ -1309,23 +1315,9 @@ module.exports = {test: async function (provider, testingContext) {
     ).slice(2)
   )
 
-  const signature = signHashedPrefixedHashedHexString(message, address)
+  const newKeySignature = signHashedPrefixedHashedHexString(message, address)
 
-  const badSignature = signHashedPrefixedHashedHexString('0x12', address)
-
-  await runTest(
-    'Dharma Key Registry V1 cannot set a new global key with a bad signature',
-    DharmaKeyRegistryV1,
-    'setGlobalKey',
-    'send',
-    [
-      address,
-      badSignature
-    ],
-    false,
-    receipt => {},
-    originalAddress
-  )
+  const badNewKeySignature = signHashedPrefixedHashedHexString('0x12', address)
 
   await runTest(
     'Dharma Key Registry V1 cannot set a new global key unless called by owner',
@@ -1334,9 +1326,23 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [
       address,
-      signature
+      newKeySignature
     ],
     false
+  )
+
+  await runTest(
+    'Dharma Key Registry V1 cannot set a new global key with a bad signature',
+    DharmaKeyRegistryV1,
+    'setGlobalKey',
+    'send',
+    [
+      address,
+      badNewKeySignature
+    ],
+    false,
+    receipt => {},
+    originalAddress
   )
 
   await runTest(
@@ -1346,7 +1352,7 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [
       address,
-      signature
+      newKeySignature
     ],
     true,
     receipt => {},
@@ -1747,6 +1753,57 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
+  let currentFactoryCode;
+  await runTest(
+    'Checking Key Registry runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [FACTORY_ADDRESS],
+    true,
+    value => {
+      currentFactoryCode = value;
+    }
+  )
+
+  if (
+    currentFactoryCode !== DharmaSmartWalletFactoryV1Artifact.deployedBytecode
+  ) {
+    await runTest(
+      `DharmaKeyRegistryV1 Code contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        '0x00000000000000000000000000000000000000000597d42573099103b3070000',
+        DharmaSmartWalletFactoryV1Artifact.bytecode
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, FACTORY_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaSmartWalletFactoryV1 contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        '0x00000000000000000000000000000000000000000597d42573099103b3070000',
+        DharmaSmartWalletFactoryV1Artifact.bytecode
+      ]
+    )
+  }
+
+  await runTest(
+    `DharmaSmartWalletFactoryV1 contract deployment`,
+    DharmaSmartWalletFactoryV1Deployer,
+    '',
+    'deploy',
+    []
+  )
+
   let currentDaiCode;
   await runTest(
     'Checking for required external contracts...',
@@ -1823,14 +1880,6 @@ module.exports = {test: async function (provider, testingContext) {
     value => {
       assert.strictEqual(value, '0x9999999999999999999999999999999999999999')
     }
-  )
-
-  const DharmaSmartWalletFactoryV1 = await runTest(
-    `DharmaSmartWalletFactoryV1 contract deployment`,
-    DharmaSmartWalletFactoryV1Deployer,
-    '',
-    'deploy',
-    []
   )
 
   let targetWalletAddress;
@@ -2160,6 +2209,19 @@ module.exports = {test: async function (provider, testingContext) {
     value => {
       assert.strictEqual(value, address)
     }
+  )
+
+  const witdrawalMessage = (
+    UserSmartWallet.options.address +
+    address.slice(2) +
+    web3.utils.asciiToHex(
+      "This signature demonstrates that the supplied signing key is valid."
+    ).slice(2)
+  )
+
+  const newWithdrawalSignature = signHashedPrefixedHashedHexString(
+    witdrawalMessage,
+    address
   )
 
   console.log(
