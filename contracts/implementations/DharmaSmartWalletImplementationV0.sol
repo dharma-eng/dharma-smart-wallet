@@ -116,11 +116,17 @@ interface DharmaSmartWalletImplementationV0Interface {
 
 /**
  * @title DharmaSmartWalletImplementationV0
- * @notice The V1 implementation for the Dharma smart wallet is a joint-custody,
- * meta-transaction-enabled wallet with an account recovery option. It is
- * deployed by a factory that allows for the address to be known ahead of time,
- * and any Dai that has been sent to the address will automatically be deposited
- * into Compound at the time the wallet is deployed.
+ * @author 0age
+ * @notice The V0 implementation for the Dharma Smart Wallet contains helper
+ * functions to facilitate lending funds to CompoundV2 and for preparing Dharma
+ * users for a smooth transition to a joint-custody smart wallet. It supports
+ * meta-transactions, signed by a key corresponding to the public key returned
+ * by the Dharma Key Registry and relayed by any transaction submitter that has
+ * provided the specified gas requirement. The smart wallet instances that rely
+ * on this implementation are deployed through the Dharma Smart Wallet Factory,
+ * using a mechanism that allows for their address to be known ahead of time,
+ * and any Dai or USDC that has been sent into that address will automatically
+ * be deposited into Compound at the time the wallet is deployed.
  */
 contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0Interface {
   using Address for address;
@@ -128,7 +134,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   // WARNING: DO NOT REMOVE OR REORDER STORAGE WHEN WRITING NEW IMPLEMENTATIONS!
   // Note: One way to protect against this is to inherit V0 on V1.
 
-  // The dharma key associated with this account is in storage slot 0.
+  // The Dharma key associated with this account is in storage slot 0.
   // It is the core differentiator when it comes to the account in question.
   address private _dharmaKey;
 
@@ -150,16 +156,12 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   // The smart wallet version will be used when constructing valid signatures.
   uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 0;
 
-  // The dharma secondary key is a signing key held in the Dharma Key Registry,
-  // used in conjunction with user's Dharma Key to make smart wallet actions.
+  // The Dharma Key Registry holds a public key for verifying meta-transactions.
   DharmaKeyRegistryInterface internal constant _DHARMA_KEY_REGISTRY = (
     DharmaKeyRegistryInterface(0x00000000006c7f32F0cD1eA4C1383558eb68802D)
   );
 
-  ComptrollerInterface internal constant _COMPTROLLER = ComptrollerInterface(
-    0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B
-  );
-
+  // This contract interfaces with Dai, USDC, and related CompoundV2 contracts.
   CTokenInterface internal constant _CDAI = CTokenInterface(
     0xF5DCe57282A584D2746FaF1593d3121Fcac444dC // mainnet
   );
@@ -180,6 +182,10 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 // mainnet
   );
 
+  ComptrollerInterface internal constant _COMPTROLLER = ComptrollerInterface(
+    0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B
+  );
+
   // Compound returns a value of 0 to indicate success, or lack of an error.
   uint256 internal constant _COMPOUND_SUCCESS = 0;
 
@@ -187,9 +193,10 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     // Ensure that this function is only callable during contract construction.
     assembly { if extcodesize(address) { revert(0, 0) } }
 
+    // Ensure that a Dharma key is set on this smart wallet.
     require(dharmaKey != address(0), "No key provided.");
 
-    // Set up the user's dharma key and emit a corresponding event.
+    // Set up the user's Dharma key and emit a corresponding event.
     _setDharmaKey(dharmaKey);
 
     // Approve the cDAI contract to transfer Dai on behalf of this contract.
@@ -225,7 +232,6 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     uint256 usdcBalance = _USDC.balanceOf(address(this));
 
     // If there is any USDC balance, check for adequate approval for cUSDC.
-    // Once borrows are enabled, first use funds to repay USDC borrow balance.
     if (usdcBalance > 0) {
       uint256 usdcAllowance = _USDC.allowance(address(this), address(_CUSDC));
       // If allowance is insufficient, try to set it before depositing.
@@ -234,7 +240,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
           // Deposit any available USDC.
           _depositUSDCOnCompound(usdcBalance);
         }
-      // otherwise, go ahead and try the deposit.
+      // Otherwise, go ahead and try the deposit.
       } else {
         // Deposit any available USDC.
         _depositUSDCOnCompound(usdcBalance);
@@ -250,6 +256,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     bytes calldata dharmaKeySignature,
     bytes calldata dharmaSecondaryKeySignature
   ) external returns (bool ok) {
+    // Ensure either caller or supplied signature is valid and increment nonce.
     _validateCustomActionAndIncrementNonce(
       ActionType.DAIWithdrawal,
       amount,
@@ -272,10 +279,23 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     (ok, returnData) = address(this).call(abi.encodeWithSelector(
       this._withdrawDaiAtomic.selector, amount, recipient
     ));
+
+    // If the atomic call failed, diagnose the reason and emit an event.
     if (!ok) {
-      emit ExternalError(address(_DAI), "DAI contract reverted on transfer.");
+      // This revert could be caused by cDai MathError or Dai transfer error.
+      (bool check, ) = address(_CDAI).call(abi.encodeWithSelector(
+        _CDAI.balanceOfUnderlying.selector, address(this)
+      ));
+      if (!check) {
+        emit ExternalError(
+          address(_CDAI),
+          "cDAI contract reverted while checking underlying Dai balance."
+        );
+      } else {
+        emit ExternalError(address(_DAI), "DAI contract reverted on transfer.");
+      }
     } else {
-      // Ensure that ok == false in the event the withdrawal failed.
+      // Set ok to false if the call succeeded but the withdrawal failed.
       ok = abi.decode(returnData, (bool));
     }
 
@@ -283,15 +303,33 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     delete _selfCallContext;
   }
 
-  function _withdrawDaiAtomic(uint256 amount, address recipient) external returns (bool success) {
+  function _withdrawDaiAtomic(
+    uint256 amount,
+    address recipient
+  ) external returns (bool success) {
     require(
       msg.sender == address(this) &&
       _selfCallContext == this.withdrawDai.selector,
       "External accounts or unapproved internal functions cannot call this."
     );
-    if (_withdrawDaiFromCompound(amount)) {
-      // at this point dai transfer *should* never fail - wrap it just in case.
-      require(_DAI.transfer(recipient, amount));
+
+    // If amount = 0xfff...fff, withdraw the maximum amount possible.
+    bool maxWithdraw = (amount == uint256(-1));
+    uint256 redeemUnderlyingAmount;
+    if (maxWithdraw) {
+      redeemUnderlyingAmount = _CDAI.balanceOfUnderlying(address(this));
+    } else {
+      redeemUnderlyingAmount = amount;
+    }
+
+    // Attempt to withdraw specified Dai amount from Compound before proceeding.
+    if (_withdrawDaiFromCompound(redeemUnderlyingAmount)) {
+      // At this point dai transfer *should* never fail - wrap it just in case.
+      if (maxWithdraw) {
+        require(_DAI.transfer(recipient, _DAI.balanceOf(address(this))));
+      } else {
+        require(_DAI.transfer(recipient, amount));
+      }
       success = true;
     }
   }
@@ -304,6 +342,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     bytes calldata dharmaKeySignature,
     bytes calldata dharmaSecondaryKeySignature
   ) external returns (bool ok) {
+    // Ensure either caller or supplied signature is valid and increment nonce.
     _validateCustomActionAndIncrementNonce(
       ActionType.USDCWithdrawal,
       amount,
@@ -327,23 +366,34 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       this._withdrawUSDCAtomic.selector, amount, recipient
     ));
     if (!ok) {
-      // find out *why* USDC transfer reverted (it doesn't give revert reasons).
-      if (_USDC_NAUGHTY.isBlacklisted(address(this))) {
+      // This revert could be caused by cUSDC MathError or USDC transfer error.
+      (bool check, ) = address(_CUSDC).call(abi.encodeWithSelector(
+        _CUSDC.balanceOfUnderlying.selector, address(this)
+      ));
+      if (!check) {
         emit ExternalError(
-          address(_USDC),
-          "transfer failed - USDC has blacklisted this user."
+          address(_CUSDC),
+          "cUSDC contract reverted while checking underlying USDC balance."
         );
-      } else { // Note: `else if` breaks coverage.
-        if (_USDC_NAUGHTY.paused()) {
+      } else {
+        // Find out why USDC transfer reverted (it doesn't give revert reasons).
+        if (_USDC_NAUGHTY.isBlacklisted(address(this))) {
           emit ExternalError(
             address(_USDC),
-            "transfer failed - USDC contract is currently paused."
+            "transfer failed - USDC has blacklisted this user."
           );
-        } else {
-          emit ExternalError(
-            address(_USDC),
-            "USDC contract reverted on transfer."
-          );
+        } else { // Note: `else if` breaks coverage.
+          if (_USDC_NAUGHTY.paused()) {
+            emit ExternalError(
+              address(_USDC),
+              "transfer failed - USDC contract is currently paused."
+            );
+          } else {
+            emit ExternalError(
+              address(_USDC),
+              "USDC contract reverted on transfer."
+            );
+          }
         }
       }
     } else {
@@ -355,15 +405,33 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     delete _selfCallContext;
   }
 
-  function _withdrawUSDCAtomic(uint256 amount, address recipient) external returns (bool success) {
+  function _withdrawUSDCAtomic(
+    uint256 amount,
+    address recipient
+  ) external returns (bool success) {
     require(
       msg.sender == address(this) &&
       _selfCallContext == this.withdrawUSDC.selector,
       "External accounts or unapproved internal functions cannot call this."
     );
-    if (_withdrawUSDCFromCompound(amount)) {
-      // ensure that the USDC transfer does not fail.
-      require(_USDC.transfer(recipient, amount));
+
+    // If amount = 0xfff...fff, withdraw the maximum amount possible.
+    bool maxWithdraw = (amount == uint256(-1));
+    uint256 redeemUnderlyingAmount;
+    if (maxWithdraw) {
+      redeemUnderlyingAmount = _CUSDC.balanceOfUnderlying(address(this));
+    } else {
+      redeemUnderlyingAmount = amount;
+    }
+
+    // Try to withdraw specified USDC amount from Compound before proceeding.
+    if (_withdrawUSDCFromCompound(redeemUnderlyingAmount)) {
+      // Ensure that the USDC transfer does not fail.
+      if (maxWithdraw) {
+        require(_USDC.transfer(recipient, _USDC.balanceOf(address(this))));
+      } else {
+        require(_USDC.transfer(recipient, amount));
+      }
       success = true;
     }
   }
@@ -376,6 +444,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     uint256 minimumActionGas,
     bytes calldata signature
   ) external {
+    // Get the secondary public key that will be used to verify the signature.
     address secondaryKey = _getSecondaryKey();
 
     if (msg.sender == secondaryKey) {
@@ -408,19 +477,14 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
 
   // Allow signatory to set a new Dharma Key - the current nonce needs to be
   // provided when using a signature so as not to enable griefing attacks. All
-  // arguments (except for the dharma key) can be omitted if called directly.
+  // arguments (except for the Dharma key) can be omitted if called directly.
   function setDharmaKey(
     address dharmaKey,
     uint256 nonce,
     uint256 minimumActionGas,
     bytes calldata signature
   ) external {
-    // This function is only callable with one signature in V0.
-    require(
-      _DHARMA_SMART_WALLET_VERSION == 0,
-      "This function is no longer callable by a single signatory."
-    );
-
+    // Get the secondary public key that will be used to verify the signature.
     address secondaryKey = _getSecondaryKey();
 
     if (msg.sender == secondaryKey) {
@@ -524,7 +588,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       _DAI.approve.selector, address(_CDAI), uint256(-1)
     ));
 
-    // Note: handling the failure on dai approvals is unnecessary.
+    // Note: handling a failure on dai approvals is unnecessary.
   }
 
   function _depositDaiOnCompound(uint256 daiBalance) internal {
@@ -781,7 +845,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       "Invalid action - insufficient gas supplied by transaction submitter."
     );
 
-    // Avoid unused variable warning - dharma key is not used for txs in V0.
+    // Avoid unused variable warning - Dharma key is not used for txs in V0.
     dharmaKeySignature;
   }
 
