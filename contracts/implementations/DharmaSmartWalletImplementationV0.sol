@@ -5,32 +5,6 @@ import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
-interface CTokenInterface {
-  function mint(uint256 mintAmount) external returns (uint256 err);
-  
-  function redeemUnderlying(uint256 redeemAmount) external returns (uint256 err);
-
-  function balanceOfUnderlying(address account) external returns (uint256 balance);
-}
-
-
-interface USDCV1Interface {
-  function isBlacklisted(address _account) external view returns (bool);
-  
-  function paused() external view returns (bool);
-}
-
-
-interface ComptrollerInterface {
-  function enterMarkets(address[] calldata cTokens) external returns (uint256[] memory errs);
-}
-
-
-interface DharmaKeyRegistryInterface {
-  function getGlobalKey() external view returns (address globalKey);
-}
-
-
 interface DharmaSmartWalletImplementationV0Interface {
   event NewDharmaKey(address dharmaKey);
   
@@ -111,6 +85,32 @@ interface DharmaSmartWalletImplementationV0Interface {
   ) external view returns (bytes32 actionID);
 
   function getVersion() external pure returns (uint256 version);
+}
+
+
+interface CTokenInterface {
+  function mint(uint256 mintAmount) external returns (uint256 err);
+  
+  function redeemUnderlying(uint256 redeemAmount) external returns (uint256 err);
+
+  function balanceOfUnderlying(address account) external returns (uint256 balance);
+}
+
+
+interface USDCV1Interface {
+  function isBlacklisted(address _account) external view returns (bool);
+  
+  function paused() external view returns (bool);
+}
+
+
+interface ComptrollerInterface {
+  function enterMarkets(address[] calldata cTokens) external returns (uint256[] memory errs);
+}
+
+
+interface DharmaKeyRegistryInterface {
+  function getGlobalKey() external view returns (address globalKey);
 }
 
 
@@ -892,15 +892,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     );
   }
 
-  function _getDharmaKey() internal view returns (address dharmaKey) {
-    dharmaKey = _dharmaKey;
-  }
-
   function _getSecondaryKey() internal view returns (address secondaryKey) {
     secondaryKey = _DHARMA_KEY_REGISTRY.getGlobalKey();
-  }
-
-  function _getNonce() internal view returns (uint256 nonce) {
-    nonce = _nonce;
   }
 }

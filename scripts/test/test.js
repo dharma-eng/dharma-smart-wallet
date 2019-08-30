@@ -8,13 +8,12 @@ let DharmaUpgradeBeaconArtifact;
 let DharmaUpgradeBeaconControllerArtifact;
 let DharmaUpgradeBeaconEnvoyArtifact;
 let DharmaKeyRegistryV1Artifact;
+let DharmaSmartWalletFactoryV1Artifact;
+let UpgradeBeaconProxyArtifact;
 
 const DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 
-const UpgradeBeaconProxyArtifact = require('../../build/contracts/UpgradeBeaconProxy.json')
-
-const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
 
@@ -295,15 +294,19 @@ function longer() {
 
 module.exports = {test: async function (provider, testingContext) {
   if (testingContext === 'coverage') {
-    DharmaUpgradeBeaconArtifact = require('../../../build/contracts/DharmaUpgradeBeacon.json')
-    DharmaUpgradeBeaconControllerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconController.json')
     DharmaUpgradeBeaconEnvoyArtifact = require('../../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
+    DharmaUpgradeBeaconControllerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconController.json')
+    DharmaUpgradeBeaconArtifact = require('../../../build/contracts/DharmaUpgradeBeacon.json')
     DharmaKeyRegistryV1Artifact = require('../../../build/contracts/DharmaKeyRegistryV1.json')
+    DharmaSmartWalletFactoryV1Artifact = require('../../../build/contracts/DharmaSmartWalletFactoryV1.json')
+    UpgradeBeaconProxyArtifact = require('../../../build/contracts/UpgradeBeaconProxy.json')
   } else {
-    DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
-    DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
     DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
+    DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
+    DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
     DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
+    DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
+    UpgradeBeaconProxyArtifact = require('../../build/contracts/UpgradeBeaconProxy.json')
   }
 
   var web3 = provider
@@ -857,8 +860,28 @@ module.exports = {test: async function (provider, testingContext) {
     return deployGas
   }
 
+  function signHashedPrefixedHexString(hashedHexString, account) {
+    const hashedPrefixedMessage = web3.utils.keccak256(
+      // prefix => "\x19Ethereum Signed Message:\n32"
+      "0x19457468657265756d205369676e6564204d6573736167653a0a3332" +
+      hashedHexString.slice(2),
+      {encoding: "hex"}
+    )
+
+    const sig = util.ecsign(
+      util.toBuffer(hashedPrefixedMessage),
+      util.toBuffer(web3.eth.accounts.wallet[account].privateKey)
+    )
+
+    return (
+      util.bufferToHex(sig.r) +
+      util.bufferToHex(sig.s).slice(2) +
+      web3.utils.toHex(sig.v).slice(2)
+    )
+  }
+
   function signHashedPrefixedHashedHexString(hexString, account) {
-    const hashedPrefixedHashedmessage = web3.utils.keccak256(
+    const hashedPrefixedHashedMessage = web3.utils.keccak256(
       // prefix => "\x19Ethereum Signed Message:\n32"
       "0x19457468657265756d205369676e6564204d6573736167653a0a3332" +
       web3.utils.keccak256(hexString, {encoding: "hex"}).slice(2),
@@ -866,7 +889,7 @@ module.exports = {test: async function (provider, testingContext) {
     )
 
     const sig = util.ecsign(
-      util.toBuffer(hashedPrefixedHashedmessage),
+      util.toBuffer(hashedPrefixedHashedMessage),
       util.toBuffer(web3.eth.accounts.wallet[account].privateKey)
     )
 
@@ -1755,7 +1778,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   let currentFactoryCode;
   await runTest(
-    'Checking Key Registry runtime code',
+    'Checking Factory runtime code',
     MockCodeCheck,
     'code',
     'call',
@@ -1770,7 +1793,7 @@ module.exports = {test: async function (provider, testingContext) {
     currentFactoryCode !== DharmaSmartWalletFactoryV1Artifact.deployedBytecode
   ) {
     await runTest(
-      `DharmaKeyRegistryV1 Code contract address check through immutable create2 factory`,
+      `DharmaSmartWalletFactoryV1 Code contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
       'call',
@@ -2211,17 +2234,270 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  const witdrawalMessage = (
-    UserSmartWallet.options.address +
-    address.slice(2) +
-    web3.utils.asciiToHex(
-      "This signature demonstrates that the supplied signing key is valid."
-    ).slice(2)
+  await runTest(
+    'UserSmartWallet can get the version (0)',
+    UserSmartWallet,
+    'getVersion',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '0')
+    }
   )
 
-  const newWithdrawalSignature = signHashedPrefixedHashedHexString(
-    witdrawalMessage,
+  await runTest(
+    'UserSmartWallet nonce is initially set to 0',
+    UserSmartWallet,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '0')
+    }
+  )
+
+  await runTest(
+    'UserSmartWallet can get balances',
+    UserSmartWallet,
+    'getBalances',
+    'call',
+    [],
+    true,
+    value => {
+      //console.log(value)
+    }
+  )
+
+  await runTest(
+    'UserSmartWallet secondary can call to withdraw dai',
+    UserSmartWallet,
+    'withdrawDai',
+    'send',
+    [
+      1,
+      address,
+      0,
+      0,
+      '0x',
+      '0x'
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+      //console.log(receipt)
+    }
+  )
+
+  await runTest(
+    'UserSmartWallet nonce is now set to 1',
+    UserSmartWallet,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '1')
+    }
+  )
+
+  await runTest(
+    'UserSmartWallet secondary can call to withdraw usdc',
+    UserSmartWallet,
+    'withdrawUSDC',
+    'send',
+    [
+      1,
+      address,
+      1,
+      0,
+      '0x',
+      '0x'
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+      //console.log(receipt)
+    }
+  )
+
+  await runTest(
+    'UserSmartWallet nonce is now set to 2',
+    UserSmartWallet,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '2')
+    }
+  )
+
+  await runTest(
+    'UserSmartWallet secondary can call to cancel',
+    UserSmartWallet,
+    'cancel',
+    'send',
+    [
+      0,
+      0,
+     '0x'
+    ]
+  )
+
+  await runTest(
+    'UserSmartWallet nonce is now set to 3',
+    UserSmartWallet,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '3')
+    }
+  )
+
+  await runTest(
+    'UserSmartWallet secondary can call to set dharmaKey',
+    UserSmartWallet,
+    'setDharmaKey',
+    'send',
+    [
+      address,
+      0,
+      0,
+      '0x'
+    ]
+  )
+
+  await runTest(
+    'UserSmartWallet nonce is now set to 4',
+    UserSmartWallet,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '4')
+    }
+  )
+
+  let customActionId;
+  await runTest(
+    'UserSmartWallet can get next custom action ID',
+    UserSmartWallet,
+    'getNextCustomActionID',
+    'call',
+    [
+      4, // DAIWithdrawal,
+      FULL_APPROVAL,
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  await runTest(
+    'UserSmartWallet can get custom action ID 4 and it matches next action ID',
+    UserSmartWallet,
+    'getCustomActionID',
+    'call',
+    [
+      4, // DAIWithdrawal,
+      FULL_APPROVAL,
+      address,
+      4,
+      0
+    ],
+    true,
+    value => {
+      assert.strictEqual(value, customActionId)
+    }
+  )
+
+  await runTest(
+    'UserSmartWallet can get next custom action ID',
+    UserSmartWallet,
+    'getNextCustomActionID',
+    'call',
+    [
+      5, // USDCWithdrawal,
+      FULL_APPROVAL,
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  const usdcWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
     address
+  )
+
+  await runTest(
+    'UserSmartWallet relay can call with signature to withdraw USDC',
+    UserSmartWallet,
+    'withdrawUSDC',
+    'send',
+    [
+      FULL_APPROVAL,
+      address,
+      4,
+      0,
+      '0x',
+      usdcWithdrawalSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+      //console.log(receipt)
+    },
+    originalAddress
+  )
+
+  const withdrawalMessage = (
+    UserSmartWallet.options.address + // smart wallet address
+    nullBytes32.slice(2) +            // smart wallet version
+    address.slice(2) +                // user dharma key
+    address.slice(2) +                // dharma key registry key
+    '5'.padStart(64, '0') +           // nonce
+    nullBytes32.slice(2) +            // minimum gas
+    '4'.padStart(64, '0') +           // action type
+    'f'.padStart(64, 'f') +           // amount
+    address.slice(2)                  // recipient
+  )
+
+  const daiWithdrawalSignature = signHashedPrefixedHashedHexString(
+    withdrawalMessage,
+    address
+  )
+
+  await runTest(
+    'UserSmartWallet relay can call with signature to withdraw dai',
+    UserSmartWallet,
+    'withdrawDai',
+    'send',
+    [
+      FULL_APPROVAL,
+      address,
+      5,
+      0,
+      '0x',
+      daiWithdrawalSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+      //console.log(receipt)
+    },
+    originalAddress
   )
 
   console.log(
