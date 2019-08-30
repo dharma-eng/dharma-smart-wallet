@@ -2420,7 +2420,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'UserSmartWallet can get next custom action ID',
+    'UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -2462,6 +2462,7 @@ module.exports = {test: async function (provider, testingContext) {
     originalAddress
   )
 
+  /* TODO: get this working manually
   const withdrawalMessage = (
     UserSmartWallet.options.address + // smart wallet address
     nullBytes32.slice(2) +            // smart wallet version
@@ -2476,6 +2477,29 @@ module.exports = {test: async function (provider, testingContext) {
 
   const daiWithdrawalSignature = signHashedPrefixedHashedHexString(
     withdrawalMessage,
+    address
+  )
+  */
+
+  await runTest(
+    'UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWallet,
+    'getNextCustomActionID',
+    'call',
+    [
+      4, // USDCWithdrawal,
+      FULL_APPROVAL,
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  const daiWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
     address
   )
 

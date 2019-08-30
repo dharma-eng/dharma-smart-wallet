@@ -727,8 +727,8 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   function _withdrawUSDCFromCompound(
     uint256 usdcToWithdraw
   ) internal returns (bool success) {
-    // Attempt to mint the Dai balance on the cDAI contract.
-    (bool ok, bytes memory data) = address(_CDAI).call(abi.encodeWithSelector(
+    // Attempt to mint the USDC balance on the cUSDC contract.
+    (bool ok, bytes memory data) = address(_CUSDC).call(abi.encodeWithSelector(
       _CUSDC.redeemUnderlying.selector, usdcToWithdraw
     ));
 
