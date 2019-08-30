@@ -37,7 +37,6 @@ interface DharmaSmartWalletImplementationV0Interface {
   function withdrawDai(
     uint256 amount,
     address recipient,
-    uint256 nonce,
     uint256 minimumActionGas,
     bytes calldata dharmaKeySignature,
     bytes calldata dharmaSecondaryKeySignature
@@ -46,21 +45,18 @@ interface DharmaSmartWalletImplementationV0Interface {
   function withdrawUSDC(
     uint256 amount,
     address recipient,
-    uint256 nonce,
     uint256 minimumActionGas,
     bytes calldata dharmaKeySignature,
     bytes calldata dharmaSecondaryKeySignature
   ) external returns (bool ok);
 
   function cancel(
-    uint256 nonce,
     uint256 minimumActionGas,
     bytes calldata signature
   ) external;
 
   function setDharmaKey(
     address dharmaKey,
-    uint256 nonce,
     uint256 minimumActionGas,
     bytes calldata signature
   ) external;
@@ -196,6 +192,16 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   // Compound returns a value of 0 to indicate success, or lack of an error.
   uint256 internal constant _COMPOUND_SUCCESS = 0;
 
+  /**
+   * @notice In the initializer, set up the Dharma key, set approval on the cDAI
+   * and cUSDC contracts, deposit any Dai and/or USDC already at the address to
+   * Compound, and enter markets for cDAI, cUSDC, and cETH (just so it doesn't
+   * need to be performed at some later stage when we move to a borrow-enabled
+   * smart wallet). In V0, the Dharma key is not actually used to submit or sign
+   * actions - the goal is to get all of the smart wallets set up with a Dharma
+   * key by the time we move to V1.
+   * @param dharmaKey address The initial Dharma key for the smart wallet.
+   */
   function initialize(address dharmaKey) external {
     // Ensure that this function is only callable during contract construction.
     assembly { if extcodesize(address) { revert(0, 0) } }
@@ -228,6 +234,14 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     _enterMarkets();
   }
 
+  /**
+   * @notice Deposit all Dai and USDC currently residing at this address to
+   * Compound. Note that "repay" is not currently implemented, but the function
+   * is still named "repayAndDeposit" so that infrastructure around calling this
+   * function will not need to be altered for a future smart wallet version. If
+   * some step of this function fails, the function itself will still succeed,
+   * but an ExternalError with information on what went wrong will be emitted.
+   */
   function repayAndDeposit() external {
     // Get the current Dai balance on this contract.
     uint256 daiBalance = _DAI.balanceOf(address(this));
@@ -255,10 +269,24 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     }
   }
 
+  /**
+   * @notice Withdraw Dai to a provided recipient address by redeeming the
+   * underlying Dai from the cDAI contract and transferring it to the recipient.
+   * All Dai in Compound and in the smart wallet itself can be withdrawn by
+   * providing an amount of uint256(-1) or 0xfff...fff. This function can be
+   * called directly by the account set as the global key on the Dharma Key
+   * Registry, or by any relayer that provides a signed message from the same
+   * keyholder. The nonce used for the signature must match the current nonce on
+   * the smart wallet, and gas supplied to the call must exceed the specified
+   * minimum action gas, plus the gas that will be spent before the gas check is
+   * reached - usually somewhere around 25,000 gas. If the withdrawal fails, an
+   * ExternalError with additional details on what went wrong will be emitted.
+   * @param amount ...
+   * @return True if the withdrawal succeeded, otherwise false.
+   */
   function withdrawDai(
     uint256 amount,
     address recipient,
-    uint256 nonce,
     uint256 minimumActionGas,
     bytes calldata dharmaKeySignature,
     bytes calldata dharmaSecondaryKeySignature
@@ -268,7 +296,6 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       ActionType.DAIWithdrawal,
       amount,
       recipient,
-      nonce,
       minimumActionGas,
       dharmaKeySignature,
       dharmaSecondaryKeySignature
@@ -330,7 +357,6 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   function withdrawUSDC(
     uint256 amount,
     address recipient,
-    uint256 nonce,
     uint256 minimumActionGas,
     bytes calldata dharmaKeySignature,
     bytes calldata dharmaSecondaryKeySignature
@@ -340,7 +366,6 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       ActionType.USDCWithdrawal,
       amount,
       recipient,
-      nonce,
       minimumActionGas,
       dharmaKeySignature,
       dharmaSecondaryKeySignature
@@ -398,10 +423,9 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   }
 
   // Allow signatory to increment the nonce at any point - the current nonce
-  // needs to be provided when using a signature so as not to enable griefing
-  // attacks. All arguments can be omitted if called directly.
+  // needs to be provided as an argument to the a signature so as not to enable
+  // griefing attacks. All arguments can be omitted if called directly.
   function cancel(
-    uint256 nonce,
     uint256 minimumActionGas,
     bytes calldata signature
   ) external {
@@ -414,12 +438,12 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       return;
     }
 
-    // Ensure the nonce and the minimum action gas are supplied correctly.
-    _checkNonceAndMinimumActionGas(nonce, minimumActionGas);
+    // Ensure that the minimum action gas is supplied correctly.
+    _checkMinimumActionGas(minimumActionGas);
 
     // Determine the actionID - this serves as the signature hash.
     bytes32 actionID = _getCustomActionID(
-      ActionType.Cancel, 0, address(0), nonce, minimumActionGas, secondaryKey
+      ActionType.Cancel, 0, address(0), _nonce, minimumActionGas, secondaryKey
     );
 
     // Ensure that the signature is valid - if so, increment the nonce.
@@ -428,11 +452,11 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   }
 
   // Allow signatory to set a new Dharma Key - the current nonce needs to be
-  // provided when using a signature so as not to enable griefing attacks. All
-  // arguments (except for the Dharma key) can be omitted if called directly.
+  // provided as an argument to the signature so as not to enable griefing
+  // attacks. All arguments other than the Dharma key can be omitted if calle
+  // directly.
   function setDharmaKey(
     address dharmaKey,
-    uint256 nonce,
     uint256 minimumActionGas,
     bytes calldata signature
   ) external {
@@ -446,12 +470,12 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       return;
     }
 
-    // Ensure the nonce and the minimum action gas are supplied correctly.
-    _checkNonceAndMinimumActionGas(nonce, minimumActionGas);
+    // Ensure that the minimum action gas are supplied correctly.
+    _checkMinimumActionGas(minimumActionGas);
 
     // Determine the actionID - this serves as the signature hash.
     bytes32 actionID = _getCustomActionID(
-      ActionType.SetDharmaKey, 0, dharmaKey, nonce, minimumActionGas, secondaryKey
+      ActionType.SetDharmaKey, 0, dharmaKey, _nonce, minimumActionGas, secondaryKey
     );
 
     // Ensure that the signature is valid - if so, increment nonce and set key.
@@ -597,20 +621,19 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     ActionType actionType,
     uint256 amount,
     address recipient,
-    uint256 nonce,
     uint256 minimumActionGas,
     bytes memory dharmaKeySignature,
     bytes memory dharmaSecondaryKeySignature
   ) internal returns (bytes32 actionID) {
-    // Ensure the nonce and the minimum action gas are supplied correctly.
-    _checkNonceAndMinimumActionGas(nonce, minimumActionGas);
+    // Ensure that the minimum action gas is supplied correctly.
+    _checkMinimumActionGas(minimumActionGas);
 
     // Get the secondary public key that will be used to verify the signature.
     address secondaryKey = _getSecondaryKey();
 
     // Determine the actionID - this serves as the signature hash.
     actionID = _getCustomActionID(
-      actionType, amount, recipient, nonce, minimumActionGas, secondaryKey
+      actionType, amount, recipient, _nonce, minimumActionGas, secondaryKey
     );
 
     // Ensure that the signature is valid - if so, increment the nonce.
@@ -812,8 +835,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     }
   }
 
-  function _checkNonceAndMinimumActionGas(
-    uint256 nonce,
+  function _checkMinimumActionGas(
     uint256 minimumActionGas
   ) internal view {
     // Ensure that the current gas exceeds the minimum required action gas.
@@ -822,13 +844,12 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     // note that some gas will be spent before this check is reached - supplying
     // ~30,000 additional gas should suffice when submitting transactions. To
     // skip this requirement, supply zero for the minimumActionGas argument.
-    require(
-      gasleft() >= minimumActionGas,
-      "Invalid action - insufficient gas supplied by transaction submitter."
-    );
-
-    // Ensure that the action has the correct nonce.
-    require(_nonce == nonce, "Invalid action - incorrect nonce.");
+    if (minimumActionGas != 0) {
+      require(
+        gasleft() >= minimumActionGas,
+        "Invalid action - insufficient gas supplied by transaction submitter."
+      );
+    }
   }
 
   function _enforceSelfCallFrom(bytes4 selfCallContext) internal view {

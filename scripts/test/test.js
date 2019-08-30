@@ -2279,7 +2279,6 @@ module.exports = {test: async function (provider, testingContext) {
       1,
       address,
       0,
-      0,
       '0x',
       '0x'
     ],
@@ -2310,7 +2309,6 @@ module.exports = {test: async function (provider, testingContext) {
     [
       1,
       address,
-      1,
       0,
       '0x',
       '0x'
@@ -2341,7 +2339,6 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [
       0,
-      0,
      '0x'
     ]
   )
@@ -2365,7 +2362,6 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [
       address,
-      0,
       0,
       '0x'
     ]
@@ -2449,7 +2445,6 @@ module.exports = {test: async function (provider, testingContext) {
     [
       FULL_APPROVAL,
       address,
-      4,
       0,
       '0x',
       '0xffffffff' + usdcWithdrawalSignature.slice(10)
@@ -2470,7 +2465,6 @@ module.exports = {test: async function (provider, testingContext) {
     [
       FULL_APPROVAL,
       address,
-      4,
       0,
       '0x',
       usdcWithdrawalSignature
@@ -2532,7 +2526,6 @@ module.exports = {test: async function (provider, testingContext) {
     [
       FULL_APPROVAL,
       address,
-      5,
       0,
       '0x',
       '0xffffffff' + daiWithdrawalSignature.slice(10)
@@ -2553,7 +2546,6 @@ module.exports = {test: async function (provider, testingContext) {
     [
       FULL_APPROVAL,
       address,
-      5,
       0,
       '0x',
       daiWithdrawalSignature
