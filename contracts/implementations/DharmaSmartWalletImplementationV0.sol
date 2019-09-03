@@ -6,8 +6,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
 interface DharmaSmartWalletImplementationV0Interface {
-  // Fires when a new Dharma Key is set on the smart wallet.
-  event NewDharmaKey(address dharmaKey);
+  // Fires when a new user signing key is set on the smart wallet.
+  event NewUserSigningKey(address userSigningKey);
   
   // Fires when an error occurs as part of an attempted action.
   event ExternalError(address indexed source, string revertReason);
@@ -22,7 +22,7 @@ interface DharmaSmartWalletImplementationV0Interface {
   // Actions, or protected methods (i.e. not deposits) each have an action type.
   enum ActionType {
     Cancel,
-    SetDharmaKey,
+    SetUserSigningKey,
     Generic,
     GenericAtomicBatch,
     DAIWithdrawal,
@@ -32,7 +32,7 @@ interface DharmaSmartWalletImplementationV0Interface {
     USDCBorrow
   }
 
-  function initialize(address dharmaKey) external;
+  function initialize(address userSigningKey) external;
 
   function repayAndDeposit() external;
 
@@ -40,16 +40,16 @@ interface DharmaSmartWalletImplementationV0Interface {
     uint256 amount,
     address recipient,
     uint256 minimumActionGas,
-    bytes calldata dharmaKeySignature,
-    bytes calldata dharmaSecondaryKeySignature
+    bytes calldata userSignature,
+    bytes calldata dharmaSignature
   ) external returns (bool ok);
 
   function withdrawUSDC(
     uint256 amount,
     address recipient,
     uint256 minimumActionGas,
-    bytes calldata dharmaKeySignature,
-    bytes calldata dharmaSecondaryKeySignature
+    bytes calldata userSignature,
+    bytes calldata dharmaSignature
   ) external returns (bool ok);
 
   function cancel(
@@ -57,8 +57,8 @@ interface DharmaSmartWalletImplementationV0Interface {
     bytes calldata signature
   ) external;
 
-  function setDharmaKey(
-    address dharmaKey,
+  function setUserSigningKey(
+    address userSigningKey,
     uint256 minimumActionGas,
     bytes calldata signature
   ) external;
@@ -70,7 +70,7 @@ interface DharmaSmartWalletImplementationV0Interface {
     uint256 cUsdcUnderlyingUsdcBalance
   );
 
-  function getDharmaKey() external view returns (address dharmaKey);
+  function getUserSigningKey() external view returns (address userSigningKey);
   
   function getNonce() external view returns (uint256 nonce);
   
@@ -138,9 +138,9 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   using ECDSA for bytes32;
   // WARNING: DO NOT REMOVE OR REORDER STORAGE WHEN WRITING NEW IMPLEMENTATIONS!
 
-  // The Dharma key associated with this account is in storage slot 0.
+  // The user signing key associated with this account is in storage slot 0.
   // It is the core differentiator when it comes to the account in question.
-  address private _dharmaKey;
+  address private _userSigningKey;
 
   // The nonce associated with this account is in storage slot 1. Every time a
   // signature is submitted, it must have the appropriate nonce, and once it has
@@ -193,25 +193,26 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   uint256 internal constant _COMPOUND_SUCCESS = 0;
 
   /**
-   * @notice In the initializer, set up the Dharma key, set approval on the cDAI
+   * @notice In initializer, set up user signing key, set approval on the cDAI
    * and cUSDC contracts, deposit any Dai and/or USDC already at the address to
    * Compound, and enter markets for cDAI, cUSDC, and cETH (just so it doesn't
    * need to be performed at some later stage when we move to a borrow-enabled
-   * smart wallet). In V0, the Dharma key is not actually used to submit or sign
-   * actions - the goal is to get all of the smart wallets set up with a Dharma
-   * key by the time we move to V1. Note that this initializer is only callable
-   * while the smart wallet instance is still in the contract creation phase.
-   * @param dharmaKey address The initial Dharma key for the smart wallet.
+   * smart wallet). In V0, the user signing key is not actually used to sign
+   * actions - the goal is to get all of the smart wallets set up with a user
+   * signing key before V1. Note that this initializer is only callable while
+   * the smart wallet instance is still in the contract creation phase.
+   * @param userSigningKey address The initial user signing key for the smart
+   * wallet.
    */
-  function initialize(address dharmaKey) external {
+  function initialize(address userSigningKey) external {
     // Ensure that this function is only callable during contract construction.
     assembly { if extcodesize(address) { revert(0, 0) } }
 
     // Ensure that a Dharma key is set on this smart wallet.
-    require(dharmaKey != address(0), "No key provided.");
+    require(userSigningKey != address(0), "No user signing key provided.");
 
-    // Set up the user's Dharma key and emit a corresponding event.
-    _setDharmaKey(dharmaKey);
+    // Set up the user's signing key and emit a corresponding event.
+    _setUserSigningKey(userSigningKey);
 
     // Approve the cDAI contract to transfer Dai on behalf of this contract.
     if (_setFullApproval(AssetType.DAI)) {
@@ -292,10 +293,10 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
    * function call.
-   * @param dharmaKeySignature bytes Unused in V0.
-   * @param dharmaSecondaryKeySignature bytes A signature that resolves to the
-   * public key returned for this account from the Dharma Key Registry. A unique
-   * hash returned from `getCustomActionID` is prefixed and hashed to create the
+   * @param userSignature bytes Unused in V0.
+   * @param dharmaSignature bytes A signature that resolves to the public key
+   * returned for this account from the Dharma Key Registry. A unique hash
+   * returned from `getCustomActionID` is prefixed and hashed to create the
    * signed message.
    * @return True if the withdrawal succeeded, otherwise false.
    */
@@ -303,11 +304,11 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     uint256 amount,
     address recipient,
     uint256 minimumActionGas,
-    bytes calldata dharmaKeySignature,
-    bytes calldata dharmaSecondaryKeySignature
+    bytes calldata userSignature,
+    bytes calldata dharmaSignature
   ) external returns (bool ok) {
     // Declare the unused value to avoid compiler and linter warnings.
-    dharmaKeySignature;
+    userSignature;
 
     // Ensure either caller or supplied signature is valid and increment nonce.
     _validateActionAndIncrementNonce(
@@ -315,7 +316,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       amount,
       recipient,
       minimumActionGas,
-      dharmaSecondaryKeySignature
+      dharmaSignature
     );
 
     // Set the self-call context so we can call _withdrawDaiAtomic.
@@ -404,10 +405,10 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
    * function call.
-   * @param dharmaKeySignature bytes Unused in V0.
-   * @param dharmaSecondaryKeySignature bytes A signature that resolves to the
-   * public key returned for this account from the Dharma Key Registry. A unique
-   * hash returned from `getCustomActionID` is prefixed and hashed to create the
+   * @param userSignature bytes Unused in V0.
+   * @param dharmaSignature bytes A signature that resolves to the public key
+   * returned for this account from the Dharma Key Registry. A unique hash
+   * returned from `getCustomActionID` is prefixed and hashed to create the
    * signed message.
    * @return True if the withdrawal succeeded, otherwise false.
    */
@@ -415,11 +416,11 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     uint256 amount,
     address recipient,
     uint256 minimumActionGas,
-    bytes calldata dharmaKeySignature,
-    bytes calldata dharmaSecondaryKeySignature
+    bytes calldata userSignature,
+    bytes calldata dharmaSignature
   ) external returns (bool ok) {
     // Declare the unused value to avoid compiler and linter warnings.
-    dharmaKeySignature;
+    userSignature;
 
     // Ensure either caller or supplied signature is valid and increment nonce.
     _validateActionAndIncrementNonce(
@@ -427,7 +428,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       amount,
       recipient,
       minimumActionGas,
-      dharmaSecondaryKeySignature
+      dharmaSignature
     );
 
     // Set the self-call context so we can call _withdrawUSDCAtomic.
@@ -520,12 +521,13 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   }
 
   /**
-   * @notice Allow signatory to set a new Dharma Key. The current nonce needs to
-   * be provided as an argument to the a signature so as not to enable griefing
-   * attacks. All arguments apart from the Dharma Key can be omitted if called
-   * directly. No value is returned from this function - it will either succeed
-   * or revert.
-   * @param dharmaKey address The new Dharma Key to set on this smart wallet.
+   * @notice Allow signatory to set a new user signing Key. The current nonce
+   * needs to be provided as an argument to the a signature so as not to enable
+   * griefing attacks. All arguments apart from the user signing key can be
+   * omitted if called directly. No value is returned from this function - it
+   * will either succeed or revert.
+   * @param userSigningKey address The new user signing key to set on this smart
+   * wallet.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
@@ -534,22 +536,22 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * for this account from the Dharma Key Registry. A unique hash returned from
    * `getCustomActionID` is prefixed and hashed to create the signed message.
    */
-  function setDharmaKey(
-    address dharmaKey,
+  function setUserSigningKey(
+    address userSigningKey,
     uint256 minimumActionGas,
     bytes calldata signature
   ) external {
     // Ensure either caller or supplied signature is valid and increment nonce.
     _validateActionAndIncrementNonce(
-      ActionType.SetDharmaKey,
+      ActionType.SetUserSigningKey,
       0,
-      dharmaKey,
+      userSigningKey,
       minimumActionGas,
       signature
     );
 
-    // Set new Dharma key on the smart wallet and emit a corresponding event.
-    _setDharmaKey(dharmaKey);
+    // Set new user signing key on smart wallet and emit a corresponding event.
+    _setUserSigningKey(userSigningKey);
   }
 
   /**
@@ -574,12 +576,12 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   }
 
   /**
-   * @notice View function for getting the current Dharma Key for the smart
-   * wallet.
-   * @return The current Dharma Key.
+   * @notice View function for getting the current user signing key for the
+   * smart wallet.
+   * @return The current user signing key.
    */
-  function getDharmaKey() external view returns (address dharmaKey) {
-    dharmaKey = _dharmaKey;
+  function getUserSigningKey() external view returns (address userSigningKey) {
+    userSigningKey = _userSigningKey;
   }
 
   /**
@@ -600,12 +602,12 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * action. The current nonce will be used, which means that it will only be
    * valid for the next action taken.
    * @param action uint256 The type of action, designated by it's index. Valid
-   * actions in V0 include Cancel (0), SetDharmaKey (1), DAIWithdrawal (4), and
-   * USDCWithdrawal (5).
+   * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
+   * and USDCWithdrawal (5).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
    * for other action types.
    * @param recipient address The account to transfer withdrawn funds to, the
-   * new Dharma Key, or the null address for cancelling.
+   * new user signing key, or the null address for cancelling.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
@@ -621,7 +623,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   ) external view returns (bytes32 actionID) {
     // Determine the actionID - this serves as a signature hash for an action.
     actionID = _getCustomActionID(
-      action, amount, recipient, _nonce, minimumActionGas, _getSecondaryKey()
+      action, amount, recipient, _nonce, minimumActionGas, _getDharmaSigningKey()
     );
   }
 
@@ -633,12 +635,12 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * action. Any nonce value may be supplied, which enables constructing valid
    * message hashes for multiple future actions ahead of time.
    * @param action uint256 The type of action, designated by it's index. Valid
-   * actions in V0 include Cancel (0), SetDharmaKey (1), DAIWithdrawal (4), and
-   * USDCWithdrawal (5).
+   * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
+   * and USDCWithdrawal (5).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
    * for other action types.
    * @param recipient address The account to transfer withdrawn funds to, the
-   * new Dharma Key, or the null address for cancelling.
+   * new user signing key, or the null address for cancelling.
    * @param nonce uint256 The nonce to use.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
    * provided to this call - be aware that additional gas must still be included
@@ -656,7 +658,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   ) external view returns (bytes32 actionID) {
     // Determine the actionID - this serves as a signature hash for an action.
     actionID = _getCustomActionID(
-      action, amount, recipient, nonce, minimumActionGas, _getSecondaryKey()
+      action, amount, recipient, nonce, minimumActionGas, _getDharmaSigningKey()
     );
   }
 
@@ -677,13 +679,14 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   }
 
   /**
-   * @notice Internal function for setting a new Dharma Key. A NewDharmaKey
-   * event will also be emitted.
-   * @param dharmaKey address The new Dharma Key to set on this smart wallet.
+   * @notice Internal function for setting a new user signing key. A
+   * NewUserSigningKey event will also be emitted.
+   * @param userSigningKey address The new user signing key to set on this smart
+   * wallet.
    */
-  function _setDharmaKey(address dharmaKey) internal {
-    _dharmaKey = dharmaKey;
-    emit NewDharmaKey(dharmaKey);
+  function _setUserSigningKey(address userSigningKey) internal {
+    _userSigningKey = userSigningKey;
+    emit NewUserSigningKey(userSigningKey);
   }
 
   /**
@@ -800,20 +803,20 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * area where these functions should revert (other than due to out-of-gas
    * errors, which can be guarded against by supplying a minimum action gas
    * requirement).
-   * @param action uint256 The type of action, designated by it's index.
-   * Valid V0 actions include Cancel (0), SetDharmaKey (1), DAIWithdrawal (4),
+   * @param action uint256 The type of action, designated by it's index. Valid
+   * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
    * and USDCWithdrawal (5).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
    * for other action types.
    * @param recipient address The account to transfer withdrawn funds to, the
-   * new Dharma Key, or the null address for cancelling.
+   * new user signing key, or the null address for cancelling.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
    * function call.
-   * @param dharmaSecondaryKeySignature bytes A signature that resolves to the
-   * public key returned for this account from the Dharma Key Registry. A unique
-   * hash returned from `getCustomActionID` is prefixed and hashed to create the
+   * @param dharmaSignature bytes A signature that resolves to the public key
+   * returned for this account from the Dharma Key Registry. A unique hash
+   * returned from `getCustomActionID` is prefixed and hashed to create the
    * signed message.
    */
   function _validateActionAndIncrementNonce(
@@ -821,7 +824,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     uint256 amount,
     address recipient,
     uint256 minimumActionGas,
-    bytes memory dharmaSecondaryKeySignature
+    bytes memory dharmaSignature
   ) internal {
     // Ensure that the current gas exceeds the minimum required action gas.
     // This prevents griefing attacks where an attacker can invalidate a
@@ -836,21 +839,21 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       );
     }
 
-    // Get the secondary public key that will be used to verify the signature.
-    address secondaryKey = _getSecondaryKey();
+    // Get the Dharma signing key that will be used to verify the signature.
+    address dharmaSigningKey = _getDharmaSigningKey();
 
     // Determine the actionID - this serves as the signature hash.
     bytes32 actionID = _getCustomActionID(
-      action, amount, recipient, _nonce, minimumActionGas, secondaryKey
+      action, amount, recipient, _nonce, minimumActionGas, dharmaSigningKey
     );
 
-    // Validate Dharma Secondary Key signature unless it is `msg.sender`.
-    if (msg.sender != secondaryKey) {
+    // Validate Dharma signing key signature unless it is `msg.sender`.
+    if (msg.sender != dharmaSigningKey) {
       require(
-        secondaryKey == actionID.toEthSignedMessageHash().recover(
-          dharmaSecondaryKeySignature
+        dharmaSigningKey == actionID.toEthSignedMessageHash().recover(
+          dharmaSignature
         ),
-        "Invalid action - invalid Dharma Secondary Key signature."
+        "Invalid action - invalid Dharma signature."
       );
     }
 
@@ -1095,18 +1098,19 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   }
 
   /**
-   * @notice Internal view function to get the "secondary key" - the public key
-   * corresponding to the secondary signer - from the Dharma Key Registry. Note
-   * that, for V0, this is actually the *only* key used, as the primary Dharma
-   * Key will first need to be provided for each smart wallet. This version uses
-   * the global key from the Dharma Key Registry; to support the use of
-   * user-specific keys with a global fallback, instead call `getKey()` on the
-   * registry.
-   * @return The address of the secondary key, or public key corresponding to
-   * the secondary signer.
+   * @notice Internal view function to get the Dharma signing key for the smart
+   * wallet from the Dharma Key Registry. Note that, for V0, this is actually
+   * the *only* key used, as the primary user signing key will first need to be
+   * provided for each smart wallet. This version uses the global key from the
+   * Dharma Key Registry; to support the use of user-specific keys with a global
+   * fallback, instead call `getKey()` on the registry.
+   * @return The address of the Dharma signing key, or public key corresponding
+   * to the secondary signer.
    */
-  function _getSecondaryKey() internal view returns (address secondaryKey) {
-    secondaryKey = _DHARMA_KEY_REGISTRY.getGlobalKey();
+  function _getDharmaSigningKey() internal view returns (
+    address dharmaSigningKey
+  ) {
+    dharmaSigningKey = _DHARMA_KEY_REGISTRY.getGlobalKey();
   }
 
   /**
@@ -1118,19 +1122,19 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * when reconstructing an action ID during protected function execution based
    * on the supplied parameters.
    * @param action uint256 The type of action, designated by it's index. Valid
-   * actions in V0 include Cancel (0), SetDharmaKey (1), DAIWithdrawal (4), and
-   * USDCWithdrawal (5).
+   * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
+   * and USDCWithdrawal (5).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
    * for other action types.
    * @param recipient address The account to transfer withdrawn funds to, the
-   * new Dharma Key, or the null address for cancelling.
+   * new user signing key, or the null address for cancelling.
    * @param nonce uint256 The nonce to use.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
    * function call.
-   * @param secondaryKey address The address of the secondary key, or public key
-   * corresponding to the secondary signer.
+   * @param dharmaSigningKey address The address of the secondary key, or public
+   * key corresponding to the secondary signer.
    * @return The action ID, which will need to be prefixed, hashed and signed in
    * order to construct a valid signature.
    */
@@ -1140,15 +1144,15 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     address recipient,
     uint256 nonce,
     uint256 minimumActionGas,
-    address secondaryKey
+    address dharmaSigningKey
   ) internal view returns (bytes32 actionID) {
     // The actionID is constructed according to EIP-191-0x45 to prevent replays.
     actionID = keccak256(
       abi.encodePacked(
         address(this),
         _DHARMA_SMART_WALLET_VERSION,
-        _dharmaKey,
-        secondaryKey,
+        _userSigningKey,
+        dharmaSigningKey,
         nonce,
         minimumActionGas,
         action,

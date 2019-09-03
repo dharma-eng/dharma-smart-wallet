@@ -124,12 +124,12 @@ contractNames[CUSDC_MAINNET_ADDRESS] = 'CUSDC'
 contractNames[CETH_MAINNET_ADDRESS] = 'CETH'
 contractNames[COMPTROLLER_MAINNET_ADDRESS] = 'Comptroller'
 
-// keccak256 of NewDharmaKey(address) -> dharmaKey
-const NEW_DHARMA_KEY_TOPIC = '0xc85cb9f33f88ea30edde920e5b888fbfbb6c8d84054c2ecc53ace52a7df75cdb'
+// keccak256 of NewUserSigningKey(address) -> dharmaKey
+const NEW_DHARMA_KEY_TOPIC = '0x7083aac3cab97f1219cedd0ab328a5b138a10b0fc72dd9348f1dc50199b21fda'
 const NEW_DHARMA_KEY_ABI = [
   {
     type: 'address',
-    name: 'dharmaKey'
+    name: 'userSigningKey'
   }
 ]
 
@@ -251,7 +251,7 @@ const ACCRUE_INTEREST_ABI = [
 
 const eventDetails = {}
 eventDetails[NEW_DHARMA_KEY_TOPIC] = {
-  name: 'NewDharmaKey',
+  name: 'NewUserSigningKey',
   abi: NEW_DHARMA_KEY_ABI
 }
 eventDetails[EXTERNAL_ERROR_TOPIC] = {
@@ -1896,7 +1896,7 @@ module.exports = {test: async function (provider, testingContext) {
   await runTest(
     'new user smart wallet can be called and has the correct dharma key set',
     DharmaSmartWalletImplementationTestWithConstructor,
-    'getDharmaKey',
+    'getUserSigningKey',
     'call',
     [],
     true,
@@ -2014,8 +2014,8 @@ module.exports = {test: async function (provider, testingContext) {
         })
 
         assert.strictEqual(events[0].address, 'Smart Wallet')
-        assert.strictEqual(events[0].eventName, 'NewDharmaKey')
-        assert.strictEqual(events[0].returnValues.dharmaKey, address)
+        assert.strictEqual(events[0].eventName, 'NewUserSigningKey')
+        assert.strictEqual(events[0].returnValues.userSigningKey, address)
 
         assert.strictEqual(events[1].address, 'DAI')
         assert.strictEqual(events[1].eventName, 'Approval')
@@ -2225,7 +2225,7 @@ module.exports = {test: async function (provider, testingContext) {
   await runTest(
     'new user smart wallet can be called and has the correct dharma key set',
     UserSmartWallet,
-    'getDharmaKey',
+    'getUserSigningKey',
     'call',
     [],
     true,
@@ -2366,7 +2366,7 @@ module.exports = {test: async function (provider, testingContext) {
   await runTest(
     'UserSmartWallet secondary can call to set dharmaKey',
     UserSmartWallet,
-    'setDharmaKey',
+    'setUserSigningKey',
     'send',
     [
       address,
