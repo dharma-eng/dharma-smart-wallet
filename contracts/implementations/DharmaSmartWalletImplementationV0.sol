@@ -6,8 +6,10 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
 interface DharmaSmartWalletImplementationV0Interface {
+  // Fires when a new Dharma Key is set on the smart wallet.
   event NewDharmaKey(address dharmaKey);
   
+  // Fires when an error occurs as part of an attempted action.
   event ExternalError(address indexed source, string revertReason);
 
   // DAI + USDC are the only assets initially supported (include ETH for later).
@@ -148,9 +150,8 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   // The self-call context flag is in storage slot 2. Some protected functions
   // may only be called externally from calls originating from other methods on
   // this contract, which enables appropriate exception handling on reverts.
-  // Another, more complex way to achieve this without needing any local storage
-  // would be to perform and handle a call into a dedicated contract and back.
-  // Any storage set here should be cleared before execution environment exits.
+  // Any storage should only be set immediately preceding a self-call and should
+  // be cleared upon entering the protected function being called.
   bytes4 internal _selfCallContext;
 
   // END STORAGE DECLARATIONS - DO NOT REMOVE OR REORDER STORAGE ABOVE HERE!
@@ -198,7 +199,8 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * need to be performed at some later stage when we move to a borrow-enabled
    * smart wallet). In V0, the Dharma key is not actually used to submit or sign
    * actions - the goal is to get all of the smart wallets set up with a Dharma
-   * key by the time we move to V1.
+   * key by the time we move to V1. Note that this initializer is only callable
+   * while the smart wallet instance is still in the contract creation phase.
    * @param dharmaKey address The initial Dharma key for the smart wallet.
    */
   function initialize(address dharmaKey) external {
@@ -281,7 +283,9 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * reached - usually somewhere around 25,000 gas. If the withdrawal fails, an
    * ExternalError with additional details on what went wrong will be emitted.
    * Note that some dust may still be left over, even in the event of a max
-   * withdrawal, due to the fact that Dai has a higher precision than cDAI.
+   * withdrawal, due to the fact that Dai has a higher precision than cDAI. Also
+   * note that the withdrawal will fail in the event that Compound does not have
+   * sufficient Dai available to withdraw.
    * @param amount uint256 The amount of Dai to withdraw.
    * @param recipient address The account to transfer the withdrawn Dai to.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
@@ -327,20 +331,31 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     // If the atomic call failed, diagnose the reason and emit an event.
     if (!ok) {
       // This revert could be caused by cDai MathError or Dai transfer error.
-      _logWithdrawalError(AssetType.DAI);
+      _diagnoseAndEmitErrorRelatedToWithdrawal(AssetType.DAI);
     } else {
       // Set ok to false if the call succeeded but the withdrawal failed.
       ok = abi.decode(returnData, (bool));
     }
-
-    // Clear the self-call context.
-    delete _selfCallContext;
   }
 
+  /**
+   * @notice Protected function that can only be called from `withdrawDai` on
+   * this contract. It will attempt to withdraw the supplied amount of Dai, or
+   * the maximum amount if specified using `uint256(-1)`, to the supplied
+   * recipient address by redeeming the underlying Dai from the cDAI contract
+   * and transferring it to the recipient. An ExternalError will be emitted and
+   * the transfer will be skipped if the call to `redeemUnderlying` fails, and
+   * any revert will be caught by `withdrawDai` and diagnosed in order to emit
+   * an appropriate ExternalError as well.
+   * @param amount uint256 The amount of Dai to withdraw.
+   * @param recipient address The account to transfer the withdrawn Dai to.
+   * @return True if the withdrawal succeeded, otherwise false.
+   */
   function _withdrawDaiAtomic(
     uint256 amount,
     address recipient
   ) external returns (bool success) {
+    // Ensure caller is this contract and self-call context is correctly set.
     _enforceSelfCallFrom(this.withdrawDai.selector);
 
     // If amount = 0xfff...fff, withdraw the maximum amount possible.
@@ -364,6 +379,35 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     }
   }
 
+  /**
+   * @notice Withdraw USDC to a provided recipient address by redeeming the
+   * underlying USDC from the cUSDC contract and transferring it to recipient.
+   * All USDC in Compound and in the smart wallet itself can be withdrawn by
+   * providing an amount of uint256(-1) or 0xfff...fff. This function can be
+   * called directly by the account set as the global key on the Dharma Key
+   * Registry, or by any relayer that provides a signed message from the same
+   * keyholder. The nonce used for the signature must match the current nonce on
+   * the smart wallet, and gas supplied to the call must exceed the specified
+   * minimum action gas, plus the gas that will be spent before the gas check is
+   * reached - usually somewhere around 25,000 gas. If the withdrawal fails, an
+   * ExternalError with additional details on what went wrong will be emitted.
+   * Note that the USDC contract can be paused and also allows for blacklisting
+   * accounts - either of these possibilities may cause a withdrawal to fail. In
+   * addition, Compound may not have sufficient USDC available at the time to
+   * withdraw.
+   * @param amount uint256 The amount of USDC to withdraw.
+   * @param recipient address The account to transfer the withdrawn USDC to.
+   * @param minimumActionGas uint256 The minimum amount of gas that must be
+   * provided to this call - be aware that additional gas must still be included
+   * to account for the cost of overhead incurred up until the start of this
+   * function call.
+   * @param dharmaKeySignature bytes Unused in V0.
+   * @param dharmaSecondaryKeySignature bytes A signature that resolves to the
+   * public key returned for this account from the Dharma Key Registry. A unique
+   * hash returned from `getCustomActionID` is prefixed and hashed to create the
+   * signed message.
+   * @return True if the withdrawal succeeded, otherwise false.
+   */
   function withdrawUSDC(
     uint256 amount,
     address recipient,
@@ -394,20 +438,31 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     ));
     if (!ok) {
       // This revert could be caused by cUSDC MathError or USDC transfer error.
-      _logWithdrawalError(AssetType.USDC);
+      _diagnoseAndEmitErrorRelatedToWithdrawal(AssetType.USDC);
     } else {
       // Ensure that ok == false in the event the withdrawal failed.
       ok = abi.decode(returnData, (bool));
     }
-
-    // Clear the self-call context.
-    delete _selfCallContext;
   }
 
+  /**
+   * @notice Protected function that can only be called from `withdrawUSDC` on
+   * this contract. It will attempt to withdraw the supplied amount of USDC, or
+   * the maximum amount if specified using `uint256(-1)`, to the supplied
+   * recipient address by redeeming the underlying USDC from the cUSDC contract
+   * and transferring it to the recipient. An ExternalError will be emitted and
+   * the transfer will be skipped if the call to `redeemUnderlying` fails, and
+   * any revert will be caught by `withdrawUSDC` and diagnosed in order to emit
+   * an appropriate ExternalError as well.
+   * @param amount uint256 The amount of USDC to withdraw.
+   * @param recipient address The account to transfer the withdrawn USDC to.
+   * @return True if the withdrawal succeeded, otherwise false.
+   */
   function _withdrawUSDCAtomic(
     uint256 amount,
     address recipient
   ) external returns (bool success) {
+    // Ensure caller is this contract and self-call context is correctly set.
     _enforceSelfCallFrom(this.withdrawUSDC.selector);
 
     // If amount = 0xfff...fff, withdraw the maximum amount possible.
@@ -431,9 +486,19 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     }
   }
 
-  // Allow signatory to increment the nonce at any point - the current nonce
-  // needs to be provided as an argument to the a signature so as not to enable
-  // griefing attacks. All arguments can be omitted if called directly.
+  /**
+   * @notice Allow signatory to increment the nonce at any point. The current
+   * nonce needs to be provided as an argument to the a signature so as not to
+   * enable griefing attacks. All arguments can be omitted if called directly.
+   * No value is returned from this function - it will either succeed or revert.
+   * @param minimumActionGas uint256 The minimum amount of gas that must be
+   * provided to this call - be aware that additional gas must still be included
+   * to account for the cost of overhead incurred up until the start of this
+   * function call.
+   * @param signature bytes A signature that resolves to the public key returned
+   * for this account from the Dharma Key Registry. A unique hash returned from
+   * `getCustomActionID` is prefixed and hashed to create the signed message.
+   */  
   function cancel(
     uint256 minimumActionGas,
     bytes calldata signature
@@ -448,10 +513,21 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     );
   }
 
-  // Allow signatory to set a new Dharma Key - the current nonce needs to be
-  // provided as an argument to the signature so as not to enable griefing
-  // attacks. All arguments other than the Dharma key can be omitted if calle
-  // directly.
+  /**
+   * @notice Allow signatory to set a new Dharma Key. The current nonce needs to
+   * be provided as an argument to the a signature so as not to enable griefing
+   * attacks. All arguments apart from the Dharma Key can be omitted if called
+   * directly. No value is returned from this function - it will either succeed
+   * or revert.
+   * @param dharmaKey address The new Dharma Key to set on this smart wallet.
+   * @param minimumActionGas uint256 The minimum amount of gas that must be
+   * provided to this call - be aware that additional gas must still be included
+   * to account for the cost of overhead incurred up until the start of this
+   * function call.
+   * @param signature bytes A signature that resolves to the public key returned
+   * for this account from the Dharma Key Registry. A unique hash returned from
+   * `getCustomActionID` is prefixed and hashed to create the signed message.
+   */
   function setDharmaKey(
     address dharmaKey,
     uint256 minimumActionGas,
@@ -470,6 +546,15 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     _setDharmaKey(dharmaKey);
   }
 
+  /**
+   * @notice Retrieve the Dai and USDC balances held by the smart wallet, both
+   * directly and held in Compound. This is not a view function since Compound
+   * will calculate accrued interest as part of the underlying balance checks,
+   * but can still be called from an off-chain source as though it were a view
+   * function.
+   * @return The Dai balance, the USDC balance, the underlying Dai balance of
+   * the cDAI balance, and the underlying USDC balance of the cUSDC balance.
+   */
   function getBalances() external returns (
     uint256 daiBalance,
     uint256 usdcBalance,
@@ -482,14 +567,46 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     cUsdcUnderlyingUsdcBalance = _CUSDC.balanceOfUnderlying(address(this));
   }
 
+  /**
+   * @notice View function for getting the current Dharma Key for the smart
+   * wallet.
+   * @return The current Dharma Key.
+   */
   function getDharmaKey() external view returns (address dharmaKey) {
     dharmaKey = _dharmaKey;
   }
 
+  /**
+   * @notice View function for getting the current nonce of the smart wallet.
+   * This nonce is incremented whenever an action is taken that requires a
+   * signature and/or a specific caller.
+   * @return The current nonce.
+   */
   function getNonce() external view returns (uint256 nonce) {
     nonce = _nonce;
   }
 
+  /**
+   * @notice View function that, given an action type and arguments, will return
+   * the action ID or message hash that will need to be prefixed (according to
+   * EIP-191 0x45), hashed, and signed by the key designated by the Dharma Key
+   * Registry in order to construct a valid signature for the corresponding
+   * action. The current nonce will be used, which means that it will only be
+   * valid for the next action taken.
+   * @param action uint256 The type of action, designated by it's index. Valid
+   * actions in V0 include Cancel (0), SetDharmaKey (1), DAIWithdrawal (4), and
+   * USDCWithdrawal (5).
+   * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
+   * for other action types.
+   * @param recipient address The account to transfer withdrawn funds to, the
+   * new Dharma Key, or the null address for cancelling.
+   * @param minimumActionGas uint256 The minimum amount of gas that must be
+   * provided to this call - be aware that additional gas must still be included
+   * to account for the cost of overhead incurred up until the start of this
+   * function call.
+   * @return The action ID, which will need to be prefixed, hashed and signed in
+   * order to construct a valid signature.
+   */
   function getNextCustomActionID(
     ActionType action,
     uint256 amount,
@@ -502,6 +619,28 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     );
   }
 
+  /**
+   * @notice View function that, given an action type and arguments, will return
+   * the action ID or message hash that will need to be prefixed (according to
+   * EIP-191 0x45), hashed, and signed by the key designated by the Dharma Key
+   * Registry in order to construct a valid signature for the corresponding
+   * action. Any nonce value may be supplied, which enables constructing valid
+   * message hashes for multiple future actions ahead of time.
+   * @param action uint256 The type of action, designated by it's index. Valid
+   * actions in V0 include Cancel (0), SetDharmaKey (1), DAIWithdrawal (4), and
+   * USDCWithdrawal (5).
+   * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
+   * for other action types.
+   * @param recipient address The account to transfer withdrawn funds to, the
+   * new Dharma Key, or the null address for cancelling.
+   * @param nonce uint256 The nonce to use.
+   * @param minimumActionGas uint256 The minimum amount of gas that must be
+   * provided to this call - be aware that additional gas must still be included
+   * to account for the cost of overhead incurred up until the start of this
+   * function call.
+   * @return The action ID, which will need to be prefixed, hashed and signed in
+   * order to construct a valid signature.
+   */
   function getCustomActionID(
     ActionType action,
     uint256 amount,
@@ -515,6 +654,10 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     );
   }
 
+  /**
+   * @notice Pure function for getting the current Dharma Smart Wallet version.
+   * @return The current Dharma Smart Wallet version.
+   */
   function getVersion() external pure returns (uint256 version) {
     version = _DHARMA_SMART_WALLET_VERSION;
   }
@@ -527,15 +670,30 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     revert("This revert message should be visible.");
   }
 
+  /**
+   * @notice Internal function for setting a new Dharma Key. A NewDharmaKey
+   * event will also be emitted.
+   * @param dharmaKey address The new Dharma Key to set on this smart wallet.
+   */
   function _setDharmaKey(address dharmaKey) internal {
     _dharmaKey = dharmaKey;
     emit NewDharmaKey(dharmaKey);
   }
 
+  /**
+   * @notice Internal function for incrementing the nonce.
+   */
   function _incrementNonce() internal {
     _nonce++;
   }
 
+  /**
+   * @notice Internal function for setting the allowance of a given ERC20 asset
+   * to the maximum value. This enables the corresponding cToken for the asset
+   * to pull in tokens in order to make deposits.
+   * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
+   * @return True if the approval succeeded, otherwise false.
+   */
   function _setFullApproval(AssetType asset) internal returns (bool ok) {
     // Get asset's underlying token address and corresponding cToken address.
     address token;
@@ -550,6 +708,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
 
     // Approve cToken contract to transfer underlying on behalf of this wallet.
     (ok, ) = token.call(abi.encodeWithSelector(
+      // Note: since both cTokens have the same interface, just use cDAI's.
       _DAI.approve.selector, cToken, uint256(-1)
     ));
 
@@ -559,11 +718,21 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
         emit ExternalError(address(_DAI), "DAI contract reverted on approval.");
       } else {
         // Find out why USDC transfer reverted (it doesn't give revert reasons).
-        _logNaughtyUSDCErrors(_USDC.approve.selector);
+        _diagnoseAndEmitUSDCSpecificError(_USDC.approve.selector);
       }
     }
   }
 
+  /**
+   * @notice Internal function for depositing a given ERC20 asset and balance on
+   * the corresponding cToken. No value is returned, as no additional steps need
+   * to be conditionally performed after the deposit.
+   * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
+   * @param balance uint256 The amount of the asset to deposit. Note that an
+   * attempt to deposit "dust" (i.e. very small amounts) may result in 0 cTokens
+   * being minted, or in fewer cTokens being minted than is implied by the
+   * current exchange rate (due to lack of sufficient precision on the tokens).
+   */
   function _depositOnCompound(AssetType asset, uint256 balance) internal {
     // Only perform a deposit if the balance is non-zero. This could also take
     // into account the safe deposit threshold for each asset - for instance, a
@@ -585,6 +754,18 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     }
   }
 
+  /**
+   * @notice Internal function for withdrawing a given ERC20 asset and balance
+   * from the corresponding cToken. Note that the requested balance may not be
+   * currently available on Compound, which will cause the withdrawal to fail.
+   * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
+   * @param balance uint256 The amount of the asset to withdraw, denominated in
+   * the underlying token. Note that an attempt to withdraw "dust" (i.e. very
+   * small amounts) may result in 0 underlying tokens being redeemed, or in
+   * fewer tokens being redeemed than is implied by the current exchange rate
+   * (due to lack of sufficient precision on the tokens).
+   * @return True if the withdrawal succeeded, otherwise false.
+   */
   function _withdrawFromCompound(
     AssetType asset,
     uint256 balance
@@ -604,13 +785,38 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     );
   }
 
+  /**
+   * @notice Internal function for validating supplied gas (if specified),
+   * retrieving the signer's public key from the Dharma Key Registry, deriving
+   * the action ID, validating the provided signature using the signer's key and
+   * the action ID, and incrementing the nonce. This function serves as the
+   * entrypoint for all protected "actions" on the smart wallet, and is the only
+   * area where these functions should revert (other than due to out-of-gas
+   * errors, which can be guarded against by supplying a minimum action gas
+   * requirement).
+   * @param action uint256 The type of action, designated by it's index.
+   * Valid V0 actions include Cancel (0), SetDharmaKey (1), DAIWithdrawal (4),
+   * and USDCWithdrawal (5).
+   * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
+   * for other action types.
+   * @param recipient address The account to transfer withdrawn funds to, the
+   * new Dharma Key, or the null address for cancelling.
+   * @param minimumActionGas uint256 The minimum amount of gas that must be
+   * provided to this call - be aware that additional gas must still be included
+   * to account for the cost of overhead incurred up until the start of this
+   * function call.
+   * @param dharmaSecondaryKeySignature bytes A signature that resolves to the
+   * public key returned for this account from the Dharma Key Registry. A unique
+   * hash returned from `getCustomActionID` is prefixed and hashed to create the
+   * signed message.
+   */
   function _validateActionAndIncrementNonce(
-    ActionType actionType,
+    ActionType action,
     uint256 amount,
     address recipient,
     uint256 minimumActionGas,
     bytes memory dharmaSecondaryKeySignature
-  ) internal returns (bytes32 actionID) {
+  ) internal {
     // Ensure that the current gas exceeds the minimum required action gas.
     // This prevents griefing attacks where an attacker can invalidate a
     // signature without providing enough gas for the action to succeed. Also
@@ -628,21 +834,10 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     address secondaryKey = _getSecondaryKey();
 
     // Determine the actionID - this serves as the signature hash.
-    actionID = _getCustomActionID(
-      actionType, amount, recipient, _nonce, minimumActionGas, secondaryKey
+    bytes32 actionID = _getCustomActionID(
+      action, amount, recipient, _nonce, minimumActionGas, secondaryKey
     );
 
-    // Ensure that the signature is valid - if so, increment the nonce.
-    _verifySignatureAndIncrementNonce(
-      actionID, dharmaSecondaryKeySignature, secondaryKey
-    );
-  }
-
-  function _verifySignatureAndIncrementNonce(
-    bytes32 actionID,
-    bytes memory dharmaSecondaryKeySignature,
-    address secondaryKey
-  ) internal {
     // Validate Dharma Secondary Key signature unless it is `msg.sender`.
     if (msg.sender != secondaryKey) {
       require(
@@ -657,6 +852,11 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     _incrementNonce();
   }
 
+  /**
+   * @notice Internal function for entering cDAI, cUSDC, and cETH markets. This
+   * is performed now so that V0 smart wallets will not need to be reinitialized
+   * in order to support using these assets as collateral when borrowing funds.
+   */
   function _enterMarkets() internal {
     // Create input array with each cToken address on which to enter a market. 
     address[] memory marketsToEnter = new address[](3);
@@ -701,6 +901,21 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     }
   }
 
+  /**
+   * @notice Internal function to determine whether a call to a given cToken
+   * succeeded, and to emit a relevant ExternalError event if it failed. The
+   * failure can be caused by a call that reverts, or by a call that does not
+   * revert but returns a non-zero error code.
+   * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
+   * @param functionSelector bytes4 The function selector that was called on the
+   * corresponding cToken of the asset type.
+   * @param ok bool A boolean representing whether the call returned or
+   * reverted.
+   * @param data bytes The data provided by the returned or reverted call.
+   * @return True if the interaction was successful, otherwise false. This will
+   * be used to determine if subsequent steps in the action should be attempted
+   * or not, specifically a transfer following a withdrawal.
+   */
   function _checkCompoundInteractionAndLogAnyErrors(
     AssetType asset,
     bytes4 functionSelector,
@@ -713,7 +928,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       if (compoundError != _COMPOUND_SUCCESS) {
         // Get called contract address, name of contract, and function selector.
         (address account, string memory name, string memory functionName) = (
-          _getCompoundErrorDetails(asset, functionSelector)
+          _getCTokenDetails(asset, functionSelector)
         );
 
         emit ExternalError(
@@ -737,7 +952,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     } else {
       // Get called contract address, name of contract, and function selector.
       (address account, string memory name, string memory functionName) = (
-        _getCompoundErrorDetails(asset, functionSelector)
+        _getCTokenDetails(asset, functionSelector)
       );
 
       emit ExternalError(
@@ -756,9 +971,19 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     }
   }
 
-  function _logWithdrawalError(AssetType asset) internal {
+  /**
+   * @notice Internal function to diagnose the reason that a withdrawal attempt
+   * failed and to emit a corresponding ExternalError event. Errors related to
+   * the call to `redeemUnderlying` on the cToken are handled by
+   * `_checkCompoundInteractionAndLogAnyErrors` - if the error did not originate
+   * from that call, it could be caused by a call to `balanceOfUnderlying` (i.e.
+   * when attempting a maximum withdrawal) or by the call to `transfer` on the
+   * underlying token after the withdrawal has been completed.
+   * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
+   */
+  function _diagnoseAndEmitErrorRelatedToWithdrawal(AssetType asset) internal {
     // Get called contract address and name of contract (no need for selector).
-    (address cToken, string memory name, ) = _getCompoundErrorDetails(
+    (address cToken, string memory name, ) = _getCTokenDetails(
       asset, bytes4(0)
     );
 
@@ -781,12 +1006,20 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
         emit ExternalError(address(_DAI), "DAI contract reverted on transfer.");
       } else {
       // Find out why USDC transfer reverted (it doesn't give revert reasons).
-      _logNaughtyUSDCErrors(_USDC.transfer.selector);        
+      _diagnoseAndEmitUSDCSpecificError(_USDC.transfer.selector);
       }   
     }
   }
 
-  function _logNaughtyUSDCErrors(bytes4 functionSelector) internal {
+  /**
+   * @notice Internal function to diagnose the reason that a call to the USDC
+   * contract failed and to emit a corresponding ExternalError event. USDC can
+   * blacklist accounts and pause the contract, which can both cause a transfer
+   * or approval to fail.
+   * @param functionSelector bytes4 The function selector that was called on the
+   * USDC contract.
+   */
+  function _diagnoseAndEmitUSDCSpecificError(bytes4 functionSelector) internal {
     // Determine the name of the function that was called on USDC.
     string memory functionName;
     if (functionSelector == _USDC.transfer.selector) {
@@ -801,7 +1034,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
         address(_USDC),
         string(
           abi.encodePacked(
-            functionName, "failed - USDC has blacklisted this user."
+            functionName, " failed - USDC has blacklisted this user."
           )
         )
       );
@@ -811,7 +1044,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
           address(_USDC),
           string(
             abi.encodePacked(
-              functionName, "failed - USDC contract is currently paused."
+              functionName, " failed - USDC contract is currently paused."
             )
           )
         );
@@ -828,20 +1061,69 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     }
   }
 
-  function _enforceSelfCallFrom(bytes4 selfCallContext) internal view {
+  /**
+   * @notice Internal function to ensure that protected functions can only be
+   * called from this contract and that they have the appropriate context set.
+   * The self-call context is then cleared. It is used as an additional guard
+   * against reentrancy, especially once generic actions are supported by the
+   * smart wallet in future versions.
+   * @param selfCallContext bytes4 The expected self-call context, equal to the
+   * function selector of the approved calling function.
+   */
+  function _enforceSelfCallFrom(bytes4 selfCallContext) internal {
+    // Ensure caller is this contract and self-call context is correctly set.
     require(
       msg.sender == address(this) &&
       _selfCallContext == selfCallContext,
       "External accounts or unapproved internal functions cannot call this."
     );
+
+    // Clear the self-call context.
+    delete _selfCallContext;
   }
 
+  /**
+   * @notice Internal view function to get the "secondary key" - the public key
+   * corresponding to the secondary signer - from the Dharma Key Registry. Note
+   * that, for V0, this is actually the *only* key used, as the primary Dharma
+   * Key will first need to be provided for each smart wallet. This version uses
+   * the global key from the Dharma Key Registry; to support the use of
+   * user-specific keys with a global fallback, instead call `getKey()` on the
+   * registry.
+   * @return The address of the secondary key, or public key corresponding to
+   * the secondary signer.
+   */
   function _getSecondaryKey() internal view returns (address secondaryKey) {
     secondaryKey = _DHARMA_KEY_REGISTRY.getGlobalKey();
   }
 
+  /**
+   * @notice Internal view function that, given an action type and arguments,
+   * will return the action ID or message hash that will need to be prefixed
+   * (according to EIP-191 0x45), hashed, and signed by the key designated by
+   * the Dharma Key Registry in order to construct a valid signature for the
+   * corresponding action. The current nonce will be supplied to this function
+   * when reconstructing an action ID during protected function execution based
+   * on the supplied parameters.
+   * @param action uint256 The type of action, designated by it's index. Valid
+   * actions in V0 include Cancel (0), SetDharmaKey (1), DAIWithdrawal (4), and
+   * USDCWithdrawal (5).
+   * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
+   * for other action types.
+   * @param recipient address The account to transfer withdrawn funds to, the
+   * new Dharma Key, or the null address for cancelling.
+   * @param nonce uint256 The nonce to use.
+   * @param minimumActionGas uint256 The minimum amount of gas that must be
+   * provided to this call - be aware that additional gas must still be included
+   * to account for the cost of overhead incurred up until the start of this
+   * function call.
+   * @param secondaryKey address The address of the secondary key, or public key
+   * corresponding to the secondary signer.
+   * @return The action ID, which will need to be prefixed, hashed and signed in
+   * order to construct a valid signature.
+   */
   function _getCustomActionID(
-    ActionType actionType,
+    ActionType action,
     uint256 amount,
     address recipient,
     uint256 nonce,
@@ -857,14 +1139,23 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
         secondaryKey,
         nonce,
         minimumActionGas,
-        actionType,
+        action,
         amount,
         recipient
       )
     );
   }
 
-  function _getCompoundErrorDetails(
+  /**
+   * @notice Internal pure function to get the cToken address, it's name, and
+   * the name of the called function, based on a supplied asset type and
+   * function selector. It is used to help construct ExternalError events.
+   * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
+   * @param functionSelector bytes4 The function selector that was called on the
+   * corresponding cToken of the asset type.
+   * @return The cToken address, it's name, and the name of the called function.
+   */
+  function _getCTokenDetails(
     AssetType asset,
     bytes4 functionSelector
   ) internal pure returns (
