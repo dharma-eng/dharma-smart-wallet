@@ -2276,7 +2276,7 @@ module.exports = {test: async function (provider, testingContext) {
     'withdrawDai',
     'send',
     [
-      1,
+      '1000000000000000000',
       address,
       0,
       '0x',
@@ -2285,7 +2285,15 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       // TODO: verify logs
-      //console.log(receipt)
+      //console.log(receipt.events.ExternalError.returnValues)
+      //console.log(receipt.events.ExternalError)
+      /*
+      console.log(Object.values(receipt.events).map(value => {
+        return (
+          value.raw
+        )
+      }))
+      */
     }
   )
 
@@ -2553,7 +2561,6 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       // TODO: verify logs
-      //console.log(receipt)
     },
     originalAddress
   )

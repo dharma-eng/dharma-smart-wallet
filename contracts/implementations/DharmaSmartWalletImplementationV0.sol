@@ -306,6 +306,9 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     bytes calldata dharmaKeySignature,
     bytes calldata dharmaSecondaryKeySignature
   ) external returns (bool ok) {
+    // Declare the unused value to avoid compiler and linter warnings.
+    dharmaKeySignature;
+
     // Ensure either caller or supplied signature is valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.DAIWithdrawal,
@@ -415,6 +418,9 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     bytes calldata dharmaKeySignature,
     bytes calldata dharmaSecondaryKeySignature
   ) external returns (bool ok) {
+    // Declare the unused value to avoid compiler and linter warnings.
+    dharmaKeySignature;
+
     // Ensure either caller or supplied signature is valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.USDCWithdrawal,
@@ -889,12 +895,15 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
         }
       }
     } else {
+      // Decode the revert reason in the event one was returned.
+      string memory revertReason = _decodeRevertReason(data);
+
       emit ExternalError(
         address(_COMPTROLLER),
         string(
           abi.encodePacked(
             "Compound Comptroller contract reverted on enterMarkets: ",
-            data
+            revertReason
           )
         )
       );
@@ -955,6 +964,9 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
         _getCTokenDetails(asset, functionSelector)
       );
 
+      // Decode the revert reason in the event one was returned.
+      string memory revertReason = _decodeRevertReason(data);
+
       emit ExternalError(
         account,
         string(
@@ -964,7 +976,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
             " contract reverted while attempting to call ",
             functionName,
             ": ",
-            data
+            revertReason
           )
         )
       );
@@ -1005,8 +1017,8 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       if (asset == AssetType.DAI) {
         emit ExternalError(address(_DAI), "DAI contract reverted on transfer.");
       } else {
-      // Find out why USDC transfer reverted (it doesn't give revert reasons).
-      _diagnoseAndEmitUSDCSpecificError(_USDC.transfer.selector);
+        // Find out why USDC transfer reverted (it doesn't give revert reasons).
+        _diagnoseAndEmitUSDCSpecificError(_USDC.transfer.selector);
       }   
     }
   }
@@ -1176,6 +1188,37 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
       functionName = "mint";
     } else {
       functionName = "redeemUnderlying";
+    }
+  }
+
+  /**
+   * @notice Internal pure function to decode revert reasons. The revert reason
+   * prefix is removed and the remaining string argument is decoded.
+   * @param revertData bytes The raw data supplied alongside the revert.
+   * @return The decoded revert reason string.
+   */
+  function _decodeRevertReason(
+    bytes memory revertData
+  ) internal pure returns (string memory revertReason) {
+    // Solidity prefixes revert reason with 0x08c379a0 -> Error(string) selector
+    if (
+      revertData.length > 68 && // prefix (4) + position (32) + length (32)
+      revertData[0] == byte(0x08) &&
+      revertData[1] == byte(0xc3) &&
+      revertData[2] == byte(0x79) &&
+      revertData[3] == byte(0xa0)
+    ) {
+      // Get the revert reason without the prefix from the revert data.
+      bytes memory revertReasonBytes = new bytes(revertData.length - 4);
+      for (uint256 i = 4; i < revertData.length; i++) {
+        revertReasonBytes[i - 4] = revertData[i];
+      }
+
+      // Decode the resultant revert reason as a string.
+      revertReason = abi.decode(revertReasonBytes, (string));
+    } else {
+      // Simply return the default, with no revert reason.
+      revertReason = "(no revert reason)";
     }
   }
 }
