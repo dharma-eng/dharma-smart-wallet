@@ -935,7 +935,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     if (ok) {
       uint256 compoundError = abi.decode(data, (uint256));
       if (compoundError != _COMPOUND_SUCCESS) {
-        // Get called contract address, name of contract, and function selector.
+        // Get called contract address, name of contract, and function name.
         (address account, string memory name, string memory functionName) = (
           _getCTokenDetails(asset, functionSelector)
         );
@@ -959,7 +959,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
         success = true;
       }
     } else {
-      // Get called contract address, name of contract, and function selector.
+      // Get called contract address, name of contract, and function name.
       (address account, string memory name, string memory functionName) = (
         _getCTokenDetails(asset, functionSelector)
       );
