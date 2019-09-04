@@ -209,9 +209,6 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
     // Ensure that this function is only callable during contract construction.
     assembly { if extcodesize(address) { revert(0, 0) } }
 
-    // Ensure that a Dharma key is set on this smart wallet.
-    require(userSigningKey != address(0), "No user signing key provided.");
-
     // Set up the user's signing key and emit a corresponding event.
     _setUserSigningKey(userSigningKey);
 
@@ -692,6 +689,9 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * wallet.
    */
   function _setUserSigningKey(address userSigningKey) internal {
+    // Ensure that a user signing key is set on this smart wallet.
+    require(userSigningKey != address(0), "No user signing key provided.");
+    
     _userSigningKey = userSigningKey;
     emit NewUserSigningKey(userSigningKey);
   }
