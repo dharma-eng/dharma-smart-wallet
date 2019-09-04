@@ -2371,6 +2371,7 @@ module.exports = {test: async function (provider, testingContext) {
     [
       address,
       0,
+      '0x',
       '0x'
     ]
   )

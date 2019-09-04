@@ -60,7 +60,8 @@ interface DharmaSmartWalletImplementationV0Interface {
   function setUserSigningKey(
     address userSigningKey,
     uint256 minimumActionGas,
-    bytes calldata signature
+    bytes calldata userSignature,
+    bytes calldata dharmaSignature
   ) external;
 
   function getBalances() external returns (
@@ -532,22 +533,28 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
    * function call.
-   * @param signature bytes A signature that resolves to the public key returned
-   * for this account from the Dharma Key Registry. A unique hash returned from
-   * `getCustomActionID` is prefixed and hashed to create the signed message.
+   * @param userSignature bytes Unused in V0.
+   * @param dharmaSignature bytes A signature that resolves to the public key
+   * returned for this account from the Dharma Key Registry. A unique hash
+   * returned from `getCustomActionID` is prefixed and hashed to create the
+   * signed message.
    */
   function setUserSigningKey(
     address userSigningKey,
     uint256 minimumActionGas,
-    bytes calldata signature
+    bytes calldata userSignature,
+    bytes calldata dharmaSignature
   ) external {
+    // Declare the unused value to avoid compiler and linter warnings.
+    userSignature;
+    
     // Ensure either caller or supplied signature is valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.SetUserSigningKey,
       0,
       userSigningKey,
       minimumActionGas,
-      signature
+      dharmaSignature
     );
 
     // Set new user signing key on smart wallet and emit a corresponding event.
