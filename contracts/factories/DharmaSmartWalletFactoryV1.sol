@@ -5,18 +5,20 @@ import "../UpgradeBeaconProxy.sol";
 
 interface DharmaSmartWalletFactoryV1Interface {
   // Fires an event when a new smart wallet is deployed and initialized.
-  event SmartWalletDeployed(address wallet, address dharmaKey);
+  event SmartWalletDeployed(address wallet, address userSigningKey);
 
-  function newSmartWallet(address dharmaKey) external returns (address wallet);
+  function newSmartWallet(
+    address userSigningKey
+  ) external returns (address wallet);
   
   function getNextSmartWallet(
-    address dharmaKey
+    address userSigningKey
   ) external view returns (address wallet);
 }
 
 
 interface DharmaSmartWalletInitializer {
-  function initialize(address dharmaKey) external;
+  function initialize(address userSigningKey) external;
 }
 
 
@@ -32,41 +34,46 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
   DharmaSmartWalletInitializer private _initializer;
 
   /**
-   * @notice Deploy a new smart wallet address using the provided Dharma Key.
-   * @param dharmaKey address The Dharma key supplied as a constructor argument.
+   * @notice Deploy a new smart wallet address using the provided user signing
+   * key.
+   * @param userSigningKey address The user signing key, supplied as a
+   * constructor argument.
    * @return The address of the new smart wallet.
    */
-  function newSmartWallet(address dharmaKey) external returns (address wallet) {
-    // Construct initialization calldata as initialize selector and Dharma key.
+  function newSmartWallet(
+    address userSigningKey
+  ) external returns (address wallet) {
+    // Get initialization calldata from initialize selector & user signing key.
     bytes memory initializationCalldata = abi.encodeWithSelector(
       _initializer.initialize.selector,
-      dharmaKey
+      userSigningKey
     );
     
     // Initialize and deploy new user smart wallet as an Upgrade Beacon proxy.
     wallet = _deployUpgradeBeaconProxyInstance(initializationCalldata);
 
     // Emit an event to signal the creation of the new smart wallet.
-    emit SmartWalletDeployed(wallet, dharmaKey);
+    emit SmartWalletDeployed(wallet, userSigningKey);
   }
 
   /**
    * @notice View function to find the address of the next smart wallet address
-   * that will be deployed for a given Dharma Key. Note that a new value will be
-   * returned if a particular Dharma key has been used before.
-   * @param dharmaKey address The Dharma key supplied as a constructor argument.
+   * that will be deployed for a given user signing key. Note that a new value
+   * will be returned if a particular user signing key has been used before.
+   * @param userSigningKey address The user signing key, supplied as a
+   * constructor argument.
    * @return The future address of the next smart wallet.
    */
   function getNextSmartWallet(
-    address dharmaKey
+    address userSigningKey
   ) external view returns (address wallet) {
-    // Construct initialization calldata as initialize selector and Dharma key.
+    // Get initialization calldata from initialize selector & user signing key.
     bytes memory initializationCalldata = abi.encodeWithSelector(
       _initializer.initialize.selector,
-      dharmaKey
+      userSigningKey
     );
     
-    // Determine the user's smart wallet address based on the Dharma key.
+    // Determine the user's smart wallet address based on the user signing key.
     wallet = _computeNextAddress(initializationCalldata);
   }
 
@@ -150,9 +157,6 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
 
     // Loop until an contract deployment address with no code has been found.
     while (true) {
-      // Derive `CREATE2` salt using `msg.sender` and nonce.
-      salt = keccak256(abi.encodePacked(msg.sender, nonce));
-
       target = address(            // derive the target deployment address.
         uint160(                   // downcast to match the address type.
           uint256(                 // cast to uint to truncate upper digits.
@@ -160,7 +164,7 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
               abi.encodePacked(    // pack all inputs to the hash together.
                 bytes1(0xff),      // pass in the control character.
                 address(this),     // pass in the address of this contract.
-                salt,              // pass in the salt from above.
+                nonce,              // pass in the salt from above.
                 initCodeHash       // pass in hash of contract creation code.
               )
             )

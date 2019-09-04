@@ -522,7 +522,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   }
 
   /**
-   * @notice Allow signatory to set a new user signing Key. The current nonce
+   * @notice Allow signatory to set a new user signing key. The current nonce
    * needs to be provided as an argument to the a signature so as not to enable
    * griefing attacks. All arguments apart from the user signing key can be
    * omitted if called directly. No value is returned from this function - it
@@ -547,7 +547,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   ) external {
     // Declare the unused value to avoid compiler and linter warnings.
     userSignature;
-    
+
     // Ensure either caller or supplied signature is valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.SetUserSigningKey,
