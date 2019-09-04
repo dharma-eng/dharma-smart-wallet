@@ -10,7 +10,7 @@ interface DharmaSmartWalletImplementationV0Interface {
   event NewUserSigningKey(address userSigningKey);
   
   // Fires when an error occurs as part of an attempted action.
-  event ExternalError(address indexed source, string revertReason);
+  event ExternalError(address indexed source, string reason);
 
   // DAI + USDC are the only assets initially supported (include ETH for later).
   enum AssetType {
@@ -691,7 +691,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   function _setUserSigningKey(address userSigningKey) internal {
     // Ensure that a user signing key is set on this smart wallet.
     require(userSigningKey != address(0), "No user signing key provided.");
-    
+
     _userSigningKey = userSigningKey;
     emit NewUserSigningKey(userSigningKey);
   }

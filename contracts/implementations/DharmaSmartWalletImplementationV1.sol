@@ -561,7 +561,7 @@ contract DharmaSmartWalletImplementationV1 is
     bytes calldata userSignature,
     bytes calldata dharmaSignature
   ) external returns (bool ok) {
-    // Do not assign the actionID, since ExternalError does not log it.
+    // Ensure caller and/or supplied signatures are valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.DAIBorrow,
       abi.encode(amount, recipient),
@@ -726,7 +726,7 @@ contract DharmaSmartWalletImplementationV1 is
     bytes calldata userSignature,
     bytes calldata dharmaSignature
   ) external returns (bool ok) {
-    // Do not assign the actionID, since ExternalError does not log it.
+    // Ensure caller and/or supplied signatures are valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.USDCBorrow,
       abi.encode(amount, recipient),
@@ -795,7 +795,7 @@ contract DharmaSmartWalletImplementationV1 is
     bytes calldata userSignature,
     bytes calldata dharmaSignature
   ) external returns (bool ok) {
-    // Do not assign the actionID, since ExternalError does not log it.
+    // Ensure caller and/or supplied signatures are valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.ETHWithdrawal,
       abi.encode(amount, recipient),
@@ -884,7 +884,7 @@ contract DharmaSmartWalletImplementationV1 is
       "Invalid action - must supply a contract as the `to` argument."
     );
 
-    // Ensure either caller or supplied signature is valid and increment nonce.
+    // Ensure caller and/or supplied signatures are valid and increment nonce.
     (bytes32 actionID, uint256 nonce) = _validateActionAndIncrementNonce(
       ActionType.Generic,
       abi.encode(to, data),
@@ -939,7 +939,7 @@ contract DharmaSmartWalletImplementationV1 is
     bytes calldata userSignature,
     bytes calldata dharmaSignature
   ) external {
-    // Ensure either caller or supplied signature is valid and increment nonce.
+    // Ensure caller and/or supplied signatures are valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.SetUserSigningKey,
       abi.encode(userSigningKey),
@@ -1146,7 +1146,7 @@ contract DharmaSmartWalletImplementationV1 is
       );
     }
 
-    // Ensure either caller or supplied signature is valid and increment nonce.
+    // Ensure caller and/or supplied signatures are valid and increment nonce.
     (bytes32 actionID, uint256 nonce) = _validateActionAndIncrementNonce(
       ActionType.GenericAtomicBatch,
       abi.encode(calls),
@@ -1553,24 +1553,35 @@ contract DharmaSmartWalletImplementationV1 is
       dharmaSigningKey
     );
 
-    // Validate user signing key signature unless it is `msg.sender`.
-    if (msg.sender != userSigningKey) {
-      require(
-        userSigningKey == actionID.toEthSignedMessageHash().recover(
-          userSignature
-        ),
-        "Invalid action - invalid user signature."
-      );
-    }
+    // Compute the message hash - the hashed, EIP-191-0x45-prefixed action ID.
+    bytes32 messageHash = actionID.toEthSignedMessageHash();
 
-    // Validate Dharma signing key signature unless it is `msg.sender`.
-    if (msg.sender != dharmaSigningKey) {
-      require(
-        dharmaSigningKey == actionID.toEthSignedMessageHash().recover(
-          dharmaSignature
-        ),
-        "Invalid action - invalid Dharma signature."
-      );
+    // Actions other than Cancel require both signatures; Cancel only needs one.
+    if (action != ActionType.Cancel) {
+      // Validate user signing key signature unless it is `msg.sender`.
+      if (msg.sender != userSigningKey) {
+        require(
+          userSigningKey == messageHash.recover(userSignature),
+          "Invalid action - invalid user signature."
+        );
+      }
+
+      // Validate Dharma signing key signature unless it is `msg.sender`.
+      if (msg.sender != dharmaSigningKey) {
+        require(
+          dharmaSigningKey == messageHash.recover(dharmaSignature),
+          "Invalid action - invalid Dharma signature."
+        );
+      }
+    } else {
+      // Validate signing key signature unless user or Dharma is `msg.sender`.
+      if (msg.sender != userSigningKey && msg.sender != dharmaSigningKey) {
+        require(
+          userSigningKey == messageHash.recover(userSignature) ||
+          dharmaSigningKey == messageHash.recover(dharmaSignature),
+          "Invalid action - invalid signature."
+        );
+      }
     }
 
     // Increment nonce in order to prevent reuse of signatures after the call.
