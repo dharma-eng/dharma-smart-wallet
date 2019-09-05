@@ -114,7 +114,7 @@ const UPGRADE_BEACON_ENVOY_ADDRESS = '0x000000000067503c398F4c9652530DBC4eA95C02
 const UPGRADE_BEACON_CONTROLLER_ADDRESS = '0x00000000003284ACb9aDEb78A2dDe0A8499932b9'
 const UPGRADE_BEACON_ADDRESS = '0x0000000000b45D6593312ac9fdE193F3D0633644'
 const KEY_REGISTRY_ADDRESS = '0x00000000006c7f32F0cD1eA4C1383558eb68802D'
-const FACTORY_ADDRESS = '0xE04438eA9357001A1Dcd00001a00008000f5aBb9'
+const FACTORY_ADDRESS = '0x8D1e00b000e56d5BcB006F3a008Ca6003b9F0033'
 
 const contractNames = {}
 contractNames[DAI_MAINNET_ADDRESS] = 'DAI'
@@ -1798,7 +1798,7 @@ module.exports = {test: async function (provider, testingContext) {
       'findCreate2Address',
       'call',
       [
-        '0x0000000000000000000000000000000000000000a2e51c304e69f50614000000',
+        '0x00000000000000000000000000000000000000000fc65f91c50a530250000000',
         DharmaSmartWalletFactoryV1Artifact.bytecode
       ],
       true,
@@ -1813,7 +1813,7 @@ module.exports = {test: async function (provider, testingContext) {
       'safeCreate2',
       'send',
       [
-        '0x0000000000000000000000000000000000000000a2e51c304e69f50614000000',
+        '0x00000000000000000000000000000000000000000fc65f91c50a530250000000',
         DharmaSmartWalletFactoryV1Artifact.bytecode
       ]
     )

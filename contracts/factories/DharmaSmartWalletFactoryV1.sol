@@ -94,7 +94,7 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
     );
 
     // Get salt to use during deployment using the supplied initialization code.
-    (bytes32 salt, ) = _getSaltAndTarget(initCode);
+    (uint256 salt, ) = _getSaltAndTarget(initCode);
 
     // Deploy the new upgrade beacon proxy contract using `CREATE2`.
     assembly {
@@ -145,12 +145,12 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
    */
   function _getSaltAndTarget(
     bytes memory initCode
-  ) private view returns (bytes32 salt, address target) {
+  ) private view returns (uint256 nonce, address target) {
     // Get the keccak256 hash of the init code for address derivation.
     bytes32 initCodeHash = keccak256(initCode);
 
     // Set the initial nonce to be provided when constructing the salt.
-    uint256 nonce = 0;
+    nonce = 0;
     
     // Declare variable for code size of derived address.
     uint256 codeSize;
