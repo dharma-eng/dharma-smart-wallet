@@ -119,13 +119,13 @@ interface DharmaSmartWalletImplementationV1Interface {
     string revertReason
   );
 
-  // ABIEncoderV2 uses an array of Calls for executing generic batch calls
+  // ABIEncoderV2 uses an array of Calls for executing generic batch calls.
   struct Call {
     address to;
     bytes data;
   }
 
-  // ABIEncoderV2 uses an array of CallReturns for handling generic batch calls
+  // ABIEncoderV2 uses an array of CallReturns for handling generic batch calls.
   struct CallReturn {
     bool ok;
     bytes returnData;
@@ -363,9 +363,6 @@ contract DharmaSmartWalletImplementationV2 is
   function initialize(address userSigningKey) external {
     // Ensure that this function is only callable during contract construction.
     assembly { if extcodesize(address) { revert(0, 0) } }
-
-    // Ensure that a Dharma key is set on this smart wallet.
-    require(userSigningKey != address(0), "No user signing key provided.");
 
     // Set up the user's signing key and emit a corresponding event.
     _setUserSigningKey(userSigningKey);
@@ -879,11 +876,8 @@ contract DharmaSmartWalletImplementationV2 is
     bytes calldata userSignature,
     bytes calldata dharmaSignature
   ) external returns (bool ok, bytes memory returnData) {
-    // Ensure that the `to` address is a contract.
-    require(
-      to.isContract(),
-      "Invalid action - must supply a contract as the `to` argument."
-    );
+    // Ensure that the `to` address is a contract and is not this contract.
+    _ensureValidGenericCallTarget(to);
 
     // Ensure caller and/or supplied signatures are valid and increment nonce.
     (bytes32 actionID, uint256 nonce) = _validateActionAndIncrementNonce(
@@ -1139,12 +1133,9 @@ contract DharmaSmartWalletImplementationV2 is
     bytes memory userSignature,
     bytes memory dharmaSignature
   ) public returns (bool[] memory ok, bytes[] memory returnData) {
-    // Ensure that the `to` address is a contract for each call.
+    // Ensure that each `to` address is a contract and is not this contract.
     for (uint256 i = 0; i < calls.length; i++) {
-      require(
-        calls[i].to.isContract(),
-        "Invalid action - must supply a contract for each `to` argument."
-      );
+      _ensureValidGenericCallTarget(calls[i].to);
     }
 
     // Ensure caller and/or supplied signatures are valid and increment nonce.
@@ -1927,6 +1918,23 @@ contract DharmaSmartWalletImplementationV2 is
         }
       }
     }
+  }
+
+  /**
+   * @notice Internal pure function to ensure that a given `to` address provided
+   * as part of a generic action is valid. Calls cannot be performed to accounts
+   * without code or back into the smart wallet itself.
+   */
+  function _ensureValidGenericCallTarget(address to) internal view {
+    require(
+      to.isContract(),
+      "Invalid `to` parameter - must supply a contract address containing code."
+    );
+
+    require(
+      to != address(this),
+      "Invalid `to` parameter - cannot supply the address of this contract."
+    );
   }
 
   /**
