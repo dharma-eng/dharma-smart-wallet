@@ -2189,6 +2189,32 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'new user smart wallet can trigger repayAndDeposit even with no funds',
+    UserSmartWallet,
+    'repayAndDeposit',
+    'send',
+    [],
+    true,
+    receipt => {
+      //console.log(receipt.status, receipt.gasUsed)
+      if (testingContext !== 'coverage') {
+        let events = []
+        Object.values(receipt.events).forEach((value) => {
+          const log = eventDetails[value.raw.topics[0]]
+          const decoded = web3.eth.abi.decodeLog(log.abi, value.raw.data, value.raw.topics)        
+          events.push({
+            address: contractNames[value.address],
+            eventName: log.name,
+            returnValues: decoded
+          })
+        })
+     
+        assert.strictEqual(events.length, 0)
+      }
+    }
+  )
+
+  await runTest(
     'Deployed User Smart Wallet code is correct',
     MockCodeCheck,
     'code',
@@ -2285,6 +2311,9 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       // TODO: verify logs
+      if (testingContext !== 'coverage') {
+        console.log(receipt.events)
+      }
       //console.log(receipt.events.ExternalError.returnValues)
       //console.log(receipt.events.ExternalError)
       /*
@@ -2564,6 +2593,122 @@ module.exports = {test: async function (provider, testingContext) {
       // TODO: verify logs
     },
     originalAddress
+  )
+
+  // ABCDE
+
+  await runTest(
+    'UserSmartWallet cannot withdraw too much dai',
+    UserSmartWallet,
+    'withdrawDai',
+    'send',
+    [
+      '100000000000000000000000000000000000000',
+      address,
+      0,
+      '0x',
+      '0x'
+    ],
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        console.log(receipt.events)
+      }
+      // TODO: verify logs
+      //console.log(receipt.events.ExternalError.returnValues)
+      //console.log(receipt.events.ExternalError)
+      /*
+      console.log(Object.values(receipt.events).map(value => {
+        return (
+          value.raw
+        )
+      }))
+      */
+    }
+  )
+
+  await runTest(
+    'UserSmartWallet cannot withdraw too much usdc',
+    UserSmartWallet,
+    'withdrawUSDC',
+    'send',
+    [
+      '100000000000000000000000000000000',
+      address,
+      0,
+      '0x',
+      '0x'
+    ],
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        console.log(receipt.events)
+      }
+      // TODO: verify logs
+      //console.log(receipt.events.ExternalError.returnValues)
+      //console.log(receipt.events.ExternalError)
+      /*
+      console.log(Object.values(receipt.events).map(value => {
+        return (
+          value.raw
+        )
+      }))
+      */
+    }
+  )
+
+  await runTest(
+    'UserSmartWallet cannot withdraw too little dai',
+    UserSmartWallet,
+    'withdrawDai',
+    'send',
+    [
+      '1',
+      address,
+      0,
+      '0x',
+      '0x'
+    ],
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        console.log(receipt.events)
+      }
+      // TODO: verify logs
+      //console.log(receipt.events.ExternalError.returnValues)
+      //console.log(receipt.events.ExternalError)
+      /*
+      console.log(Object.values(receipt.events).map(value => {
+        return (
+          value.raw
+        )
+      }))
+      */
+    }
+  )
+
+  await runTest(
+    'UserSmartWallet calls revert if insufficient action gas is supplied',
+    UserSmartWallet,
+    'cancel',
+    'send',
+    [
+      FULL_APPROVAL,
+     '0x'
+    ],
+    false
+  )
+
+  await runTest(
+    'UserSmartWallet calls to atomic methods revert',
+    UserSmartWallet,
+    '_withdrawDaiAtomic',
+    'send',
+    [
+      '1',
+     address
+    ],
+    false
   )
 
   console.log(
