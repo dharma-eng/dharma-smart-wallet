@@ -586,20 +586,15 @@ contract DharmaSmartWalletImplementationV2 is
       // Ensure that ok == false in the event the borrow failed.
       ok = abi.decode(returnData, (bool));
     }
-
-    // Clear the self-call context.
-    delete _selfCallContext;
   }
 
   function _borrowDaiAtomic(
     uint256 amount,
     address recipient
   ) external returns (bool success) {
-    require(
-      msg.sender == address(this) &&
-      _selfCallContext == this.borrowDai.selector,
-      "External accounts or unapproved internal functions cannot call this."
-    );
+    // Ensure caller is this contract and self-call context is correctly set.
+    _enforceSelfCallFrom(this.borrowDai.selector);
+
     if (_borrowFromCompound(AssetType.DAI, amount)) {
       // at this point dai transfer *should* never fail - wrap it just in case.
       require(_DAI.transfer(recipient, amount));
@@ -746,39 +741,18 @@ contract DharmaSmartWalletImplementationV2 is
       this._borrowUSDCAtomic.selector, amount, recipient
     ));
     if (!ok) {
-      // find out *why* USDC transfer reverted (it doesn't give revert reasons).
-      if (_USDC_NAUGHTY.isBlacklisted(address(this))) {
-        emit ExternalError(
-          address(_USDC),
-          "transfer failed - USDC has blacklisted this user."
-        );
-      }
-      if (_USDC_NAUGHTY.paused()) {
-        emit ExternalError(
-          address(_USDC),
-          "transfer failed - USDC contract is currently paused."
-        );
-      } else {
-        emit ExternalError(
-          address(_USDC),
-          "USDC contract reverted on transfer."
-        );
-      }
+      // Find out why USDC transfer reverted (doesn't give revert reasons).
+      _diagnoseAndEmitUSDCSpecificError(_USDC.transfer.selector);
     } else {
       // Ensure that ok == false in the event the borrow failed.
       ok = abi.decode(returnData, (bool));
     }
-
-    // Clear the self-call context.
-    delete _selfCallContext;
   }
 
   function _borrowUSDCAtomic(uint256 amount, address recipient) external returns (bool success) {
-    require(
-      msg.sender == address(this) &&
-      _selfCallContext == this.borrowUSDC.selector,
-      "External accounts or unapproved internal functions cannot call this."
-    );
+    // Ensure caller is this contract and self-call context is correctly set.
+    _enforceSelfCallFrom(this.borrowUSDC.selector);
+
     if (_borrowFromCompound(AssetType.USDC, amount)) {
       // ensure that the USDC transfer does not fail.
       require(_USDC.transfer(recipient, amount));
@@ -820,20 +794,15 @@ contract DharmaSmartWalletImplementationV2 is
       // Ensure that ok == false in the event the withdrawal failed.
       ok = abi.decode(returnData, (bool));
     }
-
-    // Clear the self-call context.
-    delete _selfCallContext;
   }
 
   function _withdrawEtherAtomic(
     uint256 amount,
     address payable recipient
   ) external returns (bool success) {
-    require(
-      msg.sender == address(this) &&
-      _selfCallContext == this.withdrawEther.selector,
-      "External accounts or unapproved internal functions cannot call this."
-    );
+    // Ensure caller is this contract and self-call context is correctly set.
+    _enforceSelfCallFrom(this.withdrawEther.selector);
+
     if (_withdrawFromCompound(AssetType.ETH, amount)) {
       recipient.transfer(amount);
       success = true;
@@ -1167,9 +1136,6 @@ contract DharmaSmartWalletImplementationV2 is
       )
     );
 
-    // Clear the self-call context.
-    delete _selfCallContext;
-
     // Parse data returned from self-call into each call result and store / log.
     CallReturn[] memory callResults = abi.decode(rawCallResults, (CallReturn[]));
     for (uint256 i = 0; i < callResults.length; i++) {
@@ -1213,11 +1179,8 @@ contract DharmaSmartWalletImplementationV2 is
   function _executeActionWithAtomicBatchCallsAtomic(
     Call[] memory calls
   ) public returns (CallReturn[] memory callResults) {
-    require(
-      msg.sender == address(this) &&
-      _selfCallContext == this.executeActionWithAtomicBatchCalls.selector,
-      "External accounts or unapproved internal functions cannot call this."
-    );
+    // Ensure caller is this contract and self-call context is correctly set.
+    _enforceSelfCallFrom(this.executeActionWithAtomicBatchCalls.selector);
 
     bool rollBack = false;
     callResults = new CallReturn[](calls.length);

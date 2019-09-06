@@ -613,20 +613,15 @@ contract DharmaSmartWalletImplementationV1 is
       // Ensure that ok == false in the event the transfer failed.
       ok = abi.decode(returnData, (bool));
     }
-
-    // Clear the self-call context.
-    delete _selfCallContext;
   }
 
   function _withdrawEtherAtomic(
     uint256 amount,
     address payable recipient
   ) external returns (bool success) {
-    require(
-      msg.sender == address(this) &&
-      _selfCallContext == this.withdrawEther.selector,
-      "External accounts or unapproved internal functions cannot call this."
-    );
+    // Ensure caller is this contract and self-call context is correctly set.
+    _enforceSelfCallFrom(this.withdrawEther.selector);
+
     recipient.transfer(amount);
     success = true;
   }
@@ -953,9 +948,6 @@ contract DharmaSmartWalletImplementationV1 is
       )
     );
 
-    // Clear the self-call context.
-    delete _selfCallContext;
-
     // Parse data returned from self-call into each call result and store / log.
     CallReturn[] memory callResults = abi.decode(rawCallResults, (CallReturn[]));
     for (uint256 i = 0; i < callResults.length; i++) {
@@ -999,11 +991,8 @@ contract DharmaSmartWalletImplementationV1 is
   function _executeActionWithAtomicBatchCallsAtomic(
     Call[] memory calls
   ) public returns (CallReturn[] memory callResults) {
-    require(
-      msg.sender == address(this) &&
-      _selfCallContext == this.executeActionWithAtomicBatchCalls.selector,
-      "External accounts or unapproved internal functions cannot call this."
-    );
+    // Ensure caller is this contract and self-call context is correctly set.
+    _enforceSelfCallFrom(this.executeActionWithAtomicBatchCalls.selector);
 
     bool rollBack = false;
     callResults = new CallReturn[](calls.length);
