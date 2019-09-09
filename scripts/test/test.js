@@ -2700,6 +2700,17 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'UserSmartWallet calls succeed if sufficient non-zero action gas supplied',
+    UserSmartWallet,
+    'cancel',
+    'send',
+    [
+      '1',
+     '0x'
+    ]
+  )
+
+  await runTest(
     'UserSmartWallet calls to atomic methods revert',
     UserSmartWallet,
     '_withdrawDaiAtomic',
