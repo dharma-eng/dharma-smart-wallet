@@ -42,6 +42,10 @@ interface UpgradeBeacon {
 contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   using SafeMath for uint256;
 
+  // Fire an event whenever the Adharma Contingency is activated or exited.
+  event AdharmaContingencyActivated();
+  event AdharmaContingencyExited();
+
   // store the Adharma Contingency implementation. Note that this is specific to
   // smart wallets, and should not be invoked on other upgrade beacons.
   address private constant _ADHAMRA_IMPLEMENTATION = address(
@@ -127,19 +131,6 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     address beacon,
     address implementation
   ) external onlyOwner {
-    // Ensure that the implementaton contract is not the null address.
-    require(
-      implementation != address(0),
-      "Implementation cannot be the null address."
-    );
-
-    // Ensure that the implementation contract has code via extcodesize.
-    uint256 size;
-    assembly {
-      size := extcodesize(implementation)
-    }
-    require(size > 0, "Implementation must have contract code.");
-
     // Ensure that the timelock has been set and is completed.
     _enforceTimelock(
       this.upgrade.selector, abi.encode(controller, beacon, implementation)
@@ -224,7 +215,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     (bool expired, ) = heartbeatStatus();
     require(
       isOwner() || expired,
-      "only callable by the owner or after 90 days without a heartbeat."
+      "Only callable by the owner or after 90 days without a heartbeat."
     );
 
     // Ensure that the Adharma Contingency has been armed.
@@ -252,6 +243,9 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
 
     // Trigger the upgrade to the Adharma Smart Wallet implementation contract.
     _upgrade(controller, beacon, _ADHAMRA_IMPLEMENTATION);
+
+    // Emit an event to signal that the Adharma Contingency has been activated.
+    emit AdharmaContingencyActivated();
   }
 
   /**
@@ -274,6 +268,8 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     // Exit the contingency state if there is currently one active.
     if (_adharmaContingency[controller][beacon].activated) {
       delete _adharmaContingency[controller][beacon];
+
+      emit AdharmaContingencyExited();
     }
 
     // Upgrade to the last implementation contract.
@@ -313,6 +309,9 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
 
     // Call controller with beacon to upgrade and implementation to upgrade to.
     _upgrade(controller, beacon, implementation);
+
+    // Emit an event to signal that the Adharma Contingency has been activated.
+    emit AdharmaContingencyExited();
   }
 
   /**
@@ -370,6 +369,19 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     address beacon,
     address implementation
   ) private {
+    // Ensure that the implementaton contract is not the null address.
+    require(
+      implementation != address(0),
+      "Implementation cannot be the null address."
+    );
+
+    // Ensure that the implementation contract has code via extcodesize.
+    uint256 size;
+    assembly {
+      size := extcodesize(implementation)
+    }
+    require(size > 0, "Implementation must have contract code.");
+
     // Try to get current implementation contract, defaulting to null address.
     address currentImplementation;
     (bool ok, bytes memory returnData) = beacon.call("");
