@@ -31,18 +31,17 @@ interface DharmaSmartWalletRecovery {
 contract DharmaAccountRecoveryManager is Ownable, Timelocker {
   using SafeMath for uint256;
 
-  /**
-   * @notice In the constructor, set the initial owner of this contract and the
-   * initial minimum timelock interval values.
-   * @param owner Initial owner of the contract.
-   */
-  constructor(address owner) public {
-    // Set the supplied account as the initial owner of this contract.
-    _transferOwnership(owner);
+  // Maintain mapping of smart wallets that have opted out of account recovery.
+  mapping(address => bool) private _accountRecoveryDisabled;
 
+  /**
+   * @notice In the constructor, set initial minimum timelock interval values.
+   */
+  constructor() public {
     // Set initial minimum timelock interval values.
     _setInitialTimelockInterval(this.modifyTimelockInterval.selector, 4 weeks);
     _setInitialTimelockInterval(this.recover.selector, 7 days);
+    _setInitialTimelockInterval(this.disableAccountRecovery.selector, 3 days);
   }
 
   /**
@@ -64,7 +63,7 @@ contract DharmaAccountRecoveryManager is Ownable, Timelocker {
     bytes calldata arguments,
     uint256 extraTime
   ) external onlyOwner {
-    // Set the timelock and emit an event.
+    // Set the timelock and emit a `TimelockInitiated` event.
     _setTimelock(functionSelector, arguments, extraTime);
   }
 
@@ -82,9 +81,44 @@ contract DharmaAccountRecoveryManager is Ownable, Timelocker {
     _enforceTimelock(
       this.recover.selector, abi.encode(wallet, newUserSigningKey)
     );
+
+    // Ensure that the wallet in question has not opted out of account recovery.
+    require(
+      !_accountRecoveryDisabled[wallet],
+      "This wallet has elected to opt out of account recovery functionality."
+    );
     
     // Call the specified smart wallet and supply the new user signing key.
     DharmaSmartWalletRecovery(wallet).recover(newUserSigningKey);
+  }
+
+  /**
+   * @notice Timelocked function to opt a given wallet out of account recovery.
+   * This action cannot be undone - any future account recovery would require an
+   * upgrade to the smart wallet implementation itself and is not likely to be
+   * supported.
+   * @param wallet Address of the smart wallet to disable account recovery for.
+   */
+  function disableAccountRecovery(address wallet) external onlyOwner {
+    // Ensure that the timelock has been set and is completed.
+    _enforceTimelock(this.disableAccountRecovery.selector, abi.encode(wallet));
+
+    // Register the specified wallet as having opted out of account recovery.
+    _accountRecoveryDisabled[wallet] = true;
+  }
+
+  /**
+   * @notice External function check whether a given smart wallet has disabled
+   * account recovery by opting out.
+   * @param wallet Address of the smart wallet to check.
+   * @return A boolean indicating if account recovery has been disabled for the
+   * wallet in question.
+   */
+  function accountRecoveryDisabled(
+    address wallet
+  ) external view returns (bool hasDisabledAccountRecovery) {
+    // Determine if the wallet in question has opted out of account recovery.
+    hasDisabledAccountRecovery = _accountRecoveryDisabled[wallet];
   }
 
   /**

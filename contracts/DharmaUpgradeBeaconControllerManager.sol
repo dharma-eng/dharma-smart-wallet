@@ -148,7 +148,9 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
 
   /**
    * @notice Timelocked function to set a new owner on an upgrade beacon
-   * controller.
+   * controller that is owned by this contract.
+   * @param controller address of controller to transfer ownership of.
+   * @param newOwner address to assign ownership of the controller to.
    */
   function transferControllerOwnership(
     address controller,
@@ -165,7 +167,9 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   }
 
   /**
-   * @notice Send a new heartbeat.
+   * @notice Send a new heartbeat. If 90 days pass without a heartbeat, anyone
+   * may trigger the Adharma Contingency and force an upgrade to any controlled
+   * upgrade beacon.
    */
   function heartbeat() external {
     require(msg.sender == _heartbeater, "Must be called from the heartbeater.");
@@ -174,6 +178,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
 
   /**
    * @notice Set a new heartbeater.
+   * @param heartbeater address to designate as the heartbeating address.
    */
   function newHeartbeater(address heartbeater) external onlyOwner {
     require(heartbeater != address(0), "Must specify a heartbeater address.");
@@ -183,6 +188,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   /**
    * @notice Arm the Adharma Contingency upgrade. This is required as an extra
    * safeguard against accidentally triggering the Adharma Contingency.
+   * @param armed Boolean that signifies the desired armed status.
    */
   function armAdharmaContingency(bool armed) external {
     // Determine if 90 days have passed since the last heartbeat.
@@ -317,6 +323,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
    * value of eight weeks.
    * @param functionSelector the selector of the function to set the timelock
    * interval for.
+   * @param newTimelockInterval new minimum time interval for the new timelock.
    */
   function modifyTimelockInterval(
     bytes4 functionSelector,
@@ -341,8 +348,8 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   }
 
   /**
-   * @notice Determine if the deadman's switch has expired and the expiration
-   * time (90 days from the last heartbeat).
+   * @notice Determine if the deadman's switch has expired and get the time at
+   * which it is set to expire (i.e. 90 days from the last heartbeat).
    */
   function heartbeatStatus() public view returns (
     bool expired,
