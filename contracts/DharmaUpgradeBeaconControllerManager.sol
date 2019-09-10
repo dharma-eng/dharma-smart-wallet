@@ -41,10 +41,9 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
 
   // store the Adharma Contingency implementation. Note that this is specific to
   // smart wallets, and should not be invoked on other upgrade beacons.
-  address private _adharmaImplementation;
-
-  // store a safeguard against accidentally triggering the Adharma Contingency.
-  bool private _adharmaContingencyArmed;
+  address private constant _ADHAMRA_IMPLEMENTATION = address(
+    0x000000000006FD7FA6B5E08621d480b8e7Ab04eD
+  );
 
   // store timestamp and last implementation in case of Adharma Contingency.
   // Note that this is specific to a particular controller and beacon.
@@ -52,6 +51,9 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     bool activated;
     uint256 activationTime;
   }
+
+  // store a safeguard against accidentally triggering the Adharma Contingency.
+  bool private _adharmaContingencyArmed;
 
   mapping(address => mapping (address => address)) private _lastImplementation;
 
@@ -62,13 +64,12 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   address private _heartbeater;
 
   /**
-   * @notice In the constructor, set the initial owner of this contract and the
-   * initial minimum timelock interval values.
-   * @param owner Initial owner of the contract.
+   * @notice In the constructor, set the initial owner of this contract, the
+   * initial minimum timelock interval values, and some initial variable values.
    */
-  constructor(address owner) public {
-    // Set the supplied account as the initial owner of this contract.
-    _transferOwnership(owner);
+  constructor() public {
+    // Set the transaction submitter as the initial owner of this contract.
+    _transferOwnership(tx.origin);
 
     // Set initial minimum timelock interval values.
     _setInitialTimelockInterval(
@@ -77,12 +78,11 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     _setInitialTimelockInterval(this.modifyTimelockInterval.selector, 4 weeks);
     _setInitialTimelockInterval(this.upgrade.selector, 7 days);
 
-    // Deploy the Adharma Smart Wallet implementation in case of emergencies.
-    _adharmaImplementation = address(new AdharmaSmartWalletImplementation());
+    // Upgrade to the Adharma Smart Wallet implementation in case of emergency.
     _adharmaContingencyArmed = false;
 
-    // Set the owner as the initial heartbeater.
-    _heartbeater = owner;
+    // Set the initial owner as the initial heartbeater.
+    _heartbeater = tx.origin;
     _lastHeartbeat = now;
   }
 
@@ -245,7 +245,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     _adharmaContingencyArmed = false;
 
     // Trigger the upgrade to the Adharma Smart Wallet implementation contract.
-    _upgrade(controller, beacon, _adharmaImplementation);
+    _upgrade(controller, beacon, _ADHAMRA_IMPLEMENTATION);
   }
 
   /**
@@ -270,7 +270,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
       delete _adharmaContingency[controller][beacon];
     } else {
       // Reenter the contingency state if the last implementation is set to it.
-      if (_lastImplementation[controller][beacon] == _adharmaImplementation) {
+      if (_lastImplementation[controller][beacon] == _ADHAMRA_IMPLEMENTATION) {
         _adharmaContingency[controller][beacon] = AdharmaContingency({
           activated: true,
           activationTime: now

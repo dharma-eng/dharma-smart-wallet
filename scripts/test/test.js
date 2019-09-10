@@ -9,6 +9,7 @@ let DharmaKeyRegistryV1Artifact;
 let DharmaAccountRecoveryManagerArtifact;
 let DharmaSmartWalletFactoryV1Artifact;
 let UpgradeBeaconProxyArtifact;
+let AdharmaSmartWalletImplementationArtifact;
 
 const DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
@@ -116,6 +117,7 @@ const UPGRADE_BEACON_ADDRESS = '0x0000000000b45D6593312ac9fdE193F3D0633644'
 const KEY_REGISTRY_ADDRESS = '0x00000000006c7f32F0cD1eA4C1383558eb68802D'
 const ACCOUNT_RECOVERY_MANAGER_ADDRESS = '0x0000000000C5Ebce8297A7E8f9ED34161a32D528'
 const FACTORY_ADDRESS = '0x8D1e00b000e56d5BcB006F3a008Ca6003b9F0033'
+const ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS = '0x000000000006FD7FA6B5E08621d480b8e7Ab04eD'
 
 const contractNames = {}
 contractNames[DAI_MAINNET_ADDRESS] = 'DAI'
@@ -302,6 +304,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaSmartWalletFactoryV1Artifact = require('../../../build/contracts/DharmaSmartWalletFactoryV1.json')
     UpgradeBeaconProxyArtifact = require('../../../build/contracts/UpgradeBeaconProxy.json')
     DharmaAccountRecoveryManagerArtifact = require('../../../build/contracts/DharmaAccountRecoveryManager.json')
+    AdharmaSmartWalletImplementationArtifact = require('../../../build/contracts/AdharmaSmartWalletImplementation.json')
     //DharmaUpgradeBeaconControllerManagerArtifact = require('../../../build/contracts/DharmaAccountRecoveryManager.json')
   } else {
     DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
@@ -311,6 +314,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
     UpgradeBeaconProxyArtifact = require('../../build/contracts/UpgradeBeaconProxy.json')
     DharmaAccountRecoveryManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
+    AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
     //DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
   }
 
@@ -1884,6 +1888,56 @@ module.exports = {test: async function (provider, testingContext) {
       [
         '0x0000000000000000000000000000000000000000ff0345dfe982180456210000',
         DharmaAccountRecoveryManagerArtifact.bytecode
+      ]
+    )
+  }
+
+  await runTest(
+    `DharmaAccountRecoveryManager contract deployment`,
+    DharmaAccountRecoveryManagerDeployer,
+    '',
+    'deploy'
+  )
+
+  let currentAdharmaSmartWalletImplementationCode;
+  await runTest(
+    'Checking Account Recovery Manager runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS],
+    true,
+    value => {
+      currentAdharmaSmartWalletImplementationCode = value;
+    }
+  )
+
+  if (
+    currentAdharmaSmartWalletImplementationCode !== AdharmaSmartWalletImplementationArtifact.deployedBytecode
+  ) {
+    await runTest(
+      `AdharmaSmartWalletImplementation contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        '0x000000000000000000000000000000000000000037686e593cbd8f0d1f190000',
+        AdharmaSmartWalletImplementationArtifact.bytecode
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `AdharmaSmartWalletImplementation contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        '0x000000000000000000000000000000000000000037686e593cbd8f0d1f190000',
+        AdharmaSmartWalletImplementationArtifact.bytecode
       ]
     )
   }
