@@ -2,9 +2,12 @@ pragma solidity 0.5.11;
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "./DharmaUpgradeBeaconController.sol";
-import "./implementations/AdharmaSmartWalletImplementation.sol";
 import "./helpers/Timelocker.sol";
+
+
+interface UpgradeBeacon {
+  function upgrade(address beacon, address implementation) external;
+}
 
 
 /**
@@ -235,6 +238,9 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
       "Adharma Contingency is already activated on this controller + beacon."
     );
 
+    // Reset the heartbeat to the current time.
+    _lastHeartbeat = now;
+
     // Mark the Adharma Contingency as having been activated.
     _adharmaContingency[controller][beacon] = AdharmaContingency({
       activated: true,
@@ -268,14 +274,6 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     // Exit the contingency state if there is currently one active.
     if (_adharmaContingency[controller][beacon].activated) {
       delete _adharmaContingency[controller][beacon];
-    } else {
-      // Reenter the contingency state if the last implementation is set to it.
-      if (_lastImplementation[controller][beacon] == _ADHAMRA_IMPLEMENTATION) {
-        _adharmaContingency[controller][beacon] = AdharmaContingency({
-          activated: true,
-          activationTime: now
-        });
-      }
     }
 
     // Upgrade to the last implementation contract.
@@ -385,6 +383,6 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     _lastImplementation[controller][beacon] = currentImplementation;
 
     // Trigger the upgrade to the new implementation contract.
-    DharmaUpgradeBeaconController(controller).upgrade(beacon, implementation);
+    UpgradeBeacon(controller).upgrade(beacon, implementation);
   }
 }

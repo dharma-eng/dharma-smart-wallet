@@ -1512,7 +1512,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerManagerDeployer,
     '',
     'deploy',
-    [address]
+    []
   )
   
   await runTest(
