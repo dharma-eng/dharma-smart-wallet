@@ -303,7 +303,7 @@ contract DharmaSmartWalletImplementationV2 is
   // Account recovery is facilitated using a hard-coded recovery manager,
   // controlled by Dharma and implementing appropriate timelocks.
   address internal constant _ACCOUNT_RECOVERY_MANAGER = address(
-    0x1111222233334444555566667777888899990000 // TODO: set an actual address!
+    0x0000000000e93CFFa607e85c1bbB3a65BcE22E0a
   );
 
   // This contract interfaces with Dai, USDC, and related CompoundV2 contracts.
