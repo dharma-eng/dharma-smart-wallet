@@ -38,6 +38,9 @@ contract DharmaAccountRecoveryManager is Ownable, Timelocker {
    * @notice In the constructor, set initial minimum timelock interval values.
    */
   constructor() public {
+    // Set initial owner to the transaction submitter.
+    _transferOwnership(tx.origin);
+
     // Set initial minimum timelock interval values.
     _setInitialTimelockInterval(this.modifyTimelockInterval.selector, 4 weeks);
     _setInitialTimelockInterval(this.recover.selector, 7 days);
