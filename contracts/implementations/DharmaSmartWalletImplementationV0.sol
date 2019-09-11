@@ -3,121 +3,11 @@ pragma solidity 0.5.11;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-
-
-interface DharmaSmartWalletImplementationV0Interface {
-  // Fires when a new user signing key is set on the smart wallet.
-  event NewUserSigningKey(address userSigningKey);
-  
-  // Fires when an error occurs as part of an attempted action.
-  event ExternalError(address indexed source, string reason);
-
-  // DAI + USDC are the only assets initially supported (include ETH for later).
-  enum AssetType {
-    DAI,
-    USDC,
-    ETH
-  }
-
-  // Actions, or protected methods (i.e. not deposits) each have an action type.
-  enum ActionType {
-    Cancel,
-    SetUserSigningKey,
-    Generic,
-    GenericAtomicBatch,
-    DAIWithdrawal,
-    USDCWithdrawal,
-    ETHWithdrawal,
-    DAIBorrow,
-    USDCBorrow
-  }
-
-  function initialize(address userSigningKey) external;
-
-  function repayAndDeposit() external;
-
-  function withdrawDai(
-    uint256 amount,
-    address recipient,
-    uint256 minimumActionGas,
-    bytes calldata userSignature,
-    bytes calldata dharmaSignature
-  ) external returns (bool ok);
-
-  function withdrawUSDC(
-    uint256 amount,
-    address recipient,
-    uint256 minimumActionGas,
-    bytes calldata userSignature,
-    bytes calldata dharmaSignature
-  ) external returns (bool ok);
-
-  function cancel(
-    uint256 minimumActionGas,
-    bytes calldata signature
-  ) external;
-
-  function setUserSigningKey(
-    address userSigningKey,
-    uint256 minimumActionGas,
-    bytes calldata userSignature,
-    bytes calldata dharmaSignature
-  ) external;
-
-  function getBalances() external returns (
-    uint256 daiBalance,
-    uint256 usdcBalance,
-    uint256 cDaiUnderlyingDaiBalance,
-    uint256 cUsdcUnderlyingUsdcBalance
-  );
-
-  function getUserSigningKey() external view returns (address userSigningKey);
-  
-  function getNonce() external view returns (uint256 nonce);
-  
-  function getNextCustomActionID(
-    ActionType action,
-    uint256 amount,
-    address recipient,
-    uint256 minimumActionGas
-  ) external view returns (bytes32 actionID);
-
-  function getCustomActionID(
-    ActionType action,
-    uint256 amount,
-    address recipient,
-    uint256 nonce,
-    uint256 minimumActionGas
-  ) external view returns (bytes32 actionID);
-
-  function getVersion() external pure returns (uint256 version);
-}
-
-
-interface CTokenInterface {
-  function mint(uint256 mintAmount) external returns (uint256 err);
-  
-  function redeemUnderlying(uint256 redeemAmount) external returns (uint256 err);
-
-  function balanceOfUnderlying(address account) external returns (uint256 balance);
-}
-
-
-interface USDCV1Interface {
-  function isBlacklisted(address _account) external view returns (bool);
-  
-  function paused() external view returns (bool);
-}
-
-
-interface ComptrollerInterface {
-  function enterMarkets(address[] calldata cTokens) external returns (uint256[] memory errs);
-}
-
-
-interface DharmaKeyRegistryInterface {
-  function getGlobalKey() external view returns (address globalKey);
-}
+import "../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
+import "../../interfaces/CTokenInterface.sol";
+import "../../interfaces/USDCV1Interface.sol";
+import "../../interfaces/ComptrollerInterface.sol";
+import "../../interfaces/DharmaKeyRegistryInterface.sol";
 
 
 /**
@@ -570,8 +460,10 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
   function getBalances() external returns (
     uint256 daiBalance,
     uint256 usdcBalance,
+    uint256 etherBalance, // always returns 0
     uint256 cDaiUnderlyingDaiBalance,
-    uint256 cUsdcUnderlyingUsdcBalance
+    uint256 cUsdcUnderlyingUsdcBalance,
+    uint256 cEtherUnderlyingEtherBalance // always returns 0
   ) {
     daiBalance = _DAI.balanceOf(address(this));
     usdcBalance = _USDC.balanceOf(address(this));

@@ -10,8 +10,8 @@ let DharmaAccountRecoveryManagerArtifact;
 let DharmaSmartWalletFactoryV1Artifact;
 let UpgradeBeaconProxyArtifact;
 let AdharmaSmartWalletImplementationArtifact;
+let DharmaUpgradeBeaconControllerManagerArtifact;
 
-const DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
 
@@ -116,6 +116,7 @@ const UPGRADE_BEACON_CONTROLLER_ADDRESS = '0x00000000003284ACb9aDEb78A2dDe0A8499
 const UPGRADE_BEACON_ADDRESS = '0x0000000000b45D6593312ac9fdE193F3D0633644'
 const KEY_REGISTRY_ADDRESS = '0x00000000006c7f32F0cD1eA4C1383558eb68802D'
 const ACCOUNT_RECOVERY_MANAGER_ADDRESS = '0x0000000000C5Ebce8297A7E8f9ED34161a32D528'
+const UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS = '0x00000000000AEa65ee112945Dce605bC2430f70d'
 const FACTORY_ADDRESS = '0x8D1e00b000e56d5BcB006F3a008Ca6003b9F0033'
 const ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS = '0x000000000006FD7FA6B5E08621d480b8e7Ab04eD'
 
@@ -305,6 +306,7 @@ module.exports = {test: async function (provider, testingContext) {
     UpgradeBeaconProxyArtifact = require('../../../build/contracts/UpgradeBeaconProxy.json')
     DharmaAccountRecoveryManagerArtifact = require('../../../build/contracts/DharmaAccountRecoveryManager.json')
     AdharmaSmartWalletImplementationArtifact = require('../../../build/contracts/AdharmaSmartWalletImplementation.json')
+    DharmaUpgradeBeaconControllerManagerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
     //DharmaUpgradeBeaconControllerManagerArtifact = require('../../../build/contracts/DharmaAccountRecoveryManager.json')
   } else {
     DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
@@ -315,6 +317,7 @@ module.exports = {test: async function (provider, testingContext) {
     UpgradeBeaconProxyArtifact = require('../../build/contracts/UpgradeBeaconProxy.json')
     DharmaAccountRecoveryManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
     AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
+    DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
     //DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
   }
 
@@ -343,6 +346,11 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaAccountRecoveryManagerArtifact.abi,
     ACCOUNT_RECOVERY_MANAGER_ADDRESS
   )
+
+  const DharmaUpgradeBeaconControllerManager = new web3.eth.Contract(
+    DharmaAccountRecoveryManagerArtifact.abi,
+    ACCOUNT_RECOVERY_MANAGER_ADDRESS
+  ) 
 
   const DharmaAccountRecoveryMultisigDeployer = new web3.eth.Contract(
     DharmaAccountRecoveryMultisigArtifact.abi
@@ -1507,7 +1515,7 @@ module.exports = {test: async function (provider, testingContext) {
     [[address], 1]
   )
 
-  const DharmaUpgradeBeaconControllerManager = await runTest(
+  await runTest(
     `DharmaUpgradeBeaconControllerManager contract deployment`,
     DharmaUpgradeBeaconControllerManagerDeployer,
     '',
@@ -1948,6 +1956,49 @@ module.exports = {test: async function (provider, testingContext) {
     '',
     'deploy'
   )
+
+  let currentUpgradeBeaconControllerManagerCode;
+  await runTest(
+    'Checking Upgrade Beacon Controller Manager runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS],
+    true,
+    value => {
+      currentUpgradeBeaconControllerManagerCode = value;
+    }
+  )
+
+  if (
+    currentUpgradeBeaconControllerManagerCode !== DharmaUpgradeBeaconControllerManagerArtifact.deployedBytecode
+  ) {
+    await runTest(
+      `DharmaUpgradeBeaconControllerManager contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        '0x00000000000000000000000000000000000000002fe04c162912b60017010000',
+        DharmaUpgradeBeaconControllerManagerArtifact.bytecode
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaUpgradeBeaconControllerManager contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        '0x00000000000000000000000000000000000000002fe04c162912b60017010000',
+        DharmaUpgradeBeaconControllerManagerArtifact.bytecode
+      ]
+    )
+  }
 
   let currentDaiCode;
   await runTest(
