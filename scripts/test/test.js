@@ -24,8 +24,10 @@ const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
 const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
 const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
+
 const ImmutableCreate2FactoryArtifact = require('../../build/contracts/ImmutableCreate2Factory.json')
 const IndestructibleRegistryArtifact = require('../../build/contracts/IndestructibleRegistry.json')
+const CodeHashCacheArtifact = require('../../build/contracts/CodeHashCache.json')
 
 const nullAddress = '0x0000000000000000000000000000000000000000'
 const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000'
@@ -358,6 +360,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   IndestructibleRegistryDeployer.options.data = (
     IndestructibleRegistryArtifact.bytecode
+  )
+
+  const CodeHashCacheDeployer = new web3.eth.Contract(
+    CodeHashCacheArtifact.abi
+  )
+  CodeHashCacheDeployer.options.data = (
+    CodeHashCacheArtifact.bytecode
   )
 
   const DharmaAccountRecoveryMultisigDeployer = new web3.eth.Contract(
@@ -3025,6 +3034,21 @@ module.exports = {test: async function (provider, testingContext) {
     'registerAsIndestructible',
     'send',
     [DharmaSmartWalletImplementationV2.options.address]
+  )
+
+  const CodeHashCache = await runTest(
+    `CodeHashCache contract deployment`,
+    CodeHashCacheDeployer,
+    '',
+    'deploy'
+  )
+
+  await runTest(
+    'CodeHashCache can register the runtime code hash of the smart wallet factory',
+    CodeHashCache,
+    'registerCodeHash',
+    'send',
+    [FACTORY_ADDRESS]
   )
 
   console.log(
