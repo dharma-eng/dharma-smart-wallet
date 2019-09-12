@@ -3,11 +3,7 @@ pragma solidity 0.5.11;
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./helpers/Timelocker.sol";
-
-
-interface UpgradeBeacon {
-  function upgrade(address beacon, address implementation) external;
-}
+import "../interfaces/UpgradeBeaconControllerInterface.sol";
 
 
 /**
@@ -43,8 +39,8 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   using SafeMath for uint256;
 
   // Fire an event whenever the Adharma Contingency is activated or exited.
-  event AdharmaContingencyActivated();
-  event AdharmaContingencyExited();
+  event AdharmaContingencyActivated(address controller, address beacon);
+  event AdharmaContingencyExited(address controller, address beacon);
 
   // store the Adharma Contingency implementation. Note that this is specific to
   // smart wallets, and should not be invoked on other upgrade beacons.
@@ -245,7 +241,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     _upgrade(controller, beacon, _ADHAMRA_IMPLEMENTATION);
 
     // Emit an event to signal that the Adharma Contingency has been activated.
-    emit AdharmaContingencyActivated();
+    emit AdharmaContingencyActivated(controller, beacon);
   }
 
   /**
@@ -269,7 +265,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     if (_adharmaContingency[controller][beacon].activated) {
       delete _adharmaContingency[controller][beacon];
 
-      emit AdharmaContingencyExited();
+      emit AdharmaContingencyExited(controller, beacon);
     }
 
     // Upgrade to the last implementation contract.
@@ -311,7 +307,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     _upgrade(controller, beacon, implementation);
 
     // Emit an event to signal that the Adharma Contingency has been activated.
-    emit AdharmaContingencyExited();
+    emit AdharmaContingencyExited(controller, beacon);
   }
 
   /**
@@ -395,6 +391,8 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     _lastImplementation[controller][beacon] = currentImplementation;
 
     // Trigger the upgrade to the new implementation contract.
-    UpgradeBeacon(controller).upgrade(beacon, implementation);
+    UpgradeBeaconControllerInterface(controller).upgrade(
+      beacon, implementation
+    );
   }
 }
