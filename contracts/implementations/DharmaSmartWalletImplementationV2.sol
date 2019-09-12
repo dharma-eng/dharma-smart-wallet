@@ -230,9 +230,10 @@ contract DharmaSmartWalletImplementationV2 is
    * to account for the cost of overhead incurred up until the start of this
    * function call.
    * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. A unique hash
-   * returned from `getCustomActionID` is prefixed and hashed to create the
-   * signed message.
+   * set for this account in storage slot zero, `_userSigningKey`. If the user
+   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
+   * will be used. A unique hash returned from `getCustomActionID` is prefixed
+   * and hashed to create the message hash for the signature.
    * @param dharmaSignature bytes A signature that resolves to the public key
    * returned for this account from the Dharma Key Registry. A unique hash
    * returned from `getCustomActionID` is prefixed and hashed to create the
@@ -392,9 +393,10 @@ contract DharmaSmartWalletImplementationV2 is
    * to account for the cost of overhead incurred up until the start of this
    * function call.
    * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. A unique hash
-   * returned from `getCustomActionID` is prefixed and hashed to create the
-   * signed message.
+   * set for this account in storage slot zero, `_userSigningKey`. If the user
+   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
+   * will be used. A unique hash returned from `getCustomActionID` is prefixed
+   * and hashed to create the message hash for the signature.
    * @param dharmaSignature bytes A signature that resolves to the public key
    * returned for this account from the Dharma Key Registry. A unique hash
    * returned from `getCustomActionID` is prefixed and hashed to create the
@@ -656,9 +658,10 @@ contract DharmaSmartWalletImplementationV2 is
    * to account for the cost of overhead incurred up until the start of this
    * function call.
    * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. A unique hash
-   * returned from `getCustomActionID` is prefixed and hashed to create the
-   * signed message.
+   * set for this account in storage slot zero, `_userSigningKey`. If the user
+   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
+   * will be used. A unique hash returned from `getCustomActionID` is prefixed
+   * and hashed to create the message hash for the signature.
    * @param dharmaSignature bytes A signature that resolves to the public key
    * returned for this account from the Dharma Key Registry. A unique hash
    * returned from `getCustomActionID` is prefixed and hashed to create the
@@ -1225,9 +1228,10 @@ contract DharmaSmartWalletImplementationV2 is
    * to account for the cost of overhead incurred up until the start of this
    * function call.
    * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. A unique hash
-   * returned from `getCustomActionID` is prefixed and hashed to create the
-   * signed message.
+   * set for this account in storage slot zero, `_userSigningKey`. If the user
+   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
+   * will be used. A unique hash returned from `getCustomActionID` is prefixed
+   * and hashed to create the message hash for the signature.
    * @param dharmaSignature bytes A signature that resolves to the public key
    * returned for this account from the Dharma Key Registry. A unique hash
    * returned from `getCustomActionID` is prefixed and hashed to create the
