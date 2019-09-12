@@ -497,7 +497,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * Registry in order to construct a valid signature for the corresponding
    * action. The current nonce will be used, which means that it will only be
    * valid for the next action taken.
-   * @param action uint256 The type of action, designated by it's index. Valid
+   * @param action uint8 The type of action, designated by it's index. Valid
    * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
    * and USDCWithdrawal (5).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
@@ -530,7 +530,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * Registry in order to construct a valid signature for the corresponding
    * action. Any nonce value may be supplied, which enables constructing valid
    * message hashes for multiple future actions ahead of time.
-   * @param action uint256 The type of action, designated by it's index. Valid
+   * @param action uint8 The type of action, designated by it's index. Valid
    * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
    * and USDCWithdrawal (5).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
@@ -702,7 +702,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * area where these functions should revert (other than due to out-of-gas
    * errors, which can be guarded against by supplying a minimum action gas
    * requirement).
-   * @param action uint256 The type of action, designated by it's index. Valid
+   * @param action uint8 The type of action, designated by it's index. Valid
    * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
    * and USDCWithdrawal (5).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
@@ -1020,7 +1020,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
    * corresponding action. The current nonce will be supplied to this function
    * when reconstructing an action ID during protected function execution based
    * on the supplied parameters.
-   * @param action uint256 The type of action, designated by it's index. Valid
+   * @param action uint8 The type of action, designated by it's index. Valid
    * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
    * and USDCWithdrawal (5).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0

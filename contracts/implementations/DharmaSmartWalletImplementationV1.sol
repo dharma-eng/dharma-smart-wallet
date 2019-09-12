@@ -13,6 +13,7 @@ import "../../interfaces/CTokenInterface.sol";
 import "../../interfaces/USDCV1Interface.sol";
 import "../../interfaces/ComptrollerInterface.sol";
 import "../../interfaces/DharmaKeyRegistryInterface.sol";
+import "../../interfaces/ERC1271.sol";
 
 
 /**
@@ -93,6 +94,9 @@ contract DharmaSmartWalletImplementationV1 is
 
   // Compound returns a value of 0 to indicate success, or lack of an error.
   uint256 internal constant _COMPOUND_SUCCESS = 0;
+
+  // ERC-1271 must return this magic value when `isValidSignature` is called.
+  bytes4 internal constant _ERC_1271_MAGIC_VALUE = bytes4(0x20c13b0b);
 
   /**
    * @notice In initializer, set up user signing key, set approval on the cDAI
@@ -603,9 +607,10 @@ contract DharmaSmartWalletImplementationV1 is
    * Registry in order to construct a valid signature for the corresponding
    * action. The current nonce will be used, which means that it will only be
    * valid for the next action taken.
-   * @param action uint256 The type of action, designated by it's index. Valid
-   * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
-   * and USDCWithdrawal (5).
+   * @param action uint8 The type of action, designated by it's index. Valid
+   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
+   * ETHWithdrawal (6).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
    * for other action types.
    * @param recipient address The account to transfer withdrawn funds to, the
@@ -641,9 +646,10 @@ contract DharmaSmartWalletImplementationV1 is
    * Registry in order to construct a valid signature for the corresponding
    * action. Any nonce value may be supplied, which enables constructing valid
    * message hashes for multiple future actions ahead of time.
-   * @param action uint256 The type of action, designated by it's index. Valid
-   * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
-   * and USDCWithdrawal (5).
+   * @param action uint8 The type of action, designated by it's index. Valid
+   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
+   * ETHWithdrawal (6).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
    * for other action types.
    * @param recipient address The account to transfer withdrawn funds to, the
@@ -988,9 +994,10 @@ contract DharmaSmartWalletImplementationV1 is
    * area where these functions should revert (other than due to out-of-gas
    * errors, which can be guarded against by supplying a minimum action gas
    * requirement).
-   * @param action uint256 The type of action, designated by it's index. Valid
-   * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
-   * and USDCWithdrawal (5).
+   * @param action uint8 The type of action, designated by it's index. Valid
+   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
+   * ETHWithdrawal (6).
    * @param arguments bytes ABI-encoded arguments for the action.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
    * provided to this call - be aware that additional gas must still be included
@@ -1053,7 +1060,9 @@ contract DharmaSmartWalletImplementationV1 is
       // Validate user signing key signature unless it is `msg.sender`.
       if (msg.sender != userSigningKey) {
         require(
-          userSigningKey == messageHash.recover(userSignature),
+          _validateUserSignature(
+            messageHash, action, arguments, userSigningKey, userSignature
+          ),
           "Invalid action - invalid user signature."
         );
       }
@@ -1069,8 +1078,10 @@ contract DharmaSmartWalletImplementationV1 is
       // Validate signing key signature unless user or Dharma is `msg.sender`.
       if (msg.sender != userSigningKey && msg.sender != dharmaSigningKey) {
         require(
-          userSigningKey == messageHash.recover(userSignature) ||
-          dharmaSigningKey == messageHash.recover(dharmaSignature),
+          dharmaSigningKey == messageHash.recover(dharmaSignature) ||
+          _validateUserSignature(
+            messageHash, action, arguments, userSigningKey, userSignature
+          ),
           "Invalid action - invalid signature."
         );
       }
@@ -1317,6 +1328,44 @@ contract DharmaSmartWalletImplementationV1 is
   }
 
   /**
+   * @notice Internal view function for validating a user's signature. If the
+   * user's signing key does not have contract code, it will be validated via
+   * ecrecover; otherwise, it will be validated using ERC-1271, passing the
+   * message hash that was signed, the action type, and the arguments as data.
+   * @param messageHash bytes32 The message hash that is signed by the user. It
+   * is derived by prefixing (according to EIP-191 0x45) and hashing an actionID
+   * returned from `getCustomActionID`.
+   * @param action uint8 The type of action, designated by it's index. Valid
+   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
+   * ETHWithdrawal (6).
+   * @param arguments bytes ABI-encoded arguments for the action.
+   * @param userSignature bytes A signature that resolves to the public key
+   * set for this account in storage slot zero, `_userSigningKey`. If the user
+   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
+   * will be used.
+   * @return A boolean representing the validity of the supplied user signature.
+   */
+  function _validateUserSignature(
+    bytes32 messageHash,
+    ActionType action,
+    bytes memory arguments,
+    address userSigningKey,
+    bytes memory userSignature
+  ) internal view returns (bool valid) {
+    if (!userSigningKey.isContract()) {
+      valid = userSigningKey == messageHash.recover(userSignature);
+    } else {
+      bytes memory data = abi.encode(messageHash, action, arguments);
+      valid = (
+        ERC1271(userSigningKey).isValidSignature(
+          data, userSignature
+        ) == _ERC_1271_MAGIC_VALUE
+      );
+    }
+  }
+
+  /**
    * @notice Internal view function to get the Dharma signing key for the smart
    * wallet from the Dharma Key Registry. This key can be set for each specific
    * smart wallet - if none has been set, a global fallback key will be used.
@@ -1337,9 +1386,10 @@ contract DharmaSmartWalletImplementationV1 is
    * corresponding action. The current nonce will be supplied to this function
    * when reconstructing an action ID during protected function execution based
    * on the supplied parameters.
-   * @param action uint256 The type of action, designated by it's index. Valid
-   * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
-   * and USDCWithdrawal (5).
+   * @param action uint8 The type of action, designated by it's index. Valid
+   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
+   * ETHWithdrawal (6).
    * @param arguments bytes ABI-encoded arguments for the action.
    * @param nonce uint256 The nonce to use.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
