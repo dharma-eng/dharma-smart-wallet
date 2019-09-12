@@ -17,6 +17,7 @@ const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/Dha
 
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
+const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV2.json')
 
 const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
 const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
@@ -24,6 +25,7 @@ const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
 const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
 const ImmutableCreate2FactoryArtifact = require('../../build/contracts/ImmutableCreate2Factory.json')
+const IndestructibleRegistryArtifact = require('../../build/contracts/IndestructibleRegistry.json')
 
 const nullAddress = '0x0000000000000000000000000000000000000000'
 const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000'
@@ -119,6 +121,7 @@ const ACCOUNT_RECOVERY_MANAGER_ADDRESS = '0x0000000000C5Ebce8297A7E8f9ED34161a32
 const UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS = '0x0000000000de600425774E508869563B583843FC'
 const FACTORY_ADDRESS = '0x8D1e00b000e56d5BcB006F3a008Ca6003b9F0033'
 const ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS = '0x000000000006FD7FA6B5E08621d480b8e7Ab04eD'
+const INDESTRUCTIBLE_REGISTRY_ADDRESS = '0x0000000000f55ff05D0080fE17A63b16596Fd59f'
 
 const contractNames = {}
 contractNames[DAI_MAINNET_ADDRESS] = 'DAI'
@@ -307,7 +310,6 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaAccountRecoveryManagerArtifact = require('../../../build/contracts/DharmaAccountRecoveryManager.json')
     AdharmaSmartWalletImplementationArtifact = require('../../../build/contracts/AdharmaSmartWalletImplementation.json')
     DharmaUpgradeBeaconControllerManagerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
-    //DharmaUpgradeBeaconControllerManagerArtifact = require('../../../build/contracts/DharmaAccountRecoveryManager.json')
   } else {
     DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
     DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
@@ -318,7 +320,6 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaAccountRecoveryManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
     AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
     DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
-    //DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
   }
 
   var web3 = provider
@@ -351,6 +352,13 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaAccountRecoveryManagerArtifact.abi,
     ACCOUNT_RECOVERY_MANAGER_ADDRESS
   ) 
+
+  const IndestructibleRegistryDeployer = new web3.eth.Contract(
+    IndestructibleRegistryArtifact.abi
+  )
+  IndestructibleRegistryDeployer.options.data = (
+    IndestructibleRegistryArtifact.bytecode
+  )
 
   const DharmaAccountRecoveryMultisigDeployer = new web3.eth.Contract(
     DharmaAccountRecoveryMultisigArtifact.abi
@@ -414,6 +422,12 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaSmartWalletFactoryV1Artifact.bytecode
   )
 
+  const AdharmaSmartWalletImplementationDeployer = new web3.eth.Contract(
+    AdharmaSmartWalletImplementationArtifact.abi
+  )
+  AdharmaSmartWalletImplementationDeployer.options.data = (
+    AdharmaSmartWalletImplementationArtifact.bytecode
+  )
   
   const DharmaAccountRecoveryManagerDeployer = new web3.eth.Contract(
     DharmaAccountRecoveryManagerArtifact.abi
@@ -434,6 +448,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   DharmaSmartWalletImplementationV1Deployer.options.data = (
     DharmaSmartWalletImplementationV1Artifact.bytecode
+  )
+
+  const DharmaSmartWalletImplementationV2Deployer = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV2Artifact.abi
+  )
+  DharmaSmartWalletImplementationV2Deployer.options.data = (
+    DharmaSmartWalletImplementationV2Artifact.bytecode
   )
 
   const UpgradeBeaconImplementationCheckDeployer = new web3.eth.Contract(
@@ -1559,6 +1580,13 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
+  const DharmaSmartWalletImplementationV2 = await runTest(
+    `DharmaSmartWalletImplementationV2 contract deployment`,
+    DharmaSmartWalletImplementationV2Deployer,
+    '',
+    'deploy'
+  )
+
   await runTest(
     'Dharma Upgrade Beacon Controller cannot set null address as implementation',
     DharmaUpgradeBeaconController,
@@ -1951,8 +1979,8 @@ module.exports = {test: async function (provider, testingContext) {
   }
 
   await runTest(
-    `DharmaAccountRecoveryManager contract deployment`,
-    DharmaAccountRecoveryManagerDeployer,
+    `AdharmaSmartWalletImplementation contract deployment`,
+    AdharmaSmartWalletImplementationDeployer,
     '',
     'deploy'
   )
@@ -2893,6 +2921,110 @@ module.exports = {test: async function (provider, testingContext) {
      address
     ],
     false
+  )
+
+  const IndestructibleRegistry = await runTest(
+    `IndestructibleRegistry contract deployment`,
+    IndestructibleRegistryDeployer,
+    '',
+    'deploy'
+  )
+
+  await runTest(
+    'IndestructibleRegistry can register itself as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [IndestructibleRegistry.options.address]
+  )
+
+  await runTest(
+    'IndestructibleRegistry can register the upgrade beacon as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [UPGRADE_BEACON_ADDRESS]
+  )  
+
+  await runTest(
+    'IndestructibleRegistry can register the upgrade beacon controller as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [UPGRADE_BEACON_CONTROLLER_ADDRESS]
+  )
+
+  await runTest(
+    'IndestructibleRegistry can register the upgrade beacon envoy as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [UPGRADE_BEACON_ENVOY_ADDRESS]
+  )  
+
+  await runTest(
+    'IndestructibleRegistry can register the upgrade beacon controller manager as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS]
+  )
+
+  await runTest(
+    'IndestructibleRegistry can register the account recovery manager as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [ACCOUNT_RECOVERY_MANAGER_ADDRESS]
+  )
+
+  await runTest(
+    'IndestructibleRegistry can register the Dharma Key Registry as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [KEY_REGISTRY_ADDRESS]
+  )
+
+  await runTest(
+    'WARNING: IndestructibleRegistry CANNOT register the smart wallet factory as indestructible (even though it is in fact NOT destructible)',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [FACTORY_ADDRESS],
+    false
+  )
+
+  await runTest(
+    'IndestructibleRegistry can register the Adharma implementation as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS]
+  )
+
+  await runTest(
+    'IndestructibleRegistry can register the V0 implementation as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [DharmaSmartWalletImplementationV0.options.address]
+  )
+
+  await runTest(
+    'IndestructibleRegistry can register the V1 implementation as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [DharmaSmartWalletImplementationV1.options.address]
+  )
+
+  await runTest(
+    'IndestructibleRegistry can register the V2 implementation as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [DharmaSmartWalletImplementationV2.options.address]
   )
 
   console.log(
