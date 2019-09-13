@@ -15,6 +15,8 @@ module.exports = {
     'openzeppelin-upgradeability/utils/Address.sol',
     'mock/MockCodeCheck.sol',
     'test/UpgradeBeaconImplementationCheck.sol',
-    'helpers/ImmutableCreate2Factory.sol'
+    'helpers/ImmutableCreate2Factory.sol',
+    'helpers/CodeHashCache.sol',
+    'helpers/IndestructibleRegistry.sol'
   ]
 }
