@@ -395,6 +395,27 @@ contract DharmaSmartWalletImplementationV1 is
     }
   }
 
+  /**
+   * @notice Withdraw Ether to a provided recipient address by transferring it
+   * to a recipient. This is only intended to be utilized on V1 as a mechanism
+   * for recovering Ether from this contract.
+   * @param amount uint256 The amount of Ether to withdraw.
+   * @param recipient address The account to transfer the Ether to.
+   * @param minimumActionGas uint256 The minimum amount of gas that must be
+   * provided to this call - be aware that additional gas must still be included
+   * to account for the cost of overhead incurred up until the start of this
+   * function call.
+   * @param userSignature bytes A signature that resolves to the public key
+   * set for this account in storage slot zero, `_userSigningKey`. If the user
+   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
+   * will be used. A unique hash returned from `getCustomActionID` is prefixed
+   * and hashed to create the message hash for the signature.
+   * @param dharmaSignature bytes A signature that resolves to the public key
+   * returned for this account from the Dharma Key Registry. A unique hash
+   * returned from `getCustomActionID` is prefixed and hashed to create the
+   * signed message.
+   * @return True if the transfer succeeded, otherwise false.
+   */
   function withdrawEther(
     uint256 amount,
     address payable recipient,
@@ -411,35 +432,11 @@ contract DharmaSmartWalletImplementationV1 is
       dharmaSignature
     );
 
-    // Set the self-call context so we can call _withdrawEtherAtomic.
-    _selfCallContext = this.withdrawEther.selector;
-
-    // Make the atomic self-call - if redeemUnderlying fails on cDAI, it will
-    // succeed but nothing will happen except firing an ExternalError event. If
-    // the second part of the self-call (the Dai transfer) fails, it will revert
-    // and roll back the first part of the call, and we'll fire an ExternalError
-    // event after returning from the failed call.
-    bytes memory returnData;
-    (ok, returnData) = address(this).call(abi.encodeWithSelector(
-      this._withdrawEtherAtomic.selector, amount, recipient
-    ));
+    // Attempt to perform the transfer and emit an event if it fails.
+    (ok, ) = recipient.call.gas(2300).value(amount)("");
     if (!ok) {
       emit ExternalError(address(this), "Ether transfer was unsuccessful.");
-    } else {
-      // Ensure that ok == false in the event the transfer failed.
-      ok = abi.decode(returnData, (bool));
     }
-  }
-
-  function _withdrawEtherAtomic(
-    uint256 amount,
-    address payable recipient
-  ) external returns (bool success) {
-    // Ensure caller is this contract and self-call context is correctly set.
-    _enforceSelfCallFrom(this.withdrawEther.selector);
-
-    recipient.transfer(amount);
-    success = true;
   }
 
   /**
@@ -471,6 +468,31 @@ contract DharmaSmartWalletImplementationV1 is
     );
   }
 
+  /**
+   * @notice Perform a generic call to another contract. Note that accounts with
+   * no code may not be specified, nor may the smart wallet itself. In order to
+   * increment the nonce and invalidate the signature, a call to this function
+   * with a valid target, signatutes, and gas will always succeed. To determine
+   * whether the call made as part of the action was successful or not, either
+   * the return values or the `CallSuccess` or `CallFailure` event can be used.
+   * @param to address The contract to call.
+   * @param data bytes The calldata to provide when making the call.
+   * @param minimumActionGas uint256 The minimum amount of gas that must be
+   * provided to this call - be aware that additional gas must still be included
+   * to account for the cost of overhead incurred up until the start of this
+   * function call.
+   * @param userSignature bytes A signature that resolves to the public key
+   * set for this account in storage slot zero, `_userSigningKey`. If the user
+   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
+   * will be used. A unique hash returned from `getCustomActionID` is prefixed
+   * and hashed to create the message hash for the signature.
+   * @param dharmaSignature bytes A signature that resolves to the public key
+   * returned for this account from the Dharma Key Registry. A unique hash
+   * returned from `getCustomActionID` is prefixed and hashed to create the
+   * signed message.
+   * @return A boolean signifying the status of the call, as well as any data
+   * returned from the call.
+   */
   function executeAction(
     address to,
     bytes calldata data,
