@@ -1,10 +1,12 @@
 pragma solidity 0.5.11;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/DharmaSmartWalletFactoryV1Interface.sol";
 import "../../interfaces/DharmaKeyRegistryInterface.sol";
+import "../../interfaces/RelayContractInterface.sol";
 
 
 /**
@@ -56,6 +58,11 @@ contract RelayMigrator is Ownable {
   event MigrationError(
     address cToken, address relayContract, address smartWallet, uint256 balance
   );
+
+  struct RelayCall {
+    address relayContract;
+    RelayContractInterface.transactionParameters[] executeTransactionsArgument;
+  }
 
   address[] private _relayContracts;
 
@@ -177,6 +184,26 @@ contract RelayMigrator is Ownable {
         deploymentCompleted = true;
         break;
       }
+    }
+  }
+
+  /**
+   * @notice Set approvals to transfer cDAI and cUSDC on a group of relay
+   * contracts in batches. Anyone may call this function as long as valid relay
+   * contracts, transaction parameters, and signatures are provided - the call
+   * will revert if any portion of the call reverts.
+   * @param relayCalls RelayCall[] An array of RelayCall structs, which contain
+   * relay contract addresses to call and an array of transactionParameters
+   * structs are provided as an argument when calling `executeTransactions` on
+   * the relay contract.
+   */
+  function batchExecuteTransactions(RelayCall[] memory relayCalls) public {
+    for (uint256 i = 0; i < relayCalls.length; i++) {
+      RelayCall memory relayCall = relayCalls[i];
+      RelayContractInterface.transactionParameters[] memory txs = (
+        relayCall.executeTransactionsArgument
+      );
+      RelayContractInterface(relayCall.relayContract).executeTransactions(txs);
     }
   }
 
