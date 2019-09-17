@@ -1,7 +1,6 @@
 pragma solidity 0.5.11;
 pragma experimental ABIEncoderV2;
 
-import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/DharmaSmartWalletFactoryV1Interface.sol";
@@ -53,8 +52,6 @@ import "../../interfaces/RelayContractInterface.sol";
  * the user's signing key).
  */
 contract RelayMigrator is Ownable {
-  using Address for address;
-
   event MigrationError(
     address cToken, address relayContract, address smartWallet, uint256 balance
   );
@@ -101,6 +98,18 @@ contract RelayMigrator is Ownable {
     0x39AA39c021dfbaE8faC545936693aC917d5E7563 // mainnet
   );
 
+  bytes32 internal constant _RELAY_CODE_HASH_ONE = bytes32(
+    0x2a85d02ccfbef70d3ca840c2a0e46ed31085a34079a601e5ded05f97fae15089
+  );
+
+  bytes32 internal constant _RELAY_CODE_HASH_TWO = bytes32(
+    0xc1f8a51c720d3d6a8361c8fe6cf7948e0012882ad31966c6be4cac186ed4ddb9
+  );
+
+  bytes32 internal constant _RELAY_CODE_HASH_THREE = bytes32(
+    0x7995a9071b13688c3ef87630b91b83b0e6983c587999f586dabad1bca6d4f01b
+  );
+
   /**
    * @notice In constructor, set the transaction submitter as the owner, set all
    * initial phase flags to false, and set the initial migration index to 0.
@@ -130,11 +139,16 @@ contract RelayMigrator is Ownable {
       "Cannot register new relay contracts once registration is completed."
     );
 
+    bytes32 codeHash;
     for (uint256 i; i < relayContracts.length; i++) {
       address relayContract = relayContracts[i];
+
+      assembly { codeHash := extcodehash(relayContract) }
       
       require(
-        relayContract.isContract(),
+        codeHash == _RELAY_CODE_HASH_ONE ||
+        codeHash == _RELAY_CODE_HASH_TWO ||
+        codeHash == _RELAY_CODE_HASH_THREE,
         "Must supply a valid relay contract address."
       );
       require(
