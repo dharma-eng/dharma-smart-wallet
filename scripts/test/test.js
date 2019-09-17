@@ -121,7 +121,7 @@ const UPGRADE_BEACON_ADDRESS = '0x0000000000b45D6593312ac9fdE193F3D0633644'
 const KEY_REGISTRY_ADDRESS = '0x00000000006c7f32F0cD1eA4C1383558eb68802D'
 const ACCOUNT_RECOVERY_MANAGER_ADDRESS = '0x0000000000C5Ebce8297A7E8f9ED34161a32D528'
 const UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS = '0x0000000000de600425774E508869563B583843FC'
-const FACTORY_ADDRESS = '0x8D1e00b000e56d5BcB006F3a008Ca6003b9F0033'
+const FACTORY_ADDRESS = '0x8cF8DDa71fe834608F6803C33B8a64a7eC41dEBB' //'0x8D1e00b000e56d5BcB006F3a008Ca6003b9F0033'
 const ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS = '0x000000000006FD7FA6B5E08621d480b8e7Ab04eD'
 const INDESTRUCTIBLE_REGISTRY_ADDRESS = '0x0000000000f55ff05D0080fE17A63b16596Fd59f'
 
@@ -1231,15 +1231,6 @@ module.exports = {test: async function (provider, testingContext) {
     '',
     'deploy',
     [address]
-  )
-
-  const FailedUpgradeBeaconProxy = await runTest(
-    `failure when deploying UpgradeBeaconProxy contract using an undeployed beacon`,
-    UpgradeBeaconProxyDeployer,
-    '',
-    'deploy',
-    ["0x"],
-    false
   )
 
   let currentUpgradeBeaconCode;
@@ -2939,127 +2930,6 @@ module.exports = {test: async function (provider, testingContext) {
     false
   )
 
-  const IndestructibleRegistry = await runTest(
-    `IndestructibleRegistry contract deployment`,
-    IndestructibleRegistryDeployer,
-    '',
-    'deploy'
-  )
-
-  await runTest(
-    'IndestructibleRegistry can register itself as indestructible',
-    IndestructibleRegistry,
-    'registerAsIndestructible',
-    'send',
-    [IndestructibleRegistry.options.address]
-  )
-
-  await runTest(
-    'IndestructibleRegistry can register the upgrade beacon as indestructible',
-    IndestructibleRegistry,
-    'registerAsIndestructible',
-    'send',
-    [UPGRADE_BEACON_ADDRESS]
-  )  
-
-  await runTest(
-    'IndestructibleRegistry can register the upgrade beacon controller as indestructible',
-    IndestructibleRegistry,
-    'registerAsIndestructible',
-    'send',
-    [UPGRADE_BEACON_CONTROLLER_ADDRESS]
-  )
-
-  await runTest(
-    'IndestructibleRegistry can register the upgrade beacon envoy as indestructible',
-    IndestructibleRegistry,
-    'registerAsIndestructible',
-    'send',
-    [UPGRADE_BEACON_ENVOY_ADDRESS]
-  )  
-
-  await runTest(
-    'IndestructibleRegistry can register the upgrade beacon controller manager as indestructible',
-    IndestructibleRegistry,
-    'registerAsIndestructible',
-    'send',
-    [UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS]
-  )
-
-  await runTest(
-    'IndestructibleRegistry can register the account recovery manager as indestructible',
-    IndestructibleRegistry,
-    'registerAsIndestructible',
-    'send',
-    [ACCOUNT_RECOVERY_MANAGER_ADDRESS]
-  )
-
-  await runTest(
-    'IndestructibleRegistry can register the Dharma Key Registry as indestructible',
-    IndestructibleRegistry,
-    'registerAsIndestructible',
-    'send',
-    [KEY_REGISTRY_ADDRESS]
-  )
-
-  await runTest(
-    'WARNING: IndestructibleRegistry CANNOT register the smart wallet factory as indestructible (even though it is in fact NOT destructible)',
-    IndestructibleRegistry,
-    'registerAsIndestructible',
-    'send',
-    [FACTORY_ADDRESS],
-    false
-  )
-
-  await runTest(
-    'IndestructibleRegistry can register the Adharma implementation as indestructible',
-    IndestructibleRegistry,
-    'registerAsIndestructible',
-    'send',
-    [ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS]
-  )
-
-  await runTest(
-    'IndestructibleRegistry can register V0 implementation as indestructible',
-    IndestructibleRegistry,
-    'registerAsIndestructible',
-    'send',
-    [DharmaSmartWalletImplementationV0.options.address]
-  )
-
-  await runTest(
-    'IndestructibleRegistry can register V1 implementation as indestructible',
-    IndestructibleRegistry,
-    'registerAsIndestructible',
-    'send',
-    [DharmaSmartWalletImplementationV1.options.address]
-  )
-
-  if (testingContext !== 'coverage') {
-    await runTest(
-      'IndestructibleRegistry can register V2 implementation as indestructible',
-      IndestructibleRegistry,
-      'registerAsIndestructible',
-      'send',
-      [DharmaSmartWalletImplementationV2.options.address]
-    )
-  }
-
-  const CodeHashCache = await runTest(
-    `CodeHashCache contract deployment`,
-    CodeHashCacheDeployer,
-    '',
-    'deploy'
-  )
-
-  await runTest(
-    'CodeHashCache can register the runtime code hash of the smart wallet factory',
-    CodeHashCache,
-    'registerCodeHash',
-    'send',
-    [FACTORY_ADDRESS]
-  )
-
   let originalNonce
   await runTest(
     'UserSmartWallet can get the nonce prior to upgrade',
@@ -3809,7 +3679,6 @@ module.exports = {test: async function (provider, testingContext) {
           })
         })
 
-        assert.strictEqual(events[0].address, 'Smart Wallet')
         assert.strictEqual(events[0].eventName, 'NewUserSigningKey')
         assert.strictEqual(events[0].returnValues.userSigningKey, addressTwo) 
 
