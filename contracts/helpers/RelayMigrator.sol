@@ -202,26 +202,6 @@ contract RelayMigrator is Ownable {
   }
 
   /**
-   * @notice Set approvals to transfer cDAI and cUSDC on a group of relay
-   * contracts in batches. Anyone may call this function as long as valid relay
-   * contracts, transaction parameters, and signatures are provided - the call
-   * will revert if any portion of the call reverts.
-   * @param relayCalls RelayCall[] An array of RelayCall structs, which contain
-   * relay contract addresses to call and an array of transactionParameters
-   * structs are provided as an argument when calling `executeTransactions` on
-   * the relay contract.
-   */
-  function batchExecuteTransactions(RelayCall[] memory relayCalls) public {
-    for (uint256 i = 0; i < relayCalls.length; i++) {
-      RelayCall memory relayCall = relayCalls[i];
-      RelayContractInterface.transactionParameters[] memory txs = (
-        relayCall.executeTransactionsArgument
-      );
-      RelayContractInterface(relayCall.relayContract).executeTransactions(txs);
-    }
-  }
-
-  /**
    * @notice Begin relay contract migration. Only the owner may call this
    * function, and smart wallet deployment must first be completed.
    */
@@ -328,5 +308,25 @@ contract RelayMigrator is Ownable {
   ) external view returns (address relayContract, address smartWallet) {
     relayContract = _relayContracts[index];
     smartWallet = _smartWallets[index];
-  } 
+  }
+
+  /**
+   * @notice Set approvals to transfer cDAI and cUSDC on a group of relay
+   * contracts in batches. Anyone may call this function as long as valid relay
+   * contracts, transaction parameters, and signatures are provided - the call
+   * will revert if any portion of the call reverts.
+   * @param relayCalls RelayCall[] An array of RelayCall structs, which contain
+   * relay contract addresses to call and an array of transactionParameters
+   * structs are provided as an argument when calling `executeTransactions` on
+   * the relay contract.
+   */
+  function batchExecuteTransactions(RelayCall[] memory relayCalls) public {
+    for (uint256 i = 0; i < relayCalls.length; i++) {
+      RelayCall memory relayCall = relayCalls[i];
+      RelayContractInterface.transactionParameters[] memory txs = (
+        relayCall.executeTransactionsArgument
+      );
+      RelayContractInterface(relayCall.relayContract).executeTransactions(txs);
+    }
+  }
 }

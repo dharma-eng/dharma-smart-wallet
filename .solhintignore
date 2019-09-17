@@ -1,3 +1,5 @@
 contracts/mock/MockCodeCheck.sol
 contracts/openzeppelin-upgradeability/
-Contracts/helpers/IndestructibleRegistry.sol
+contracts/helpers/IndestructibleRegistry.sol
+contracts/mock/RelayContract.sol
+contracts/mock/RelayContractV2.sol
