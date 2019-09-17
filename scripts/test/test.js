@@ -1,6 +1,7 @@
 var assert = require('assert')
 var fs = require('fs')
 var util = require('ethereumjs-util')
+const constants = require('./constants.js')
 
 let DharmaUpgradeBeaconArtifact;
 let DharmaUpgradeBeaconControllerArtifact;
@@ -29,111 +30,15 @@ const ImmutableCreate2FactoryArtifact = require('../../build/contracts/Immutable
 const IndestructibleRegistryArtifact = require('../../build/contracts/IndestructibleRegistry.json')
 const CodeHashCacheArtifact = require('../../build/contracts/CodeHashCache.json')
 
-const nullAddress = '0x0000000000000000000000000000000000000000'
-const nullBytes32 = '0x0000000000000000000000000000000000000000000000000000000000000000'
-const emptyHash = '0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470'
-const FULL_APPROVAL = '115792089237316195423570985008687907853269984665640564039457584007913129639935'
-
-const keylessCreate2DeployerAddress = '0x4c8D290a1B368ac4728d83a9e8321fC3af2b39b1'
-const keylessCreate2DeploymentTransaction = '0xf87e8085174876e800830186a08080ad601f80600e600039806000f350fe60003681823780368234f58015156014578182fd5b80825250506014600cf31ba02222222222222222222222222222222222222222222222222222222222222222a02222222222222222222222222222222222222222222222222222222222222222'
-const keylessCreate2Address = '0x7A0D94F55792C434d74a40883C6ed8545E406D12'
-const keylessCreate2Runtime = '0x60003681823780368234f58015156014578182fd5b80825250506014600cf3'
-
-const InefficientImmutableCreate2FactoryAddress = '0xcfA3A7637547094fF06246817a35B8333C315196'
-const ImmutableCreate2FactoryAddress = '0x0000000000FFe8B47B3e2130213B802212439497'
-const ImmutableCreate2FactoryRuntimeHash = '0x767db8f19b71e367540fa372e8e81e4dcb7ca8feede0ae58a0c0bd08b7320dee'
-
-const immutableCreate2FactoryCreationCode = (
-  '0x608060405234801561001057600080fd5b50610833806100206000396000f3fe60806040' +
-  '526004361061003f5760003560e01c806308508b8f1461004457806364e030871461009857' +
-  '806385cf97ab14610138578063a49a7c90146101bc575b600080fd5b348015610050576000' +
-  '80fd5b506100846004803603602081101561006757600080fd5b503573ffffffffffffffff' +
-  'ffffffffffffffffffffffff166101ec565b604080519115158252519081900360200190f3' +
-  '5b61010f600480360360408110156100ae57600080fd5b8135919081019060408101602082' +
-  '01356401000000008111156100d057600080fd5b8201836020820111156100e257600080fd' +
-  '5b8035906020019184600183028401116401000000008311171561010457600080fd5b5090' +
-  '92509050610217565b6040805173ffffffffffffffffffffffffffffffffffffffff909216' +
-  '8252519081900360200190f35b34801561014457600080fd5b5061010f6004803603604081' +
-  '101561015b57600080fd5b8135919081019060408101602082013564010000000081111561' +
-  '017d57600080fd5b82018360208201111561018f57600080fd5b8035906020019184600183' +
-  '02840111640100000000831117156101b157600080fd5b509092509050610592565b348015' +
-  '6101c857600080fd5b5061010f600480360360408110156101df57600080fd5b5080359060' +
-  '20013561069e565b73ffffffffffffffffffffffffffffffffffffffff1660009081526020' +
-  '819052604090205460ff1690565b600083606081901c33148061024c57507fffffffffffff' +
-  'ffffffffffffffffffffffffffff0000000000000000000000008116155b6102a157604051' +
-  '7f08c379a00000000000000000000000000000000000000000000000000000000081526004' +
-  '01808060200182810382526045815260200180610774604591396060019150506040518091' +
-  '0390fd5b606084848080601f01602080910402602001604051908101604052809392919081' +
-  '81526020018383808284376000920182905250604051855195965090943094508b93508692' +
-  '506020918201918291908401908083835b6020831061033557805182527fffffffffffffff' +
-  'ffffffffffffffffffffffffffffffffffffffffffffffffe0909201916020918201910161' +
-  '02f8565b51815160209384036101000a7fffffffffffffffffffffffffffffffffffffffff' +
-  'ffffffffffffffffffffffff018019909216911617905260408051929094018281037fffff' +
-  'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffe001835280855282' +
-  '51928201929092207fff000000000000000000000000000000000000000000000000000000' +
-  '000000008383015260609890981b7fffffffffffffffffffffffffffffffffffffffff0000' +
-  '00000000000000000000166021830152603582019690965260558082019790975282518082' +
-  '03909701875260750182525084519484019490942073ffffffffffffffffffffffffffffff' +
-  'ffffffffff81166000908152938490529390922054929350505060ff16156104a757604051' +
-  '7f08c379a00000000000000000000000000000000000000000000000000000000081526004' +
-  '0180806020018281038252603f815260200180610735603f91396040019150506040518091' +
-  '0390fd5b81602001825188818334f5955050508073ffffffffffffffffffffffffffffffff' +
-  'ffffffff168473ffffffffffffffffffffffffffffffffffffffff161461053a576040517f' +
-  '08c379a0000000000000000000000000000000000000000000000000000000008152600401' +
-  '8080602001828103825260468152602001806107b960469139606001915050604051809103' +
-  '90fd5b50505073ffffffffffffffffffffffffffffffffffffffff81166000908152602081' +
-  '90526040902080547fffffffffffffffffffffffffffffffffffffffffffffffffffffffff' +
-  'ffffff001660011790559392505050565b6000308484846040516020018083838082843760' +
-  '408051919093018181037fffffffffffffffffffffffffffffffffffffffffffffffffffff' +
-  'ffffffffffe001825280845281516020928301207fff000000000000000000000000000000' +
-  '000000000000000000000000000000008383015260609990991b7fffffffffffffffffffff' +
-  'ffffffffffffffffffff000000000000000000000000166021820152603581019790975260' +
-  '558088019890985282518088039098018852607590960182525085519585019590952073ff' +
-  'ffffffffffffffffffffffffffffffffffffff811660009081529485905294909320549394' +
-  '50505060ff909116159050610697575060005b9392505050565b604080517fff0000000000' +
-  '00000000000000000000000000000000000000000000000000006020808301919091523060' +
-  '601b6021830152603582018590526055808301859052835180840390910181526075909201' +
-  '835281519181019190912073ffffffffffffffffffffffffffffffffffffffff8116600090' +
-  '8152918290529190205460ff161561072e575060005b9291505056fe496e76616c69642063' +
-  '6f6e7472616374206372656174696f6e202d20636f6e74726163742068617320616c726561' +
-  '6479206265656e206465706c6f7965642e496e76616c69642073616c74202d206669727374' +
-  '203230206279746573206f66207468652073616c74206d757374206d617463682063616c6c' +
-  '696e6720616464726573732e4661696c656420746f206465706c6f7920636f6e7472616374' +
-  '207573696e672070726f76696465642073616c7420616e6420696e697469616c697a617469' +
-  '6f6e20636f64652ea265627a7a723058202bdc55310d97c4088f18acf04253db593f091405' +
-  '9f0c781a9df3624dcef0d1cf64736f6c634300050a0032'
-)
-
-const eth_whale = '0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe'
-const dai_whale = '0x76B03EB651153a81fA1f212f2f59329B4180A46F'
-const usdc_whale = '0x035e742A7E62253C606b9028eeB65178B44F1e7E'
-
-const DAI_MAINNET_ADDRESS = '0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359'
-const USDC_MAINNET_ADDRESS = '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'
-const CDAI_MAINNET_ADDRESS = '0xF5DCe57282A584D2746FaF1593d3121Fcac444dC'
-const CUSDC_MAINNET_ADDRESS = '0x39AA39c021dfbaE8faC545936693aC917d5E7563'
-const CETH_MAINNET_ADDRESS = '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5'
-const COMPTROLLER_MAINNET_ADDRESS = '0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B'
-
-const UPGRADE_BEACON_ENVOY_ADDRESS = '0x000000000067503c398F4c9652530DBC4eA95C02'
-const UPGRADE_BEACON_CONTROLLER_ADDRESS = '0x00000000003284ACb9aDEb78A2dDe0A8499932b9'
-const UPGRADE_BEACON_ADDRESS = '0x0000000000b45D6593312ac9fdE193F3D0633644'
-const KEY_REGISTRY_ADDRESS = '0x00000000006c7f32F0cD1eA4C1383558eb68802D'
-const ACCOUNT_RECOVERY_MANAGER_ADDRESS = '0x0000000000C5Ebce8297A7E8f9ED34161a32D528'
-const UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS = '0x0000000000de600425774E508869563B583843FC'
-const FACTORY_ADDRESS = '0x8cF8DDa71fe834608F6803C33B8a64a7eC41dEBB' //'0x8D1e00b000e56d5BcB006F3a008Ca6003b9F0033'
-const ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS = '0x000000000006FD7FA6B5E08621d480b8e7Ab04eD'
-const INDESTRUCTIBLE_REGISTRY_ADDRESS = '0x0000000000f55ff05D0080fE17A63b16596Fd59f'
-
 const contractNames = {}
-contractNames[DAI_MAINNET_ADDRESS] = 'DAI'
-contractNames[USDC_MAINNET_ADDRESS] = 'USDC'
-contractNames[CDAI_MAINNET_ADDRESS] = 'CDAI'
-contractNames[CUSDC_MAINNET_ADDRESS] = 'CUSDC'
-contractNames[CETH_MAINNET_ADDRESS] = 'CETH'
-contractNames[COMPTROLLER_MAINNET_ADDRESS] = 'Comptroller'
+contractNames[constants.DAI_MAINNET_ADDRESS] = 'DAI'
+contractNames[constants.USDC_MAINNET_ADDRESS] = 'USDC'
+contractNames[constants.CDAI_MAINNET_ADDRESS] = 'CDAI'
+contractNames[constants.CUSDC_MAINNET_ADDRESS] = 'CUSDC'
+contractNames[constants.CETH_MAINNET_ADDRESS] = 'CETH'
+contractNames[constants.COMPTROLLER_MAINNET_ADDRESS] = 'Comptroller'
 
-// keccak256 of NewUserSigningKey(address) -> dharmaKey
+// keccak256 of NewUserSigningKey(address) -> userSigningKey
 const NEW_DHARMA_KEY_TOPIC = '0x7083aac3cab97f1219cedd0ab328a5b138a10b0fc72dd9348f1dc50199b21fda'
 const NEW_DHARMA_KEY_ABI = [
   {
@@ -142,7 +47,7 @@ const NEW_DHARMA_KEY_ABI = [
   }
 ]
 
-// keccak256 of ExternalError(address,string) -> source, revertReason
+// keccak256 of ExternalError(address,string) -> source, reason
 const EXTERNAL_ERROR_TOPIC = '0x5bbd5ab79029b89a22c80c7b7bfdc2f0c8e3f0d2a7330c7148cabc044250674b'
 const EXTERNAL_ERROR_ABI = [
   {
@@ -151,11 +56,11 @@ const EXTERNAL_ERROR_ABI = [
     indexed: true
   }, {
     type: 'string',
-    name: 'revertReason'
+    name: 'reason'
   }
 ]
 
-// keccak256 of SmartWalletDeployed(address,address) -> wallet, dharmaKey
+// keccak256 of SmartWalletDeployed(address,address) -> wallet, userSigningKey
 const SMART_WALLET_DEPLOYED_TOPIC = '0x6e60d84846384a1994833ed675b0a0f76bef64943304debf6e42a9706d1a7dd7'
 const SMART_WALLET_DEPLOYED_ABI = [
   {
@@ -163,7 +68,7 @@ const SMART_WALLET_DEPLOYED_ABI = [
     name: 'wallet'
   }, {
     type: 'address',
-    name: 'dharmaKey'
+    name: 'userSigningKey'
   }
 ]
 
@@ -332,27 +237,27 @@ module.exports = {test: async function (provider, testingContext) {
 
   const DharmaUpgradeBeaconController = new web3.eth.Contract(
     DharmaUpgradeBeaconControllerArtifact.abi,
-    UPGRADE_BEACON_CONTROLLER_ADDRESS
+    constants.UPGRADE_BEACON_CONTROLLER_ADDRESS
   )
 
   const DharmaUpgradeBeacon = new web3.eth.Contract(
     DharmaUpgradeBeaconArtifact.abi,
-    UPGRADE_BEACON_ADDRESS
+    constants.UPGRADE_BEACON_ADDRESS
   )
 
   const DharmaSmartWalletFactoryV1 = new web3.eth.Contract(
     DharmaSmartWalletFactoryV1Artifact.abi,
-    FACTORY_ADDRESS
+    constants.FACTORY_ADDRESS
   )
 
   const DharmaAccountRecoveryManager = new web3.eth.Contract(
     DharmaAccountRecoveryManagerArtifact.abi,
-    ACCOUNT_RECOVERY_MANAGER_ADDRESS
+    constants.ACCOUNT_RECOVERY_MANAGER_ADDRESS
   )
 
   const DharmaUpgradeBeaconControllerManager = new web3.eth.Contract(
     DharmaAccountRecoveryManagerArtifact.abi,
-    ACCOUNT_RECOVERY_MANAGER_ADDRESS
+    constants.ACCOUNT_RECOVERY_MANAGER_ADDRESS
   ) 
 
   const IndestructibleRegistryDeployer = new web3.eth.Contract(
@@ -475,12 +380,12 @@ module.exports = {test: async function (provider, testingContext) {
 
   const InefficientImmutableCreate2Factory = new web3.eth.Contract(
     ImmutableCreate2FactoryArtifact.abi,
-    InefficientImmutableCreate2FactoryAddress
+    constants.INEFFICIENT_IMMUTABLE_CREATE2_FACTORY_ADDRESS
   )
 
   const ImmutableCreate2Factory = new web3.eth.Contract(
     ImmutableCreate2FactoryArtifact.abi,
-    ImmutableCreate2FactoryAddress
+    constants.IMMUTABLE_CREATE2_FACTORY_ADDRESS
   )
 
   const MockCodeCheckDeployer = new web3.eth.Contract(
@@ -488,37 +393,21 @@ module.exports = {test: async function (provider, testingContext) {
   )
   MockCodeCheckDeployer.options.data = MockCodeCheckArtifact.bytecode
 
-  // construct the payload passed to create2 in order to verify correct behavior
-  const testCreate2payload = (
-    '0xff' +
-    keylessCreate2Address.slice(2) +
-    '0000000000000000000000000000000000000000000000000000000000000000' +
-    web3.utils.keccak256(
-      MockCodeCheckArtifact.bytecode,
-      {encoding: 'hex'}
-    ).slice(2)
+  const DAI = new web3.eth.Contract(
+    IERC20Artifact.abi, constants.DAI_MAINNET_ADDRESS
   )
 
-  // determine the target address using the payload
-  const targetCodeCheckAddress = web3.utils.toChecksumAddress(
-    '0x' + web3.utils.keccak256(
-      testCreate2payload,
-      {encoding: "hex"}
-    ).slice(12).substring(14)
+  const USDC = new web3.eth.Contract(
+    IERC20Artifact.abi, constants.USDC_MAINNET_ADDRESS
   )
 
-  const MockCodeCheckTwo = new web3.eth.Contract(
-    MockCodeCheckArtifact.abi,
-    targetCodeCheckAddress
+  const CDAI = new web3.eth.Contract(
+    IERC20Artifact.abi, constants.CDAI_MAINNET_ADDRESS
   )
 
-  const DAI = new web3.eth.Contract(IERC20Artifact.abi, DAI_MAINNET_ADDRESS)
-
-  const USDC = new web3.eth.Contract(IERC20Artifact.abi, USDC_MAINNET_ADDRESS)
-
-  const CDAI = new web3.eth.Contract(IERC20Artifact.abi, CDAI_MAINNET_ADDRESS)
-
-  const CUSDC = new web3.eth.Contract(IERC20Artifact.abi, CUSDC_MAINNET_ADDRESS)
+  const CUSDC = new web3.eth.Contract(
+    IERC20Artifact.abi, constants.CUSDC_MAINNET_ADDRESS
+  )
 
   // get available addresses and assign them to various roles
   const addresses = await web3.eth.getAccounts()
@@ -544,24 +433,6 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   const gasLimit = latestBlock.gasLimit
-
-  console.log('funding initial create2 contract deployer address...')
-  await web3.eth.sendTransaction({
-    from: originalAddress,
-    to: keylessCreate2DeployerAddress,
-    value: web3.utils.toWei('0.01', 'ether'),
-    gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
-    gasPrice: 1
-  })
-
-  console.log('funding initial controller owner address...')
-  await web3.eth.sendTransaction({
-    from: originalAddress,
-    to: initialControllerOwner,
-    value: web3.utils.toWei('0.001', 'ether'),
-    gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
-    gasPrice: 1
-  })
 
   console.log('running tests...')
 
@@ -975,358 +846,6 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
-  await runTest(
-    'Deployed MockCodeCheck code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [MockCodeCheck.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, MockCodeCheckArtifact.deployedBytecode)
-    }
-  )
-
-  await runTest(
-    'Deployed MockCodeCheck has correct extcodehash',
-    MockCodeCheck,
-    'hash',
-    'call',
-    [MockCodeCheck.options.address],
-    true,
-    value => {
-      assert.strictEqual(
-        value,
-        web3.utils.keccak256(
-          MockCodeCheckArtifact.deployedBytecode,
-          {encoding: 'hex'}
-        )
-      )
-    }
-  )
-
-  let currentKeylessCreate2Runtime;
-  await runTest(
-    'Current runtime code at address of initial create2 factory can be retrieved',
-    MockCodeCheck,
-    'code',
-    'call',
-    [keylessCreate2Address],
-    true,
-    value => {
-      currentKeylessCreate2Runtime = value
-    }
-  )
-
-  // submit the initial create2 deployment transaction if needed
-  if (currentKeylessCreate2Runtime !== keylessCreate2Runtime) {
-    console.log(' ✓ submitting initial create2 contract deployment transaction...')
-    await web3.eth.sendSignedTransaction(keylessCreate2DeploymentTransaction);
-    passed++
-
-    // deploy a mock code check contract using the initial create2 deployer
-    console.log(' ✓ deploying test contract via create2 contract...')
-    const DeploymentTx = await web3.eth.sendTransaction({
-      from: originalAddress,
-      to: keylessCreate2Address,
-      value: 0,
-      gas: (testingContext !== 'coverage') ? 1500051 : gasLimit - 1,
-      gasPrice: 1,
-      data: MockCodeCheckArtifact.bytecode
-    })
-    passed++
-  } else {
-    console.log(' ✓ initial create2 contract already deployed, skipping...')
-  }
-
-  let currentInefficientImmutableCreate2FactoryRuntimeHash;
-  await runTest(
-    'Current runtime hash at address of inefficient immutable create2 factory can be retrieved',
-    MockCodeCheck,
-    'hash',
-    'call',
-    [InefficientImmutableCreate2FactoryAddress],
-    true,
-    value => {
-      currentInefficientImmutableCreate2FactoryRuntimeHash = value
-    }
-  )
-
-  // submit the inefficient immutable create2 deployment transaction if needed  
-  if (currentInefficientImmutableCreate2FactoryRuntimeHash !== ImmutableCreate2FactoryRuntimeHash) {
-    console.log(' ✓ submitting inefficient immutable create2 factory deployment through initial create2 contract...')
-    await web3.eth.sendTransaction({
-      from: originalAddress,
-      to: keylessCreate2Address,
-      value: '0',
-      gas: (testingContext !== 'coverage') ? '608261' : gasLimit - 1,
-      gasPrice: 1,
-      data: immutableCreate2FactoryCreationCode
-    });
-    passed++
-  } else {
-    console.log(' ✓ inefficient immutable create2 factory contract already deployed, skipping...')
-  }
-
-  let currentImmutableCreate2FactoryRuntimeHash;
-  await runTest(
-    'Current runtime hash at address of immutable create2 factory can be retrieved',
-    MockCodeCheck,
-    'hash',
-    'call',
-    [ImmutableCreate2FactoryAddress],
-    true,
-    value => {
-      currentImmutableCreate2FactoryRuntimeHash = value
-    }
-  )  
-
-  // submit the immutable create2 deployment transaction if needed  
-  if (currentImmutableCreate2FactoryRuntimeHash !== ImmutableCreate2FactoryRuntimeHash) {
-    await runTest(
-      `submitting immutable create2 factory deployment through initial create2 contract...`,
-      InefficientImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        '0x0000000000000000000000000000000000000000f4b0218f13a6440a6f020000',
-        immutableCreate2FactoryCreationCode
-      ],
-      true
-    )
-  } else {
-    console.log(' ✓ immutable create2 factory contract already deployed, skipping...')
-  }
-
-  // BEGIN ACTUAL DEPLOYMENT TESTS
-
-  let currentUpgradeBeaconEnvoyCode;
-  await runTest(
-    'Checking Upgrade Beacon Envoy runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [UPGRADE_BEACON_ENVOY_ADDRESS],
-    true,
-    value => {
-      currentUpgradeBeaconEnvoyCode = value;
-    }
-  )
-
-  if (
-    currentUpgradeBeaconEnvoyCode !== DharmaUpgradeBeaconEnvoyArtifact.deployedBytecode
-  ) {
-    await runTest(
-      `UpgradeBeaconEnvoy contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        '0x00000000000000000000000000000000000000003b4cf3f5b304150b79010000',
-        DharmaUpgradeBeaconEnvoyArtifact.bytecode
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, UPGRADE_BEACON_ENVOY_ADDRESS)
-      }
-    )
-
-    await runTest(
-      `Upgrade Beacon Envoy contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        '0x00000000000000000000000000000000000000003b4cf3f5b304150b79010000',
-        DharmaUpgradeBeaconEnvoyArtifact.bytecode
-      ]
-    )
-  }
-
-  await runTest(
-    'Deployed Upgrade Beacon Envoy code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [UPGRADE_BEACON_ENVOY_ADDRESS],
-    true,
-    value => {
-      assert.strictEqual(value, DharmaUpgradeBeaconEnvoyArtifact.deployedBytecode)
-    }
-  )
-
-  let currentUpgradeBeaconControllerCode;
-  await runTest(
-    'Checking Upgrade Beacon Controller runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [UPGRADE_BEACON_CONTROLLER_ADDRESS],
-    true,
-    value => {
-      currentUpgradeBeaconControllerCode = value;
-    }
-  )
-
-  if (
-    currentUpgradeBeaconControllerCode !== DharmaUpgradeBeaconControllerArtifact.deployedBytecode
-  ) {
-    await runTest(
-      `DharmaUpgradeBeaconController contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        '0x00000000000000000000000000000000000000005aa398eb9566310e02000000',
-        DharmaUpgradeBeaconControllerArtifact.bytecode + 
-        '000000000000000000000000990774Aa5DFB8a2600EB78101C1eeAa8d6104623'
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, UPGRADE_BEACON_CONTROLLER_ADDRESS)
-      }
-    )
-
-    await runTest(
-      `DharmaUpgradeBeaconController contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        '0x00000000000000000000000000000000000000005aa398eb9566310e02000000',
-        DharmaUpgradeBeaconControllerArtifact.bytecode + 
-        '000000000000000000000000990774Aa5DFB8a2600EB78101C1eeAa8d6104623'
-      ]
-    )
-
-    await runTest(
-      `DharmaUpgradeBeaconController can transfer owner`,
-      DharmaUpgradeBeaconController,
-      'transferOwnership',
-      'send',
-      [address],
-      true,
-      receipt => {},
-      initialControllerOwner
-    )
-  }
-
-  // TODO: override mainnet owner if set to some other account
-
-  await runTest(
-    'Deployed Upgrade Beacon Controller code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [DharmaUpgradeBeaconController.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, DharmaUpgradeBeaconControllerArtifact.deployedBytecode)
-    }
-  )
-
-  await runTest(
-    `DharmaUpgradeBeaconController contract deployment`,
-    DharmaUpgradeBeaconControllerDeployer,
-    '',
-    'deploy',
-    [address]
-  )
-
-  let currentUpgradeBeaconCode;
-  await runTest(
-    'Checking Upgrade Beacon runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [UPGRADE_BEACON_ADDRESS],
-    true,
-    value => {
-      currentUpgradeBeaconCode = value;
-    }
-  )
-
-  if (
-    currentUpgradeBeaconCode !== DharmaUpgradeBeaconArtifact.deployedBytecode
-  ) {
-    await runTest(
-      `DharmaUpgradeBeacon contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        '0x0000000000000000000000000000000000000000795c924476188b0e6c020000',
-        DharmaUpgradeBeaconArtifact.bytecode
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, UPGRADE_BEACON_ADDRESS)
-      }
-    )
-
-    await runTest(
-      `DharmaUpgradeBeacon contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        '0x0000000000000000000000000000000000000000795c924476188b0e6c020000',
-        DharmaUpgradeBeaconArtifact.bytecode
-      ]
-    )
-  }
-
-  await runTest(
-    `DharmaUpgradeBeacon contract deployment`,
-    DharmaUpgradeBeaconDeployer,
-    '',
-    'deploy',
-    []
-  )
-
-  let currentKeyRegistryCode;
-  await runTest(
-    'Checking Key Registry runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [KEY_REGISTRY_ADDRESS],
-    true,
-    value => {
-      currentKeyRegistryCode = value;
-    }
-  )
-
-  if (
-    currentKeyRegistryCode !== DharmaKeyRegistryV1Artifact.deployedBytecode
-  ) {
-    await runTest(
-      `DharmaKeyRegistryV1 Code contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        '0x0000000000000000000000000000000000000000003e4b8475edaa0ebb0b0000',
-        DharmaKeyRegistryV1Artifact.bytecode
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, KEY_REGISTRY_ADDRESS)
-      }
-    )
-
-    await runTest(
-      `DharmaKeyRegistryV1 contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        '0x0000000000000000000000000000000000000000003e4b8475edaa0ebb0b0000',
-        DharmaKeyRegistryV1Artifact.bytecode
-      ]
-    )
-  }
-
   DharmaKeyRegistryV1 = await runTest(
     `DharmaKeyRegistryV1 contract deployment`,
     DharmaKeyRegistryV1Deployer,
@@ -1377,7 +896,7 @@ module.exports = {test: async function (provider, testingContext) {
     'setGlobalKey',
     'send',
     [
-      nullAddress,
+      constants.NULL_ADDRESS,
       '0x'
     ],
     false,
@@ -1540,22 +1059,6 @@ module.exports = {test: async function (provider, testingContext) {
     [[address], 1]
   )
 
-  await runTest(
-    `DharmaUpgradeBeaconControllerManager contract deployment`,
-    DharmaUpgradeBeaconControllerManagerDeployer,
-    '',
-    'deploy',
-    []
-  )
-  
-  await runTest(
-    `DharmaUpgradeBeacon contract deployment`,
-    DharmaUpgradeBeaconDeployer,
-    '',
-    'deploy',
-    []
-  )
-
   const BadBeacon = await runTest(
     `Mock Bad Beacon contract deployment`,
     BadBeaconDeployer,
@@ -1598,7 +1101,7 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [
       DharmaUpgradeBeacon.options.address,
-      nullAddress
+      constants.NULL_ADDRESS
     ],
     false
   )
@@ -1661,11 +1164,11 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.newImplementation,
-          nullAddress
+          constants.NULL_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.newImplementationCodeHash,
-          emptyHash
+          constants.EMPTY_HASH
         )
       }
     }
@@ -1689,11 +1192,11 @@ module.exports = {test: async function (provider, testingContext) {
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.oldImplementation,
-          nullAddress
+          constants.NULL_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
-          emptyHash
+          constants.EMPTY_HASH
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.newImplementation,
@@ -1736,11 +1239,11 @@ module.exports = {test: async function (provider, testingContext) {
         */
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.newImplementation,
-          nullAddress
+          constants.NULL_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.newImplementationCodeHash,
-          emptyHash
+          constants.EMPTY_HASH
         )
       }
     }
@@ -1764,11 +1267,11 @@ module.exports = {test: async function (provider, testingContext) {
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.oldImplementation,
-          nullAddress
+          constants.NULL_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
-          emptyHash
+          constants.EMPTY_HASH
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.newImplementation,
@@ -1838,207 +1341,13 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  let currentFactoryCode;
-  await runTest(
-    'Checking Factory runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [FACTORY_ADDRESS],
-    true,
-    value => {
-      currentFactoryCode = value;
-    }
-  )
-
-  if (
-    currentFactoryCode !== DharmaSmartWalletFactoryV1Artifact.deployedBytecode
-  ) {
-    await runTest(
-      `DharmaSmartWalletFactoryV1 Code contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        '0x00000000000000000000000000000000000000000fc65f91c50a530250000000',
-        DharmaSmartWalletFactoryV1Artifact.bytecode
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, FACTORY_ADDRESS)
-      }
-    )
-
-    await runTest(
-      `DharmaSmartWalletFactoryV1 contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        '0x00000000000000000000000000000000000000000fc65f91c50a530250000000',
-        DharmaSmartWalletFactoryV1Artifact.bytecode
-      ]
-    )
-  }
-
-  await runTest(
-    `DharmaSmartWalletFactoryV1 contract deployment`,
-    DharmaSmartWalletFactoryV1Deployer,
-    '',
-    'deploy',
-    []
-  )
-
-  let currentAccountRecoveryManagerCode;
-  await runTest(
-    'Checking Account Recovery Manager runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [ACCOUNT_RECOVERY_MANAGER_ADDRESS],
-    true,
-    value => {
-      currentAccountRecoveryManagerCode = value;
-    }
-  )
-
-  if (
-    currentAccountRecoveryManagerCode !== DharmaAccountRecoveryManagerArtifact.deployedBytecode
-  ) {
-    await runTest(
-      `DharmaAccountRecoveryManager contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        '0x0000000000000000000000000000000000000000ff0345dfe982180456210000',
-        DharmaAccountRecoveryManagerArtifact.bytecode
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, ACCOUNT_RECOVERY_MANAGER_ADDRESS)
-      }
-    )
-
-    await runTest(
-      `DharmaAccountRecoveryManager contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        '0x0000000000000000000000000000000000000000ff0345dfe982180456210000',
-        DharmaAccountRecoveryManagerArtifact.bytecode
-      ]
-    )
-  }
-
-  await runTest(
-    `DharmaAccountRecoveryManager contract deployment`,
-    DharmaAccountRecoveryManagerDeployer,
-    '',
-    'deploy'
-  )
-
-  let currentAdharmaSmartWalletImplementationCode;
-  await runTest(
-    'Checking Account Recovery Manager runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS],
-    true,
-    value => {
-      currentAdharmaSmartWalletImplementationCode = value;
-    }
-  )
-
-  if (
-    currentAdharmaSmartWalletImplementationCode !== AdharmaSmartWalletImplementationArtifact.deployedBytecode
-  ) {
-    await runTest(
-      `AdharmaSmartWalletImplementation contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        '0x000000000000000000000000000000000000000037686e593cbd8f0d1f190000',
-        AdharmaSmartWalletImplementationArtifact.bytecode
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS)
-      }
-    )
-
-    await runTest(
-      `AdharmaSmartWalletImplementation contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        '0x000000000000000000000000000000000000000037686e593cbd8f0d1f190000',
-        AdharmaSmartWalletImplementationArtifact.bytecode
-      ]
-    )
-  }
-
-  await runTest(
-    `AdharmaSmartWalletImplementation contract deployment`,
-    AdharmaSmartWalletImplementationDeployer,
-    '',
-    'deploy'
-  )
-
-  let currentUpgradeBeaconControllerManagerCode;
-  await runTest(
-    'Checking Upgrade Beacon Controller Manager runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS],
-    true,
-    value => {
-      currentUpgradeBeaconControllerManagerCode = value;
-    }
-  )
-
-  if (
-    currentUpgradeBeaconControllerManagerCode !== DharmaUpgradeBeaconControllerManagerArtifact.deployedBytecode
-  ) {
-    await runTest(
-      `DharmaUpgradeBeaconControllerManager contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        '0x0000000000000000000000000000000000000000ab7cfa72f49fa70a011d0000',
-        DharmaUpgradeBeaconControllerManagerArtifact.bytecode
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS)
-      }
-    )
-
-    await runTest(
-      `DharmaUpgradeBeaconControllerManager contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        '0x0000000000000000000000000000000000000000ab7cfa72f49fa70a011d0000',
-        DharmaUpgradeBeaconControllerManagerArtifact.bytecode
-      ]
-    )
-  }
-
   let currentDaiCode;
   await runTest(
     'Checking for required external contracts...',
     MockCodeCheck,
     'code',
     'call',
-    [DAI_MAINNET_ADDRESS],
+    [constants.DAI_MAINNET_ADDRESS],
     true,
     value => {
       currentDaiCode = value;
@@ -2128,7 +1437,7 @@ module.exports = {test: async function (provider, testingContext) {
   contractNames[targetWalletAddress] = 'Smart Wallet'
 
   await web3.eth.sendTransaction({
-    from: eth_whale,
+    from: constants.ETH_WHALE_ADDRESS,
     to: targetWalletAddress,
     value: web3.utils.toWei('100', 'ether'),
     gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
@@ -2147,7 +1456,7 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Transfer.returnValues.from,
-          dai_whale
+          constants.DAI_WHALE_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Transfer.returnValues.to,
@@ -2159,7 +1468,7 @@ module.exports = {test: async function (provider, testingContext) {
         )
       }
     },
-    dai_whale
+    constants.DAI_WHALE_ADDRESS
   )
 
   await runTest(
@@ -2173,7 +1482,7 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Transfer.returnValues.from,
-          usdc_whale
+          constants.USDC_WHALE_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Transfer.returnValues.to,
@@ -2185,7 +1494,7 @@ module.exports = {test: async function (provider, testingContext) {
         )
       }
     },
-    usdc_whale
+    constants.USDC_WHALE_ADDRESS
   )
 
   await runTest(
@@ -2193,7 +1502,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
     'send',
-    [nullAddress],
+    [constants.NULL_ADDRESS],
     false
   )
 
@@ -2224,7 +1533,7 @@ module.exports = {test: async function (provider, testingContext) {
 
         assert.strictEqual(events[1].address, 'DAI')
         assert.strictEqual(events[1].eventName, 'Approval')
-        assert.strictEqual(events[1].returnValues.value, FULL_APPROVAL)
+        assert.strictEqual(events[1].returnValues.value, constants.FULL_APPROVAL)
 
         assert.strictEqual(events[2].address, 'CDAI')
         assert.strictEqual(events[2].eventName, 'AccrueInterest')
@@ -2242,7 +1551,7 @@ module.exports = {test: async function (provider, testingContext) {
 
         assert.strictEqual(events[6].address, 'USDC')
         assert.strictEqual(events[6].eventName, 'Approval')
-        assert.strictEqual(events[6].returnValues.value, FULL_APPROVAL)
+        assert.strictEqual(events[6].returnValues.value, constants.FULL_APPROVAL)
 
         assert.strictEqual(events[7].address, 'CUSDC')
         assert.strictEqual(events[7].eventName, 'AccrueInterest')
@@ -2285,7 +1594,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await web3.eth.sendTransaction({
-    from: eth_whale,
+    from: constants.ETH_WHALE_ADDRESS,
     to: targetWalletAddress,
     value: web3.utils.toWei('100', 'ether'),
     gas: (testingContext !== 'coverage') ? '0xffff' : gasLimit - 1,
@@ -2305,7 +1614,7 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Transfer.returnValues.from,
-          dai_whale
+          constants.DAI_WHALE_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Transfer.returnValues.to,
@@ -2317,7 +1626,7 @@ module.exports = {test: async function (provider, testingContext) {
         )
       }
     },
-    dai_whale
+    constants.DAI_WHALE_ADDRESS
   )
 
   await runTest(
@@ -2331,7 +1640,7 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Transfer.returnValues.from,
-          usdc_whale
+          constants.USDC_WHALE_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Transfer.returnValues.to,
@@ -2343,7 +1652,7 @@ module.exports = {test: async function (provider, testingContext) {
         )
       }
     },
-    usdc_whale
+    constants.USDC_WHALE_ADDRESS
   )
 
   await runTest(
@@ -2603,7 +1912,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'UserSmartWallet secondary can call to set dharmaKey',
+    'UserSmartWallet secondary can call to set userSigningKey',
     UserSmartWallet,
     'setUserSigningKey',
     'send',
@@ -2635,7 +1944,7 @@ module.exports = {test: async function (provider, testingContext) {
     'call',
     [
       4, // DAIWithdrawal,
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0
     ],
@@ -2652,7 +1961,7 @@ module.exports = {test: async function (provider, testingContext) {
     'call',
     [
       4, // DAIWithdrawal,
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       4,
       0
@@ -2670,7 +1979,7 @@ module.exports = {test: async function (provider, testingContext) {
     'call',
     [
       5, // USDCWithdrawal,
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0
     ],
@@ -2691,7 +2000,7 @@ module.exports = {test: async function (provider, testingContext) {
     'withdrawUSDC',
     'send',
     [
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0,
       '0x',
@@ -2711,7 +2020,7 @@ module.exports = {test: async function (provider, testingContext) {
     'withdrawUSDC',
     'send',
     [
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0,
       '0x',
@@ -2727,15 +2036,15 @@ module.exports = {test: async function (provider, testingContext) {
 
   /* TODO: get this working manually
   const withdrawalMessage = (
-    UserSmartWallet.options.address + // smart wallet address
-    nullBytes32.slice(2) +            // smart wallet version
-    address.slice(2) +                // user dharma key
-    address.slice(2) +                // dharma key registry key
-    '5'.padStart(64, '0') +           // nonce
-    nullBytes32.slice(2) +            // minimum gas
-    '4'.padStart(64, '0') +           // action type
-    'f'.padStart(64, 'f') +           // amount
-    address.slice(2)                  // recipient
+    UserSmartWallet.options.address +  // smart wallet address
+    constants.NULL_BYTES_32.slice(2) + // smart wallet version
+    address.slice(2) +                 // user dharma key
+    address.slice(2) +                 // dharma key registry key
+    '5'.padStart(64, '0') +            // nonce
+    constants.NULL_BYTES_32.slice(2) + // minimum gas
+    '04' +                             // action type
+    'f'.padStart(64, 'f') +            // amount
+    address.slice(2)                   // recipient
   )
 
   const daiWithdrawalSignature = signHashedPrefixedHashedHexString(
@@ -2751,7 +2060,7 @@ module.exports = {test: async function (provider, testingContext) {
     'call',
     [
       4, // DaiWithdrawal,
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0
     ],
@@ -2772,7 +2081,7 @@ module.exports = {test: async function (provider, testingContext) {
     'withdrawDai',
     'send',
     [
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0,
       '0x',
@@ -2792,7 +2101,7 @@ module.exports = {test: async function (provider, testingContext) {
     'withdrawDai',
     'send',
     [
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0,
       '0x',
@@ -2901,7 +2210,7 @@ module.exports = {test: async function (provider, testingContext) {
     'cancel',
     'send',
     [
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
      '0x'
     ],
     false
@@ -2966,7 +2275,7 @@ module.exports = {test: async function (provider, testingContext) {
         /* TODO
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
-          emptyHash
+          constants.EMPTY_HASH
         )
         */
         assert.strictEqual(
@@ -3017,7 +2326,7 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Transfer.returnValues.from,
-          dai_whale
+          constants.DAI_WHALE_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Transfer.returnValues.to,
@@ -3029,7 +2338,7 @@ module.exports = {test: async function (provider, testingContext) {
         )
       }
     },
-    dai_whale
+    constants.DAI_WHALE_ADDRESS
   )
 
   await runTest(
@@ -3043,7 +2352,7 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Transfer.returnValues.from,
-          usdc_whale
+          constants.USDC_WHALE_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Transfer.returnValues.to,
@@ -3055,7 +2364,7 @@ module.exports = {test: async function (provider, testingContext) {
         )
       }
     },
-    usdc_whale
+    constants.USDC_WHALE_ADDRESS
   )
 
   await runTest(
@@ -3209,7 +2518,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet secondary can set a custom user dharmaKey',
+    'V1 UserSmartWallet secondary can set a custom user userSigningKey',
     UserSmartWallet,
     'setUserSigningKey',
     'send',
@@ -3252,7 +2561,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet secondary can no longer call to set dharmaKey without primary',
+    'V1 UserSmartWallet secondary can no longer call to set userSigningKey without primary',
     UserSmartWallet,
     'setUserSigningKey',
     'send',
@@ -3272,7 +2581,7 @@ module.exports = {test: async function (provider, testingContext) {
     'call',
     [
       4, // DAIWithdrawal,
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0
     ],
@@ -3289,7 +2598,7 @@ module.exports = {test: async function (provider, testingContext) {
     'call',
     [
       4, // DAIWithdrawal,
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       parseInt(originalNonce) + 2,
       0
@@ -3341,7 +2650,7 @@ module.exports = {test: async function (provider, testingContext) {
     'call',
     [
       5, // USDCWithdrawal,
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0
     ],
@@ -3367,7 +2676,7 @@ module.exports = {test: async function (provider, testingContext) {
     'withdrawUSDC',
     'send',
     [
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0,
       usdcUserWithdrawalSignature,
@@ -3387,7 +2696,7 @@ module.exports = {test: async function (provider, testingContext) {
     'withdrawUSDC',
     'send',
     [
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0,
       '0xffffffff' + usdcUserWithdrawalSignature.slice(10),
@@ -3407,7 +2716,7 @@ module.exports = {test: async function (provider, testingContext) {
     'withdrawUSDC',
     'send',
     [
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0,
       usdcUserWithdrawalSignature,
@@ -3423,15 +2732,15 @@ module.exports = {test: async function (provider, testingContext) {
 
   /* TODO: get this working manually
   const withdrawalMessage = (
-    UserSmartWallet.options.address + // smart wallet address
-    nullBytes32.slice(2) +            // smart wallet version
-    address.slice(2) +                // user dharma key
-    address.slice(2) +                // dharma key registry key
-    '5'.padStart(64, '0') +           // nonce
-    nullBytes32.slice(2) +            // minimum gas
-    '4'.padStart(64, '0') +           // action type
-    'f'.padStart(64, 'f') +           // amount
-    address.slice(2)                  // recipient
+    UserSmartWallet.options.address +  // smart wallet address
+    constants.NULL_BYTES_32.slice(2) + // smart wallet version
+    address.slice(2) +                 // user dharma key
+    address.slice(2) +                 // dharma key registry key
+    '5'.padStart(64, '0') +            // nonce
+    constants.NULL_BYTES_32.slice(2) + // minimum gas
+    '04' +                             // action type
+    'f'.padStart(64, 'f') +            // amount
+    address.slice(2)                   // recipient
   )
 
   const daiWithdrawalSignature = signHashedPrefixedHashedHexString(
@@ -3447,7 +2756,7 @@ module.exports = {test: async function (provider, testingContext) {
     'call',
     [
       4, // DaiWithdrawal,
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0
     ],
@@ -3473,7 +2782,7 @@ module.exports = {test: async function (provider, testingContext) {
     'withdrawDai',
     'send',
     [
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0,
       daiUserWithdrawalSignature,
@@ -3493,7 +2802,7 @@ module.exports = {test: async function (provider, testingContext) {
     'withdrawDai',
     'send',
     [
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0,
       '0xffffffff' + daiUserWithdrawalSignature.slice(10),
@@ -3513,7 +2822,7 @@ module.exports = {test: async function (provider, testingContext) {
     'withdrawDai',
     'send',
     [
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
       address,
       0,
       daiUserWithdrawalSignature,
@@ -3618,7 +2927,7 @@ module.exports = {test: async function (provider, testingContext) {
     'cancel',
     'send',
     [
-      FULL_APPROVAL,
+      constants.FULL_APPROVAL,
      '0x'
     ],
     false
