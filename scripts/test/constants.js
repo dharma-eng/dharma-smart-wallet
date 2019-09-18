@@ -157,5 +157,150 @@ module.exports = Object.freeze({
   ),
   INDESTRUCTIBLE_REGISTRY_ADDRESS: (
     '0x0000000000f55ff05D0080fE17A63b16596Fd59f'
-  )
+  ),
+  CONTRACT_NAMES: {
+    '0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359': 'DAI',
+    '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48': 'USDC',
+    '0xF5DCe57282A584D2746FaF1593d3121Fcac444dC': 'CDAI',
+    '0x39AA39c021dfbaE8faC545936693aC917d5E7563': 'CUSDC',
+    '0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5': 'CETH',
+    '0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B': 'Comptroller'    
+  },
+  EVENT_DETAILS: {
+    // keccak256 of NewUserSigningKey(address) -> userSigningKey
+    '0x7083aac3cab97f1219cedd0ab328a5b138a10b0fc72dd9348f1dc50199b21fda': {
+      name: 'NewUserSigningKey',
+      abi: [
+        {
+          type: 'address',
+          name: 'userSigningKey'
+        }
+      ]  
+    },
+    // ExternalError(address,string) -> source, reason
+    '0x5bbd5ab79029b89a22c80c7b7bfdc2f0c8e3f0d2a7330c7148cabc044250674b': {
+      name: 'ExternalError',
+      abi: [
+        {
+          type: 'address',
+          name: 'source',
+          indexed: true
+        }, {
+          type: 'string',
+          name: 'reason'
+        }
+      ]
+    },
+    // SmartWalletDeployed(address,address) -> wallet, userSigningKey
+    '0x6e60d84846384a1994833ed675b0a0f76bef64943304debf6e42a9706d1a7dd7': {
+      name: 'SmartWalletDeployed',
+      abi: [
+        {
+          type: 'address',
+          name: 'wallet'
+        }, {
+          type: 'address',
+          name: 'userSigningKey'
+        }
+      ]
+    },
+    // Approval(address,address,uint256) -> owner, spender, value
+    '0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925': {
+      name: 'Approval',
+      abi: [
+        {
+          type: 'address',
+          name: 'owner',
+          indexed: true
+        }, {
+          type: 'address',
+          name: 'spender',
+          indexed: true
+        }, {
+          type: 'uint256',
+          name: 'value'
+        }
+      ]    
+    },
+    // Transfer(address,address,uint256) -> to, from, value
+    '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef': {
+      name: 'Transfer',
+      abi: [
+        {
+          type: 'address',
+          name: 'from',
+          indexed: true
+        }, {
+          type: 'address',
+          name: 'to',
+          indexed: true
+        }, {
+          type: 'uint256',
+          name: 'value'
+        }
+      ]
+    },
+    // Mint(address,uint256,uint256) -> minter, mintTokens, mintAmount
+    '0x4c209b5fc8ad50758f13e2e1088ba56a560dff690a1c6fef26394f4c03821c4f': {
+      name: 'Mint',
+      abi: [
+        {
+          type: 'address',
+          name: 'minter'
+        }, {
+          type: 'uint256',
+          name: 'mintTokens'
+        }, {
+          type: 'uint256',
+          name: 'mintAmount'
+        }
+      ]    
+    },
+    // Redeem(address,uint256,uint256) -> redeemer, redeemTokens, redeemAmount
+    '0xe5b754fb1abb7f01b499791d0b820ae3b6af3424ac1c59768edb53f4ec31a929': {
+      name: 'Redeem',
+      abi: [
+        {
+          type: 'address',
+          name: 'redeemer'
+        }, {
+          type: 'uint256',
+          name: 'redeemTokens'
+        }, {
+          type: 'uint256',
+          name: 'redeemAmount'
+        }
+      ]    
+    },
+    // MarketEntered(address,address) -> cToken, account
+    '0x3ab23ab0d51cccc0c3085aec51f99228625aa1a922b3a8ca89a26b0f2027a1a5': {
+      name: 'MarketEntered',
+      abi: [
+        {
+          type: 'address',
+          name: 'cToken'
+        }, {
+          type: 'address',
+          name: 'account'
+        }
+      ]
+    },
+    // AccrueInterest(uint256,uint256,uint256) ->
+    //   interestAccumulated, borrowIndex, totalBorrows
+    '0x875352fb3fadeb8c0be7cbbe8ff761b308fa7033470cd0287f02f3436fd76cb9': {
+      name: 'AccrueInterest',
+      abi: [
+        {
+          type: 'uint256',
+          name: 'interestAccumulated'
+        }, {
+          type: 'uint256',
+          name: 'borrowIndex'
+        }, {
+          type: 'uint256',
+          name: 'totalBorrows'
+        }
+      ]    
+    }
+  }
 })

@@ -26,10 +26,6 @@ const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
 const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
 
-const ImmutableCreate2FactoryArtifact = require('../../build/contracts/ImmutableCreate2Factory.json')
-const IndestructibleRegistryArtifact = require('../../build/contracts/IndestructibleRegistry.json')
-const CodeHashCacheArtifact = require('../../build/contracts/CodeHashCache.json')
-
 const contractNames = Object.assign({}, constants.CONTRACT_NAMES)
 
 // used to wait for more confirmations
@@ -90,20 +86,6 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaAccountRecoveryManagerArtifact.abi,
     constants.ACCOUNT_RECOVERY_MANAGER_ADDRESS
   ) 
-
-  const IndestructibleRegistryDeployer = new web3.eth.Contract(
-    IndestructibleRegistryArtifact.abi
-  )
-  IndestructibleRegistryDeployer.options.data = (
-    IndestructibleRegistryArtifact.bytecode
-  )
-
-  const CodeHashCacheDeployer = new web3.eth.Contract(
-    CodeHashCacheArtifact.abi
-  )
-  CodeHashCacheDeployer.options.data = (
-    CodeHashCacheArtifact.bytecode
-  )
 
   const DharmaAccountRecoveryMultisigDeployer = new web3.eth.Contract(
     DharmaAccountRecoveryMultisigArtifact.abi
@@ -207,16 +189,6 @@ module.exports = {test: async function (provider, testingContext) {
   )
   UpgradeBeaconImplementationCheckDeployer.options.data = (
     UpgradeBeaconImplementationCheckArtifact.bytecode
-  )
-
-  const InefficientImmutableCreate2Factory = new web3.eth.Contract(
-    ImmutableCreate2FactoryArtifact.abi,
-    constants.INEFFICIENT_IMMUTABLE_CREATE2_FACTORY_ADDRESS
-  )
-
-  const ImmutableCreate2Factory = new web3.eth.Contract(
-    ImmutableCreate2FactoryArtifact.abi,
-    constants.IMMUTABLE_CREATE2_FACTORY_ADDRESS
   )
 
   const MockCodeCheckDeployer = new web3.eth.Contract(
