@@ -30,176 +30,7 @@ const ImmutableCreate2FactoryArtifact = require('../../build/contracts/Immutable
 const IndestructibleRegistryArtifact = require('../../build/contracts/IndestructibleRegistry.json')
 const CodeHashCacheArtifact = require('../../build/contracts/CodeHashCache.json')
 
-const contractNames = {}
-contractNames[constants.DAI_MAINNET_ADDRESS] = 'DAI'
-contractNames[constants.USDC_MAINNET_ADDRESS] = 'USDC'
-contractNames[constants.CDAI_MAINNET_ADDRESS] = 'CDAI'
-contractNames[constants.CUSDC_MAINNET_ADDRESS] = 'CUSDC'
-contractNames[constants.CETH_MAINNET_ADDRESS] = 'CETH'
-contractNames[constants.COMPTROLLER_MAINNET_ADDRESS] = 'Comptroller'
-
-// keccak256 of NewUserSigningKey(address) -> userSigningKey
-const NEW_DHARMA_KEY_TOPIC = '0x7083aac3cab97f1219cedd0ab328a5b138a10b0fc72dd9348f1dc50199b21fda'
-const NEW_DHARMA_KEY_ABI = [
-  {
-    type: 'address',
-    name: 'userSigningKey'
-  }
-]
-
-// keccak256 of ExternalError(address,string) -> source, reason
-const EXTERNAL_ERROR_TOPIC = '0x5bbd5ab79029b89a22c80c7b7bfdc2f0c8e3f0d2a7330c7148cabc044250674b'
-const EXTERNAL_ERROR_ABI = [
-  {
-    type: 'address',
-    name: 'source',
-    indexed: true
-  }, {
-    type: 'string',
-    name: 'reason'
-  }
-]
-
-// keccak256 of SmartWalletDeployed(address,address) -> wallet, userSigningKey
-const SMART_WALLET_DEPLOYED_TOPIC = '0x6e60d84846384a1994833ed675b0a0f76bef64943304debf6e42a9706d1a7dd7'
-const SMART_WALLET_DEPLOYED_ABI = [
-  {
-    type: 'address',
-    name: 'wallet'
-  }, {
-    type: 'address',
-    name: 'userSigningKey'
-  }
-]
-
-// keccak256 of Approval(address,address,uint256) -> owner, spender, value
-const APPROVAL_TOPIC = '0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925'
-const APPROVAL_ABI = [
-  {
-    type: 'address',
-    name: 'owner',
-    indexed: true
-  }, {
-    type: 'address',
-    name: 'spender',
-    indexed: true
-  }, {
-    type: 'uint256',
-    name: 'value'
-  }
-]
-
-// keccak256 of Transfer(address,address,uint256) -> to, from, value
-const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
-const TRANSFER_ABI = [
-  {
-    type: 'address',
-    name: 'from',
-    indexed: true
-  }, {
-    type: 'address',
-    name: 'to',
-    indexed: true
-  }, {
-    type: 'uint256',
-    name: 'value'
-  }
-]
-
-// keccak256 of Mint(address,uint256,uint256) -> minter, mintTokens, mintAmount
-const MINT_TOPIC = '0x4c209b5fc8ad50758f13e2e1088ba56a560dff690a1c6fef26394f4c03821c4f'
-const MINT_ABI = [
-  {
-    type: 'address',
-    name: 'minter'
-  }, {
-    type: 'uint256',
-    name: 'mintTokens'
-  }, {
-    type: 'uint256',
-    name: 'mintAmount'
-  }
-]
-
-// keccak256 of Redeem(address,uint256,uint256) -> redeemer, redeemTokens, redeemAmount
-const REDEEM_TOPIC = '0xe5b754fb1abb7f01b499791d0b820ae3b6af3424ac1c59768edb53f4ec31a929'
-const REDEEM_ABI = [
-  {
-    type: 'address',
-    name: 'redeemer'
-  }, {
-    type: 'uint256',
-    name: 'redeemTokens'
-  }, {
-    type: 'uint256',
-    name: 'redeemAmount'
-  }
-]
-
-// keccak256 of MarketEntered(address,address) -> cToken, account
-const MARKET_ENTERED_TOPIC = '0x3ab23ab0d51cccc0c3085aec51f99228625aa1a922b3a8ca89a26b0f2027a1a5'
-const MARKET_ENTERED_ABI = [
-  {
-    type: 'address',
-    name: 'cToken'
-  }, {
-    type: 'address',
-    name: 'account'
-  }
-]
-
-// keccak256 of AccrueInterest(uint256,uint256,uint256) -> interestAccumulated, borrowIndex, totalBorrows
-const ACCRUE_INTEREST_TOPIC = '0x875352fb3fadeb8c0be7cbbe8ff761b308fa7033470cd0287f02f3436fd76cb9'
-const ACCRUE_INTEREST_ABI = [
-  {
-    type: 'uint256',
-    name: 'interestAccumulated'
-  }, {
-    type: 'uint256',
-    name: 'borrowIndex'
-  }, {
-    type: 'uint256',
-    name: 'totalBorrows'
-  }
-]
-
-const eventDetails = {}
-eventDetails[NEW_DHARMA_KEY_TOPIC] = {
-  name: 'NewUserSigningKey',
-  abi: NEW_DHARMA_KEY_ABI
-}
-eventDetails[EXTERNAL_ERROR_TOPIC] = {
-  name: 'ExternalError',
-  abi: EXTERNAL_ERROR_ABI
-}
-eventDetails[SMART_WALLET_DEPLOYED_TOPIC] = {
-  name: 'SmartWalletDeployed',
-  abi: SMART_WALLET_DEPLOYED_ABI
-}
-eventDetails[APPROVAL_TOPIC] = {
-  name: 'Approval',
-  abi: APPROVAL_ABI
-}
-eventDetails[TRANSFER_TOPIC] = {
-  name: 'Transfer',
-  abi: TRANSFER_ABI
-}
-eventDetails[MINT_TOPIC] = {
-  name: 'Mint',
-  abi: MINT_ABI
-}
-eventDetails[REDEEM_TOPIC] = {
-  name: 'Redeem',
-  abi: REDEEM_ABI
-}
-eventDetails[MARKET_ENTERED_TOPIC] = {
-  name: 'MarketEntered',
-  abi: MARKET_ENTERED_ABI
-}
-eventDetails[ACCRUE_INTEREST_TOPIC] = {
-  name: 'AccrueInterest',
-  abi: ACCRUE_INTEREST_ABI
-}
+const contractNames = Object.assign({}, constants.CONTRACT_NAMES)
 
 // used to wait for more confirmations
 function longer() {
@@ -1518,8 +1349,10 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         let events = []
         Object.values(receipt.events).forEach((value) => {
-          const log = eventDetails[value.raw.topics[0]]
-          const decoded = web3.eth.abi.decodeLog(log.abi, value.raw.data, value.raw.topics)        
+          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
+          const decoded = web3.eth.abi.decodeLog(
+            log.abi, value.raw.data, value.raw.topics
+          )        
           events.push({
             address: contractNames[value.address],
             eventName: log.name,
@@ -1667,8 +1500,10 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         let events = []
         Object.values(receipt.events).forEach((value) => {
-          const log = eventDetails[value.raw.topics[0]]
-          const decoded = web3.eth.abi.decodeLog(log.abi, value.raw.data, value.raw.topics)        
+          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
+          const decoded = web3.eth.abi.decodeLog(
+            log.abi, value.raw.data, value.raw.topics
+          )        
           events.push({
             address: contractNames[value.address],
             eventName: log.name,
@@ -1719,8 +1554,10 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         let events = []
         Object.values(receipt.events).forEach((value) => {
-          const log = eventDetails[value.raw.topics[0]]
-          const decoded = web3.eth.abi.decodeLog(log.abi, value.raw.data, value.raw.topics)        
+          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
+          const decoded = web3.eth.abi.decodeLog(
+            log.abi, value.raw.data, value.raw.topics
+          )        
           events.push({
             address: contractNames[value.address],
             eventName: log.name,
@@ -2379,8 +2216,10 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         let events = []
         Object.values(receipt.events).forEach((value) => {
-          const log = eventDetails[value.raw.topics[0]]
-          const decoded = web3.eth.abi.decodeLog(log.abi, value.raw.data, value.raw.topics)        
+          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
+          const decoded = web3.eth.abi.decodeLog(
+            log.abi, value.raw.data, value.raw.topics
+          )        
           events.push({
             address: contractNames[value.address],
             eventName: log.name,
@@ -2432,8 +2271,10 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         let events = []
         Object.values(receipt.events).forEach((value) => {
-          const log = eventDetails[value.raw.topics[0]]
-          const decoded = web3.eth.abi.decodeLog(log.abi, value.raw.data, value.raw.topics)        
+          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
+          const decoded = web3.eth.abi.decodeLog(
+            log.abi, value.raw.data, value.raw.topics
+          )        
           events.push({
             address: contractNames[value.address],
             eventName: log.name,
@@ -2979,8 +2820,10 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         let events = []
         Object.values(receipt.events).forEach((value) => {
-          const log = eventDetails[value.raw.topics[0]]
-          const decoded = web3.eth.abi.decodeLog(log.abi, value.raw.data, value.raw.topics)        
+          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
+          const decoded = web3.eth.abi.decodeLog(
+            log.abi, value.raw.data, value.raw.topics
+          )        
           events.push({
             address: contractNames[value.address],
             eventName: log.name,
@@ -2989,7 +2832,7 @@ module.exports = {test: async function (provider, testingContext) {
         })
 
         assert.strictEqual(events[0].eventName, 'NewUserSigningKey')
-        assert.strictEqual(events[0].returnValues.userSigningKey, addressTwo) 
+        assert.strictEqual(events[0].returnValues.userSigningKey, addressTwo)
 
         // TODO: test more events
       }
