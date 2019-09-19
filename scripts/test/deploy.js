@@ -9,12 +9,13 @@ let DharmaUpgradeBeaconEnvoyArtifact;
 let DharmaKeyRegistryV1Artifact;
 let DharmaAccountRecoveryManagerArtifact;
 let DharmaSmartWalletFactoryV1Artifact;
-let UpgradeBeaconProxyArtifact;
+let UpgradeBeaconProxyV1Artifact;
 let AdharmaSmartWalletImplementationArtifact;
 let DharmaUpgradeBeaconControllerManagerArtifact;
 
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
+const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaKeyRegistryMultisig.json')
 
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
@@ -35,6 +36,31 @@ function longer() {
   return new Promise(resolve => {setTimeout(() => {resolve()}, 500)})
 }
 
+function swapMetadataHash(bytecode, newMetadataHashes) {
+  const totalBzzrs = bytecode.split(constants.METADATA_IDENTIFIER).length - 1
+
+  if (totalBzzrs !== newMetadataHashes.length) {
+    throw("number of metadata hashes to replace must match provided number.")
+  }
+
+  let startingPoint = bytecode.length - 1;
+
+  for (i = 0; i < totalBzzrs; i++) {
+    let replacement = constants.METADATA_IDENTIFIER + newMetadataHashes.slice(i)[0]
+    let lastIndex = bytecode.lastIndexOf(
+      constants.METADATA_IDENTIFIER, startingPoint
+    )
+    bytecode = (
+      bytecode.slice(0, lastIndex) + replacement + bytecode.slice(
+        lastIndex + replacement.length, bytecode.length
+      )
+    )
+    startingPoint = lastIndex - 1;
+  }
+  
+  return bytecode
+}
+
 module.exports = {test: async function (provider, testingContext) {
   if (testingContext === 'coverage') {
     DharmaUpgradeBeaconEnvoyArtifact = require('../../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
@@ -42,7 +68,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconArtifact = require('../../../build/contracts/DharmaUpgradeBeacon.json')
     DharmaKeyRegistryV1Artifact = require('../../../build/contracts/DharmaKeyRegistryV1.json')
     DharmaSmartWalletFactoryV1Artifact = require('../../../build/contracts/DharmaSmartWalletFactoryV1.json')
-    UpgradeBeaconProxyArtifact = require('../../../build/contracts/UpgradeBeaconProxy.json')
+    UpgradeBeaconProxyV1Artifact = require('../../../build/contracts/UpgradeBeaconProxyV1.json')
     DharmaAccountRecoveryManagerArtifact = require('../../../build/contracts/DharmaAccountRecoveryManager.json')
     AdharmaSmartWalletImplementationArtifact = require('../../../build/contracts/AdharmaSmartWalletImplementation.json')
     DharmaUpgradeBeaconControllerManagerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
@@ -52,7 +78,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
     DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
     DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
-    UpgradeBeaconProxyArtifact = require('../../build/contracts/UpgradeBeaconProxy.json')
+    UpgradeBeaconProxyV1Artifact = require('../../build/contracts/UpgradeBeaconProxyV1.json')
     DharmaAccountRecoveryManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
     AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
     DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
@@ -64,6 +90,15 @@ module.exports = {test: async function (provider, testingContext) {
   let gasUsage = {}
   let counts = {}
 
+  /*
+  console.log(DharmaUpgradeBeaconControllerArtifact.bytecode)
+  console.log(swapMetadataHash(
+    DharmaUpgradeBeaconControllerArtifact.bytecode,
+    constants.UPGRADE_BEACON_CONTROLLER_METADATA
+  ))
+  process.exit(0)
+  */
+
   const DharmaUpgradeBeaconController = new web3.eth.Contract(
     DharmaUpgradeBeaconControllerArtifact.abi,
     constants.UPGRADE_BEACON_CONTROLLER_ADDRESS
@@ -74,14 +109,19 @@ module.exports = {test: async function (provider, testingContext) {
     constants.UPGRADE_BEACON_ADDRESS
   )
 
-  const DharmaSmartWalletFactoryV1 = new web3.eth.Contract(
-    DharmaSmartWalletFactoryV1Artifact.abi,
-    constants.FACTORY_ADDRESS
-  )
-
   const DharmaAccountRecoveryManager = new web3.eth.Contract(
     DharmaAccountRecoveryManagerArtifact.abi,
     constants.ACCOUNT_RECOVERY_MANAGER_ADDRESS
+  )
+
+  const DharmaKeyRegistryV1 = new web3.eth.Contract(
+    DharmaKeyRegistryV1Artifact.abi,
+    constants.KEY_REGISTRY_ADDRESS
+  )
+
+  const DharmaSmartWalletFactoryV1 = new web3.eth.Contract(
+    DharmaSmartWalletFactoryV1Artifact.abi,
+    constants.FACTORY_ADDRESS
   )
 
   const DharmaUpgradeBeaconControllerManager = new web3.eth.Contract(
@@ -103,11 +143,25 @@ module.exports = {test: async function (provider, testingContext) {
     CodeHashCacheArtifact.bytecode
   )
 
+  const DharmaUpgradeMultisigDeployer = new web3.eth.Contract(
+    DharmaUpgradeMultisigArtifact.abi
+  )
+  DharmaUpgradeMultisigDeployer.options.data = (
+    DharmaUpgradeMultisigArtifact.bytecode
+  )
+
   const DharmaAccountRecoveryMultisigDeployer = new web3.eth.Contract(
     DharmaAccountRecoveryMultisigArtifact.abi
   )
   DharmaAccountRecoveryMultisigDeployer.options.data = (
     DharmaAccountRecoveryMultisigArtifact.bytecode
+  )
+
+  const DharmaKeyRegistryMultisigDeployer = new web3.eth.Contract(
+    DharmaKeyRegistryMultisigArtifact.abi
+  )
+  DharmaKeyRegistryMultisigDeployer.options.data = (
+    DharmaKeyRegistryMultisigArtifact.bytecode
   )
 
   const DharmaUpgradeBeaconControllerDeployer = new web3.eth.Contract(
@@ -137,18 +191,11 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerManagerArtifact.bytecode
   )
 
-  const DharmaUpgradeMultisigDeployer = new web3.eth.Contract(
-    DharmaUpgradeMultisigArtifact.abi
+  const UpgradeBeaconProxyV1Deployer = new web3.eth.Contract(
+    UpgradeBeaconProxyV1Artifact.abi
   )
-  DharmaUpgradeMultisigDeployer.options.data = (
-    DharmaUpgradeMultisigArtifact.bytecode
-  )
-
-  const UpgradeBeaconProxyDeployer = new web3.eth.Contract(
-    UpgradeBeaconProxyArtifact.abi
-  )
-  UpgradeBeaconProxyDeployer.options.data = (
-    UpgradeBeaconProxyArtifact.bytecode
+  UpgradeBeaconProxyV1Deployer.options.data = (
+    UpgradeBeaconProxyV1Artifact.bytecode
   )
 
   const DharmaKeyRegistryV1Deployer = new web3.eth.Contract(
@@ -845,7 +892,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   if (
-    currentUpgradeBeaconEnvoyCode !== DharmaUpgradeBeaconEnvoyArtifact.deployedBytecode
+    currentUpgradeBeaconEnvoyCode !== constants.UPGRADE_BEACON_ENVOY_RUNTIME_CODE
   ) {
     await runTest(
       `UpgradeBeaconEnvoy contract address check through immutable create2 factory`,
@@ -854,7 +901,7 @@ module.exports = {test: async function (provider, testingContext) {
       'call',
       [
         constants.UPGRADE_BEACON_ENVOY_SALT,
-        DharmaUpgradeBeaconEnvoyArtifact.bytecode
+        constants.UPGRADE_BEACON_ENVOY_CREATION_CODE
       ],
       true,
       value => {
@@ -869,7 +916,7 @@ module.exports = {test: async function (provider, testingContext) {
       'send',
       [
         constants.UPGRADE_BEACON_ENVOY_SALT,
-        DharmaUpgradeBeaconEnvoyArtifact.bytecode
+        constants.UPGRADE_BEACON_ENVOY_CREATION_CODE
       ]
     )
   }
@@ -882,7 +929,7 @@ module.exports = {test: async function (provider, testingContext) {
     [constants.UPGRADE_BEACON_ENVOY_ADDRESS],
     true,
     value => {
-      assert.strictEqual(value, DharmaUpgradeBeaconEnvoyArtifact.deployedBytecode)
+      assert.strictEqual(value, constants.UPGRADE_BEACON_ENVOY_RUNTIME_CODE)
     }
   )
 
@@ -900,7 +947,10 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   if (
-    currentUpgradeBeaconControllerCode !== DharmaUpgradeBeaconControllerArtifact.deployedBytecode
+    currentUpgradeBeaconControllerCode !== swapMetadataHash(
+      DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
+      constants.UPGRADE_BEACON_CONTROLLER_METADATA
+    )
   ) {
     await runTest(
       `DharmaUpgradeBeaconController contract address check through immutable create2 factory`,
@@ -909,8 +959,10 @@ module.exports = {test: async function (provider, testingContext) {
       'call',
       [
         constants.UPGRADE_BEACON_CONTROLLER_SALT,
-        DharmaUpgradeBeaconControllerArtifact.bytecode + 
-        '000000000000000000000000990774Aa5DFB8a2600EB78101C1eeAa8d6104623'
+        swapMetadataHash(
+          DharmaUpgradeBeaconControllerArtifact.bytecode,
+          constants.UPGRADE_BEACON_CONTROLLER_METADATA
+        )
       ],
       true,
       value => {
@@ -925,24 +977,13 @@ module.exports = {test: async function (provider, testingContext) {
       'send',
       [
         constants.UPGRADE_BEACON_CONTROLLER_SALT,
-        DharmaUpgradeBeaconControllerArtifact.bytecode + 
-        '000000000000000000000000990774Aa5DFB8a2600EB78101C1eeAa8d6104623'
+        swapMetadataHash(
+          DharmaUpgradeBeaconControllerArtifact.bytecode,
+          constants.UPGRADE_BEACON_CONTROLLER_METADATA
+        )
       ]
     )
-
-    await runTest(
-      `DharmaUpgradeBeaconController can transfer owner`,
-      DharmaUpgradeBeaconController,
-      'transferOwnership',
-      'send',
-      [address],
-      true,
-      receipt => {},
-      initialControllerOwner
-    )
   }
-
-  // TODO: override mainnet owner if set to some other account
 
   await runTest(
     'Deployed Upgrade Beacon Controller code is correct',
@@ -952,7 +993,10 @@ module.exports = {test: async function (provider, testingContext) {
     [DharmaUpgradeBeaconController.options.address],
     true,
     value => {
-      assert.strictEqual(value, DharmaUpgradeBeaconControllerArtifact.deployedBytecode)
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
+        constants.UPGRADE_BEACON_CONTROLLER_METADATA
+      ))
     }
   )
 
@@ -960,13 +1004,12 @@ module.exports = {test: async function (provider, testingContext) {
     `DharmaUpgradeBeaconController contract deployment`,
     DharmaUpgradeBeaconControllerDeployer,
     '',
-    'deploy',
-    [address]
+    'deploy'
   )
 
   const FailedUpgradeBeaconProxy = await runTest(
-    `failure when deploying UpgradeBeaconProxy contract using an undeployed beacon`,
-    UpgradeBeaconProxyDeployer,
+    `failure when deploying UpgradeBeaconProxyV1 contract using an undeployed beacon`,
+    UpgradeBeaconProxyV1Deployer,
     '',
     'deploy',
     ["0x"],
@@ -987,7 +1030,10 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   if (
-    currentUpgradeBeaconCode !== DharmaUpgradeBeaconArtifact.deployedBytecode
+    currentUpgradeBeaconCode !== swapMetadataHash(
+      DharmaUpgradeBeaconArtifact.deployedBytecode,
+      constants.UPGRADE_BEACON_METADATA
+    )
   ) {
     await runTest(
       `DharmaUpgradeBeacon contract address check through immutable create2 factory`,
@@ -996,7 +1042,10 @@ module.exports = {test: async function (provider, testingContext) {
       'call',
       [
         constants.UPGRADE_BEACON_SALT,
-        DharmaUpgradeBeaconArtifact.bytecode
+        swapMetadataHash(
+          DharmaUpgradeBeaconArtifact.bytecode,
+          constants.UPGRADE_BEACON_METADATA
+        )
       ],
       true,
       value => {
@@ -1011,17 +1060,34 @@ module.exports = {test: async function (provider, testingContext) {
       'send',
       [
         constants.UPGRADE_BEACON_SALT,
-        DharmaUpgradeBeaconArtifact.bytecode
+        swapMetadataHash(
+          DharmaUpgradeBeaconArtifact.bytecode,
+          constants.UPGRADE_BEACON_METADATA
+        )
       ]
     )
   }
 
   await runTest(
+    'Deployed Upgrade Beacon code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [DharmaUpgradeBeacon.options.address],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaUpgradeBeaconArtifact.deployedBytecode,
+        constants.UPGRADE_BEACON_METADATA
+      ))
+    }
+  )
+
+  await runTest(
     `DharmaUpgradeBeacon contract deployment`,
     DharmaUpgradeBeaconDeployer,
     '',
-    'deploy',
-    []
+    'deploy'
   )
 
   let currentKeyRegistryCode;
@@ -1038,7 +1104,10 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   if (
-    currentKeyRegistryCode !== DharmaKeyRegistryV1Artifact.deployedBytecode
+    currentKeyRegistryCode !== swapMetadataHash(
+      DharmaKeyRegistryV1Artifact.deployedBytecode,
+      constants.KEY_REGISTRY_METADATA
+    )
   ) {
     await runTest(
       `DharmaKeyRegistryV1 Code contract address check through immutable create2 factory`,
@@ -1047,7 +1116,10 @@ module.exports = {test: async function (provider, testingContext) {
       'call',
       [
         constants.KEY_REGISTRY_SALT,
-        DharmaKeyRegistryV1Artifact.bytecode
+        swapMetadataHash(
+          DharmaKeyRegistryV1Artifact.bytecode,
+          constants.KEY_REGISTRY_METADATA
+        )
       ],
       true,
       value => {
@@ -1062,53 +1134,32 @@ module.exports = {test: async function (provider, testingContext) {
       'send',
       [
         constants.KEY_REGISTRY_SALT,
-        DharmaKeyRegistryV1Artifact.bytecode
+        swapMetadataHash(
+          DharmaKeyRegistryV1Artifact.bytecode,
+          constants.KEY_REGISTRY_METADATA
+        )
       ]
     )
   }
 
-  const DharmaUpgradeMultisig = await runTest(
-    `DharmaUpgradeMultisig contract deployment`,
-    DharmaUpgradeMultisigDeployer,
-    '',
-    'deploy',
-    [[address], 1]
-  )
-
-  const DharmaAccountRecoveryMultisig = await runTest(
-    `DharmaAccountRecoveryMultisig contract deployment`,
-    DharmaAccountRecoveryMultisigDeployer,
-    '',
-    'deploy',
-    [[address], 1]
+  await runTest(
+    'Deployed Key Registry code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [DharmaKeyRegistryV1.options.address],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaKeyRegistryV1Artifact.deployedBytecode,
+        constants.KEY_REGISTRY_METADATA
+      ))
+    }
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager contract deployment`,
     DharmaUpgradeBeaconControllerManagerDeployer,
-    '',
-    'deploy',
-    []
-  )
-  
-  await runTest(
-    `DharmaUpgradeBeacon contract deployment`,
-    DharmaUpgradeBeaconDeployer,
-    '',
-    'deploy',
-    []
-  )
-
-  const BadBeacon = await runTest(
-    `Mock Bad Beacon contract deployment`,
-    BadBeaconDeployer,
-    '',
-    'deploy'
-  )
-
-  const BadBeaconTwo = await runTest(
-    `Mock Bad Beacon Two contract deployment`,
-    BadBeaconTwoDeployer,
     '',
     'deploy'
   )
@@ -1134,57 +1185,6 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
-  let currentFactoryCode;
-  await runTest(
-    'Checking Factory runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.FACTORY_ADDRESS],
-    true,
-    value => {
-      currentFactoryCode = value;
-    }
-  )
-
-  if (
-    currentFactoryCode !== DharmaSmartWalletFactoryV1Artifact.deployedBytecode
-  ) {
-    await runTest(
-      `DharmaSmartWalletFactoryV1 Code contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.FACTORY_SALT,
-        DharmaSmartWalletFactoryV1Artifact.bytecode
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.FACTORY_ADDRESS)
-      }
-    )
-
-    await runTest(
-      `DharmaSmartWalletFactoryV1 contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.FACTORY_SALT,
-        DharmaSmartWalletFactoryV1Artifact.bytecode
-      ]
-    )
-  }
-
-  await runTest(
-    `DharmaSmartWalletFactoryV1 contract deployment`,
-    DharmaSmartWalletFactoryV1Deployer,
-    '',
-    'deploy',
-    []
-  )
-
   let currentAccountRecoveryManagerCode;
   await runTest(
     'Checking Account Recovery Manager runtime code',
@@ -1199,7 +1199,10 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   if (
-    currentAccountRecoveryManagerCode !== DharmaAccountRecoveryManagerArtifact.deployedBytecode
+    currentAccountRecoveryManagerCode !== swapMetadataHash(
+      DharmaAccountRecoveryManagerArtifact.deployedBytecode,
+      constants.ACCOUNT_RECOVERY_MANAGER_METADATA
+    )
   ) {
     await runTest(
       `DharmaAccountRecoveryManager contract address check through immutable create2 factory`,
@@ -1208,7 +1211,10 @@ module.exports = {test: async function (provider, testingContext) {
       'call',
       [
         constants.ACCOUNT_RECOVERY_MANAGER_SALT,
-        DharmaAccountRecoveryManagerArtifact.bytecode
+        swapMetadataHash(
+          DharmaAccountRecoveryManagerArtifact.bytecode,
+          constants.ACCOUNT_RECOVERY_MANAGER_METADATA
+        )
       ],
       true,
       value => {
@@ -1223,16 +1229,109 @@ module.exports = {test: async function (provider, testingContext) {
       'send',
       [
         constants.ACCOUNT_RECOVERY_MANAGER_SALT,
-        DharmaAccountRecoveryManagerArtifact.bytecode
+        swapMetadataHash(
+          DharmaAccountRecoveryManagerArtifact.bytecode,
+          constants.ACCOUNT_RECOVERY_MANAGER_METADATA
+        )
       ]
     )
   }
+
+  await runTest(
+    'Deployed Account Recovery Manager code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [DharmaAccountRecoveryManager.options.address],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaAccountRecoveryManagerArtifact.deployedBytecode,
+        constants.ACCOUNT_RECOVERY_MANAGER_METADATA
+      ))
+    }
+  )
 
   await runTest(
     `DharmaAccountRecoveryManager contract deployment`,
     DharmaAccountRecoveryManagerDeployer,
     '',
     'deploy'
+  )
+
+  let currentFactoryCode;
+  await runTest(
+    'Checking Factory runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.FACTORY_ADDRESS],
+    true,
+    value => {
+      currentFactoryCode = value;
+    }
+  )
+
+  if (
+    currentFactoryCode !== swapMetadataHash(
+      DharmaSmartWalletFactoryV1Artifact.deployedBytecode,
+      constants.FACTORY_METADATA
+    )
+  ) {
+    await runTest(
+      `DharmaSmartWalletFactoryV1 Code contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        constants.FACTORY_SALT,
+        swapMetadataHash(
+          DharmaSmartWalletFactoryV1Artifact.bytecode,
+          constants.FACTORY_METADATA
+        )
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, constants.FACTORY_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaSmartWalletFactoryV1 contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        constants.FACTORY_SALT,
+        swapMetadataHash(
+          DharmaSmartWalletFactoryV1Artifact.bytecode,
+          constants.FACTORY_METADATA
+        )
+      ]
+    )
+  }
+
+  await runTest(
+    'Deployed FactoryV1 code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [DharmaSmartWalletFactoryV1.options.address],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaSmartWalletFactoryV1Artifact.deployedBytecode,
+        constants.FACTORY_METADATA
+      ))
+    }
+  )
+
+  await runTest(
+    `DharmaSmartWalletFactoryV1 contract deployment`,
+    DharmaSmartWalletFactoryV1Deployer,
+    '',
+    'deploy',
+    []
   )
 
   let currentAdharmaSmartWalletImplementationCode;
@@ -1327,6 +1426,30 @@ module.exports = {test: async function (provider, testingContext) {
       ]
     )
   }
+
+  const DharmaUpgradeMultisig = await runTest(
+    `DharmaUpgradeMultisig contract deployment`,
+    DharmaUpgradeMultisigDeployer,
+    '',
+    'deploy',
+    [[address], 1]
+  )
+
+  const DharmaAccountRecoveryMultisig = await runTest(
+    `DharmaAccountRecoveryMultisig contract deployment`,
+    DharmaAccountRecoveryMultisigDeployer,
+    '',
+    'deploy',
+    [[address], 1]
+  )
+
+  const DharmaKeyRegistryMultisig = await runTest(
+    `DharmaKeyRegistryMultisig contract deployment`,
+    DharmaKeyRegistryMultisigDeployer,
+    '',
+    'deploy',
+    [[address], 1]
+  )
 
   const IndestructibleRegistry = await runTest(
     `IndestructibleRegistry contract deployment`,

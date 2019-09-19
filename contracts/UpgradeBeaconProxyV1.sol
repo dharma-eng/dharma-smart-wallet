@@ -2,15 +2,18 @@ pragma solidity 0.5.11;
 
 
 /**
- * @title UpgradeBeaconProxy
+ * @title UpgradeBeaconProxyV1
  * @author 0age
  * @notice This contract delegates all logic, including initialization, to an
  * implementation contract specified by a hard-coded "upgrade beacon" contract.
+ * Note that this implementation can be reduced in size by stripping out the
+ * metadata hash, or even more significantly by using a minimal upgrade beacon
+ * proxy implemented using raw EVM opcodes.
  */
-contract UpgradeBeaconProxy {
+contract UpgradeBeaconProxyV1 {
   // Set upgrade beacon address as a constant (i.e. not in contract storage).
   address private constant _UPGRADE_BEACON = address(
-    0x0000000000b45D6593312ac9fdE193F3D0633644
+    0x000000000026750c571ce882B17016557279ADaa
   );
 
   /**

@@ -1,7 +1,6 @@
-pragma solidity 0.5.11;
+pragma solidity 0.5.11; // optimization runs: 200, evm version: petersburg
 // WARNING - `executeActionWithAtomicBatchCalls` has a `bytes[]` argument that
-// requires ABIEncoderV2, and the alternatives are pretty convoluted. Consider
-// losing that function and ABIEncoderV2 for the V1 smart wallet implementation.
+// requires ABIEncoderV2. Exercise caution when calling that specific function.
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -18,6 +17,7 @@ import "../../interfaces/ERC1271.sol";
 
 /**
  * @title DharmaSmartWalletImplementationV1
+ * @author 0age
  * @notice The V1 implementation for the Dharma smart wallet is a joint-custody,
  * meta-transaction-enabled wallet with helper functions to facilitate lending
  * funds using CompoundV2. It also contains methods to support account recovery
@@ -58,13 +58,13 @@ contract DharmaSmartWalletImplementationV1 is
 
   // The Dharma Key Registry holds a public key for verifying meta-transactions.
   DharmaKeyRegistryInterface internal constant _DHARMA_KEY_REGISTRY = (
-    DharmaKeyRegistryInterface(0x00000000006c7f32F0cD1eA4C1383558eb68802D)
+    DharmaKeyRegistryInterface(0x000000005D7065eB9716a410070Ee62d51092C98)
   );
 
   // Account recovery is facilitated using a hard-coded recovery manager,
   // controlled by Dharma and implementing appropriate timelocks.
   address internal constant _ACCOUNT_RECOVERY_MANAGER = address(
-    0x0000000000C5Ebce8297A7E8f9ED34161a32D528
+    0x00000000d750176e38660203C678D88eE7e28d36
   );
 
   // This contract interfaces with Dai, USDC, and related CompoundV2 contracts.
@@ -1127,7 +1127,9 @@ contract DharmaSmartWalletImplementationV1 is
     address[] memory marketsToEnter = new address[](3);
     marketsToEnter[0] = address(_CDAI);
     marketsToEnter[1] = address(_CUSDC);
-    marketsToEnter[2] = address(0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5); // CEther
+    marketsToEnter[2] = address(
+      0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5
+    ); // CEther
 
     // Attempt to enter each market by calling into the Comptroller contract.
     (bool ok, bytes memory data) = address(_COMPTROLLER).call(

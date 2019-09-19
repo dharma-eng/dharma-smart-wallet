@@ -13,7 +13,7 @@ contract DharmaUpgradeBeacon {
 
   // The controller that can update the implementation is set as a constant.
   address private constant _CONTROLLER = address(
-    0x00000000003284ACb9aDEb78A2dDe0A8499932b9
+    0x00000000002226C940b74d674B85E4bE05539663
   );
 
   /**
