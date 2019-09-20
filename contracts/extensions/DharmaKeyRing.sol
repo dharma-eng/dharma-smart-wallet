@@ -1,6 +1,6 @@
 pragma solidity 0.5.11;
 
-import "..//helpers/ECDSAGroup.sol";
+import "../helpers/ECDSAGroup.sol";
 import "../../interfaces/DharmaKeyRingInterface.sol";
 import "../../interfaces/ERC1271.sol";
 
