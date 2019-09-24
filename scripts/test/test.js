@@ -3,18 +3,13 @@ var fs = require('fs')
 var util = require('ethereumjs-util')
 const constants = require('./constants.js')
 
-let DharmaUpgradeBeaconArtifact;
-let DharmaUpgradeBeaconControllerArtifact;
-let DharmaUpgradeBeaconEnvoyArtifact;
-let DharmaKeyRegistryV1Artifact;
-let DharmaAccountRecoveryManagerArtifact;
-let DharmaSmartWalletFactoryV1Artifact;
-let UpgradeBeaconProxyArtifact;
 let AdharmaSmartWalletImplementationArtifact;
-let DharmaUpgradeBeaconControllerManagerArtifact;
 
-const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
-const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
+const DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
+const DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
+const DharmaAccountRecoveryManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
+const DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
+const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
 
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
@@ -33,27 +28,36 @@ function longer() {
   return new Promise(resolve => {setTimeout(() => {resolve()}, 500)})
 }
 
+function swapMetadataHash(bytecode, newMetadataHashes) {
+  const totalBzzrs = bytecode.split(constants.METADATA_IDENTIFIER).length - 1
+
+  if (totalBzzrs !== newMetadataHashes.length) {
+    throw("number of metadata hashes to replace must match provided number.")
+  }
+
+  let startingPoint = bytecode.length - 1;
+
+  for (i = 0; i < totalBzzrs; i++) {
+    let replacement = constants.METADATA_IDENTIFIER + newMetadataHashes.slice(i)[0]
+    let lastIndex = bytecode.lastIndexOf(
+      constants.METADATA_IDENTIFIER, startingPoint
+    )
+    bytecode = (
+      bytecode.slice(0, lastIndex) + replacement + bytecode.slice(
+        lastIndex + replacement.length, bytecode.length
+      )
+    )
+    startingPoint = lastIndex - 1;
+  }
+  
+  return bytecode
+}
+
 module.exports = {test: async function (provider, testingContext) {
   if (testingContext === 'coverage') {
-    DharmaUpgradeBeaconEnvoyArtifact = require('../../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
-    DharmaUpgradeBeaconControllerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconController.json')
-    DharmaUpgradeBeaconArtifact = require('../../../build/contracts/DharmaUpgradeBeacon.json')
-    DharmaKeyRegistryV1Artifact = require('../../../build/contracts/DharmaKeyRegistryV1.json')
-    DharmaSmartWalletFactoryV1Artifact = require('../../../build/contracts/DharmaSmartWalletFactoryV1.json')
-    UpgradeBeaconProxyArtifact = require('../../../build/contracts/UpgradeBeaconProxy.json')
-    DharmaAccountRecoveryManagerArtifact = require('../../../build/contracts/DharmaAccountRecoveryManager.json')
     AdharmaSmartWalletImplementationArtifact = require('../../../build/contracts/AdharmaSmartWalletImplementation.json')
-    DharmaUpgradeBeaconControllerManagerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
   } else {
-    DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
-    DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
-    DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
-    DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
-    DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
-    UpgradeBeaconProxyArtifact = require('../../build/contracts/UpgradeBeaconProxy.json')
-    DharmaAccountRecoveryManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
     AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
-    DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
   }
 
   var web3 = provider
@@ -72,40 +76,19 @@ module.exports = {test: async function (provider, testingContext) {
     constants.UPGRADE_BEACON_ADDRESS
   )
 
-  const DharmaSmartWalletFactoryV1 = new web3.eth.Contract(
-    DharmaSmartWalletFactoryV1Artifact.abi,
-    constants.FACTORY_ADDRESS
-  )
-
   const DharmaAccountRecoveryManager = new web3.eth.Contract(
     DharmaAccountRecoveryManagerArtifact.abi,
     constants.ACCOUNT_RECOVERY_MANAGER_ADDRESS
   )
 
-  const DharmaUpgradeBeaconControllerManager = new web3.eth.Contract(
-    DharmaAccountRecoveryManagerArtifact.abi,
-    constants.ACCOUNT_RECOVERY_MANAGER_ADDRESS
-  ) 
-
-  const DharmaAccountRecoveryMultisigDeployer = new web3.eth.Contract(
-    DharmaAccountRecoveryMultisigArtifact.abi
-  )
-  DharmaAccountRecoveryMultisigDeployer.options.data = (
-    DharmaAccountRecoveryMultisigArtifact.bytecode
+  const DharmaKeyRegistryV1 = new web3.eth.Contract(
+    DharmaKeyRegistryV1Artifact.abi,
+    constants.KEY_REGISTRY_ADDRESS
   )
 
-  const DharmaUpgradeBeaconControllerDeployer = new web3.eth.Contract(
-    DharmaUpgradeBeaconControllerArtifact.abi
-  )
-  DharmaUpgradeBeaconControllerDeployer.options.data = (
-    DharmaUpgradeBeaconControllerArtifact.bytecode
-  )
-
-  const DharmaUpgradeBeaconDeployer = new web3.eth.Contract(
-    DharmaUpgradeBeaconArtifact.abi
-  )
-  DharmaUpgradeBeaconDeployer.options.data = (
-    DharmaUpgradeBeaconArtifact.bytecode
+  const DharmaSmartWalletFactoryV1 = new web3.eth.Contract(
+    DharmaSmartWalletFactoryV1Artifact.abi,
+    constants.FACTORY_ADDRESS
   )
 
   const BadBeaconDeployer = new web3.eth.Contract(BadBeaconArtifact.abi)
@@ -114,53 +97,12 @@ module.exports = {test: async function (provider, testingContext) {
   const BadBeaconTwoDeployer = new web3.eth.Contract(BadBeaconTwoArtifact.abi)
   BadBeaconTwoDeployer.options.data = BadBeaconTwoArtifact.bytecode
 
-  const DharmaUpgradeBeaconControllerManagerDeployer = new web3.eth.Contract(
-    DharmaUpgradeBeaconControllerManagerArtifact.abi
-  )
-  DharmaUpgradeBeaconControllerManagerDeployer.options.data = (
-    DharmaUpgradeBeaconControllerManagerArtifact.bytecode
-  )
-
-  const DharmaUpgradeMultisigDeployer = new web3.eth.Contract(
-    DharmaUpgradeMultisigArtifact.abi
-  )
-  DharmaUpgradeMultisigDeployer.options.data = (
-    DharmaUpgradeMultisigArtifact.bytecode
-  )
-
-  const UpgradeBeaconProxyDeployer = new web3.eth.Contract(
-    UpgradeBeaconProxyArtifact.abi
-  )
-  UpgradeBeaconProxyDeployer.options.data = (
-    UpgradeBeaconProxyArtifact.bytecode
-  )
-
-  const DharmaKeyRegistryV1Deployer = new web3.eth.Contract(
-    DharmaKeyRegistryV1Artifact.abi
-  )
-  DharmaKeyRegistryV1Deployer.options.data = (
-    DharmaKeyRegistryV1Artifact.bytecode
-  )
-
-  const DharmaSmartWalletFactoryV1Deployer = new web3.eth.Contract(
-    DharmaSmartWalletFactoryV1Artifact.abi
-  )
-  DharmaSmartWalletFactoryV1Deployer.options.data = (
-    DharmaSmartWalletFactoryV1Artifact.bytecode
-  )
 
   const AdharmaSmartWalletImplementationDeployer = new web3.eth.Contract(
     AdharmaSmartWalletImplementationArtifact.abi
   )
   AdharmaSmartWalletImplementationDeployer.options.data = (
     AdharmaSmartWalletImplementationArtifact.bytecode
-  )
-  
-  const DharmaAccountRecoveryManagerDeployer = new web3.eth.Contract(
-    DharmaAccountRecoveryManagerArtifact.abi
-  )
-  DharmaAccountRecoveryManagerDeployer.options.data = (
-    DharmaAccountRecoveryManagerArtifact.bytecode
   )
 
   const DharmaSmartWalletImplementationV0Deployer = new web3.eth.Contract(
@@ -526,19 +468,10 @@ module.exports = {test: async function (provider, testingContext) {
     const pubKey = await web3.eth.accounts.privateKeyToAccount(newPrivateKey)
     await web3.eth.accounts.wallet.add(pubKey)
 
-    const txCount = await web3.eth.getTransactionCount(pubKey.address)
-
-    if (txCount > 0) {
-      console.warn(
-        `warning: ${pubKey.address} has already been used, which may cause ` +
-        'some tests to fail or to be skipped.'
-      )
-    }
-
     await web3.eth.sendTransaction({
       from: originalAddress,
       to: pubKey.address,
-      value: 10 ** 18,
+      value: 2 * 10 ** 18,
       gas: '0x5208',
       gasPrice: '0x4A817C800'
     })
@@ -642,22 +575,19 @@ module.exports = {test: async function (provider, testingContext) {
   let deployGas
   let selfAddress
 
+  await runTest(
+    `DharmaUpgradeBeaconController can transfer owner`,
+    DharmaUpgradeBeaconController,
+    'transferOwnership',
+    'send',
+    [address]
+  )
+
   const MockCodeCheck = await runTest(
     `MockCodeCheck contract deployment`,
     MockCodeCheckDeployer,
     '',
     'deploy'
-  )
-
-  DharmaKeyRegistryV1 = await runTest(
-    `DharmaKeyRegistryV1 contract deployment`,
-    DharmaKeyRegistryV1Deployer,
-    '',
-    'deploy',
-    [],
-    true,
-    receipt => {},
-    originalAddress
   )
 
   await runTest(
@@ -668,7 +598,7 @@ module.exports = {test: async function (provider, testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, originalAddress)
+      assert.strictEqual(value, address)
     }
   )
 
@@ -689,7 +619,7 @@ module.exports = {test: async function (provider, testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, originalAddress)
+      assert.strictEqual(value, address)
     }
   )
 
@@ -728,7 +658,9 @@ module.exports = {test: async function (provider, testingContext) {
       address,
       newKeySignature
     ],
-    false
+    false,
+    receipt => {},
+    originalAddress
   )
 
   await runTest(
@@ -740,9 +672,7 @@ module.exports = {test: async function (provider, testingContext) {
       address,
       badNewKeySignature
     ],
-    false,
-    receipt => {},
-    originalAddress
+    false
   )
 
   await runTest(
@@ -753,10 +683,7 @@ module.exports = {test: async function (provider, testingContext) {
     [
       address,
       newKeySignature
-    ],
-    true,
-    receipt => {},
-    originalAddress
+    ]
   )
 
   await runTest(
@@ -780,7 +707,9 @@ module.exports = {test: async function (provider, testingContext) {
       address,
       DharmaKeyRegistryV1.options.address
     ],
-    false
+    false,
+    receipt => {},
+    originalAddress
   )
 
   await runTest(
@@ -791,10 +720,7 @@ module.exports = {test: async function (provider, testingContext) {
     [
       address,
       DharmaKeyRegistryV1.options.address
-    ],
-    true,
-    receipt => {},
-    originalAddress
+    ]
   )
 
   await runTest(
@@ -828,10 +754,7 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [
       address
-    ],
-    true,
-    receipt => {},
-    originalAddress
+    ]
   )
 
   await runTest(
@@ -844,22 +767,6 @@ module.exports = {test: async function (provider, testingContext) {
     value => {
       assert.strictEqual(value, address)
     }
-  )
-
-  const DharmaUpgradeMultisig = await runTest(
-    `DharmaUpgradeMultisig contract deployment`,
-    DharmaUpgradeMultisigDeployer,
-    '',
-    'deploy',
-    [[address], 1]
-  )
-
-  const DharmaAccountRecoveryMultisig = await runTest(
-    `DharmaAccountRecoveryMultisig contract deployment`,
-    DharmaAccountRecoveryMultisigDeployer,
-    '',
-    'deploy',
-    [[address], 1]
   )
 
   const BadBeacon = await runTest(
@@ -948,33 +855,15 @@ module.exports = {test: async function (provider, testingContext) {
   await runTest(
     'Dharma Upgrade Beacon Controller is inaccessible from a non-owner',
     DharmaUpgradeBeaconController,
-    'freeze',
+    'upgrade',
     'send',
-    [DharmaUpgradeBeacon.options.address],
+    [
+      DharmaUpgradeBeacon.options.address,
+      DharmaSmartWalletImplementationV0.options.address
+    ],
     false,
     receipt => {},
     originalAddress
-  )
-
-  await runTest(
-    'Dharma Upgrade Beacon Controller is accessible from the owner',
-    DharmaUpgradeBeaconController,
-    'freeze',
-    'send',
-    [DharmaUpgradeBeacon.options.address],
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.newImplementation,
-          constants.NULL_ADDRESS
-        )
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.newImplementationCodeHash,
-          constants.EMPTY_HASH
-        )
-      }
-    }
   )
 
   await runTest(
@@ -1016,40 +905,15 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'Dharma Upgrade Beacon Controller can clear upgrade beacon implementation',
+    'Dharma Upgrade Beacon Controller cannot clear upgrade beacon implementation',
     DharmaUpgradeBeaconController,
-    'freeze',
+    'upgrade',
     'send',
     [
-      DharmaUpgradeBeacon.options.address
+      DharmaUpgradeBeacon.options.address,
+      constants.NULL_ADDRESS
     ],
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.upgradeBeacon,
-          DharmaUpgradeBeacon.options.address
-        )
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.oldImplementation,
-          DharmaSmartWalletImplementationV0.options.address
-        )
-        /* TODO
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
-          ...
-        )
-        */
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.newImplementation,
-          constants.NULL_ADDRESS
-        )
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.newImplementationCodeHash,
-          constants.EMPTY_HASH
-        )
-      }
-    }
+    false
   )
 
   await runTest(
@@ -1070,12 +934,14 @@ module.exports = {test: async function (provider, testingContext) {
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.oldImplementation,
-          constants.NULL_ADDRESS
+          DharmaSmartWalletImplementationV0.options.address
         )
+        /* TODO
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
           constants.EMPTY_HASH
         )
+        */
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.newImplementation,
           DharmaSmartWalletImplementationV0.options.address
@@ -1239,10 +1105,47 @@ module.exports = {test: async function (provider, testingContext) {
   contractNames[DharmaSmartWalletFactoryV1.options.address] = 'Smart Wallet Factory'
   contractNames[targetWalletAddress] = 'Smart Wallet'
 
+  const ethWhaleBalance = await web3.eth.getBalance(constants.ETH_WHALE_ADDRESS)
+  const daiWhaleBalance = await web3.eth.getBalance(constants.DAI_WHALE_ADDRESS)
+  const usdcWhaleBalance = await web3.eth.getBalance(constants.USDC_WHALE_ADDRESS)
+
+  if (ethWhaleBalance === '0') {
+    await web3.eth.sendTransaction({
+      from: address,
+      to: constants.ETH_WHALE_ADDRESS,
+      value: web3.utils.toWei('.2', 'ether'),
+      gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+      gasPrice: 1
+    })
+    console.log(' ✓ Eth Whale can receive eth if needed')
+  }
+
+  if (daiWhaleBalance === '0') {
+    await web3.eth.sendTransaction({
+      from: address,
+      to: constants.DAI_WHALE_ADDRESS,
+      value: web3.utils.toWei('.1', 'ether'),
+      gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+      gasPrice: 1
+    })
+    console.log(' ✓ Dai Whale can receive eth if needed')
+  }
+
+  if (usdcWhaleBalance === '0') {
+    await web3.eth.sendTransaction({
+      from: address,
+      to: constants.USDC_WHALE_ADDRESS,
+      value: web3.utils.toWei('.1', 'ether'),
+      gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+      gasPrice: 1
+    })
+    console.log(' ✓ USDC Whale can receive eth if needed')
+  }
+
   await web3.eth.sendTransaction({
     from: constants.ETH_WHALE_ADDRESS,
     to: targetWalletAddress,
-    value: web3.utils.toWei('100', 'ether'),
+    value: web3.utils.toWei('.1', 'ether'),
     gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
     gasPrice: 1
   })
@@ -1322,9 +1225,12 @@ module.exports = {test: async function (provider, testingContext) {
         let events = []
         Object.values(receipt.events).forEach((value) => {
           const log = constants.EVENT_DETAILS[value.raw.topics[0]]
+          if (typeof log === 'undefined') {
+            console.log(value)
+          }
           const decoded = web3.eth.abi.decodeLog(
             log.abi, value.raw.data, value.raw.topics
-          )        
+          )
           events.push({
             address: contractNames[value.address],
             eventName: log.name,
@@ -1475,7 +1381,7 @@ module.exports = {test: async function (provider, testingContext) {
           const log = constants.EVENT_DETAILS[value.raw.topics[0]]
           const decoded = web3.eth.abi.decodeLog(
             log.abi, value.raw.data, value.raw.topics
-          )        
+          )
           events.push({
             address: contractNames[value.address],
             eventName: log.name,
@@ -1539,18 +1445,6 @@ module.exports = {test: async function (provider, testingContext) {
      
         assert.strictEqual(events.length, 0)
       }
-    }
-  )
-
-  await runTest(
-    'Deployed User Smart Wallet code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [UserSmartWallet.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, UpgradeBeaconProxyArtifact.deployedBytecode) 
     }
   )
 

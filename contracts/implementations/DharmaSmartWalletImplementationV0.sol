@@ -52,7 +52,7 @@ contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0I
 
   // The Dharma Key Registry holds a public key for verifying meta-transactions.
   DharmaKeyRegistryInterface internal constant _DHARMA_KEY_REGISTRY = (
-    DharmaKeyRegistryInterface(0x00000000006c7f32F0cD1eA4C1383558eb68802D)
+    DharmaKeyRegistryInterface(0x000000005D7065eB9716a410070Ee62d51092C98)
   );
 
   // This contract interfaces with Dai, USDC, and related CompoundV2 contracts.

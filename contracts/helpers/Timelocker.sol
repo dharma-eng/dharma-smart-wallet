@@ -68,10 +68,7 @@ contract Timelocker {
    * @notice View function to check if a timelock for the specified function and
    * arguments has completed.
    * @param functionSelector function to be called.
-   * @param arguments The abi-encoded arguments of the function to be called -
-   * in the case of `update`, it is the beacon controller address, the beacon
-   * address, and the implementation address, each encoded as left-padded
-   * 32-byte values.
+   * @param arguments The abi-encoded arguments of the function to be called.
    * @return A boolean indicating if the timelock exists or not and the time at
    * which the timelock completes if it does exist.
    */
@@ -148,6 +145,8 @@ contract Timelocker {
    * function selector. Only callable during contract creation.
    * @param functionSelector the selector of the function to set the timelock
    * interval for.
+   * @param newTimelockInterval the new minimum timelock interval to set for the
+   * given function.
    */
   function _setInitialTimelockInterval(
     bytes4 functionSelector,

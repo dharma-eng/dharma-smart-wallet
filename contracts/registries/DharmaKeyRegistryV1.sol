@@ -7,14 +7,15 @@ import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 /**
  * @title DharmaKeyRegistryV1
  * @author 0age
- * @notice The Dharma Key Registry is a contract that holds the public secondary
- * signing key (or keys) that will be used by the Dharma Smart Wallet. Each time
- * a particular Dharma Smart Wallet instance needs to validate a signature, it
+ * @notice The Dharma Key Registry is an owned contract that holds the public
+ * user signing keys that will be used by the Dharma Smart Wallet. Each time a
+ * particular Dharma Smart Wallet instance needs to validate a signature, it
  * will first retrieve the public address for the secondary signing key
  * associated with that wallet from the Dharma Key Registry. If a specific key
  * has not been set for that smart wallet, it will return the global public key.
- * Otherwise, it will return the specific signing key. (Either of these options
- * can also be retrieved directly.)
+ * Otherwise, it will return the specific signing key. Additional view functions
+ * are also provided for retrieving public keys directly. Only the owner may
+ * update these keys.
  */
 contract DharmaKeyRegistryV1 is Ownable {
   using ECDSA for bytes32;
@@ -106,6 +107,23 @@ contract DharmaKeyRegistryV1 is Ownable {
   }
 
   /**
+   * @notice Get the public key associated with a particular account. If a
+   * specific key is set for the account, it will be returned; otherwise, the
+   * global key will be returned.
+   * @param account address The account to find the public key for.
+   * @return The public key to use for the provided account.
+   */
+  function getKeyForUser(address account) external view returns (address key) {
+    // Retrieve the specific key, if any, for the specified account.
+    key = _specificKeys[account];
+
+    // Fall back to the global key in the event that no specific key is set.
+    if (key == address(0)) {
+      key = _globalKey;
+    }
+  }
+
+  /**
    * @notice Get the global public key.
    * @return The global public key.
    */
@@ -117,6 +135,7 @@ contract DharmaKeyRegistryV1 is Ownable {
   /**
    * @notice Get the specific public key associated with the supplied account.
    * The call will revert if a specific public key is not set for the account.
+   * @param account address The account to find the specific public key for.
    * @return The specific public key set on the provided account, if one exists.
    */
   function getSpecificKey(
