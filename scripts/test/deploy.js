@@ -133,14 +133,20 @@ module.exports = {test: async function (provider, testingContext) {
     IndestructibleRegistryArtifact.abi
   )
   IndestructibleRegistryDeployer.options.data = (
-    IndestructibleRegistryArtifact.bytecode
+    swapMetadataHash(
+      IndestructibleRegistryArtifact.bytecode,
+      ['0000000000000000000000000000000000000000000000000000000000000000']
+    )
   )
 
   const CodeHashCacheDeployer = new web3.eth.Contract(
     CodeHashCacheArtifact.abi
   )
   CodeHashCacheDeployer.options.data = (
-    CodeHashCacheArtifact.bytecode
+    swapMetadataHash(
+      CodeHashCacheArtifact.bytecode,
+      ['0000000000000000000000000000000000000000000000000000000000000000']
+    )
   )
 
   const DharmaUpgradeMultisigDeployer = new web3.eth.Contract(
@@ -216,14 +222,20 @@ module.exports = {test: async function (provider, testingContext) {
     AdharmaSmartWalletImplementationArtifact.abi
   )
   AdharmaSmartWalletImplementationDeployer.options.data = (
-    AdharmaSmartWalletImplementationArtifact.bytecode
+    swapMetadataHash(
+      AdharmaSmartWalletImplementationArtifact.bytecode,
+      ['0000000000000000000000000000000000000000000000000000000000000000']
+    )
   )
   
   const DharmaAccountRecoveryManagerDeployer = new web3.eth.Contract(
     DharmaAccountRecoveryManagerArtifact.abi
   )
   DharmaAccountRecoveryManagerDeployer.options.data = (
-    DharmaAccountRecoveryManagerArtifact.bytecode
+    swapMetadataHash(
+      DharmaAccountRecoveryManagerArtifact.bytecode,
+      ['0000000000000000000000000000000000000000000000000000000000000000']
+    )
   )
 
   const DharmaSmartWalletImplementationV0Deployer = new web3.eth.Contract(
@@ -233,7 +245,7 @@ module.exports = {test: async function (provider, testingContext) {
     swapMetadataHash(
       DharmaSmartWalletImplementationV0Artifact.bytecode,
       ['0000000000000000000000000000000000000000000000000000000000000000']
-    )    
+    ) 
   )
 
   const DharmaSmartWalletImplementationV1Deployer = new web3.eth.Contract(
@@ -1619,6 +1631,14 @@ module.exports = {test: async function (provider, testingContext) {
     CodeHashCacheDeployer,
     '',
     'deploy'
+  )
+
+  await runTest(
+    'IndestructibleRegistry can register codehashcache as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [CodeHashCache.options.address]
   )
 
   await runTest(
