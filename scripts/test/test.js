@@ -471,7 +471,7 @@ module.exports = {test: async function (provider, testingContext) {
     await web3.eth.sendTransaction({
       from: originalAddress,
       to: pubKey.address,
-      value: 10 ** 18,
+      value: 2 * 10 ** 18,
       gas: '0x5208',
       gasPrice: '0x4A817C800'
     })
@@ -1105,10 +1105,47 @@ module.exports = {test: async function (provider, testingContext) {
   contractNames[DharmaSmartWalletFactoryV1.options.address] = 'Smart Wallet Factory'
   contractNames[targetWalletAddress] = 'Smart Wallet'
 
+  const ethWhaleBalance = await web3.eth.getBalance(constants.ETH_WHALE_ADDRESS)
+  const daiWhaleBalance = await web3.eth.getBalance(constants.DAI_WHALE_ADDRESS)
+  const usdcWhaleBalance = await web3.eth.getBalance(constants.USDC_WHALE_ADDRESS)
+
+  if (ethWhaleBalance === '0') {
+    await web3.eth.sendTransaction({
+      from: address,
+      to: constants.ETH_WHALE_ADDRESS,
+      value: web3.utils.toWei('.2', 'ether'),
+      gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+      gasPrice: 1
+    })
+    console.log(' ✓ Eth Whale can receive eth if needed')
+  }
+
+  if (daiWhaleBalance === '0') {
+    await web3.eth.sendTransaction({
+      from: address,
+      to: constants.DAI_WHALE_ADDRESS,
+      value: web3.utils.toWei('.1', 'ether'),
+      gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+      gasPrice: 1
+    })
+    console.log(' ✓ Dai Whale can receive eth if needed')
+  }
+
+  if (usdcWhaleBalance === '0') {
+    await web3.eth.sendTransaction({
+      from: address,
+      to: constants.USDC_WHALE_ADDRESS,
+      value: web3.utils.toWei('.1', 'ether'),
+      gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+      gasPrice: 1
+    })
+    console.log(' ✓ USDC Whale can receive eth if needed')
+  }
+
   await web3.eth.sendTransaction({
     from: constants.ETH_WHALE_ADDRESS,
     to: targetWalletAddress,
-    value: web3.utils.toWei('100', 'ether'),
+    value: web3.utils.toWei('.1', 'ether'),
     gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
     gasPrice: 1
   })
@@ -1188,9 +1225,12 @@ module.exports = {test: async function (provider, testingContext) {
         let events = []
         Object.values(receipt.events).forEach((value) => {
           const log = constants.EVENT_DETAILS[value.raw.topics[0]]
+          if (typeof log === 'undefined') {
+            console.log(value)
+          }
           const decoded = web3.eth.abi.decodeLog(
             log.abi, value.raw.data, value.raw.topics
-          )        
+          )
           events.push({
             address: contractNames[value.address],
             eventName: log.name,
@@ -1341,7 +1381,7 @@ module.exports = {test: async function (provider, testingContext) {
           const log = constants.EVENT_DETAILS[value.raw.topics[0]]
           const decoded = web3.eth.abi.decodeLog(
             log.abi, value.raw.data, value.raw.topics
-          )        
+          )
           events.push({
             address: contractNames[value.address],
             eventName: log.name,

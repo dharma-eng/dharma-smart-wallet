@@ -202,6 +202,15 @@ module.exports = Object.freeze({
       '20202020202055706772616465426561636f6e50726f78795631202020202020'
     ]
   ),
+  KEY_REGISTRY_MIMIC_ADDRESS: (
+    '0x00000000D1dBC357A3f3D0f1F934D0186Ba40396'
+  ),
+  KEY_REGISTRY_MIMIC_SALT: (
+    '0x000000000000000000000000000000000000000033a95ffc488dbf0114000000'
+  ),
+  KEY_REGISTRY_MIMIC_METADATA: (
+    ['20202020446861726d614b6579526567697374727956314d696d696320202020']
+  ),  
   DHARMA_SMART_WALLET_IMPLEMENTATION_V1_ADDRESS: (
     '0x0000000010A653849F221A573E00f3A37C8C4082'
   ),
@@ -209,7 +218,7 @@ module.exports = Object.freeze({
     '0x0000000000000000000000000000000000000000dfdbded845e0d00ca0000000'
   ),
   DHARMA_SMART_WALLET_IMPLEMENTATION_V1_METADATA: (
-    '446861726d61536d61727457616c6c6574496d706c656d656e746174696f6e31'
+    ['446861726d61536d61727457616c6c6574496d706c656d656e746174696f6e31']
   ),
   ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS: (
     '0x000000000006FD7FA6B5E08621d480b8e7Ab04eD'
@@ -363,6 +372,21 @@ module.exports = Object.freeze({
           name: 'totalBorrows'
         }
       ]    
+    },
+    '0x45b96fe442630264581b197e84bbada861235052c5a1aadfff9ea4e40a969aa0': {
+      name: 'Failure',
+      abi: [
+        {
+          type: 'uint256',
+          name: 'error'
+        }, {
+          type: 'uint256',
+          name: 'info'
+        }, {
+          type: 'uint256',
+          name: 'detail'
+        }
+      ]
     }
   },
   METADATA_IDENTIFIER: '627a7a72315820',
