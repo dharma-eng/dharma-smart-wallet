@@ -1157,13 +1157,6 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  await runTest(
-    `DharmaUpgradeBeaconControllerManager contract deployment`,
-    DharmaUpgradeBeaconControllerManagerDeployer,
-    '',
-    'deploy'
-  )
-
   const DharmaSmartWalletImplementationV0 = await runTest(
     `DharmaSmartWalletImplementationV0 contract deployment`,
     DharmaSmartWalletImplementationV0Deployer,
@@ -1336,7 +1329,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   let currentAdharmaSmartWalletImplementationCode;
   await runTest(
-    'Checking Account Recovery Manager runtime code',
+    'Checking Adharma smart wallet implementation runtime code',
     MockCodeCheck,
     'code',
     'call',
@@ -1348,7 +1341,10 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   if (
-    currentAdharmaSmartWalletImplementationCode !== AdharmaSmartWalletImplementationArtifact.deployedBytecode
+    currentAdharmaSmartWalletImplementationCode !== swapMetadataHash(
+      AdharmaSmartWalletImplementationArtifact.deployedBytecode,
+      constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_METADATA
+    )
   ) {
     await runTest(
       `AdharmaSmartWalletImplementation contract address check through immutable create2 factory`,
@@ -1356,8 +1352,11 @@ module.exports = {test: async function (provider, testingContext) {
       'findCreate2Address',
       'call',
       [
-        '0x000000000000000000000000000000000000000037686e593cbd8f0d1f190000',
-        AdharmaSmartWalletImplementationArtifact.bytecode
+        constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_SALT,
+        swapMetadataHash(
+          AdharmaSmartWalletImplementationArtifact.bytecode,
+          constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_METADATA
+        )
       ],
       true,
       value => {
@@ -1371,11 +1370,29 @@ module.exports = {test: async function (provider, testingContext) {
       'safeCreate2',
       'send',
       [
-        '0x000000000000000000000000000000000000000037686e593cbd8f0d1f190000',
-        AdharmaSmartWalletImplementationArtifact.bytecode
+        constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_SALT,
+        swapMetadataHash(
+          AdharmaSmartWalletImplementationArtifact.bytecode,
+          constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_METADATA
+        )
       ]
     )
   }
+
+  await runTest(
+    'Deployed AdharmaSmartWalletImplementation code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        AdharmaSmartWalletImplementationArtifact.deployedBytecode,
+        constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_METADATA
+      ))
+    }
+  )
 
   await runTest(
     `AdharmaSmartWalletImplementation contract deployment`,
@@ -1398,7 +1415,10 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   if (
-    currentUpgradeBeaconControllerManagerCode !== DharmaUpgradeBeaconControllerManagerArtifact.deployedBytecode
+    currentUpgradeBeaconControllerManagerCode !== swapMetadataHash(
+      DharmaUpgradeBeaconControllerManagerArtifact.deployedBytecode,
+      constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+    )
   ) {
     await runTest(
       `DharmaUpgradeBeaconControllerManager contract address check through immutable create2 factory`,
@@ -1407,7 +1427,10 @@ module.exports = {test: async function (provider, testingContext) {
       'call',
       [
         constants.UPGRADE_BEACON_CONTROLLER_MANAGER_SALT,
-        DharmaUpgradeBeaconControllerManagerArtifact.bytecode
+        swapMetadataHash(
+          DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
+          constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+        )
       ],
       true,
       value => {
@@ -1421,11 +1444,36 @@ module.exports = {test: async function (provider, testingContext) {
       'safeCreate2',
       'send',
       [
-        '0x0000000000000000000000000000000000000000ab7cfa72f49fa70a011d0000',
-        DharmaUpgradeBeaconControllerManagerArtifact.bytecode
+        constants.UPGRADE_BEACON_CONTROLLER_MANAGER_SALT,
+        swapMetadataHash(
+          DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
+          constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+        )
       ]
     )
   }
+
+  await runTest(
+    'Deployed DharmaUpgradeBeaconControllerManager code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaUpgradeBeaconControllerManagerArtifact.deployedBytecode,
+        constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+      ))
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager contract deployment`,
+    DharmaUpgradeBeaconControllerManagerDeployer,
+    '',
+    'deploy'
+  )
 
   const DharmaUpgradeMultisig = await runTest(
     `DharmaUpgradeMultisig contract deployment`,
