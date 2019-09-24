@@ -230,21 +230,30 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaSmartWalletImplementationV0Artifact.abi
   )
   DharmaSmartWalletImplementationV0Deployer.options.data = (
-    DharmaSmartWalletImplementationV0Artifact.bytecode
+    swapMetadataHash(
+      DharmaSmartWalletImplementationV0Artifact.bytecode,
+      ['0000000000000000000000000000000000000000000000000000000000000000']
+    )    
   )
 
   const DharmaSmartWalletImplementationV1Deployer = new web3.eth.Contract(
     DharmaSmartWalletImplementationV1Artifact.abi
   )
   DharmaSmartWalletImplementationV1Deployer.options.data = (
-    DharmaSmartWalletImplementationV1Artifact.bytecode
+    swapMetadataHash(
+      DharmaSmartWalletImplementationV1Artifact.bytecode,
+      ['0000000000000000000000000000000000000000000000000000000000000000']
+    )
   )
 
   const DharmaSmartWalletImplementationV2Deployer = new web3.eth.Contract(
     DharmaSmartWalletImplementationV2Artifact.abi
   )
   DharmaSmartWalletImplementationV2Deployer.options.data = (
-    DharmaSmartWalletImplementationV2Artifact.bytecode
+    swapMetadataHash(
+      DharmaSmartWalletImplementationV2Artifact.bytecode,
+      ['0000000000000000000000000000000000000000000000000000000000000000']
+    )
   )
 
   const UpgradeBeaconImplementationCheckDeployer = new web3.eth.Contract(
