@@ -1514,7 +1514,7 @@ module.exports = {test: async function (provider, testingContext) {
     [],
     true,
     value => {
-      //console.log(value)
+      console.log(value)
     }
   )
 
@@ -2463,7 +2463,7 @@ module.exports = {test: async function (provider, testingContext) {
     'call',
     [
       4, // DaiWithdrawal,
-      constants.FULL_APPROVAL,
+      '100000000000000',
       address,
       0
     ],
@@ -2479,6 +2479,53 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   let daiUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V1 UserSmartWallet relay can call with signature to withdraw dai',
+    UserSmartWallet,
+    'withdrawDai',
+    'send',
+    [
+      '100000000000000',
+      address,
+      0,
+      daiUserWithdrawalSignature,
+      daiWithdrawalSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+      console.log(receipt.events)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWallet,
+    'getNextCustomActionID',
+    'call',
+    [
+      4, // DaiWithdrawal,
+      constants.FULL_APPROVAL,
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  daiWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  daiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     addressTwo
   )
@@ -2711,8 +2758,8 @@ module.exports = {test: async function (provider, testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.totalSupply().encodeABI(),
+      USDC.options.address,
+      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -2737,8 +2784,8 @@ module.exports = {test: async function (provider, testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.totalSupply().encodeABI(),
+      USDC.options.address,
+      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -2967,6 +3014,53 @@ module.exports = {test: async function (provider, testingContext) {
       // TODO: verify logs
       console.log(receipt.events[0])
       console.log(receipt.events.ExternalError)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get a Ether withdrawal custom action ID',
+    UserSmartWalletV1,
+    'getNextCustomActionID',
+    'call',
+    [
+      6, // ETHWithdrawal,
+      '1',
+      targetWalletAddress,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  ethWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V1 UserSmartWallet relay cannot withdraw eth to a non-payable account',
+    UserSmartWalletV1,
+    'withdrawEther',
+    'send',
+    [
+      '1',
+      targetWalletAddress,
+      0,
+      ethUserWithdrawalSignature,
+      ethWithdrawalSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+      console.log(receipt)
     },
     originalAddress
   )

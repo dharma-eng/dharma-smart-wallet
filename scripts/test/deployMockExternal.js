@@ -2150,6 +2150,18 @@ module.exports = {test: async function (provider, testingContext) {
 
   const gasLimit = latestBlock.gasLimit
 
+  // 0x43Af172dFC1017c775D789f5B6cDD375E3D8Fe14
+  // primary address, nonce: 0
+  const mockPriceOracleDeploymentData = (
+    '0x608060405234801561001057600080fd5b5060cd8061001f6000396000f3fe60806040' +
+    '52348015600f57600080fd5b506004361060325760003560e01c806366331bba14603757' +
+    '8063fc57d4df146051575b600080fd5b603d6086565b6040805191151582525190819003' +
+    '60200190f35b607460048036036020811015606557600080fd5b50356001600160a01b03' +
+    '16608b565b60408051918252519081900360200190f35b600190565b50670de0b6b3a764' +
+    '00009056fea265627a7a72315820cf3b4d1c8f3041ebb02fbc6b404dd54636a41af89e8a' +
+    '04ea19bf35f04b48fae764736f6c634300050b0032'
+  )
+
   // 0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359
   // nonce: 4
   const mockDaiDeploymentData = (
@@ -4599,107 +4611,25 @@ module.exports = {test: async function (provider, testingContext) {
     return pubKey.address
   }
 
-  async function raiseGasLimit(necessaryGas) {
-    iterations = 9999
-    if (necessaryGas > 8000000) {
-      console.error('the gas needed is too high!')
-      process.exit(1)
-    } else if (typeof necessaryGas === 'undefined') {
-      iterations = 20
-      necessaryGas = 8000000
-    }
-
-    // bring up gas limit if necessary by doing additional transactions
-    var block = await web3.eth.getBlock("latest")
-    while (iterations > 0 && block.gasLimit < necessaryGas) {
-      await web3.eth.sendTransaction({
-        from: originalAddress,
-        to: originalAddress,
-        value: '0x01',
-        gas: '0x5208',
-        gasPrice: '0x4A817C800'
-      })
-      var block = await web3.eth.getBlock("latest")
-      iterations--
-    }
-
-    console.log("raising gasLimit, currently at " + block.gasLimit)
-    return block.gasLimit
-  }
-
-  async function getDeployGas(dataPayload) {
-    await web3.eth.estimateGas({
-      from: address,
-      data: dataPayload
-    }).catch(async error => {
-      if (
-        error.message === (
-          'Returned error: gas required exceeds allowance or always failing ' +
-          'transaction'
-        )
-      ) {
-        await raiseGasLimit()
-        await getDeployGas(dataPayload)
-      }
-    })
-
-    deployGas = await web3.eth.estimateGas({
-      from: address,
-      data: dataPayload
-    })
-
-    return deployGas
-  }
-
-  function signHashedPrefixedHexString(hashedHexString, account) {
-    const hashedPrefixedMessage = web3.utils.keccak256(
-      // prefix => "\x19Ethereum Signed Message:\n32"
-      "0x19457468657265756d205369676e6564204d6573736167653a0a3332" +
-      hashedHexString.slice(2),
-      {encoding: "hex"}
-    )
-
-    const sig = util.ecsign(
-      util.toBuffer(hashedPrefixedMessage),
-      util.toBuffer(web3.eth.accounts.wallet[account].privateKey)
-    )
-
-    return (
-      util.bufferToHex(sig.r) +
-      util.bufferToHex(sig.s).slice(2) +
-      web3.utils.toHex(sig.v).slice(2)
-    )
-  }
-
-  function signHashedPrefixedHashedHexString(hexString, account) {
-    const hashedPrefixedHashedMessage = web3.utils.keccak256(
-      // prefix => "\x19Ethereum Signed Message:\n32"
-      "0x19457468657265756d205369676e6564204d6573736167653a0a3332" +
-      web3.utils.keccak256(hexString, {encoding: "hex"}).slice(2),
-      {encoding: "hex"}
-    )
-
-    const sig = util.ecsign(
-      util.toBuffer(hashedPrefixedHashedMessage),
-      util.toBuffer(web3.eth.accounts.wallet[account].privateKey)
-    )
-
-    return (
-      util.bufferToHex(sig.r) +
-      util.bufferToHex(sig.s).slice(2) +
-      web3.utils.toHex(sig.v).slice(2)
-    )
-  }
-
   // *************************** deploy contracts *************************** //
-  let deployGas
-  let selfAddress
-
   const currentDaiCode = await web3.eth.getCode(constants.DAI_MAINNET_ADDRESS)
   if (currentDaiCode !== '0x') {
     console.log('contracts already set up, skipping...')
     return 0
   }
+
+  console.log('deploying mock price oracle contract...')
+  const priceOracleDeployReceipt = await web3.eth.sendTransaction({
+    from: address,
+    gas: (testingContext !== 'coverage') ? '1000000' : gasLimit - 1,
+    gasPrice: 1,
+    data: mockPriceOracleDeploymentData
+  })
+
+  assert.strictEqual(
+    priceOracleDeployReceipt.contractAddress,
+    '0x43Af172dFC1017c775D789f5B6cDD375E3D8Fe14'
+  )
 
   console.log('funding dai deployer address...')
   await web3.eth.sendTransaction({
@@ -4941,7 +4871,7 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [
       UNITROLLER.options.address,
-      address,
+      priceOracleDeployReceipt.contractAddress,
       '500000000000000000',
       20,
       false
@@ -5090,7 +5020,7 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [
       UNITROLLER.options.address,
-      address,
+      priceOracleDeployReceipt.contractAddress,
       '500000000000000000',
       20,
       true
