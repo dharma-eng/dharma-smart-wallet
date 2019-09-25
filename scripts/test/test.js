@@ -1732,7 +1732,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       // TODO: verify logs
-      //console.log(receipt)
+      console.log(receipt.events)
     },
     originalAddress
   )
@@ -2703,6 +2703,272 @@ module.exports = {test: async function (provider, testingContext) {
         // TODO: test more events
       }
     }
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV1,
+    'getNextGenericActionID',
+    'call',
+    [
+      DAI.options.address,
+      DAI.methods.totalSupply().encodeABI(),
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  let executeActionSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  let executeActionUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can call executeAction',
+    UserSmartWalletV1,
+    'executeAction',
+    'send',
+    [
+      DAI.options.address,
+      DAI.methods.totalSupply().encodeABI(),
+      0,
+      executeActionUserSignature,
+      executeActionSignature
+    ]
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get the next generic batch action ID',
+    UserSmartWalletV1,
+    'getNextGenericAtomicBatchActionID',
+    'call',
+    [
+      [{to: DAI.options.address, data: DAI.methods.totalSupply().encodeABI()}],
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  let currentNonce
+  await runTest(
+    'UserSmartWallet can get the nonce',
+    UserSmartWalletV1,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      currentNonce = value
+    }
+  )
+
+  await runTest(
+    'V1 UserSmartWallet generic batch action ID with nonce matches next ID',
+    UserSmartWalletV1,
+    'getGenericAtomicBatchActionID',
+    'call',
+    [
+      [{to: DAI.options.address, data: DAI.methods.totalSupply().encodeABI()}],
+      currentNonce,
+      0
+    ],
+    true,
+    value => {
+      assert.strictEqual(value, customActionId)
+    }
+  )
+
+  executeActionSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  executeActionUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can call executeActionWithAtomicBatchCalls',
+    UserSmartWalletV1,
+    'executeActionWithAtomicBatchCalls',
+    'send',
+    [
+      [{to: DAI.options.address, data: DAI.methods.totalSupply().encodeABI()}],
+      0,
+      executeActionUserSignature,
+      executeActionSignature
+    ]
+  )
+
+  await runTest(
+    'USDC Whale can deposit usdc into the deployed smart wallet',
+    USDC,
+    'transfer',
+    'send',
+    [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.from,
+          constants.USDC_WHALE_ADDRESS
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.to,
+          targetWalletAddress
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.value,
+          web3.utils.toWei('100', 'lovelace')
+        )
+      }
+    },
+    constants.USDC_WHALE_ADDRESS
+  )
+
+  await runTest(
+    'new user smart wallet can trigger repayAndDeposit to deposit all new funds',
+    UserSmartWalletV1,
+    'repayAndDeposit',
+    'send',
+    [],
+    true,
+    receipt => {
+      //console.log(receipt.status, receipt.gasUsed)
+      if (testingContext !== 'coverage') {
+        let events = []
+        Object.values(receipt.events).forEach((value) => {
+          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
+          const decoded = web3.eth.abi.decodeLog(
+            log.abi, value.raw.data, value.raw.topics
+          )
+          events.push({
+            address: contractNames[value.address],
+            eventName: log.name,
+            returnValues: decoded
+          })
+        })
+
+        assert.strictEqual(events[0].address, 'CUSDC')
+        assert.strictEqual(events[0].eventName, 'AccrueInterest')
+
+        assert.strictEqual(events[1].address, 'USDC')
+        assert.strictEqual(events[1].eventName, 'Transfer')
+        assert.strictEqual(events[1].returnValues.value, web3.utils.toWei('100', 'lovelace'))
+
+        assert.strictEqual(events[2].address, 'CUSDC')
+        assert.strictEqual(events[2].eventName, 'Mint')
+        assert.strictEqual(events[2].returnValues.mintTokens, web3.utils.toWei('100', 'lovelace'))
+
+        assert.strictEqual(events[3].address, 'CUSDC')
+        assert.strictEqual(events[3].eventName, 'Transfer')
+      }
+    }
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
+    UserSmartWallet,
+    'getNextCustomActionID',
+    'call',
+    [
+      5, // USDCWithdrawal,
+      web3.utils.toWei('50', 'lovelace'),
+      constants.MOCK_USDC_BLACKLISTED_ADDRESS,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  usdcWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  const FIAT_TOKEN = new web3.eth.Contract(
+    [
+      {
+        "constant": true, "inputs": [], "name": "blacklister",
+        "outputs": [{"name": "", "type": "address"}], "payable": false,
+        "stateMutability": "view", "type": "function"
+      }, {
+        "constant": false, "inputs": [{"name": "_account", "type": "address"}],
+        "name": "blacklist", "outputs": [], "payable": false,
+        "stateMutability": "nonpayable", "type": "function"
+      }, {
+        "constant": true, "inputs": [{"name": "_account", "type": "address"}],
+        "name": "isBlacklisted", "outputs": [{"name": "", "type": "bool"}],
+        "payable": false, "stateMutability": "view", "type": "function"
+      }
+    ],
+    constants.USDC_MAINNET_ADDRESS
+  )
+
+  let isBlacklisted
+  await runTest(
+    'Check if mock blacklisted address has been blacklisted',
+    FIAT_TOKEN,
+    'isBlacklisted',
+    'call',
+    [constants.MOCK_USDC_BLACKLISTED_ADDRESS],
+    true,
+    value => {
+      isBlacklisted = value
+    }
+  )
+
+  if (!isBlacklisted) {
+    await runTest(
+      'blacklist mock address',
+      FIAT_TOKEN,
+      'blacklist',
+      'send',
+      [constants.MOCK_USDC_BLACKLISTED_ADDRESS],
+      true,
+      receipt => {},
+      '0x5dB0115f3B72d19cEa34dD697cf412Ff86dc7E1b' // current USDC blacklister
+    )
+  }
+
+  await runTest(
+    'V1 UserSmartWallet relay call to withdraw USDC to blacklisted address',
+    UserSmartWallet,
+    'withdrawUSDC',
+    'send',
+    [
+      web3.utils.toWei('50', 'lovelace'),
+      constants.MOCK_USDC_BLACKLISTED_ADDRESS,
+      0,
+      usdcUserWithdrawalSignature,
+      usdcWithdrawalSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+      console.log(receipt.events[0])
+      console.log(receipt.events.ExternalError)
+    },
+    originalAddress
   )
 
   console.log(

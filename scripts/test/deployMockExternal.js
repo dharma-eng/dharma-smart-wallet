@@ -4882,6 +4882,14 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
+  await runTest(
+    'blacklist a USDC address',
+    FIAT_TOKEN,
+    'blacklist',
+    'send',
+    [constants.MOCK_USDC_BLACKLISTED_ADDRESS]
+  )
+
   console.log('deploying Compound unitroller...')
   const unitrollerDeploymentReceipt = await web3.eth.sendTransaction({
     from: '0xA7ff0d561cd15eD525e31bbe0aF3fE34ac2059F6',
