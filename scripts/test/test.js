@@ -2676,6 +2676,20 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'V1 UserSmartWallet cancel reverts with bad signature',
+    UserSmartWallet,
+    'cancel',
+    'send',
+    [
+      0,
+     '0x'
+    ],
+    false,
+    receipt => {},
+    originalAddress
+  )
+
+  await runTest(
     'V1 UserSmartWallet calls revert if insufficient action gas is supplied',
     UserSmartWallet,
     'cancel',
@@ -2746,6 +2760,7 @@ module.exports = {test: async function (provider, testingContext) {
 
         assert.strictEqual(events[0].eventName, 'NewUserSigningKey')
         assert.strictEqual(events[0].returnValues.userSigningKey, addressTwo)
+        console.log(events)
 
         // TODO: test more events
       }
@@ -2776,6 +2791,36 @@ module.exports = {test: async function (provider, testingContext) {
   let executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
     addressTwo
+  )
+
+  await runTest(
+    'V1 UserSmartWallet cannot call executeAction and target a non-contract',
+    UserSmartWalletV1,
+    'executeAction',
+    'send',
+    [
+      address,
+      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      0,
+      executeActionUserSignature,
+      executeActionSignature
+    ],
+    false
+  )
+
+  await runTest(
+    'V1 UserSmartWallet cannot call executeAction and target itself',
+    UserSmartWalletV1,
+    'executeAction',
+    'send',
+    [
+      UserSmartWalletV1.options.address,
+      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      0,
+      executeActionUserSignature,
+      executeActionSignature
+    ],
+    false
   )
 
   await runTest(
@@ -2907,20 +2952,23 @@ module.exports = {test: async function (provider, testingContext) {
             returnValues: decoded
           })
         })
+        assert.strictEqual(events[0].address, 'USDC')
+        assert.strictEqual(events[0].eventName, 'Approval')
+        assert.strictEqual(events[0].returnValues.value, constants.FULL_APPROVAL)
 
-        assert.strictEqual(events[0].address, 'CUSDC')
-        assert.strictEqual(events[0].eventName, 'AccrueInterest')
+        assert.strictEqual(events[1].address, 'CUSDC')
+        assert.strictEqual(events[1].eventName, 'AccrueInterest')
 
-        assert.strictEqual(events[1].address, 'USDC')
-        assert.strictEqual(events[1].eventName, 'Transfer')
-        assert.strictEqual(events[1].returnValues.value, web3.utils.toWei('100', 'lovelace'))
-
-        assert.strictEqual(events[2].address, 'CUSDC')
-        assert.strictEqual(events[2].eventName, 'Mint')
-        assert.strictEqual(events[2].returnValues.mintTokens, web3.utils.toWei('100', 'lovelace'))
+        assert.strictEqual(events[2].address, 'USDC')
+        assert.strictEqual(events[2].eventName, 'Transfer')
+        assert.strictEqual(events[2].returnValues.value, web3.utils.toWei('100', 'lovelace'))
 
         assert.strictEqual(events[3].address, 'CUSDC')
-        assert.strictEqual(events[3].eventName, 'Transfer')
+        assert.strictEqual(events[3].eventName, 'Mint')
+        assert.strictEqual(events[3].returnValues.mintTokens, web3.utils.toWei('100', 'lovelace'))
+
+        assert.strictEqual(events[4].address, 'CUSDC')
+        assert.strictEqual(events[4].eventName, 'Transfer')
       }
     }
   )
@@ -3062,6 +3110,47 @@ module.exports = {test: async function (provider, testingContext) {
       // TODO: verify logs
       console.log(receipt)
     },
+    originalAddress
+  )
+
+  let targetWalletAddressTwo;
+  await runTest(
+    'DharmaSmartWalletFactoryV1 can get a new smart wallet address ahead of time',
+    DharmaSmartWalletFactoryV1,
+    'getNextSmartWallet',
+    'call',
+    [targetWalletAddress],
+    true,
+    value => {
+      // TODO: verify against expected value
+      targetWalletAddressTwo = value
+    }
+  )
+
+  await runTest(
+    'DharmaSmartWalletFactoryV1 can deploy a V1 smart wallet using a contract key',
+    DharmaSmartWalletFactoryV1,
+    'newSmartWallet',
+    'send',
+    [targetWalletAddress]
+  )
+
+  const UserSmartWalletV1Two = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV1Artifact.abi,
+    targetWalletAddressTwo
+  )
+
+  await runTest(
+    'V1 UserSmartWallet cancel reverts with bad contract signature',
+    UserSmartWalletV1Two,
+    'cancel',
+    'send',
+    [
+      0,
+     '0x'
+    ],
+    false,
+    receipt => {},
     originalAddress
   )
 
