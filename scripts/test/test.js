@@ -2225,6 +2225,20 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'V1 UserSmartWallet secondary cannot set an empty user userSigningKey',
+    UserSmartWallet,
+    'setUserSigningKey',
+    'send',
+    [
+      constants.NULL_ADDRESS,
+      0,
+      '0x',
+      '0x'
+    ],
+    false
+  )
+
+  await runTest(
     'V1 UserSmartWallet secondary can set a custom user userSigningKey',
     UserSmartWallet,
     'setUserSigningKey',
@@ -3152,6 +3166,193 @@ module.exports = {test: async function (provider, testingContext) {
     false,
     receipt => {},
     originalAddress
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV1,
+    'getNextGenericActionID',
+    'call',
+    [
+      DAI.options.address,
+      DAI.methods.transfer(address, constants.FULL_APPROVAL).encodeABI(),
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  executeActionSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  executeActionUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can call executeAction',
+    UserSmartWalletV1,
+    'executeAction',
+    'send',
+    [
+      DAI.options.address,
+      DAI.methods.transfer(address, constants.FULL_APPROVAL).encodeABI(),
+      0,
+      executeActionUserSignature,
+      executeActionSignature
+    ]
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWallet,
+    'getNextCustomActionID',
+    'call',
+    [
+      4, // DaiWithdrawal,
+      '100000000000000000000000000000000000000', // too much
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  daiWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V1 UserSmartWallet relay cannot withdraw too much dai',
+    UserSmartWallet,
+    'withdrawDai',
+    'send',
+    [
+      '100000000000000000000000000000000000000', // too much
+      address,
+      0,
+      daiUserWithdrawalSignature,
+      daiWithdrawalSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+      console.log(receipt.events)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWallet,
+    'getNextCustomActionID',
+    'call',
+    [
+      5, // USDCWithdrawal,
+      '100000000000000000000000000000000000000', // too much
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  usdcWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+
+  await runTest(
+    'V1 UserSmartWallet relay can call with two signatures to withdraw USDC',
+    UserSmartWallet,
+    'withdrawUSDC',
+    'send',
+    [
+      '100000000000000000000000000000000000000', // too much
+      address,
+      0,
+      usdcUserWithdrawalSignature,
+      usdcWithdrawalSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+      console.log(receipt)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get next generic batch action ID',
+    UserSmartWalletV1,
+    'getNextGenericAtomicBatchActionID',
+    'call',
+    [
+      [{
+        to: DAI.options.address,
+        data: DAI.methods.transfer(
+          address, '100000000000000000000000000000'
+        ).encodeABI()
+      }],
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  executeActionSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  executeActionUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V1 UserSmartWallet bad executeActionWithAtomicBatchCalls emits CallFailure',
+    UserSmartWalletV1,
+    'executeActionWithAtomicBatchCalls',
+    'send',
+    [
+      [{
+        to: DAI.options.address,
+        data: DAI.methods.transfer(
+          address, '100000000000000000000000000000'
+        ).encodeABI()
+      }],
+      0,
+      executeActionUserSignature,
+      executeActionSignature
+    ],
+    true,
+    receipt => {
+      console.log(receipt)
+    }
   )
 
   console.log(

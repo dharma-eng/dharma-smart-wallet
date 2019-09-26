@@ -646,15 +646,6 @@ module.exports = {test: async function (provider, testingContext) {
     const pubKey = await web3.eth.accounts.privateKeyToAccount(newPrivateKey)
     await web3.eth.accounts.wallet.add(pubKey)
 
-    const txCount = await web3.eth.getTransactionCount(pubKey.address)
-
-    if (txCount > 0) {
-      console.warn(
-        `warning: ${pubKey.address} has already been used, which may cause ` +
-        'some tests to fail or to be skipped.'
-      )
-    }
-
     await web3.eth.sendTransaction({
       from: originalAddress,
       to: pubKey.address,
