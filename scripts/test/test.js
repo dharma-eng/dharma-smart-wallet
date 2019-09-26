@@ -1757,67 +1757,6 @@ module.exports = {test: async function (provider, testingContext) {
   */
 
   await runTest(
-    'UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWallet,
-    'getNextCustomActionID',
-    'call',
-    [
-      4, // DaiWithdrawal,
-      constants.FULL_APPROVAL,
-      address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  let daiWithdrawalSignature = signHashedPrefixedHexString(
-    customActionId,
-    address
-  )
-
-  await runTest(
-    'UserSmartWallet relay cannot call with bad signature to withdraw dai',
-    UserSmartWallet,
-    'withdrawDai',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      address,
-      0,
-      '0x',
-      '0xffffffff' + daiWithdrawalSignature.slice(10)
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    originalAddress
-  )
-
-  await runTest(
-    'UserSmartWallet relay can call with signature to withdraw dai',
-    UserSmartWallet,
-    'withdrawDai',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      address,
-      0,
-      '0x',
-      daiWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-    },
-    originalAddress
-  )
-
-  await runTest(
     'UserSmartWallet cannot withdraw too much dai',
     UserSmartWallet,
     'withdrawDai',
@@ -1891,9 +1830,7 @@ module.exports = {test: async function (provider, testingContext) {
     ],
     true,
     receipt => {
-      if (testingContext !== 'coverage') {
-        console.log(receipt.events)
-      }
+      console.log(receipt.events.ExternalError)
       // TODO: verify logs
       //console.log(receipt.events.ExternalError.returnValues)
       //console.log(receipt.events.ExternalError)
@@ -1905,6 +1842,67 @@ module.exports = {test: async function (provider, testingContext) {
       }))
       */
     }
+  )
+
+  await runTest(
+    'UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWallet,
+    'getNextCustomActionID',
+    'call',
+    [
+      4, // DaiWithdrawal,
+      constants.FULL_APPROVAL,
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  let daiWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  await runTest(
+    'UserSmartWallet relay cannot call with bad signature to withdraw dai',
+    UserSmartWallet,
+    'withdrawDai',
+    'send',
+    [
+      constants.FULL_APPROVAL,
+      address,
+      0,
+      '0x',
+      '0xffffffff' + daiWithdrawalSignature.slice(10)
+    ],
+    false,
+    receipt => {
+      // TODO: verify logs
+      //console.log(receipt)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'UserSmartWallet relay can call with signature to withdraw dai',
+    UserSmartWallet,
+    'withdrawDai',
+    'send',
+    [
+      constants.FULL_APPROVAL,
+      address,
+      0,
+      '0x',
+      daiWithdrawalSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+    },
+    originalAddress
   )
 
   await runTest(
@@ -2019,6 +2017,146 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'V1 user smart wallet can be called and still has original dharma key set',
+    UserSmartWallet,
+    'getUserSigningKey',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get the new version (1)',
+    UserSmartWallet,
+    'getVersion',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '1')
+    }
+  )
+
+  await runTest(
+    'V1 UserSmartWallet nonce is still set to value from before upgrade',
+    UserSmartWallet,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, originalNonce)
+    }
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get balances',
+    UserSmartWallet,
+    'getBalances',
+    'call',
+    [],
+    true,
+    value => {
+      //console.log(value)
+    }
+  )
+
+  await runTest(
+    'V1 UserSmartWallet secondary can call to cancel',
+    UserSmartWallet,
+    'cancel',
+    'send',
+    [
+      0,
+     '0x'
+    ]
+  )
+
+  await runTest(
+    'V1 UserSmartWallet nonce is now set to original + 1',
+    UserSmartWallet,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, (parseInt(originalNonce) + 1).toString())
+    }
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get next custom action ID',
+    UserSmartWallet,
+    'getNextCustomActionID',
+    'call',
+    [
+      4, // DAIWithdrawal,
+      constants.FULL_APPROVAL,
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get custom action ID and it matches next action ID',
+    UserSmartWallet,
+    'getCustomActionID',
+    'call',
+    [
+      4, // DAIWithdrawal,
+      constants.FULL_APPROVAL,
+      address,
+      parseInt(originalNonce) + 1,
+      0
+    ],
+    true,
+    value => {
+      assert.strictEqual(value, customActionId)
+    }
+  )
+
+  let genericActionID
+  await runTest(
+    'V1 UserSmartWallet can get next generic action ID',
+    UserSmartWalletV1,
+    'getNextGenericActionID',
+    'call',
+    [
+      address,
+      '0x',
+      0
+    ],
+    true,
+    value => {
+      genericActionID = value
+    }
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get generic action ID and it matches next action ID',
+    UserSmartWalletV1,
+    'getGenericActionID',
+    'call',
+    [
+      address,
+      '0x',
+      parseInt(originalNonce) + 1,
+      0
+    ],
+    true,
+    value => {
+      assert.strictEqual(value, genericActionID)
+    }
+  )
+
+  await runTest(
     'Dai Whale can deposit dai into the V1 smart wallet',
     DAI,
     'transfer',
@@ -2126,6 +2264,168 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'Dai Whale can deposit dai into the V1 smart wallet again',
+    DAI,
+    'transfer',
+    'send',
+    [targetWalletAddress, web3.utils.toWei('100', 'ether')],
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.from,
+          constants.DAI_WHALE_ADDRESS
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.to,
+          targetWalletAddress
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.value,
+          web3.utils.toWei('100', 'ether')
+        )
+      }
+    },
+    constants.DAI_WHALE_ADDRESS
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV1,
+    'getNextGenericActionID',
+    'call',
+    [
+      DAI.options.address,
+      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  let executeActionSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  let executeActionUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can call executeAction',
+    UserSmartWalletV1,
+    'executeAction',
+    'send',
+    [
+      DAI.options.address,
+      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      0,
+      executeActionUserSignature,
+      executeActionSignature
+    ]
+  )
+
+  await runTest(
+    'V1 user smart wallet repayAndDeposit cannot deposit without approval',
+    UserSmartWallet,
+    'repayAndDeposit',
+    'send',
+    [],
+    true,
+    receipt => {
+      //console.log(receipt.status, receipt.gasUsed)
+      if (testingContext !== 'coverage') {
+        let events = []
+        Object.values(receipt.events).forEach((value) => {
+          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
+          const decoded = web3.eth.abi.decodeLog(
+            log.abi, value.raw.data, value.raw.topics
+          )        
+          events.push({
+            address: contractNames[value.address],
+            eventName: log.name,
+            returnValues: decoded
+          })
+        })
+     
+        // TODO: verify
+      }
+    }
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV1,
+    'getNextGenericActionID',
+    'call',
+    [
+      DAI.options.address,
+      DAI.methods.approve(CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  executeActionSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  executeActionUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can call executeAction',
+    UserSmartWalletV1,
+    'executeAction',
+    'send',
+    [
+      DAI.options.address,
+      DAI.methods.approve(CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
+      0,
+      executeActionUserSignature,
+      executeActionSignature
+    ]
+  )
+
+  await runTest(
+    'V1 user smart wallet repayAndDeposit can deposit with approval added back',
+    UserSmartWallet,
+    'repayAndDeposit',
+    'send',
+    [],
+    true,
+    receipt => {
+      //console.log(receipt.status, receipt.gasUsed)
+      if (testingContext !== 'coverage') {
+        let events = []
+        Object.values(receipt.events).forEach((value) => {
+          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
+          const decoded = web3.eth.abi.decodeLog(
+            log.abi, value.raw.data, value.raw.topics
+          )        
+          events.push({
+            address: contractNames[value.address],
+            eventName: log.name,
+            returnValues: decoded
+          })
+        })
+     
+        // TODO: verify
+      }
+    }
+  )
+
+  await runTest(
     'V1 user smart wallet can trigger repayAndDeposit even with no funds',
     UserSmartWallet,
     'repayAndDeposit',
@@ -2150,77 +2450,6 @@ module.exports = {test: async function (provider, testingContext) {
      
         assert.strictEqual(events.length, 0)
       }
-    }
-  )
-
-  await runTest(
-    'V1 user smart wallet can be called and still has original dharma key set',
-    UserSmartWallet,
-    'getUserSigningKey',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, address)
-    }
-  )
-
-  await runTest(
-    'V1 UserSmartWallet can get the new version (1)',
-    UserSmartWallet,
-    'getVersion',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, '1')
-    }
-  )
-
-  await runTest(
-    'V1 UserSmartWallet nonce is still set to value from before upgrade',
-    UserSmartWallet,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, originalNonce)
-    }
-  )
-
-  await runTest(
-    'V1 UserSmartWallet can get balances',
-    UserSmartWallet,
-    'getBalances',
-    'call',
-    [],
-    true,
-    value => {
-      //console.log(value)
-    }
-  )
-
-  await runTest(
-    'V1 UserSmartWallet secondary can call to cancel',
-    UserSmartWallet,
-    'cancel',
-    'send',
-    [
-      0,
-     '0x'
-    ]
-  )
-
-  await runTest(
-    'V1 UserSmartWallet nonce is now set to original + 1',
-    UserSmartWallet,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, (parseInt(originalNonce) + 1).toString())
     }
   )
 
@@ -2296,13 +2525,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get next custom action ID',
+    'V1 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
     [
-      4, // DAIWithdrawal,
-      constants.FULL_APPROVAL,
+      5, // USDCWithdrawal,
+      '100000',
       address,
       0
     ],
@@ -2312,56 +2541,34 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
+  usdcWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  let usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
   await runTest(
-    'V1 UserSmartWallet can get custom action ID and it matches next action ID',
+    'V1 UserSmartWallet relay can call with two signatures to withdraw USDC',
     UserSmartWallet,
-    'getCustomActionID',
-    'call',
+    'withdrawUSDC',
+    'send',
     [
-      4, // DAIWithdrawal,
-      constants.FULL_APPROVAL,
+      '100000',
       address,
-      parseInt(originalNonce) + 2,
-      0
+      0,
+      usdcUserWithdrawalSignature,
+      usdcWithdrawalSignature
     ],
     true,
-    value => {
-      assert.strictEqual(value, customActionId)
-    }
-  )
-
-  let genericActionID
-  await runTest(
-    'V1 UserSmartWallet can get next generic action ID',
-    UserSmartWalletV1,
-    'getNextGenericActionID',
-    'call',
-    [
-      address,
-      '0x',
-      0
-    ],
-    true,
-    value => {
-      genericActionID = value
-    }
-  )
-
-  await runTest(
-    'V1 UserSmartWallet can get generic action ID and it matches next action ID',
-    UserSmartWalletV1,
-    'getGenericActionID',
-    'call',
-    [
-      address,
-      '0x',
-      parseInt(originalNonce) + 2,
-      0
-    ],
-    true,
-    value => {
-      assert.strictEqual(value, genericActionID)
-    }
+    receipt => {
+      // TODO: verify logs
+      //console.log(receipt)
+    },
+    originalAddress
   )
 
   await runTest(
@@ -2386,7 +2593,7 @@ module.exports = {test: async function (provider, testingContext) {
     address
   )
 
-  let usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     addressTwo
   )
@@ -2477,7 +2684,7 @@ module.exports = {test: async function (provider, testingContext) {
     'call',
     [
       4, // DaiWithdrawal,
-      '100000000000000',
+      '1',
       address,
       0
     ],
@@ -2493,6 +2700,53 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   let daiUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V1 UserSmartWallet relay cannot withdraw too little dai',
+    UserSmartWallet,
+    'withdrawDai',
+    'send',
+    [
+      '1',
+      address,
+      0,
+      daiUserWithdrawalSignature,
+      daiWithdrawalSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+      console.log(receipt.events)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V1 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWallet,
+    'getNextCustomActionID',
+    'call',
+    [
+      4, // DaiWithdrawal,
+      '100000000000000',
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  daiWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  daiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     addressTwo
   )
@@ -2727,6 +2981,39 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'V1 UserSmartWallet can get a cancel custom action ID',
+    UserSmartWalletV1,
+    'getNextCustomActionID',
+    'call',
+    [
+      0, // Cancel,
+      '0',
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  let cancelSignature = signHashedPrefixedHexString(customActionId, addressTwo)
+
+  await runTest(
+    'WARNING: V1 UserSmartWallet CANNOT cancel using a signature with a message hash from getNextCustomActionID!',
+    UserSmartWallet,
+    'cancel',
+    'send',
+    [
+      '0',
+      cancelSignature
+    ],
+    false,
+    receipt => {},
+    originalAddress
+  )
+
+  await runTest(
     'V1 UserSmartWallet calls to atomic methods revert',
     UserSmartWallet,
     '_withdrawDaiAtomic',
@@ -2797,12 +3084,12 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  let executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = signHashedPrefixedHexString(
     customActionId,
     address
   )
 
-  let executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
     addressTwo
   )
