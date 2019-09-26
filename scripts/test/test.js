@@ -3337,33 +3337,6 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  await runTest(
-    'V2 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
-    UserSmartWallet,
-    'getNextCustomActionID',
-    'call',
-    [
-      5, // USDCWithdrawal,
-      web3.utils.toWei('50', 'lovelace'),
-      constants.MOCK_USDC_BLACKLISTED_ADDRESS,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
-    customActionId,
-    address
-  )
-
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
-    customActionId,
-    addressTwo
-  )
-
   const FIAT_TOKEN = new web3.eth.Contract(
     [
       {
@@ -3410,12 +3383,87 @@ module.exports = {test: async function (provider, testingContext) {
   }
 
   await runTest(
+    'V2 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
+    UserSmartWallet,
+    'getNextCustomActionID',
+    'call',
+    [
+      5, // USDCWithdrawal,
+      web3.utils.toWei('50', 'lovelace'),
+      constants.MOCK_USDC_BLACKLISTED_ADDRESS,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  usdcWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
     'V2 UserSmartWallet relay call to withdraw USDC to blacklisted address',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
     [
       web3.utils.toWei('50', 'lovelace'),
+      constants.MOCK_USDC_BLACKLISTED_ADDRESS,
+      0,
+      usdcUserWithdrawalSignature,
+      usdcWithdrawalSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+      console.log(receipt.events[0])
+      console.log(receipt.events.ExternalError)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V2 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
+    UserSmartWallet,
+    'getNextCustomActionID',
+    'call',
+    [
+      5, // USDCWithdrawal,
+      constants.FULL_APPROVAL,
+      constants.MOCK_USDC_BLACKLISTED_ADDRESS,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  usdcWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V2 UserSmartWallet relay call to withdraw USDC to blacklisted address',
+    UserSmartWallet,
+    'withdrawUSDC',
+    'send',
+    [
+      constants.FULL_APPROVAL,
       constants.MOCK_USDC_BLACKLISTED_ADDRESS,
       0,
       usdcUserWithdrawalSignature,
@@ -3709,6 +3757,8 @@ module.exports = {test: async function (provider, testingContext) {
     `completed ${passed + failed} test${passed + failed === 1 ? '' : 's'} ` +
     `with ${failed} failure${failed === 1 ? '' : 's'}.`
   )
+
+  await longer()
 
   if (failed > 0) {
     process.exit(1)
