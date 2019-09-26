@@ -1286,8 +1286,8 @@ module.exports = {test: async function (provider, testingContext) {
     targetWalletAddress
   )
 
-  const UserSmartWalletV1 = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV1Artifact.abi,
+  const UserSmartWalletV2 = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV2Artifact.abi,
     targetWalletAddress
   )
 
@@ -2017,7 +2017,70 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 user smart wallet can be called and still has original dharma key set',
+    'Dharma Upgrade Beacon Controller can upgrade to V2 implementation',
+    DharmaUpgradeBeaconController,
+    'upgrade',
+    'send',
+    [
+      DharmaUpgradeBeacon.options.address,
+      DharmaSmartWalletImplementationV2.options.address
+    ],
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.upgradeBeacon,
+          DharmaUpgradeBeacon.options.address
+        )
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.oldImplementation,
+          DharmaSmartWalletImplementationV1.options.address
+        )
+        /* TODO
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
+          constants.EMPTY_HASH
+        )
+        */
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.newImplementation,
+          DharmaSmartWalletImplementationV2.options.address
+        )
+        /* TODO
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.newImplementationCodeHash,
+          ...
+        )
+        */
+      }
+    }
+  )
+
+  const UpgradeBeaconImplementationCheckV2 = await runTest(
+    `UpgradeBeaconImplementationCheck deployment`,
+    UpgradeBeaconImplementationCheckDeployer,
+    '',
+    'deploy',
+    [
+      DharmaUpgradeBeacon.options.address,
+      DharmaSmartWalletImplementationV2.options.address
+    ]
+  )
+
+  await runTest(
+    'DharmaUpgradeBeacon has the implementation set',
+    DharmaUpgradeBeaconController,
+    'getImplementation',
+    'call',
+    [DharmaUpgradeBeacon.options.address],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaSmartWalletImplementationV2.options.address)
+    }
+  )
+
+  await runTest(
+    'V2 user smart wallet can be called and still has original dharma key set',
     UserSmartWallet,
     'getUserSigningKey',
     'call',
@@ -2029,19 +2092,19 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get the new version (1)',
+    'V2 UserSmartWallet can get the new version (2)',
     UserSmartWallet,
     'getVersion',
     'call',
     [],
     true,
     value => {
-      assert.strictEqual(value, '1')
+      assert.strictEqual(value, '2')
     }
   )
 
   await runTest(
-    'V1 UserSmartWallet nonce is still set to value from before upgrade',
+    'V2 UserSmartWallet nonce is still set to value from before upgrade',
     UserSmartWallet,
     'getNonce',
     'call',
@@ -2053,7 +2116,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get balances',
+    'V2 UserSmartWallet can get balances',
     UserSmartWallet,
     'getBalances',
     'call',
@@ -2065,7 +2128,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet secondary can call to cancel',
+    'V2 UserSmartWallet secondary can call to cancel',
     UserSmartWallet,
     'cancel',
     'send',
@@ -2076,7 +2139,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet nonce is now set to original + 1',
+    'V2 UserSmartWallet nonce is now set to original + 1',
     UserSmartWallet,
     'getNonce',
     'call',
@@ -2088,7 +2151,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get next custom action ID',
+    'V2 UserSmartWallet can get next custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -2105,7 +2168,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get custom action ID and it matches next action ID',
+    'V2 UserSmartWallet can get custom action ID and it matches next action ID',
     UserSmartWallet,
     'getCustomActionID',
     'call',
@@ -2124,8 +2187,8 @@ module.exports = {test: async function (provider, testingContext) {
 
   let genericActionID
   await runTest(
-    'V1 UserSmartWallet can get next generic action ID',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can get next generic action ID',
+    UserSmartWalletV2,
     'getNextGenericActionID',
     'call',
     [
@@ -2140,8 +2203,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get generic action ID and it matches next action ID',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can get generic action ID and it matches next action ID',
+    UserSmartWalletV2,
     'getGenericActionID',
     'call',
     [
@@ -2157,7 +2220,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'Dai Whale can deposit dai into the V1 smart wallet',
+    'Dai Whale can deposit dai into the V2 smart wallet',
     DAI,
     'transfer',
     'send',
@@ -2183,7 +2246,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'USDC Whale can deposit usdc into the V1 smart wallet',
+    'USDC Whale can deposit usdc into the V2 smart wallet',
     USDC,
     'transfer',
     'send',
@@ -2209,7 +2272,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 user smart wallet can trigger repayAndDeposit to deposit all new funds',
+    'V2 user smart wallet can trigger repayAndDeposit to deposit all new funds',
     UserSmartWallet,
     'repayAndDeposit',
     'send',
@@ -2264,7 +2327,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'Dai Whale can deposit dai into the V1 smart wallet again',
+    'Dai Whale can deposit dai into the V2 smart wallet again',
     DAI,
     'transfer',
     'send',
@@ -2290,8 +2353,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV2,
     'getNextGenericActionID',
     'call',
     [
@@ -2316,8 +2379,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can call executeAction',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can call executeAction',
+    UserSmartWalletV2,
     'executeAction',
     'send',
     [
@@ -2330,7 +2393,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 user smart wallet repayAndDeposit cannot deposit without approval',
+    'V2 user smart wallet repayAndDeposit cannot deposit without approval',
     UserSmartWallet,
     'repayAndDeposit',
     'send',
@@ -2358,8 +2421,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV2,
     'getNextGenericActionID',
     'call',
     [
@@ -2384,8 +2447,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can call executeAction',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can call executeAction',
+    UserSmartWalletV2,
     'executeAction',
     'send',
     [
@@ -2398,7 +2461,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 user smart wallet repayAndDeposit can deposit with approval added back',
+    'V2 user smart wallet repayAndDeposit can deposit with approval added back',
     UserSmartWallet,
     'repayAndDeposit',
     'send',
@@ -2426,7 +2489,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 user smart wallet can trigger repayAndDeposit even with no funds',
+    'V2 user smart wallet can trigger repayAndDeposit even with no funds',
     UserSmartWallet,
     'repayAndDeposit',
     'send',
@@ -2454,7 +2517,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet secondary cannot set an empty user userSigningKey',
+    'V2 UserSmartWallet secondary cannot set an empty user userSigningKey',
     UserSmartWallet,
     'setUserSigningKey',
     'send',
@@ -2468,7 +2531,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet secondary can set a custom user userSigningKey',
+    'V2 UserSmartWallet secondary can set a custom user userSigningKey',
     UserSmartWallet,
     'setUserSigningKey',
     'send',
@@ -2481,7 +2544,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet secondary cannot call to withdraw dai without primary',
+    'V2 UserSmartWallet secondary cannot call to withdraw dai without primary',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -2496,7 +2559,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet secondary cannot call to withdraw usdc without primary',
+    'V2 UserSmartWallet secondary cannot call to withdraw usdc without primary',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -2511,7 +2574,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet secondary can no longer call to set userSigningKey without primary',
+    'V2 UserSmartWallet secondary can no longer call to set userSigningKey without primary',
     UserSmartWallet,
     'setUserSigningKey',
     'send',
@@ -2525,7 +2588,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get a USDC withdrawal custom action ID',
+    'V2 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -2552,7 +2615,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet relay can call with two signatures to withdraw USDC',
+    'V2 UserSmartWallet relay can call with two signatures to withdraw USDC',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -2572,7 +2635,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get a USDC withdrawal custom action ID',
+    'V2 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -2599,7 +2662,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet relay cannot call with bad signature to withdraw USDC',
+    'V2 UserSmartWallet relay cannot call with bad signature to withdraw USDC',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -2619,7 +2682,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet cannot call with bad user signature to withdraw USDC',
+    'V2 UserSmartWallet cannot call with bad user signature to withdraw USDC',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -2639,7 +2702,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet relay can call with two signatures to withdraw USDC',
+    'V2 UserSmartWallet relay can call with two signatures to withdraw USDC',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -2678,7 +2741,7 @@ module.exports = {test: async function (provider, testingContext) {
   */
 
   await runTest(
-    'V1 UserSmartWallet can get a Dai withdrawal custom action ID',
+    'V2 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -2705,7 +2768,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet relay cannot withdraw too little dai',
+    'V2 UserSmartWallet relay cannot withdraw too little dai',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -2725,7 +2788,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get a Dai withdrawal custom action ID',
+    'V2 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -2752,7 +2815,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet relay can call with signature to withdraw dai',
+    'V2 UserSmartWallet relay can call with signature to withdraw dai',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -2772,7 +2835,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get a Dai withdrawal custom action ID',
+    'V2 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -2799,7 +2862,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet relay cannot call with bad signature to withdraw dai',
+    'V2 UserSmartWallet relay cannot call with bad signature to withdraw dai',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -2819,7 +2882,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet relay cannot call with bad user signature to withdraw dai',
+    'V2 UserSmartWallet relay cannot call with bad user signature to withdraw dai',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -2839,7 +2902,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet relay can call with signature to withdraw dai',
+    'V2 UserSmartWallet relay can call with signature to withdraw dai',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -2858,8 +2921,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get a Ether withdrawal custom action ID',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can get a Ether withdrawal custom action ID',
+    UserSmartWalletV2,
     'getNextCustomActionID',
     'call',
     [
@@ -2885,8 +2948,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet relay cannot call with bad signature to withdraw eth',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet relay cannot call with bad signature to withdraw eth',
+    UserSmartWalletV2,
     'withdrawEther',
     'send',
     [
@@ -2905,8 +2968,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
+    UserSmartWalletV2,
     'withdrawEther',
     'send',
     [
@@ -2925,8 +2988,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet relay can call with signature to withdraw ether',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet relay can call with signature to withdraw ether',
+    UserSmartWalletV2,
     'withdrawEther',
     'send',
     [
@@ -2944,7 +3007,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet cancel reverts with bad signature',
+    'V2 UserSmartWallet cancel reverts with bad signature',
     UserSmartWallet,
     'cancel',
     'send',
@@ -2958,7 +3021,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet calls revert if insufficient action gas is supplied',
+    'V2 UserSmartWallet calls revert if insufficient action gas is supplied',
     UserSmartWallet,
     'cancel',
     'send',
@@ -2970,7 +3033,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet calls succeed if sufficient non-zero action gas supplied',
+    'V2 UserSmartWallet calls succeed if sufficient non-zero action gas supplied',
     UserSmartWallet,
     'cancel',
     'send',
@@ -2981,8 +3044,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get a cancel custom action ID',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can get a cancel custom action ID',
+    UserSmartWalletV2,
     'getNextCustomActionID',
     'call',
     [
@@ -3000,7 +3063,7 @@ module.exports = {test: async function (provider, testingContext) {
   let cancelSignature = signHashedPrefixedHexString(customActionId, addressTwo)
 
   await runTest(
-    'WARNING: V1 UserSmartWallet CANNOT cancel using a signature with a message hash from getNextCustomActionID!',
+    'V2 UserSmartWallet can cancel using a signature',
     UserSmartWallet,
     'cancel',
     'send',
@@ -3008,13 +3071,13 @@ module.exports = {test: async function (provider, testingContext) {
       '0',
       cancelSignature
     ],
-    false,
+    true,
     receipt => {},
     originalAddress
   )
 
   await runTest(
-    'V1 UserSmartWallet calls to atomic methods revert',
+    'V2 UserSmartWallet calls to atomic methods revert',
     UserSmartWallet,
     '_withdrawDaiAtomic',
     'send',
@@ -3026,8 +3089,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet calls to recover from random address revert',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet calls to recover from random address revert',
+    UserSmartWalletV2,
     'recover',
     'send',
     [
@@ -3037,7 +3100,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'DharmaSmartWalletFactoryV1 can deploy a V1 smart wallet using a Dharma Key',
+    'DharmaSmartWalletFactoryV1 can deploy a V2 smart wallet using a Dharma Key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
     'send',
@@ -3069,8 +3132,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV2,
     'getNextGenericActionID',
     'call',
     [
@@ -3095,8 +3158,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet cannot call executeAction and target a non-contract',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet cannot call executeAction and target a non-contract',
+    UserSmartWalletV2,
     'executeAction',
     'send',
     [
@@ -3110,12 +3173,12 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet cannot call executeAction and target itself',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet cannot call executeAction and target itself',
+    UserSmartWalletV2,
     'executeAction',
     'send',
     [
-      UserSmartWalletV1.options.address,
+      UserSmartWalletV2.options.address,
       USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
@@ -3125,8 +3188,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can call executeAction',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can call executeAction',
+    UserSmartWalletV2,
     'executeAction',
     'send',
     [
@@ -3139,8 +3202,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get the next generic batch action ID',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can get the next generic batch action ID',
+    UserSmartWalletV2,
     'getNextGenericAtomicBatchActionID',
     'call',
     [
@@ -3156,7 +3219,7 @@ module.exports = {test: async function (provider, testingContext) {
   let currentNonce
   await runTest(
     'UserSmartWallet can get the nonce',
-    UserSmartWalletV1,
+    UserSmartWalletV2,
     'getNonce',
     'call',
     [],
@@ -3167,8 +3230,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet generic batch action ID with nonce matches next ID',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet generic batch action ID with nonce matches next ID',
+    UserSmartWalletV2,
     'getGenericAtomicBatchActionID',
     'call',
     [
@@ -3193,8 +3256,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can call executeActionWithAtomicBatchCalls',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can call executeActionWithAtomicBatchCalls',
+    UserSmartWalletV2,
     'executeActionWithAtomicBatchCalls',
     'send',
     [
@@ -3233,7 +3296,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'new user smart wallet can trigger repayAndDeposit to deposit all new funds',
-    UserSmartWalletV1,
+    UserSmartWalletV2,
     'repayAndDeposit',
     'send',
     [],
@@ -3275,7 +3338,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
+    'V2 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -3347,7 +3410,7 @@ module.exports = {test: async function (provider, testingContext) {
   }
 
   await runTest(
-    'V1 UserSmartWallet relay call to withdraw USDC to blacklisted address',
+    'V2 UserSmartWallet relay call to withdraw USDC to blacklisted address',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -3368,8 +3431,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get a Ether withdrawal custom action ID',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can get a Ether withdrawal custom action ID',
+    UserSmartWalletV2,
     'getNextCustomActionID',
     'call',
     [
@@ -3395,8 +3458,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet relay cannot withdraw eth to a non-payable account',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet relay cannot withdraw eth to a non-payable account',
+    UserSmartWalletV2,
     'withdrawEther',
     'send',
     [
@@ -3429,21 +3492,21 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'DharmaSmartWalletFactoryV1 can deploy a V1 smart wallet using a contract key',
+    'DharmaSmartWalletFactoryV1 can deploy a V2 smart wallet using a contract key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
     'send',
     [targetWalletAddress]
   )
 
-  const UserSmartWalletV1Two = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV1Artifact.abi,
+  const UserSmartWalletV2Two = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV2Artifact.abi,
     targetWalletAddressTwo
   )
 
   await runTest(
-    'V1 UserSmartWallet cancel reverts with bad contract signature',
-    UserSmartWalletV1Two,
+    'V2 UserSmartWallet cancel reverts with bad contract signature',
+    UserSmartWalletV2Two,
     'cancel',
     'send',
     [
@@ -3456,8 +3519,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV2,
     'getNextGenericActionID',
     'call',
     [
@@ -3482,8 +3545,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can call executeAction',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can call executeAction',
+    UserSmartWalletV2,
     'executeAction',
     'send',
     [
@@ -3496,7 +3559,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get a Dai withdrawal custom action ID',
+    'V2 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -3523,7 +3586,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet relay cannot withdraw too much dai',
+    'V2 UserSmartWallet relay cannot withdraw too much dai',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -3543,7 +3606,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get a USDC withdrawal custom action ID',
+    'V2 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -3571,7 +3634,7 @@ module.exports = {test: async function (provider, testingContext) {
 
 
   await runTest(
-    'V1 UserSmartWallet relay can call with two signatures to withdraw USDC',
+    'V2 UserSmartWallet relay can call with two signatures to withdraw USDC',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -3591,8 +3654,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet can get next generic batch action ID',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet can get next generic batch action ID',
+    UserSmartWalletV2,
     'getNextGenericAtomicBatchActionID',
     'call',
     [
@@ -3621,8 +3684,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V1 UserSmartWallet bad executeActionWithAtomicBatchCalls emits CallFailure',
-    UserSmartWalletV1,
+    'V2 UserSmartWallet bad executeActionWithAtomicBatchCalls emits CallFailure',
+    UserSmartWalletV2,
     'executeActionWithAtomicBatchCalls',
     'send',
     [
