@@ -21,6 +21,9 @@ https://etherscan.io/address/0x000000005d7065eb9716a410070ee62d51092c98#code
 DharmaSmartWalletImplementationV1
 https://etherscan.io/address/0x0000000010a653849f221a573e00f3a37c8c4082#code
 
+DharmaSmartWalletImplementationV2
+https://etherscan.io/address/0x000000000088387c42fe85a60df4dce8e34eea4e#code
+
 DharmaSmartWalletFactoryV1
 https://etherscan.io/address/0xfc00c80b0000007f73004edb00094cad80626d8d#code
 
@@ -40,6 +43,8 @@ https://etherscan.io/tx/0xb13acf0ad97efef0138e0f1ff0e7f9e682a4d8e7eb7e33b4e3a1ec
 Dharma Key Registry V1 seting a global key:
 https://etherscan.io/tx/0xbbe90a37df4488d725b602a4c214856cd0d5c414fe52e0010ece6060210966e1
 
+Upgrade to DharmaSmartWalletImplementationV2"
+https://etherscan.io/tx/0xc12cf1c3ca9ef8503cdd5536d8d42d29f8f833d24fb3dcdbea00b18c0b2aa52f#eventlog
 
 # Summary
 Explore a minimal implementation of a smart wallet that:
