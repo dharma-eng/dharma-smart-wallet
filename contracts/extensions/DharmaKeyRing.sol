@@ -26,11 +26,11 @@ import "../../interfaces/ERC1271.sol";
 contract DharmaKeyRing is DharmaKeyRingInterface, ERC1271 {
   using ECDSAGroup for bytes32;
 
-  // isAdmin => KeyGroup
-  mapping(bool => KeyGroup) private _keyGroups;
+  // ActionType => KeyGroup
+  mapping(uint256 => KeyGroup) private _keyGroups;
 
-  // isAdmin => keys => isKey
-  mapping(bool => mapping (uint160 => bool)) private _keys;
+  // ActionType => keys => isKey
+  mapping(uint256 => mapping (uint160 => bool)) private _keys;
 
   // Track a nonce for the keyring so that admin actions cannot be replayed.
   uint256 private _nonce;
@@ -53,29 +53,29 @@ contract DharmaKeyRing is DharmaKeyRingInterface, ERC1271 {
       "Executor threshold cannot be less than the total supplied executor keys."
     );
 
-    _keyGroups[true] = KeyGroup({
+    _keyGroups[uint256(ActionType.Admin)] = KeyGroup({
       count: uint128(adminKeys.length),
       threshold: adminThreshold
     });
-    _keyGroups[false] = KeyGroup({
+    _keyGroups[uint256(ActionType.Standard)] = KeyGroup({
       count: uint128(executorKeys.length),
       threshold: executorThreshold
     });
 
     for (uint256 i = 0; i < adminKeys.length; i++) {
       require(
-        !_keys[true][uint160(adminKeys[i])],
+        !_keys[uint256(ActionType.Admin)][uint160(adminKeys[i])],
         "Cannot supply duplicate admin keys."
       );
-      _keys[true][uint160(adminKeys[i])] = true;
+      _keys[uint256(ActionType.Admin)][uint160(adminKeys[i])] = true;
     }
 
     for (uint256 i = 0; i < executorKeys.length; i++) {
       require(
-        !_keys[false][uint160(executorKeys[i])],
+        !_keys[uint256(ActionType.Standard)][uint160(executorKeys[i])],
         "Cannot supply duplicate executor keys."
       );
-      _keys[false][uint160(executorKeys[i])] = true;
+      _keys[uint256(ActionType.Standard)][uint160(executorKeys[i])] = true;
     }
   }
 
@@ -83,12 +83,12 @@ contract DharmaKeyRing is DharmaKeyRingInterface, ERC1271 {
     AdminActionType adminActionType, uint160 argument, bytes calldata signatures
   ) external {
     _verifyOrderedSignatures(
-      true, _getHash(adminActionType, argument), signatures
+      ActionType.Admin, _getAdminActionHash(adminActionType, argument), signatures
     );
 
     uint8 adminActionTypeIndex = uint8(adminActionType);
     uint8 adminActionCategory = adminActionTypeIndex % 3;
-    bool admin = adminActionTypeIndex > 2;
+    uint256 admin = adminActionTypeIndex > 2 ? 1 : 0;
     KeyGroup storage keyGroup = _keyGroups[admin];
 
     if (adminActionCategory == 0) { // AddKey or AddAdminKey
@@ -120,35 +120,69 @@ contract DharmaKeyRing is DharmaKeyRingInterface, ERC1271 {
     _nonce++;
   }
 
+  function takeAction(
+    address payable to, uint256 value, bytes calldata data, bytes calldata signatures
+  ) external returns (bool ok, bytes memory returnData) {
+    _verifyOrderedSignatures(
+      ActionType.Standard, _getStandardActionHash(to, value, data), signatures
+    );
+
+    _nonce++;
+
+    (ok, returnData) = to.call.value(value)(data);
+  }
+
   function isValidSignature(
     bytes calldata data, bytes calldata signatures
   ) external view returns (bytes4 magicValue) {
     (bytes32 hash, uint8 action, ) = abi.decode(data, (bytes32, uint8, bytes));
 
     // Calling setUserSigningKey (ActionType 1) requires admin signatures.
-    _verifyOrderedSignatures(action == 1, hash, signatures);
+    _verifyOrderedSignatures(
+      action != 1 ? ActionType.Standard : ActionType.Admin,
+      hash,
+      signatures
+    );
 
     magicValue = _ERC_1271_MAGIC_VALUE;
+  }
+
+  function getActionID(
+    address payable to, uint256 value, bytes calldata data
+  ) external view returns (bytes32 actionID) {
+    actionID = _getStandardActionHash(to, value, data);
   }
 
   function getAdminActionID(
     AdminActionType adminActionType, uint160 argument
   ) external view returns (bytes32 adminActionID) {
-    adminActionID = _getHash(adminActionType, argument);
+    adminActionID = _getAdminActionHash(adminActionType, argument);
   }
 
-  function _getHash(
+  function _getStandardActionHash(
+    address payable to, uint256 value, bytes memory data
+  ) internal view returns (bytes32 hash) {
+    hash = keccak256(
+      abi.encodePacked(
+        address(this), _nonce, ActionType.Standard, to, value, data
+      )
+    );
+  }
+
+  function _getAdminActionHash(
     AdminActionType adminActionType, uint160 argument
   ) internal view returns (bytes32 hash) {
     hash = keccak256(
-      abi.encodePacked(address(this), _nonce, adminActionType, argument)
+      abi.encodePacked(
+        address(this), _nonce, ActionType.Admin, adminActionType, argument
+      )
     );
   }
 
   function _verifyOrderedSignatures(
-    bool admin, bytes32 hash, bytes memory signatures
+    ActionType admin, bytes32 hash, bytes memory signatures
   ) internal view {
-    KeyGroup memory keyGroup = _keyGroups[admin];
+    KeyGroup memory keyGroup = _keyGroups[uint256(admin)];
 
     uint160[] memory signers = hash.recoverGroup(signatures);
     
@@ -160,7 +194,10 @@ contract DharmaKeyRing is DharmaKeyRingInterface, ERC1271 {
     uint160 lastSigner = 0;
     for (uint256 i = 0; i < signers.length; i++) {
       uint160 signer = signers[i];
-      require(_keys[admin][signer], "Supplied signature has no valid signer.");
+      require(
+        _keys[uint256(admin)][signer],
+        "Supplied signature has no valid signer."
+      );
       require(signer > lastSigner, "Invalid signature ordering.");
       lastSigner = signer;
     }

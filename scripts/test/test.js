@@ -10,6 +10,7 @@ const DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgrade
 const DharmaAccountRecoveryManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
 const DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
 const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
+const ComptrollerArtifact = require('../../build/contracts/ComptrollerInterface.json')
 
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
@@ -89,6 +90,24 @@ module.exports = {test: async function (provider, testingContext) {
   const DharmaSmartWalletFactoryV1 = new web3.eth.Contract(
     DharmaSmartWalletFactoryV1Artifact.abi,
     constants.FACTORY_ADDRESS
+  )
+
+  const Comptroller = new web3.eth.Contract(
+    ComptrollerArtifact.abi,
+    constants.COMPTROLLER_MAINNET_ADDRESS
+  )
+
+  const CDAI_BORROW = new web3.eth.Contract(
+    [{
+      "constant": false,
+      "inputs": [{"name": "borrowAmount", "type": "uint256"}],
+      "name": "borrow",
+      "outputs": [{"name": "", "type": "uint256"}],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }],
+    constants.CDAI_MAINNET_ADDRESS
   )
 
   const BadBeaconDeployer = new web3.eth.Contract(BadBeaconArtifact.abi)
@@ -568,6 +587,24 @@ module.exports = {test: async function (provider, testingContext) {
       util.bufferToHex(sig.r) +
       util.bufferToHex(sig.s).slice(2) +
       web3.utils.toHex(sig.v).slice(2)
+    )
+  }
+
+  async function advanceTime(time) {
+    await web3.currentProvider.send(
+      {
+        jsonrpc: '2.0',
+        method: 'evm_increaseTime',
+        params: [time],
+        id: new Date().getTime()
+      },
+      (err, result) => {
+        if (err) {
+          console.error(err)
+        } else {
+          console.log(' ✓ advanced time by', time, 'seconds')
+        }
+      }
     )
   }
 
@@ -3345,42 +3382,209 @@ module.exports = {test: async function (provider, testingContext) {
         "stateMutability": "view", "type": "function"
       }, {
         "constant": false, "inputs": [{"name": "_account", "type": "address"}],
+        "name": "unBlacklist", "outputs": [], "payable": false,
+        "stateMutability": "nonpayable", "type": "function"
+      }, {
+        "constant": false, "inputs": [{"name": "_account", "type": "address"}],
         "name": "blacklist", "outputs": [], "payable": false,
         "stateMutability": "nonpayable", "type": "function"
       }, {
         "constant": true, "inputs": [{"name": "_account", "type": "address"}],
         "name": "isBlacklisted", "outputs": [{"name": "", "type": "bool"}],
         "payable": false, "stateMutability": "view", "type": "function"
+      }, {
+        "constant": false, "inputs": [],
+        "name": "pause", "outputs": [], "payable": false,
+        "stateMutability": "nonpayable", "type": "function"
+      }, {
+        "constant": false, "inputs": [],
+        "name": "unpause", "outputs": [], "payable": false,
+        "stateMutability": "nonpayable", "type": "function"
+      }, {
+        "constant": true, "inputs": [], "name": "pauser",
+        "outputs": [{"name": "", "type": "address"}], "payable": false,
+        "stateMutability": "view", "type": "function"
       }
     ],
     constants.USDC_MAINNET_ADDRESS
   )
 
-  let isBlacklisted
+  let blacklister
   await runTest(
-    'Check if mock blacklisted address has been blacklisted',
+    'Check blacklister address',
     FIAT_TOKEN,
-    'isBlacklisted',
+    'blacklister',
+    'call',
+    [],
+    true,
+    value => {
+      blacklister = value
+    }
+  )
+
+  let pausear
+  await runTest(
+    'Check pauser address',
+    FIAT_TOKEN,
+    'pauser',
+    'call',
+    [],
+    true,
+    value => {
+      pauser = value
+    }
+  )
+
+  await runTest(
+    'blacklist mock address',
+    FIAT_TOKEN,
+    'blacklist',
+    'send',
+    [constants.MOCK_USDC_BLACKLISTED_ADDRESS],
+    true,
+    receipt => {},
+    blacklister
+  )
+
+  let targetBlacklistAddress;
+  await runTest(
+    'DharmaSmartWalletFactoryV1 can get a new smart wallet address ahead of time',
+    DharmaSmartWalletFactoryV1,
+    'getNextSmartWallet',
     'call',
     [constants.MOCK_USDC_BLACKLISTED_ADDRESS],
     true,
     value => {
-      isBlacklisted = value
+      targetBlacklistAddress = value
     }
   )
 
-  if (!isBlacklisted) {
-    await runTest(
-      'blacklist mock address',
-      FIAT_TOKEN,
-      'blacklist',
-      'send',
-      [constants.MOCK_USDC_BLACKLISTED_ADDRESS],
-      true,
-      receipt => {},
-      '0x5dB0115f3B72d19cEa34dD697cf412Ff86dc7E1b' // current USDC blacklister
-    )
-  }
+  const BlacklistedUserSmartWalletV2 = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV2Artifact.abi,
+    targetBlacklistAddress
+  )
+
+  await runTest(
+    'USDC Whale can deposit usdc into the yet-to-be-blacklisted smart wallet',
+    USDC,
+    'transfer',
+    'send',
+    [targetBlacklistAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.from,
+          constants.USDC_WHALE_ADDRESS
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.to,
+          targetBlacklistAddress
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.value,
+          web3.utils.toWei('100', 'lovelace')
+        )
+      }
+    },
+    constants.USDC_WHALE_ADDRESS
+  )
+
+  await runTest(
+    'blacklist counterfactual deployment address',
+    FIAT_TOKEN,
+    'blacklist',
+    'send',
+    [targetBlacklistAddress],
+    true,
+    receipt => {},
+    blacklister
+  )
+
+  await runTest(
+    'DharmaSmartWalletFactoryV1 can deploy to a blacklisted address',
+    DharmaSmartWalletFactoryV1,
+    'newSmartWallet',
+    'send',
+    [constants.MOCK_USDC_BLACKLISTED_ADDRESS],
+    true,
+    receipt => {
+      // TODO: verify
+      console.log(receipt.events)
+    }
+  )
+
+  await runTest(
+    'blacklisted smart wallet will not approve USDC during repayAndDeposit',
+    BlacklistedUserSmartWalletV2,
+    'repayAndDeposit',
+    'send',
+    [],
+    true,
+    receipt => {    
+      // TODO: verify
+      console.log(receipt.events)
+    }
+  )
+
+  await runTest(
+    'un-blacklist counterfactual deployment address',
+    FIAT_TOKEN,
+    'unBlacklist',
+    'send',
+    [targetBlacklistAddress],
+    true,
+    receipt => {},
+    blacklister
+  )
+
+  await runTest(
+    'pause USDC',
+    FIAT_TOKEN,
+    'pause',
+    'send',
+    [],
+    true,
+    receipt => {},
+    pauser
+  )
+
+  await runTest(
+    'smart wallet will not approve USDC when paused during repayAndDeposit',
+    BlacklistedUserSmartWalletV2,
+    'repayAndDeposit',
+    'send',
+    [],
+    true,
+    receipt => {    
+      // TODO: verify
+      console.log(receipt.events)
+    }
+  )
+
+  await runTest(
+    'unpause USDC',
+    FIAT_TOKEN,
+    'unpause',
+    'send',
+    [],
+    true,
+    receipt => {},
+    pauser
+  )
+
+  await runTest(
+    'unblacklisted, unpaused smart wallet approves USDC during repayAndDeposit',
+    BlacklistedUserSmartWalletV2,
+    'repayAndDeposit',
+    'send',
+    [],
+    true,
+    receipt => {    
+      // TODO: verify
+      console.log(receipt.events)
+    }
+  )
 
   await runTest(
     'V2 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
@@ -3426,6 +3630,52 @@ module.exports = {test: async function (provider, testingContext) {
       // TODO: verify logs
       console.log(receipt.events[0])
       console.log(receipt.events.ExternalError)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V2 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWallet,
+    'getNextCustomActionID',
+    'call',
+    [
+      5, // USDCWithdrawal,
+      constants.FULL_APPROVAL,
+      UserSmartWallet.options.address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  usdcWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V2 UserSmartWallet relay call to withdraw USDC to itself',
+    UserSmartWallet,
+    'withdrawUSDC',
+    'send',
+    [
+      constants.FULL_APPROVAL,
+      UserSmartWallet.options.address,
+      0,
+      usdcUserWithdrawalSignature,
+      usdcWithdrawalSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
     },
     originalAddress
   )
@@ -3750,6 +4000,226 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       console.log(receipt)
+    }
+  )
+
+  await runTest(
+    'V2 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV2,
+    'getNextGenericActionID',
+    'call',
+    [
+      Comptroller.options.address,
+      Comptroller.methods.enterMarkets(
+        [constants.CDAI_MAINNET_ADDRESS]
+      ).encodeABI(),
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  executeActionSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  executeActionUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V2 UserSmartWallet can call executeAction to enter dai market',
+    UserSmartWalletV2,
+    'executeAction',
+    'send',
+    [
+      Comptroller.options.address,
+      Comptroller.methods.enterMarkets(
+        [constants.CDAI_MAINNET_ADDRESS]
+      ).encodeABI(),
+      0,
+      executeActionUserSignature,
+      executeActionSignature
+    ]
+  )
+
+  await runTest(
+    'Dai Whale can deposit dai into the smart wallet',
+    DAI,
+    'transfer',
+    'send',
+    [targetWalletAddress, web3.utils.toWei('100', 'ether')],
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.from,
+          constants.DAI_WHALE_ADDRESS
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.to,
+          targetWalletAddress
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.value,
+          web3.utils.toWei('100', 'ether')
+        )
+      }
+    },
+    constants.DAI_WHALE_ADDRESS
+  )
+
+  await runTest(
+    'new user smart wallet can trigger repayAndDeposit to deposit all new funds',
+    UserSmartWallet,
+    'repayAndDeposit'
+  )
+
+  await runTest(
+    'V2 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV2,
+    'getNextGenericActionID',
+    'call',
+    [
+      CDAI_BORROW.options.address,
+      CDAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  executeActionSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  executeActionUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V2 UserSmartWallet can call executeAction to perform a borrow',
+    UserSmartWalletV2,
+    'executeAction',
+    'send',
+    [
+      CDAI_BORROW.options.address,
+      CDAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
+      0,
+      executeActionUserSignature,
+      executeActionSignature
+    ],
+    true,
+    receipt => {
+      console.log(receipt.events)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V2 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWalletV2,
+    'getNextCustomActionID',
+    'call',
+    [
+      4, // DaiWithdrawal,
+      constants.FULL_APPROVAL,
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  daiWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V2 UserSmartWallet relay cannot withdraw max dai with an outstanding borrow',
+    UserSmartWalletV2,
+    'withdrawDai',
+    'send',
+    [
+      constants.FULL_APPROVAL,
+      address,
+      0,
+      daiUserWithdrawalSignature,
+      daiWithdrawalSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+      console.log(receipt.events)
+    },
+    originalAddress
+  )
+
+  // Initiate account recovery
+  await runTest(
+    'smart wallet account recovery can be initiated',
+    DharmaAccountRecoveryManager,
+    'setTimelock',
+    'send',
+    [
+      '0x648bf774', // function selector: recover(address,address)
+      '0x' + // arguments: the wallet to reset + 
+      UserSmartWalletV2.options.address.slice(2).padStart(64, '0') +
+      originalAddress.slice(2).padStart(64, '0'),
+      0 // extraTime in seconds
+    ],
+    true,
+    receipt => {    
+      // TODO: verify
+      console.log(receipt.events)
+    }
+  )
+
+  await runTest(
+    'smart wallet account recovery cannot be performed right away',
+    DharmaAccountRecoveryManager,
+    'recover',
+    'send',
+    [
+      UserSmartWalletV2.options.address,
+      originalAddress
+    ],
+    false
+  )
+
+  // advance time by 7 days
+  await advanceTime((60 * 60 * 24 * 7) + 5)
+
+  // recover account
+  await runTest(
+    'smart wallet account recovery can be performed after seven days',
+    DharmaAccountRecoveryManager,
+    'recover',
+    'send',
+    [
+      UserSmartWalletV2.options.address,
+      originalAddress
+    ],
+    true,
+    receipt => {    
+      // TODO: verify
+      console.log(receipt.events)
     }
   )
 
