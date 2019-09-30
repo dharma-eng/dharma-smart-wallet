@@ -1,49 +1,65 @@
 pragma solidity 0.5.11;
 
-import "../helpers/ECDSAGroup.sol";
-import "../../interfaces/DharmaKeyRingInterface.sol";
-import "../../interfaces/ERC1271.sol";
+import "../../helpers/ECDSAGroup.sol";
+import "../../../interfaces/DharmaKeyRingImplementationV0Interface.sol";
+import "../../../interfaces/DharmaKeyRingImplementationV1Interface.sol";
+import "../../../interfaces/ERC1271.sol";
 
 
 /**
- * @title DharmaKeyRing
+ * @title DharmaKeyRingImplementationV1
  * @author 0age
- * @notice The Dharma Key Ring is a proof-of-concept for a smart contract that
- * implements ERC-1271 and can be used in place of an externally-owned account
- * for the user signing key on the Dharma Smart Wallet V1+ to support multiple
- * user signing keys. It distinguishes between Admin keys, which are used to
- * modify sigining keys that are set on the key ring or to set a new signing key
- * for the user on the smart wallet, and Executor keys, which are used when
- * calling isValidSignature from the smart wallet in order to validate all other
- * smart wallet actions.
+ * @notice The Dharma Key Ring is a smart contract that implements ERC-1271 and
+ * can be used in place of an externally-owned account for the user signing key
+ * on the Dharma Smart Wallet to support multiple user signing keys. It
+ * distinguishes between Admin keys, which are used to modify sigining keys that
+ * are set on the key ring or to set a new signing key for the user on the smart
+ * wallet, and Standard or Executor keys, which are used when calling 
+ * `isValidSignature` from the smart wallet in order to validate all other smart
+ * wallet actions. Upgrades are managed by an upgrade beacon, similar to the one
+ * utilized by the Dharma Smart Wallet.
  * @dev There are multiple enhancements that can be made to this POC from here,
  * including (but not limited to):
- *   - Adding events for adding or removing keys and modifying thresholds
  *   - Iterating over all keys that have been set on the keyring
  *   - Allowing for other smart contracts to be specified as signers
  *   - Allowing for keys that have a more restrictive set of permissions
  */
-contract DharmaKeyRing is DharmaKeyRingInterface, ERC1271 {
+contract DharmaKeyRingImplementationV1 is
+  DharmaKeyRingImplementationV0Interface,
+  DharmaKeyRingImplementationV1Interface,
+  ERC1271 {
   using ECDSAGroup for bytes32;
 
-  AdditionalKeyCount private _additionalKeyCounts;
+  // WARNING: DO NOT REMOVE OR REORDER STORAGE WHEN WRITING NEW IMPLEMENTATIONS!
 
-  AdditionalThreshold private _additionalThresholds;
-
+  // Track all keys as an address (as uint160) => key type mapping in slot zero.
   mapping (uint160 => KeyType) private _keys;
 
-  // Track a nonce for the keyring so that admin actions cannot be replayed.
+  // Track the nonce in slot 1 so that actions cannot be replayed. Note that
+  // proper nonce management must be managed by the implementing contract when
+  // using `isValidSignature`, as it is a static method and cannot change state.
   uint256 private _nonce;
+
+  // Track the total number of standard and admin keys in storage slot 2.
+  AdditionalKeyCount private _additionalKeyCounts;
+
+  // Track the required threshold standard and admin actions in storage slot 3.
+  AdditionalThreshold private _additionalThresholds;
+
+  // END STORAGE DECLARATIONS - DO NOT REMOVE OR REORDER STORAGE ABOVE HERE!
 
   // ERC-1271 must return this magic value when `isValidSignature` is called.
   bytes4 internal constant _ERC_1271_MAGIC_VALUE = bytes4(0x20c13b0b);
 
-  constructor(
+  function initialize(
     uint128 adminThreshold,
     uint128 executorThreshold,
-    address[] memory keys,
-    uint8[] memory keyTypes // 1: standard, 2: admin, 3: dual
-  ) public {
+    address[] calldata keys,
+    uint8[] calldata keyTypes // 1: standard, 2: admin, 3: dual
+  ) external {
+    // Ensure that this function is only callable during contract construction.
+    assembly { if extcodesize(address) { revert(0, 0) } }
+
     uint128 adminKeys;
     uint128 executorKeys;
 
@@ -68,11 +84,16 @@ contract DharmaKeyRing is DharmaKeyRingInterface, ERC1271 {
 
       _keys[uint160(keys[i])] = keyType;
 
-      if (keyType == KeyType.Standard || keyType == KeyType.Dual) {
+      bool isStandard = (keyType == KeyType.Standard || keyType == KeyType.Dual);
+      bool isAdmin = (keyType == KeyType.Admin || keyType == KeyType.Dual);
+
+      emit KeyModified(keys[i], isStandard, isAdmin);
+
+      if (isStandard) {
         executorKeys++;
       }
 
-      if (keyType == KeyType.Admin || keyType == KeyType.Dual) {
+      if (isAdmin) {
         adminKeys++;
       }
     }
@@ -184,6 +205,19 @@ contract DharmaKeyRing is DharmaKeyRingInterface, ERC1271 {
         standard: isStandard ? threshold : _additionalThresholds.standard,
         admin: isAdmin ? threshold : _additionalThresholds.admin
       });
+
+      emit ThresholdModified(
+        uint256(_additionalThresholds.standard),
+        uint256(_additionalThresholds.admin)
+      );
+    }
+
+    if (adminActionCategory != 2) {
+      emit KeyModified(
+        address(argument),
+        _keys[argument] == KeyType.Standard || _keys[argument] == KeyType.Dual,
+        _keys[argument] == KeyType.Admin || _keys[argument] == KeyType.Dual
+      );
     }
 
     _nonce++;

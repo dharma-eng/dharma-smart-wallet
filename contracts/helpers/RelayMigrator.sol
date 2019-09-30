@@ -12,7 +12,7 @@ import "../../interfaces/RelayContractInterface.sol";
  * @author 0age
  * @notice This contract will migrate cDAI and cUSDC balances from existing user
  * relay contracts to new smart wallet contracts. It has four distinct phases:
- *  - Phase one: Registration. All existing relay contracts, and a user sigining
+ *  - Phase one: Registration. All existing relay contracts, and a user signing
  *    key that will be used to provision a new smart wallet for each, are
  *    provided as arguments to the `register` function. Once all relay contracts
  *    have been registered, the `endRegistration` function is called and the
@@ -134,9 +134,9 @@ contract RelayMigrator is Ownable {
    * Only the owner may call this function.
    * @param relayContracts address[] An array of relay contract addresses to
    * register.
-   * @param initialUserSigningKeys address[] An array addresses to register for
-   * each relay contract that will be used to set the initial user signing key
-   * when creating the new smart wallet for the user.
+   * @param initialUserSigningKeys address[] An array of addresses to register
+   * for each relay contract that will be used to set the initial user signing
+   * key when creating the new smart wallet for the user.
    */
   function register(
     address[] calldata relayContracts,

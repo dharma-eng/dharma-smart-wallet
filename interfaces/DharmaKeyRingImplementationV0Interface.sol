@@ -1,7 +1,9 @@
 pragma solidity 0.5.11;
 
 
-interface DharmaKeyRingInterface {
+interface DharmaKeyRingImplementationV0Interface {
+  event KeyModified(address indexed key, bool standard, bool admin);
+
   enum KeyType {
     None,
     Standard,
@@ -25,19 +27,6 @@ interface DharmaKeyRingInterface {
     uint128 standard;
     uint128 admin;
   }
-
-  struct AdditionalThreshold {
-    uint128 standard;
-    uint128 admin;
-  }
-
-  function takeAction(
-    address payable to, uint256 value, bytes calldata data, bytes calldata signatures
-  ) external returns (bool ok, bytes memory returnData);
-
-  function getActionID(
-    address payable to, uint256 value, bytes calldata data
-  ) external view returns (bytes32 actionID);
 
   function takeAdminAction(
     AdminActionType adminActionType, uint160 argument, bytes calldata signatures
