@@ -1,12 +1,8 @@
 pragma solidity 0.5.11;
 
-import "../proxies/UpgradeBeaconProxyV1.sol";
-import "../../interfaces/DharmaSmartWalletFactoryV1Interface.sol";
-
-
-interface DharmaSmartWalletInitializer {
-  function initialize(address userSigningKey) external;
-}
+import "../../proxies/UpgradeBeaconProxyV1.sol";
+import "../../../interfaces/DharmaSmartWalletFactoryV1Interface.sol";
+import "../../../interfaces/DharmaSmartWalletInitializer.sol";
 
 
 /**

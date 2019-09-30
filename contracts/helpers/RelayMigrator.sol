@@ -217,7 +217,7 @@ contract RelayMigrator is Ownable {
     address newSmartWallet;
 
     uint256 totalInitialUserSigningKeys = _initialUserSigningKeys.length;
-    
+
     for (uint256 i = _iterationIndex; i < totalInitialUserSigningKeys; i++) {
       if (gasleft() < 200000) {
         _iterationIndex = i;
@@ -225,7 +225,7 @@ contract RelayMigrator is Ownable {
       }
 
       newSmartWallet = _DHARMA_SMART_WALLET_FACTORY.newSmartWallet(
-        _initialUserSigningKeys[i];
+        _initialUserSigningKeys[i]
       );
 
       _smartWallets.push(newSmartWallet);

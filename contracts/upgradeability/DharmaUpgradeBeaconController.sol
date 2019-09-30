@@ -1,9 +1,6 @@
 pragma solidity 0.5.11; // optimization runs: 200, evm version: petersburg
 
-
-interface DharmaUpgradeBeaconEnvoyInterface {
-  function getImplementation(address beacon) external view returns (address);
-}
+import "../../interfaces/DharmaUpgradeBeaconEnvoyInterface.sol";
 
 
 /**

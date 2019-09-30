@@ -6,31 +6,29 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
-import "../../interfaces/DharmaSmartWalletImplementationV1Interface.sol";
-import "../../interfaces/CTokenInterface.sol";
-import "../../interfaces/USDCV1Interface.sol";
-import "../../interfaces/ComptrollerInterface.sol";
-import "../../interfaces/DharmaKeyRegistryInterface.sol";
-import "../../interfaces/ERC1271.sol";
+import "../../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
+import "../../../interfaces/DharmaSmartWalletImplementationV1Interface.sol";
+import "../../../interfaces/CTokenInterface.sol";
+import "../../../interfaces/USDCV1Interface.sol";
+import "../../../interfaces/ComptrollerInterface.sol";
+import "../../../interfaces/DharmaKeyRegistryInterface.sol";
+import "../../../interfaces/ERC1271.sol";
 
 
 /**
- * @title DharmaSmartWalletImplementationV2
+ * @title DharmaSmartWalletImplementationV1
  * @author 0age
- * @notice The V2 implementation for the Dharma smart wallet is a joint-custody,
+ * @notice The V1 implementation for the Dharma smart wallet is a joint-custody,
  * meta-transaction-enabled wallet with helper functions to facilitate lending
- * funds using CompoundV2. It makes a few minor fixes and changes to the V1
- * implementation to improve efficiency and reliability for an initial save-only
- * Dharma Smart Wallet. It also contains methods to support account recovery and
- * generic actions, including in an atomic batch. The smart wallet instances
+ * funds using CompoundV2. It also contains methods to support account recovery
+ * and generic actions, including in an atomic batch. The smart wallet instances
  * utilizing this implementation are deployed through the Dharma Smart Wallet
  * Factory via `CREATE2`, which allows for their address to be known ahead of
- * time, and any Dai or USDC that has already been sent into that address will
- * automatically be deposited into Compound upon deployment of the new smart
- * wallet instance.
+ * time, and any Dai, USDC, or Ether that has already been sent into that
+ * address will automatically be deposited into Compound upon deployment of the
+ * new smart wallet instance.
  */
-contract DharmaSmartWalletImplementationV2 is
+contract DharmaSmartWalletImplementationV1 is
   DharmaSmartWalletImplementationV0Interface,
   DharmaSmartWalletImplementationV1Interface {
   using Address for address;
@@ -56,7 +54,7 @@ contract DharmaSmartWalletImplementationV2 is
   // END STORAGE DECLARATIONS - DO NOT REMOVE OR REORDER STORAGE ABOVE HERE!
 
   // The smart wallet version will be used when constructing valid signatures.
-  uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 2;
+  uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 1;
 
   // The Dharma Key Registry holds a public key for verifying meta-transactions.
   DharmaKeyRegistryInterface internal constant _DHARMA_KEY_REGISTRY = (
@@ -102,9 +100,10 @@ contract DharmaSmartWalletImplementationV2 is
 
   /**
    * @notice In initializer, set up user signing key, set approval on the cDAI
-   * and cUSDC contracts, and deposit any Dai or USDC already at the address to
-   * Compound. Note that this initializer is only callable while the smart
-   * wallet instance is still in the contract creation phase.
+   * and cUSDC contracts, deposit any Dai, USDC, and ETH already at the address
+   * to Compound, and enter markets for cDAI, cUSDC, and cETH. Note that this
+   * initializer is only callable while the smart wallet instance is still in
+   * the contract creation phase.
    * @param userSigningKey address The initial user signing key for the smart
    * wallet.
    */
@@ -132,6 +131,9 @@ contract DharmaSmartWalletImplementationV2 is
       // Try to deposit any USDC balance on Compound.
       _depositOnCompound(AssetType.USDC, usdcBalance);
     }
+
+    // Enter DAI + USDC + ETH markets now to avoid a need to reinitialize later.
+    _enterMarkets();
   }
 
   /**
@@ -231,9 +233,10 @@ contract DharmaSmartWalletImplementationV2 is
       this._withdrawDaiAtomic.selector, amount, recipient
     ));
 
-    // If the atomic call failed, emit an event signifying a transfer failure.
+    // If the atomic call failed, diagnose the reason and emit an event.
     if (!ok) {
-      emit ExternalError(address(_DAI), "DAI contract reverted on transfer.");
+      // This revert could be caused by cDai MathError or Dai transfer error.
+      _diagnoseAndEmitErrorRelatedToWithdrawal(AssetType.DAI);
     } else {
       // Set ok to false if the call succeeded but the withdrawal failed.
       ok = abi.decode(returnData, (bool));
@@ -246,9 +249,9 @@ contract DharmaSmartWalletImplementationV2 is
    * the maximum amount if specified using `uint256(-1)`, to the supplied
    * recipient address by redeeming the underlying Dai from the cDAI contract
    * and transferring it to the recipient. An ExternalError will be emitted and
-   * the transfer will be skipped if the call to `redeem` or `redeemUnderlying`
-   * fails, and any revert will be caught by `withdrawDai` and diagnosed in
-   * order to emit an appropriate ExternalError as well.
+   * the transfer will be skipped if the call to `redeemUnderlying` fails, and
+   * any revert will be caught by `withdrawDai` and diagnosed in order to emit
+   * an appropriate ExternalError as well.
    * @param amount uint256 The amount of Dai to withdraw.
    * @param recipient address The account to transfer the withdrawn Dai to.
    * @return True if the withdrawal succeeded, otherwise false.
@@ -262,20 +265,22 @@ contract DharmaSmartWalletImplementationV2 is
 
     // If amount = 0xfff...fff, withdraw the maximum amount possible.
     bool maxWithdraw = (amount == uint256(-1));
+    uint256 redeemUnderlyingAmount;
     if (maxWithdraw) {
-      // Attempt to withdraw all Dai from Compound before proceeding.
-      if (_withdrawMaxFromCompound(AssetType.DAI)) {
-        // At this point dai transfer should never fail - wrap it just in case.
-        require(_DAI.transfer(recipient, _DAI.balanceOf(address(this))));
-        success = true;
-      }
+      redeemUnderlyingAmount = _CDAI.balanceOfUnderlying(address(this));
     } else {
-      // Attempt to withdraw specified Dai from Compound before proceeding.
-      if (_withdrawFromCompound(AssetType.DAI, amount)) {
-        // At this point dai transfer should never fail - wrap it just in case.
+      redeemUnderlyingAmount = amount;
+    }
+
+    // Attempt to withdraw specified Dai amount from Compound before proceeding.
+    if (_withdrawFromCompound(AssetType.DAI, redeemUnderlyingAmount)) {
+      // At this point dai transfer *should* never fail - wrap it just in case.
+      if (maxWithdraw) {
+        require(_DAI.transfer(recipient, _DAI.balanceOf(address(this))));
+      } else {
         require(_DAI.transfer(recipient, amount));
-        success = true;
       }
+      success = true;
     }
   }
 
@@ -341,8 +346,8 @@ contract DharmaSmartWalletImplementationV2 is
       this._withdrawUSDCAtomic.selector, amount, recipient
     ));
     if (!ok) {
-      // Find out why USDC transfer reverted (doesn't give revert reasons).
-      _diagnoseAndEmitUSDCSpecificError(_USDC.transfer.selector);
+      // This revert could be caused by cUSDC MathError or USDC transfer error.
+      _diagnoseAndEmitErrorRelatedToWithdrawal(AssetType.USDC);
     } else {
       // Ensure that ok == false in the event the withdrawal failed.
       ok = abi.decode(returnData, (bool));
@@ -371,26 +376,28 @@ contract DharmaSmartWalletImplementationV2 is
 
     // If amount = 0xfff...fff, withdraw the maximum amount possible.
     bool maxWithdraw = (amount == uint256(-1));
+    uint256 redeemUnderlyingAmount;
     if (maxWithdraw) {
-      // Attempt to withdraw all USDC from Compound before proceeding.
-      if (_withdrawMaxFromCompound(AssetType.USDC)) {
-        // Ensure that the USDC transfer does not fail.
-        require(_USDC.transfer(recipient, _USDC.balanceOf(address(this))));
-        success = true;
-      }
+      redeemUnderlyingAmount = _CUSDC.balanceOfUnderlying(address(this));
     } else {
-      // Attempt to withdraw specified USDC from Compound before proceeding.
-      if (_withdrawFromCompound(AssetType.USDC, amount)) {
-        // Ensure that the USDC transfer does not fail.
+      redeemUnderlyingAmount = amount;
+    }
+
+    // Try to withdraw specified USDC amount from Compound before proceeding.
+    if (_withdrawFromCompound(AssetType.USDC, redeemUnderlyingAmount)) {
+      // Ensure that the USDC transfer does not fail.
+      if (maxWithdraw) {
+        require(_USDC.transfer(recipient, _USDC.balanceOf(address(this))));
+      } else {
         require(_USDC.transfer(recipient, amount));
-        success = true;
       }
+      success = true;
     }
   }
 
   /**
    * @notice Withdraw Ether to a provided recipient address by transferring it
-   * to a recipient. This is only intended to be utilized on V2 as a mechanism
+   * to a recipient. This is only intended to be utilized on V1 as a mechanism
    * for recovering Ether from this contract.
    * @param amount uint256 The amount of Ether to withdraw.
    * @param recipient address The account to transfer the Ether to.
@@ -428,7 +435,7 @@ contract DharmaSmartWalletImplementationV2 is
     // Attempt to perform the transfer and emit an event if it fails.
     (ok, ) = recipient.call.gas(2300).value(amount)("");
     if (!ok) {
-      emit ExternalError(recipient, "Recipient rejected ether transfer.");
+      emit ExternalError(address(this), "Ether transfer was unsuccessful.");
     }
   }
 
@@ -626,7 +633,7 @@ contract DharmaSmartWalletImplementationV2 is
    * action. The current nonce will be used, which means that it will only be
    * valid for the next action taken.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V2 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
    * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
    * ETHWithdrawal (6).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
@@ -665,7 +672,7 @@ contract DharmaSmartWalletImplementationV2 is
    * action. Any nonce value may be supplied, which enables constructing valid
    * message hashes for multiple future actions ahead of time.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V2 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
    * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
    * ETHWithdrawal (6).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
@@ -1004,35 +1011,6 @@ contract DharmaSmartWalletImplementationV2 is
   }
 
   /**
-   * @notice Internal function for withdrawing the total underlying asset
-   * balance from the corresponding cToken. Note that the requested balance may
-   * not be currently available on Compound, which will cause the withdrawal to
-   * fail.
-   * @param asset uint256 The asset's ID, either Dai (0) or USDC (1).
-   * @return True if the withdrawal succeeded, otherwise false.
-   */
-  function _withdrawMaxFromCompound(
-    AssetType asset
-  ) internal returns (bool success) {
-    // Get cToken address for the asset type. (No custom ETH withdrawal action.)
-    address cToken = asset == AssetType.DAI ? address(_CDAI) : address(_CUSDC);
-
-    // Get the current cToken balance for this account.
-    uint256 redeemAmount = _CDAI.balanceOf(address(this));
-
-    // Attempt to redeem the underlying balance from the cToken contract.
-    (bool ok, bytes memory data) = cToken.call(abi.encodeWithSelector(
-      // Note: function selector is the same for each cToken so just use cDAI's.
-      _CDAI.redeem.selector, redeemAmount
-    ));
-
-    // Log an external error if something went wrong with the attempt.
-    success = _checkCompoundInteractionAndLogAnyErrors(
-      asset, _CDAI.redeem.selector, ok, data
-    );
-  }
-
-  /**
    * @notice Internal function for validating supplied gas (if specified),
    * retrieving the signer's public key from the Dharma Key Registry, deriving
    * the action ID, validating the provided caller and/or signatures using that
@@ -1042,7 +1020,7 @@ contract DharmaSmartWalletImplementationV2 is
    * errors, which can be guarded against by supplying a minimum action gas
    * requirement).
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V2 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
    * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
    * ETHWithdrawal (6).
    * @param arguments bytes ABI-encoded arguments for the action.
@@ -1140,6 +1118,60 @@ contract DharmaSmartWalletImplementationV2 is
   }
 
   /**
+   * @notice Internal function for entering cDAI, cUSDC, and cETH markets. This
+   * is performed now so that V0 smart wallets will not need to be reinitialized
+   * in order to support using these assets as collateral when borrowing funds.
+   */
+  function _enterMarkets() internal {
+    // Create input array with each cToken address on which to enter a market. 
+    address[] memory marketsToEnter = new address[](3);
+    marketsToEnter[0] = address(_CDAI);
+    marketsToEnter[1] = address(_CUSDC);
+    marketsToEnter[2] = address(
+      0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5
+    ); // CEther
+
+    // Attempt to enter each market by calling into the Comptroller contract.
+    (bool ok, bytes memory data) = address(_COMPTROLLER).call(
+      abi.encodeWithSelector(_COMPTROLLER.enterMarkets.selector, marketsToEnter)
+    );
+
+    // Log an external error if something went wrong with the attempt.
+    if (ok) {
+      uint256[] memory compoundErrors = abi.decode(data, (uint256[]));
+      for (uint256 i = 0; i < compoundErrors.length; i++) {
+        uint256 compoundError = compoundErrors[i];
+        if (compoundError != _COMPOUND_SUCCESS) {
+          emit ExternalError(
+            address(_COMPTROLLER),
+            string(
+              abi.encodePacked(
+                "Compound Comptroller contract returned error code ",
+                uint8((compoundError / 10) + 48),
+                uint8((compoundError % 10) + 48),
+                " while attempting to call enterMarkets."
+              )
+            )
+          );
+        }
+      }
+    } else {
+      // Decode the revert reason in the event one was returned.
+      string memory revertReason = _decodeRevertReason(data);
+
+      emit ExternalError(
+        address(_COMPTROLLER),
+        string(
+          abi.encodePacked(
+            "Compound Comptroller contract reverted on enterMarkets: ",
+            revertReason
+          )
+        )
+      );
+    }
+  }
+
+  /**
    * @notice Internal function to determine whether a call to a given cToken
    * succeeded, and to emit a relevant ExternalError event if it failed. The
    * failure can be caused by a call that reverts, or by a call that does not
@@ -1209,6 +1241,46 @@ contract DharmaSmartWalletImplementationV2 is
           )
         )
       );
+    }
+  }
+
+  /**
+   * @notice Internal function to diagnose the reason that a withdrawal attempt
+   * failed and to emit a corresponding ExternalError event. Errors related to
+   * the call to `redeemUnderlying` on the cToken are handled by
+   * `_checkCompoundInteractionAndLogAnyErrors` - if the error did not originate
+   * from that call, it could be caused by a call to `balanceOfUnderlying` (i.e.
+   * when attempting a maximum withdrawal) or by the call to `transfer` on the
+   * underlying token after the withdrawal has been completed.
+   * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
+   */
+  function _diagnoseAndEmitErrorRelatedToWithdrawal(AssetType asset) internal {
+    // Get called contract address and name of contract (no need for selector).
+    (address cToken, string memory name, ) = _getCTokenDetails(
+      asset, bytes4(0)
+    );
+
+    // Revert could be caused by cToken MathError or underlying transfer error.
+    (bool check, ) = cToken.call(abi.encodeWithSelector(
+      // Note: since both cTokens have the same interface, just use cDAI's.
+      _CDAI.balanceOfUnderlying.selector, address(this)
+    ));
+    if (!check) {
+      emit ExternalError(
+        cToken,
+        string(
+          abi.encodePacked(
+            name, " contract reverted on call to balanceOfUnderlying."
+          )
+        )
+      );
+    } else {
+      if (asset == AssetType.DAI) {
+        emit ExternalError(address(_DAI), "DAI contract reverted on transfer.");
+      } else {
+        // Find out why USDC transfer reverted (doesn't give revert reasons).
+        _diagnoseAndEmitUSDCSpecificError(_USDC.transfer.selector);
+      }
     }
   }
 
@@ -1292,7 +1364,7 @@ contract DharmaSmartWalletImplementationV2 is
    * is derived by prefixing (according to EIP-191 0x45) and hashing an actionID
    * returned from `getCustomActionID`.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V2 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
    * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
    * ETHWithdrawal (6).
    * @param arguments bytes ABI-encoded arguments for the action.
@@ -1343,7 +1415,7 @@ contract DharmaSmartWalletImplementationV2 is
    * when reconstructing an action ID during protected function execution based
    * on the supplied parameters.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V2 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
    * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
    * ETHWithdrawal (6).
    * @param arguments bytes ABI-encoded arguments for the action.
@@ -1365,34 +1437,19 @@ contract DharmaSmartWalletImplementationV2 is
     address userSigningKey,
     address dharmaSigningKey
   ) internal view returns (bytes32 actionID) {
-    if (action == ActionType.Cancel) {
-      // actionID is constructed according to EIP-191-0x45 to prevent replays.
-      actionID = keccak256(
-        abi.encodePacked(
-          address(this),
-          _DHARMA_SMART_WALLET_VERSION,
-          userSigningKey,
-          dharmaSigningKey,
-          nonce,
-          minimumActionGas,
-          action
-        )
-      );
-    } else {
-      // actionID is constructed according to EIP-191-0x45 to prevent replays.
-      actionID = keccak256(
-        abi.encodePacked(
-          address(this),
-          _DHARMA_SMART_WALLET_VERSION,
-          userSigningKey,
-          dharmaSigningKey,
-          nonce,
-          minimumActionGas,
-          action,
-          arguments
-        )
-      );
-    }
+    // The actionID is constructed according to EIP-191-0x45 to prevent replays.
+    actionID = keccak256(
+      abi.encodePacked(
+        address(this),
+        _DHARMA_SMART_WALLET_VERSION,
+        userSigningKey,
+        dharmaSigningKey,
+        nonce,
+        minimumActionGas,
+        action,
+        arguments
+      )
+    );
   }
 
   /**

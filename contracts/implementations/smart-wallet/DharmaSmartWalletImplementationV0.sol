@@ -1,36 +1,30 @@
-pragma solidity 0.5.11; // optimization runs: 200, evm version: petersburg
-// WARNING - `executeActionWithAtomicBatchCalls` has a `bytes[]` argument that
-// requires ABIEncoderV2. Exercise caution when calling that specific function.
-pragma experimental ABIEncoderV2;
+pragma solidity 0.5.11;
 
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
-import "../../interfaces/DharmaSmartWalletImplementationV1Interface.sol";
-import "../../interfaces/CTokenInterface.sol";
-import "../../interfaces/USDCV1Interface.sol";
-import "../../interfaces/ComptrollerInterface.sol";
-import "../../interfaces/DharmaKeyRegistryInterface.sol";
-import "../../interfaces/ERC1271.sol";
+import "../../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
+import "../../../interfaces/CTokenInterface.sol";
+import "../../../interfaces/USDCV1Interface.sol";
+import "../../../interfaces/ComptrollerInterface.sol";
+import "../../../interfaces/DharmaKeyRegistryInterface.sol";
 
 
 /**
- * @title DharmaSmartWalletImplementationV1
+ * @title DharmaSmartWalletImplementationV0
  * @author 0age
- * @notice The V1 implementation for the Dharma smart wallet is a joint-custody,
- * meta-transaction-enabled wallet with helper functions to facilitate lending
- * funds using CompoundV2. It also contains methods to support account recovery
- * and generic actions, including in an atomic batch. The smart wallet instances
- * utilizing this implementation are deployed through the Dharma Smart Wallet
- * Factory via `CREATE2`, which allows for their address to be known ahead of
- * time, and any Dai, USDC, or Ether that has already been sent into that
- * address will automatically be deposited into Compound upon deployment of the
- * new smart wallet instance.
+ * @notice The V0 implementation for the Dharma Smart Wallet contains helper
+ * functions to facilitate lending funds to CompoundV2 and for preparing Dharma
+ * users for a smooth transition to a joint-custody smart wallet. It supports
+ * meta-transactions, signed by a key corresponding to the public key returned
+ * by the Dharma Key Registry and relayed by any transaction submitter that has
+ * provided the specified gas requirement. The smart wallet instances utilizing
+ * this implementation are deployed through the Dharma Smart Wallet Factory via
+ * `CREATE2`, which allows for their address to be known ahead of time, and any
+ * Dai or USDC that has already been sent into that address will automatically
+ * be deposited into Compound upon deployment of the new smart wallet instance.
  */
-contract DharmaSmartWalletImplementationV1 is
-  DharmaSmartWalletImplementationV0Interface,
-  DharmaSmartWalletImplementationV1Interface {
+contract DharmaSmartWalletImplementationV0 is DharmaSmartWalletImplementationV0Interface {
   using Address for address;
   using ECDSA for bytes32;
   // WARNING: DO NOT REMOVE OR REORDER STORAGE WHEN WRITING NEW IMPLEMENTATIONS!
@@ -54,17 +48,11 @@ contract DharmaSmartWalletImplementationV1 is
   // END STORAGE DECLARATIONS - DO NOT REMOVE OR REORDER STORAGE ABOVE HERE!
 
   // The smart wallet version will be used when constructing valid signatures.
-  uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 1;
+  uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 0;
 
   // The Dharma Key Registry holds a public key for verifying meta-transactions.
   DharmaKeyRegistryInterface internal constant _DHARMA_KEY_REGISTRY = (
     DharmaKeyRegistryInterface(0x000000005D7065eB9716a410070Ee62d51092C98)
-  );
-
-  // Account recovery is facilitated using a hard-coded recovery manager,
-  // controlled by Dharma and implementing appropriate timelocks.
-  address internal constant _ACCOUNT_RECOVERY_MANAGER = address(
-    0x00000000d750176e38660203C678D88eE7e28d36
   );
 
   // This contract interfaces with Dai, USDC, and related CompoundV2 contracts.
@@ -95,15 +83,15 @@ contract DharmaSmartWalletImplementationV1 is
   // Compound returns a value of 0 to indicate success, or lack of an error.
   uint256 internal constant _COMPOUND_SUCCESS = 0;
 
-  // ERC-1271 must return this magic value when `isValidSignature` is called.
-  bytes4 internal constant _ERC_1271_MAGIC_VALUE = bytes4(0x20c13b0b);
-
   /**
    * @notice In initializer, set up user signing key, set approval on the cDAI
-   * and cUSDC contracts, deposit any Dai, USDC, and ETH already at the address
-   * to Compound, and enter markets for cDAI, cUSDC, and cETH. Note that this
-   * initializer is only callable while the smart wallet instance is still in
-   * the contract creation phase.
+   * and cUSDC contracts, deposit any Dai and/or USDC already at the address to
+   * Compound, and enter markets for cDAI, cUSDC, and cETH (just so it doesn't
+   * need to be performed at some later stage when we move to a borrow-enabled
+   * smart wallet). In V0, the user signing key is not actually used to sign
+   * actions - the goal is to get all of the smart wallets set up with a user
+   * signing key before V1. Note that this initializer is only callable while
+   * the smart wallet instance is still in the contract creation phase.
    * @param userSigningKey address The initial user signing key for the smart
    * wallet.
    */
@@ -193,11 +181,7 @@ contract DharmaSmartWalletImplementationV1 is
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
    * function call.
-   * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. If the user
-   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
-   * will be used. A unique hash returned from `getCustomActionID` is prefixed
-   * and hashed to create the message hash for the signature.
+   * @param userSignature bytes Unused in V0.
    * @param dharmaSignature bytes A signature that resolves to the public key
    * returned for this account from the Dharma Key Registry. A unique hash
    * returned from `getCustomActionID` is prefixed and hashed to create the
@@ -211,12 +195,15 @@ contract DharmaSmartWalletImplementationV1 is
     bytes calldata userSignature,
     bytes calldata dharmaSignature
   ) external returns (bool ok) {
-    // Ensure caller and/or supplied signatures are valid and increment nonce.
+    // Declare the unused value to avoid compiler and linter warnings.
+    userSignature;
+
+    // Ensure either caller or supplied signature is valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.DAIWithdrawal,
-      abi.encode(amount, recipient),
+      amount,
+      recipient,
       minimumActionGas,
-      userSignature,
       dharmaSignature
     );
 
@@ -306,11 +293,7 @@ contract DharmaSmartWalletImplementationV1 is
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
    * function call.
-   * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. If the user
-   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
-   * will be used. A unique hash returned from `getCustomActionID` is prefixed
-   * and hashed to create the message hash for the signature.
+   * @param userSignature bytes Unused in V0.
    * @param dharmaSignature bytes A signature that resolves to the public key
    * returned for this account from the Dharma Key Registry. A unique hash
    * returned from `getCustomActionID` is prefixed and hashed to create the
@@ -324,12 +307,15 @@ contract DharmaSmartWalletImplementationV1 is
     bytes calldata userSignature,
     bytes calldata dharmaSignature
   ) external returns (bool ok) {
-    // Ensure caller and/or supplied signatures are valid and increment nonce.
+    // Declare the unused value to avoid compiler and linter warnings.
+    userSignature;
+
+    // Ensure either caller or supplied signature is valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.USDCWithdrawal,
-      abi.encode(amount, recipient),
+      amount,
+      recipient,
       minimumActionGas,
-      userSignature,
       dharmaSignature
     );
 
@@ -396,51 +382,7 @@ contract DharmaSmartWalletImplementationV1 is
   }
 
   /**
-   * @notice Withdraw Ether to a provided recipient address by transferring it
-   * to a recipient. This is only intended to be utilized on V1 as a mechanism
-   * for recovering Ether from this contract.
-   * @param amount uint256 The amount of Ether to withdraw.
-   * @param recipient address The account to transfer the Ether to.
-   * @param minimumActionGas uint256 The minimum amount of gas that must be
-   * provided to this call - be aware that additional gas must still be included
-   * to account for the cost of overhead incurred up until the start of this
-   * function call.
-   * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. If the user
-   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
-   * will be used. A unique hash returned from `getCustomActionID` is prefixed
-   * and hashed to create the message hash for the signature.
-   * @param dharmaSignature bytes A signature that resolves to the public key
-   * returned for this account from the Dharma Key Registry. A unique hash
-   * returned from `getCustomActionID` is prefixed and hashed to create the
-   * signed message.
-   * @return True if the transfer succeeded, otherwise false.
-   */
-  function withdrawEther(
-    uint256 amount,
-    address payable recipient,
-    uint256 minimumActionGas,
-    bytes calldata userSignature,
-    bytes calldata dharmaSignature
-  ) external returns (bool ok) {
-    // Ensure caller and/or supplied signatures are valid and increment nonce.
-    _validateActionAndIncrementNonce(
-      ActionType.ETHWithdrawal,
-      abi.encode(amount, recipient),
-      minimumActionGas,
-      userSignature,
-      dharmaSignature
-    );
-
-    // Attempt to perform the transfer and emit an event if it fails.
-    (ok, ) = recipient.call.gas(2300).value(amount)("");
-    if (!ok) {
-      emit ExternalError(address(this), "Ether transfer was unsuccessful.");
-    }
-  }
-
-  /**
-   * @notice Allow a signatory to increment the nonce at any point. The current
+   * @notice Allow signatory to increment the nonce at any point. The current
    * nonce needs to be provided as an argument to the a signature so as not to
    * enable griefing attacks. All arguments can be omitted if called directly.
    * No value is returned from this function - it will either succeed or revert.
@@ -448,106 +390,37 @@ contract DharmaSmartWalletImplementationV1 is
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
    * function call.
-   * @param signature bytes A signature that resolves to either the public key
-   * set for this account in storage slot zero, `_userSigningKey`, or the public
-   * key returned for this account from the Dharma Key Registry. A unique hash
-   * returned from `getCustomActionID` is prefixed and hashed to create the
-   * signed message.
+   * @param signature bytes A signature that resolves to the public key returned
+   * for this account from the Dharma Key Registry. A unique hash returned from
+   * `getCustomActionID` is prefixed and hashed to create the signed message.
    */  
   function cancel(
     uint256 minimumActionGas,
     bytes calldata signature
   ) external {
-    // Ensure the caller or the supplied signature is valid and increment nonce.
+    // Ensure either caller or supplied signature is valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.Cancel,
-      abi.encode(),
+      0,
+      address(0),
       minimumActionGas,
-      signature,
       signature
     );
   }
 
   /**
-   * @notice Perform a generic call to another contract. Note that accounts with
-   * no code may not be specified, nor may the smart wallet itself. In order to
-   * increment the nonce and invalidate the signature, a call to this function
-   * with a valid target, signatutes, and gas will always succeed. To determine
-   * whether the call made as part of the action was successful or not, either
-   * the return values or the `CallSuccess` or `CallFailure` event can be used.
-   * @param to address The contract to call.
-   * @param data bytes The calldata to provide when making the call.
-   * @param minimumActionGas uint256 The minimum amount of gas that must be
-   * provided to this call - be aware that additional gas must still be included
-   * to account for the cost of overhead incurred up until the start of this
-   * function call.
-   * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. If the user
-   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
-   * will be used. A unique hash returned from `getCustomActionID` is prefixed
-   * and hashed to create the message hash for the signature.
-   * @param dharmaSignature bytes A signature that resolves to the public key
-   * returned for this account from the Dharma Key Registry. A unique hash
-   * returned from `getCustomActionID` is prefixed and hashed to create the
-   * signed message.
-   * @return A boolean signifying the status of the call, as well as any data
-   * returned from the call.
-   */
-  function executeAction(
-    address to,
-    bytes calldata data,
-    uint256 minimumActionGas,
-    bytes calldata userSignature,
-    bytes calldata dharmaSignature
-  ) external returns (bool ok, bytes memory returnData) {
-    // Ensure that the `to` address is a contract and is not this contract.
-    _ensureValidGenericCallTarget(to);
-
-    // Ensure caller and/or supplied signatures are valid and increment nonce.
-    (bytes32 actionID, uint256 nonce) = _validateActionAndIncrementNonce(
-      ActionType.Generic,
-      abi.encode(to, data),
-      minimumActionGas,
-      userSignature,
-      dharmaSignature
-    );
-
-    // Note: from this point on, there are no reverts (apart from out-of-gas or
-    // call-depth-exceeded) originating from this action. However, the call
-    // itself may revert, in which case the function will return `false`, along
-    // with the revert reason encoded as bytes, and fire an CallFailure event.
-
-    // Perform the action via low-level call and set return values using result.
-    (ok, returnData) = to.call(data);
-
-    // Emit a CallSuccess or CallFailure event based on the outcome of the call.
-    if (ok) {
-      // Note: while the call succeeded, the action may still have "failed"
-      // (for example, successful calls to Compound can still return an error).
-      emit CallSuccess(actionID, false, nonce, to, data, returnData);
-    } else {
-      // Note: while the call failed, the nonce will still be incremented, which
-      // will invalidate all supplied signatures.
-      emit CallFailure(actionID, nonce, to, data, string(returnData));
-    }
-  }
-
-  /**
    * @notice Allow signatory to set a new user signing key. The current nonce
    * needs to be provided as an argument to the a signature so as not to enable
-   * griefing attacks. No value is returned from this function - it will either
-   * succeed or revert.
+   * griefing attacks. All arguments apart from the user signing key can be
+   * omitted if called directly. No value is returned from this function - it
+   * will either succeed or revert.
    * @param userSigningKey address The new user signing key to set on this smart
    * wallet.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
    * function call.
-   * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. If the user
-   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
-   * will be used. A unique hash returned from `getCustomActionID` is prefixed
-   * and hashed to create the message hash for the signature.
+   * @param userSignature bytes Unused in V0.
    * @param dharmaSignature bytes A signature that resolves to the public key
    * returned for this account from the Dharma Key Registry. A unique hash
    * returned from `getCustomActionID` is prefixed and hashed to create the
@@ -559,28 +432,20 @@ contract DharmaSmartWalletImplementationV1 is
     bytes calldata userSignature,
     bytes calldata dharmaSignature
   ) external {
-    // Ensure caller and/or supplied signatures are valid and increment nonce.
+    // Declare the unused value to avoid compiler and linter warnings.
+    userSignature;
+
+    // Ensure either caller or supplied signature is valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.SetUserSigningKey,
-      abi.encode(userSigningKey),
+      0,
+      userSigningKey,
       minimumActionGas,
-      userSignature,
       dharmaSignature
     );
 
     // Set new user signing key on smart wallet and emit a corresponding event.
     _setUserSigningKey(userSigningKey);
-  }
-
-  // Allow the account recovery manager to change the user signing key.
-  function recover(address newUserSigningKey) external {
-    require(
-      msg.sender == _ACCOUNT_RECOVERY_MANAGER,
-      "Only the account recovery manager may call this function."
-    );
-
-    // Set up the user's new dharma key and emit a corresponding event.
-    _setUserSigningKey(newUserSigningKey);
   }
 
   /**
@@ -633,9 +498,8 @@ contract DharmaSmartWalletImplementationV1 is
    * action. The current nonce will be used, which means that it will only be
    * valid for the next action taken.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
-   * ETHWithdrawal (6).
+   * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
+   * and USDCWithdrawal (5).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
    * for other action types.
    * @param recipient address The account to transfer withdrawn funds to, the
@@ -654,13 +518,8 @@ contract DharmaSmartWalletImplementationV1 is
     uint256 minimumActionGas
   ) external view returns (bytes32 actionID) {
     // Determine the actionID - this serves as a signature hash for an action.
-    actionID = _getActionID(
-      action,
-      abi.encode(amount, recipient),
-      _nonce,
-      minimumActionGas,
-      _userSigningKey,
-      _getDharmaSigningKey()
+    actionID = _getCustomActionID(
+      action, amount, recipient, _nonce, minimumActionGas, _getDharmaSigningKey()
     );
   }
 
@@ -672,9 +531,8 @@ contract DharmaSmartWalletImplementationV1 is
    * action. Any nonce value may be supplied, which enables constructing valid
    * message hashes for multiple future actions ahead of time.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
-   * ETHWithdrawal (6).
+   * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
+   * and USDCWithdrawal (5).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
    * for other action types.
    * @param recipient address The account to transfer withdrawn funds to, the
@@ -695,46 +553,8 @@ contract DharmaSmartWalletImplementationV1 is
     uint256 minimumActionGas
   ) external view returns (bytes32 actionID) {
     // Determine the actionID - this serves as a signature hash for an action.
-    actionID = _getActionID(
-      action,
-      abi.encode(amount, recipient),
-      nonce,
-      minimumActionGas,
-      _userSigningKey,
-      _getDharmaSigningKey()
-    );
-  }
-
-  function getNextGenericActionID(
-    address to,
-    bytes calldata data,
-    uint256 minimumActionGas
-  ) external view returns (bytes32 actionID) {
-    // Determine the actionID - this serves as a signature hash for an action.
-    actionID = _getActionID(
-      ActionType.Generic,
-      abi.encode(to, data),
-      _nonce,
-      minimumActionGas,
-      _userSigningKey,
-      _getDharmaSigningKey()
-    );
-  }
-
-  function getGenericActionID(
-    address to,
-    bytes calldata data,
-    uint256 nonce,
-    uint256 minimumActionGas
-  ) external view returns (bytes32 actionID) {
-    // Determine the actionID - this serves as a signature hash for an action.
-    actionID = _getActionID(
-      ActionType.Generic,
-      abi.encode(to, data),
-      nonce,
-      minimumActionGas,
-      _userSigningKey,
-      _getDharmaSigningKey()
+    actionID = _getCustomActionID(
+      action, amount, recipient, nonce, minimumActionGas, _getDharmaSigningKey()
     );
   }
 
@@ -746,149 +566,12 @@ contract DharmaSmartWalletImplementationV1 is
     version = _DHARMA_SMART_WALLET_VERSION;
   }
 
-  // Note: this must currently be implemented as a public function (instead of
-  // as an external one) due to an ABIEncoderV2 `UnimplementedFeatureError`.
-  // Also note that the returned `ok` boolean only signifies that a call was
-  // successfully completed during execution - the call will be rolled back
-  // unless EVERY call succeeded and therefore the whole `ok` array is true.
-  function executeActionWithAtomicBatchCalls(
-    Call[] memory calls,
-    uint256 minimumActionGas,
-    bytes memory userSignature,
-    bytes memory dharmaSignature
-  ) public returns (bool[] memory ok, bytes[] memory returnData) {
-    // Ensure that each `to` address is a contract and is not this contract.
-    for (uint256 i = 0; i < calls.length; i++) {
-      _ensureValidGenericCallTarget(calls[i].to);
-    }
-
-    // Ensure caller and/or supplied signatures are valid and increment nonce.
-    (bytes32 actionID, uint256 nonce) = _validateActionAndIncrementNonce(
-      ActionType.GenericAtomicBatch,
-      abi.encode(calls),
-      minimumActionGas,
-      userSignature,
-      dharmaSignature
-    );
-
-    // Note: from this point on, there are no reverts (apart from out-of-gas or
-    // call-depth-exceeded) originating from this contract. However, one of the
-    // calls may revert, in which case the function will return `false`, along
-    // with the revert reason encoded as bytes, and fire an CallFailure event.
-    
-    // Specify length of returned values in order to work with them in memory.
-    ok = new bool[](calls.length);
-    returnData = new bytes[](calls.length);
-
-    // Set self-call context to call _executeActionWithAtomicBatchCallsAtomic.
-    _selfCallContext = this.executeActionWithAtomicBatchCalls.selector;
-
-    // Make the atomic self-call - if any call fails, calls that preceded it
-    // will be rolled back and calls that follow it will not be made.
-    (bool externalOk, bytes memory rawCallResults) = address(this).call(
-      abi.encodeWithSelector(
-        this._executeActionWithAtomicBatchCallsAtomic.selector, calls
-      )
-    );
-
-    // Parse data returned from self-call into each call result and store / log.
-    CallReturn[] memory callResults = abi.decode(rawCallResults, (CallReturn[]));
-    for (uint256 i = 0; i < callResults.length; i++) {
-      Call memory currentCall = calls[i];
-
-      // Set the status and the return data / revert reason from the call.
-      ok[i] = callResults[i].ok;
-      returnData[i] = callResults[i].returnData;
-      
-      // Emit CallSuccess or CallFailure event based on the outcome of the call.
-      if (callResults[i].ok) {
-        // Note: while the call succeeded, the action may still have "failed"
-        // (i.e. a successful calls to Compound can still return an error).
-        emit CallSuccess(
-          actionID,
-          !externalOk, // if another call failed this will have been rolled back
-          nonce,
-          currentCall.to,
-          currentCall.data,
-          callResults[i].returnData
-        );
-      } else {
-        // Note: while the call failed, the nonce will still be incremented,
-        // which will invalidate all supplied signatures.
-        emit CallFailure(
-          actionID,
-          nonce,
-          currentCall.to,
-          currentCall.data,
-          string(callResults[i].returnData)
-        );
-
-        // exit early - any calls after the first failed call will not execute.
-        break;
-      }
-    }
+  function test() external pure returns (bool) {
+    return true;
   }
 
-  // Note: this must currently be implemented as a public function (instead of
-  // as an external one) due to an ABIEncoderV2 `UnimplementedFeatureError`
-  function _executeActionWithAtomicBatchCallsAtomic(
-    Call[] memory calls
-  ) public returns (CallReturn[] memory callResults) {
-    // Ensure caller is this contract and self-call context is correctly set.
-    _enforceSelfCallFrom(this.executeActionWithAtomicBatchCalls.selector);
-
-    bool rollBack = false;
-    callResults = new CallReturn[](calls.length);
-
-    for (uint256 i = 0; i < calls.length; i++) {
-      // Perform low-level call and set return values using result.
-      (bool ok, bytes memory returnData) = calls[i].to.call(calls[i].data);
-      callResults[i] = CallReturn({ok: ok, returnData: returnData});
-      if (!ok) {
-        // exit early - any calls after the first failed call will not execute.
-        rollBack = true;
-        break;
-      }
-    }
-
-    if (rollBack) {
-      // wrap in length encoding and revert (provide data instead of a string)
-      bytes memory callResultsBytes = abi.encode(callResults);
-      assembly { revert(add(32, callResultsBytes), mload(callResultsBytes)) }
-    }
-  }
-
-  // cannot be implemented as an external function: `UnimplementedFeatureError`
-  function getNextGenericAtomicBatchActionID(
-    Call[] memory calls,
-    uint256 minimumActionGas
-  ) public view returns (bytes32 actionID) {
-    // Determine the actionID - this serves as a signature hash for an action.
-    actionID = _getActionID(
-      ActionType.GenericAtomicBatch,
-      abi.encode(calls),
-      _nonce,
-      minimumActionGas,
-      _userSigningKey,
-      _getDharmaSigningKey()
-    );
-  }
-
-  // cannot be implemented as an external function: `UnimplementedFeatureError`
-  function getGenericAtomicBatchActionID(
-    Call[] memory calls,
-    uint256 nonce,
-    uint256 minimumActionGas
-  ) public view returns (bytes32 actionID) {
-    // Determine the actionID - this serves as a signature hash for an action.
-    actionID = _getActionID(
-      ActionType.GenericAtomicBatch,
-      abi.encode(calls),
-      nonce,
-      minimumActionGas,
-      _userSigningKey,
-      _getDharmaSigningKey()
-    );
+  function testRevert() external pure returns (bool) {
+    revert("This revert message should be visible.");
   }
 
   /**
@@ -900,7 +583,7 @@ contract DharmaSmartWalletImplementationV1 is
   function _setUserSigningKey(address userSigningKey) internal {
     // Ensure that a user signing key is set on this smart wallet.
     require(userSigningKey != address(0), "No user signing key provided.");
-    
+
     _userSigningKey = userSigningKey;
     emit NewUserSigningKey(userSigningKey);
   }
@@ -980,10 +663,10 @@ contract DharmaSmartWalletImplementationV1 is
   }
 
   /**
-   * @notice Internal function for withdrawing a given underlying asset balance
+   * @notice Internal function for withdrawing a given ERC20 asset and balance
    * from the corresponding cToken. Note that the requested balance may not be
    * currently available on Compound, which will cause the withdrawal to fail.
-   * @param asset uint256 The asset's ID, either Dai (0) or USDC (1).
+   * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
    * @param balance uint256 The amount of the asset to withdraw, denominated in
    * the underlying token. Note that an attempt to withdraw "dust" (i.e. very
    * small amounts) may result in 0 underlying tokens being redeemed, or in
@@ -995,12 +678,12 @@ contract DharmaSmartWalletImplementationV1 is
     AssetType asset,
     uint256 balance
   ) internal returns (bool success) {
-    // Get cToken address for the asset type. (No custom ETH withdrawal action.)
+    // Get cToken address for the asset type.
     address cToken = asset == AssetType.DAI ? address(_CDAI) : address(_CUSDC);
 
     // Attempt to redeem the underlying balance from the cToken contract.
     (bool ok, bytes memory data) = cToken.call(abi.encodeWithSelector(
-      // Note: function selector is the same for each cToken so just use cDAI's.
+      // Note: since both cTokens have the same interface, just use cDAI's.
       _CDAI.redeemUnderlying.selector, balance
     ));
 
@@ -1013,39 +696,35 @@ contract DharmaSmartWalletImplementationV1 is
   /**
    * @notice Internal function for validating supplied gas (if specified),
    * retrieving the signer's public key from the Dharma Key Registry, deriving
-   * the action ID, validating the provided caller and/or signatures using that
-   * action ID, and incrementing the nonce. This function serves as the
+   * the action ID, validating the provided signature using the signer's key and
+   * the action ID, and incrementing the nonce. This function serves as the
    * entrypoint for all protected "actions" on the smart wallet, and is the only
    * area where these functions should revert (other than due to out-of-gas
    * errors, which can be guarded against by supplying a minimum action gas
    * requirement).
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
-   * ETHWithdrawal (6).
-   * @param arguments bytes ABI-encoded arguments for the action.
+   * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
+   * and USDCWithdrawal (5).
+   * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
+   * for other action types.
+   * @param recipient address The account to transfer withdrawn funds to, the
+   * new user signing key, or the null address for cancelling.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
    * function call.
-   * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. If the user
-   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
-   * will be used. A unique hash returned from `getCustomActionID` is prefixed
-   * and hashed to create the message hash for the signature.
    * @param dharmaSignature bytes A signature that resolves to the public key
    * returned for this account from the Dharma Key Registry. A unique hash
    * returned from `getCustomActionID` is prefixed and hashed to create the
    * signed message.
-   * @return The nonce of the current action (prior to incrementing it).
    */
   function _validateActionAndIncrementNonce(
     ActionType action,
-    bytes memory arguments,
+    uint256 amount,
+    address recipient,
     uint256 minimumActionGas,
-    bytes memory userSignature,
     bytes memory dharmaSignature
-  ) internal returns (bytes32 actionID, uint256 actionNonce) {
+  ) internal {
     // Ensure that the current gas exceeds the minimum required action gas.
     // This prevents griefing attacks where an attacker can invalidate a
     // signature without providing enough gas for the action to succeed. Also
@@ -1059,58 +738,22 @@ contract DharmaSmartWalletImplementationV1 is
       );
     }
 
-    // Get the current nonce for the action to be performed.
-    actionNonce = _nonce;
-
-    // Get the user signing key that will be used to verify their signature.
-    address userSigningKey = _userSigningKey;
-
-    // Get the Dharma signing key that will be used to verify their signature.
+    // Get the Dharma signing key that will be used to verify the signature.
     address dharmaSigningKey = _getDharmaSigningKey();
 
     // Determine the actionID - this serves as the signature hash.
-    actionID = _getActionID(
-      action,
-      arguments,
-      actionNonce,
-      minimumActionGas,
-      userSigningKey,
-      dharmaSigningKey
+    bytes32 actionID = _getCustomActionID(
+      action, amount, recipient, _nonce, minimumActionGas, dharmaSigningKey
     );
 
-    // Compute the message hash - the hashed, EIP-191-0x45-prefixed action ID.
-    bytes32 messageHash = actionID.toEthSignedMessageHash();
-
-    // Actions other than Cancel require both signatures; Cancel only needs one.
-    if (action != ActionType.Cancel) {
-      // Validate user signing key signature unless it is `msg.sender`.
-      if (msg.sender != userSigningKey) {
-        require(
-          _validateUserSignature(
-            messageHash, action, arguments, userSigningKey, userSignature
-          ),
-          "Invalid action - invalid user signature."
-        );
-      }
-
-      // Validate Dharma signing key signature unless it is `msg.sender`.
-      if (msg.sender != dharmaSigningKey) {
-        require(
-          dharmaSigningKey == messageHash.recover(dharmaSignature),
-          "Invalid action - invalid Dharma signature."
-        );
-      }
-    } else {
-      // Validate signing key signature unless user or Dharma is `msg.sender`.
-      if (msg.sender != userSigningKey && msg.sender != dharmaSigningKey) {
-        require(
-          dharmaSigningKey == messageHash.recover(dharmaSignature) ||
-          _validateUserSignature(
-            messageHash, action, arguments, userSigningKey, userSignature
-          ),
-          "Invalid action - invalid signature."
-        );
-      }
+    // Validate Dharma signing key signature unless it is `msg.sender`.
+    if (msg.sender != dharmaSigningKey) {
+      require(
+        dharmaSigningKey == actionID.toEthSignedMessageHash().recover(
+          dharmaSignature
+        ),
+        "Invalid action - invalid Dharma signature."
+      );
     }
 
     // Increment nonce in order to prevent reuse of signatures after the call.
@@ -1127,14 +770,12 @@ contract DharmaSmartWalletImplementationV1 is
     address[] memory marketsToEnter = new address[](3);
     marketsToEnter[0] = address(_CDAI);
     marketsToEnter[1] = address(_CUSDC);
-    marketsToEnter[2] = address(
-      0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5
-    ); // CEther
+    marketsToEnter[2] = address(0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5); // CEther
 
     // Attempt to enter each market by calling into the Comptroller contract.
-    (bool ok, bytes memory data) = address(_COMPTROLLER).call(
-      abi.encodeWithSelector(_COMPTROLLER.enterMarkets.selector, marketsToEnter)
-    );
+    (bool ok, bytes memory data) = address(_COMPTROLLER).call(abi.encodeWithSelector(
+      _COMPTROLLER.enterMarkets.selector, marketsToEnter
+    ));
 
     // Log an external error if something went wrong with the attempt.
     if (ok) {
@@ -1278,9 +919,9 @@ contract DharmaSmartWalletImplementationV1 is
       if (asset == AssetType.DAI) {
         emit ExternalError(address(_DAI), "DAI contract reverted on transfer.");
       } else {
-        // Find out why USDC transfer reverted (doesn't give revert reasons).
+        // Find out why USDC transfer reverted (it doesn't give revert reasons).
         _diagnoseAndEmitUSDCSpecificError(_USDC.transfer.selector);
-      }
+      }   
     }
   }
 
@@ -1356,54 +997,19 @@ contract DharmaSmartWalletImplementationV1 is
   }
 
   /**
-   * @notice Internal view function for validating a user's signature. If the
-   * user's signing key does not have contract code, it will be validated via
-   * ecrecover; otherwise, it will be validated using ERC-1271, passing the
-   * message hash that was signed, the action type, and the arguments as data.
-   * @param messageHash bytes32 The message hash that is signed by the user. It
-   * is derived by prefixing (according to EIP-191 0x45) and hashing an actionID
-   * returned from `getCustomActionID`.
-   * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
-   * ETHWithdrawal (6).
-   * @param arguments bytes ABI-encoded arguments for the action.
-   * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. If the user
-   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
-   * will be used.
-   * @return A boolean representing the validity of the supplied user signature.
-   */
-  function _validateUserSignature(
-    bytes32 messageHash,
-    ActionType action,
-    bytes memory arguments,
-    address userSigningKey,
-    bytes memory userSignature
-  ) internal view returns (bool valid) {
-    if (!userSigningKey.isContract()) {
-      valid = userSigningKey == messageHash.recover(userSignature);
-    } else {
-      bytes memory data = abi.encode(messageHash, action, arguments);
-      valid = (
-        ERC1271(userSigningKey).isValidSignature(
-          data, userSignature
-        ) == _ERC_1271_MAGIC_VALUE
-      );
-    }
-  }
-
-  /**
    * @notice Internal view function to get the Dharma signing key for the smart
-   * wallet from the Dharma Key Registry. This key can be set for each specific
-   * smart wallet - if none has been set, a global fallback key will be used.
+   * wallet from the Dharma Key Registry. Note that, for V0, this is actually
+   * the *only* key used, as the primary user signing key will first need to be
+   * provided for each smart wallet. This version uses the global key from the
+   * Dharma Key Registry; to support the use of user-specific keys with a global
+   * fallback, instead call `getKey()` on the registry.
    * @return The address of the Dharma signing key, or public key corresponding
    * to the secondary signer.
    */
   function _getDharmaSigningKey() internal view returns (
     address dharmaSigningKey
   ) {
-    dharmaSigningKey = _DHARMA_KEY_REGISTRY.getKey();
+    dharmaSigningKey = _DHARMA_KEY_REGISTRY.getGlobalKey();
   }
 
   /**
@@ -1415,10 +1021,12 @@ contract DharmaSmartWalletImplementationV1 is
    * when reconstructing an action ID during protected function execution based
    * on the supplied parameters.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V1 include Cancel (0), SetUserSigningKey (1), Generic (2), 
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
-   * ETHWithdrawal (6).
-   * @param arguments bytes ABI-encoded arguments for the action.
+   * actions in V0 include Cancel (0), SetUserSigningKey (1), DAIWithdrawal (4),
+   * and USDCWithdrawal (5).
+   * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
+   * for other action types.
+   * @param recipient address The account to transfer withdrawn funds to, the
+   * new user signing key, or the null address for cancelling.
    * @param nonce uint256 The nonce to use.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
    * provided to this call - be aware that additional gas must still be included
@@ -1429,12 +1037,12 @@ contract DharmaSmartWalletImplementationV1 is
    * @return The action ID, which will need to be prefixed, hashed and signed in
    * order to construct a valid signature.
    */
-  function _getActionID(
+  function _getCustomActionID(
     ActionType action,
-    bytes memory arguments,
+    uint256 amount,
+    address recipient,
     uint256 nonce,
     uint256 minimumActionGas,
-    address userSigningKey,
     address dharmaSigningKey
   ) internal view returns (bytes32 actionID) {
     // The actionID is constructed according to EIP-191-0x45 to prevent replays.
@@ -1442,12 +1050,13 @@ contract DharmaSmartWalletImplementationV1 is
       abi.encodePacked(
         address(this),
         _DHARMA_SMART_WALLET_VERSION,
-        userSigningKey,
+        _userSigningKey,
         dharmaSigningKey,
         nonce,
         minimumActionGas,
         action,
-        arguments
+        amount,
+        recipient
       )
     );
   }
@@ -1483,23 +1092,6 @@ contract DharmaSmartWalletImplementationV1 is
     } else {
       functionName = "redeemUnderlying";
     }
-  }
-
-  /**
-   * @notice Internal pure function to ensure that a given `to` address provided
-   * as part of a generic action is valid. Calls cannot be performed to accounts
-   * without code or back into the smart wallet itself.
-   */
-  function _ensureValidGenericCallTarget(address to) internal view {
-    require(
-      to.isContract(),
-      "Invalid `to` parameter - must supply a contract address containing code."
-    );
-
-    require(
-      to != address(this),
-      "Invalid `to` parameter - cannot supply the address of this contract."
-    );
   }
 
   /**
