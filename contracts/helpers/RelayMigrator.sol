@@ -4,7 +4,6 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../interfaces/DharmaSmartWalletFactoryV1Interface.sol";
-import "../../interfaces/DharmaKeyRegistryInterface.sol";
 import "../../interfaces/RelayContractInterface.sol";
 
 
@@ -13,27 +12,28 @@ import "../../interfaces/RelayContractInterface.sol";
  * @author 0age
  * @notice This contract will migrate cDAI and cUSDC balances from existing user
  * relay contracts to new smart wallet contracts. It has four distinct phases:
- *  - Phase one: Registration. All existing relay contracts are provided as
- *    arguments to the `register` function. Once all relay contracts have been
- *    registered, the `endRegistration` function is called and the final group
- *    of registered relay contracts is verified by calling
+ *  - Phase one: Registration. All existing relay contracts, and a user sigining
+ *    key that will be used to provision a new smart wallet for each, are
+ *    provided as arguments to the `register` function. Once all relay contracts
+ *    have been registered, the `endRegistration` function is called and the
+ *    final group of registered relay contracts is verified by calling
  *    `getTotalRegisteredRelayContracts` and `getRegisteredRelayContract`.
  *  - Phase two: Deployment. This contract will call the Dharma Smart Wallet
- *    factory, supplying the current global signing key set on the Dharma Key
- *    Registry as the user signing key (this means that Dharma will initially be
- *    in full control of each smart wallet). The resultant smart wallet address
- *    will be recorded for each relay contract. Once a smart wallet has been
- *    deployed for each relay contract, the deployment phase will be marked as
- *    ended, and the final group of deployed smart wallets should be verified by
- *    calling `getTotalDeployedSmartWallets` and `getRegisteredRelayContract`
- *    and making sure that each relay contract has a corresponding smart wallet,
- *    then updating that information for each user.
+ *    factory, supplying the registered user signing key. The resultant smart
+ *    wallet address will be recorded for each relay contract. Once a smart
+ *    wallet has been deployed for each relay contract, the deployment phase
+ *    will be marked as ended, and the final group of deployed smart wallets
+ *    should be verified by calling `getTotalDeployedSmartWallets` and 
+ *    `getRegisteredRelayContract`, making sure that each relay contract has a
+ *    corresponding smart wallet, and updating that information for each user.
  *  - Phase three: Approval Assignment. Each relay contract will need to call
  *    `executeTransactions` and assign this contract full allowance to transfer
  *    both cDAI and cUSDC ERC20 tokens on it's behalf. This can be done safely,
  *    as there is only one valid recipient for each `transferFrom` sent from the
  *    relay contract: the associated smart wallet. Once this phase is complete,
- *    the `beginMigration` function is called and the token migration can begin.
+ *    approvals should be verified by calling `getRegisteredRelayContract` for
+ *    each relay contract, making sure that `readyToMigrate` is true for each.
+ *    Then, call the `beginMigration` function to start the actual migration.
  *  - Phase four: Migration. The migrator will iterate over each relay contract,
  *    detect the current cDAI and cUSDC token balance on the relay contract, and
  *    transfer it from the relay contract to the smart wallet. If a transfer
@@ -45,15 +45,18 @@ import "../../interfaces/RelayContractInterface.sol";
  *    be brought over as well. Once all users have been successfully migrated
  *    `endMigration` may be called to completely decommission the migrator.
  *
- * After the migration is complete, it is imperative that users set their own
+ * After migration is complete, it is imperative that users set a user-supplied
  * signing key by calling `setUserSigningKey` on their smart wallet. Until then,
- * the same signature can be supplied for both the user and for Dharma when
- * performing smart wallet actions (this includes for the initial request to set
- * the user's signing key).
+ * the initial user signature will be supplied by Dharma to perform smart wallet
+ * actions (including for the initial request to set the user's signing key).
  */
 contract RelayMigrator is Ownable {
   event MigrationError(
-    address cToken, address relayContract, address smartWallet, uint256 balance
+    address cToken,
+    address relayContract,
+    address smartWallet,
+    uint256 balance,
+    uint256 allowance
   );
 
   struct RelayCall {
@@ -63,9 +66,13 @@ contract RelayMigrator is Ownable {
 
   address[] private _relayContracts;
 
+  address[] private _initialUserSigningKeys;
+
   address[] private _smartWallets;
 
   mapping(address => bool) private _relayContractRegistered;
+
+  mapping(address => bool) private _initialUserSigningKeyRegistered;
 
   uint256 private _migrationIndex;
 
@@ -82,11 +89,6 @@ contract RelayMigrator is Ownable {
   // The Dharma Smart Wallet Factory will deploy each new smart wallet.
   DharmaSmartWalletFactoryV1Interface internal constant _DHARMA_SMART_WALLET_FACTORY = (
     DharmaSmartWalletFactoryV1Interface(0x8D1e00b000e56d5BcB006F3a008Ca6003b9F0033)
-  );
-
-  // The Dharma Key Registry holds a public key for verifying meta-transactions.
-  DharmaKeyRegistryInterface internal constant _DHARMA_KEY_REGISTRY = (
-    DharmaKeyRegistryInterface(0x000000005D7065eB9716a410070Ee62d51092C98)
   );
 
   // This contract interfaces with cDai and cUSDC CompoundV2 contracts.
@@ -128,20 +130,42 @@ contract RelayMigrator is Ownable {
 
   /**
    * @notice Register a group of relay contracts. This function will revert if a
-   * supplied relay contract has already been registered. Only the owner may
-   * call this function.
+   * supplied relay contract or user signing key has already been registered.
+   * Only the owner may call this function.
    * @param relayContracts address[] An array of relay contract addresses to
    * register.
+   * @param initialUserSigningKeys address[] An array addresses to register for
+   * each relay contract that will be used to set the initial user signing key
+   * when creating the new smart wallet for the user.
    */
-  function register(address[] calldata relayContracts) external onlyOwner {
+  function register(
+    address[] calldata relayContracts,
+    address[] calldata initialUserSigningKeys
+  ) external onlyOwner {
     require(
       !registrationCompleted,
       "Cannot register new relay contracts once registration is completed."
     );
 
+    require(
+      relayContracts.length == initialUserSigningKeys.length,
+      "Length of relay contracts array and user signing keys array must match."
+    );
+
     bytes32 codeHash;
     for (uint256 i; i < relayContracts.length; i++) {
       address relayContract = relayContracts[i];
+      address initialUserSigningKey = initialUserSigningKeys[i];
+
+      require(
+        initialUserSigningKey != address(0),
+        "Must supply an initial user signing key."
+      );
+
+      require(
+        !_initialUserSigningKeyRegistered[initialUserSigningKey],
+        "Initial user signing key already registered."
+      );
 
       assembly { codeHash := extcodehash(relayContract) }
       
@@ -151,13 +175,16 @@ contract RelayMigrator is Ownable {
         codeHash == _RELAY_CODE_HASH_THREE,
         "Must supply a valid relay contract address."
       );
+
       require(
         !_relayContractRegistered[relayContract],
         "Relay contract already registered."
       );
 
       _relayContractRegistered[relayContract] = true;
+      _initialUserSigningKeyRegistered[initialUserSigningKey] = true;
       _relayContracts.push(relayContract);
+      _initialUserSigningKeys.push(initialUserSigningKey);
     }
   }
 
@@ -187,18 +214,22 @@ contract RelayMigrator is Ownable {
       "Cannot deploy new smart wallets after deployment is completed."
     );
 
-    address initialKey = _DHARMA_KEY_REGISTRY.getGlobalKey();
     uint256 totalRelayContracts = _relayContracts.length;
-
+    address initialKey;
     address newSmartWallet;
-    while (gasleft() > 500000) {
+
+    for (uint256 i = _migrationIndex; i < totalRelayContracts; i++) {
+      if (gasleft() < 200000) {
+        _migrationIndex = i;
+        return;
+      }
+      initialKey = _initialUserSigningKeys[i];
       newSmartWallet = _DHARMA_SMART_WALLET_FACTORY.newSmartWallet(initialKey);
       _smartWallets.push(newSmartWallet);
-      if (_smartWallets.length >= totalRelayContracts) {
-        deploymentCompleted = true;
-        break;
-      }
     }
+
+    deploymentCompleted = true;
+    _migrationIndex = 0;
   }
 
   /**
@@ -234,6 +265,7 @@ contract RelayMigrator is Ownable {
     address relayContract;
     address smartWallet;
     uint256 balance;
+    uint256 allowance;
     bool ok;
 
     for (uint256 i = _migrationIndex; i < totalRelayContracts; i++) {
@@ -254,8 +286,9 @@ contract RelayMigrator is Ownable {
 
         // Emit a corresponding event if the transfer failed.
         if (!ok) {
+          allowance = _CDAI.allowance(relayContract, address(this));
           emit MigrationError(
-            address(_CDAI), relayContract, smartWallet, balance
+            address(_CDAI), relayContract, smartWallet, balance, allowance
           );
         }
       }
@@ -269,8 +302,9 @@ contract RelayMigrator is Ownable {
 
         // Emit a corresponding event if the transfer failed.
         if (!ok) {
+          allowance = _CUSDC.allowance(relayContract, address(this));
           emit MigrationError(
-            address(_CUSDC), relayContract, smartWallet, balance
+            address(_CUSDC), relayContract, smartWallet, balance, allowance
           );
         }
       }
@@ -305,9 +339,16 @@ contract RelayMigrator is Ownable {
 
   function getRegisteredRelayContract(
     uint256 index
-  ) external view returns (address relayContract, address smartWallet) {
+  ) external view returns (
+    address relayContract,
+    address initialUserSigningKey,
+    address smartWallet,
+    bool readyToMigrate
+  ) {
     relayContract = _relayContracts[index];
+    initialUserSigningKey = _initialUserSigningKeys[index];
     smartWallet = _smartWallets[index];
+    readyToMigrate = _isReadyToMigrate(relayContract);
   }
 
   /**
@@ -328,5 +369,22 @@ contract RelayMigrator is Ownable {
       );
       RelayContractInterface(relayCall.relayContract).executeTransactions(txs);
     }
+  }
+
+  /**
+   * @notice Internal function to check whether appropriate allowances have been
+   * set on a given relay contract so that this contract can transfer cTokens on
+   * its behalf. Note that an increase in a cToken balance between this function
+   * being called and the migration may cause a given migration to fail.
+   * @param relayContract address A relay contract address to check for cDAI and
+   * cUSDC allowances.
+   */
+  function _isReadyToMigrate(
+    address relayContract
+  ) internal view returns (bool ready) {
+    ready = (
+      _CDAI.allowance(relayContract, address(this)) >= _CDAI.balanceOf(relayContract) &&
+      _CUSDC.allowance(relayContract, address(this)) >= _CUSDC.balanceOf(relayContract)
+    );
   }
 }
