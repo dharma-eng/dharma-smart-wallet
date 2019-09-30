@@ -74,7 +74,7 @@ contract RelayMigrator is Ownable {
 
   mapping(address => bool) private _initialUserSigningKeyRegistered;
 
-  uint256 private _migrationIndex;
+  uint256 private _iterationIndex;
 
   bool public registrationCompleted;
 
@@ -125,7 +125,7 @@ contract RelayMigrator is Ownable {
     migrationFirstPassCompleted = false;
     migrationCompleted = false;
 
-    _migrationIndex = 0;
+    _iterationIndex = 0;
   }
 
   /**
@@ -214,22 +214,25 @@ contract RelayMigrator is Ownable {
       "Cannot deploy new smart wallets after deployment is completed."
     );
 
-    uint256 totalRelayContracts = _relayContracts.length;
-    address initialKey;
     address newSmartWallet;
 
-    for (uint256 i = _migrationIndex; i < totalRelayContracts; i++) {
+    uint256 totalInitialUserSigningKeys = _initialUserSigningKeys.length;
+    
+    for (uint256 i = _iterationIndex; i < totalInitialUserSigningKeys; i++) {
       if (gasleft() < 200000) {
-        _migrationIndex = i;
+        _iterationIndex = i;
         return;
       }
-      initialKey = _initialUserSigningKeys[i];
-      newSmartWallet = _DHARMA_SMART_WALLET_FACTORY.newSmartWallet(initialKey);
+
+      newSmartWallet = _DHARMA_SMART_WALLET_FACTORY.newSmartWallet(
+        _initialUserSigningKeys[i];
+      );
+
       _smartWallets.push(newSmartWallet);
     }
 
     deploymentCompleted = true;
-    _migrationIndex = 0;
+    _iterationIndex = 0;
   }
 
   /**
@@ -268,9 +271,9 @@ contract RelayMigrator is Ownable {
     uint256 allowance;
     bool ok;
 
-    for (uint256 i = _migrationIndex; i < totalRelayContracts; i++) {
+    for (uint256 i = _iterationIndex; i < totalRelayContracts; i++) {
       if (gasleft() < 200000) {
-        _migrationIndex = i;
+        _iterationIndex = i;
         return;
       }
 
@@ -311,7 +314,7 @@ contract RelayMigrator is Ownable {
     }
 
     migrationFirstPassCompleted = true;
-    _migrationIndex = 0;
+    _iterationIndex = 0;
   }
 
   /**
