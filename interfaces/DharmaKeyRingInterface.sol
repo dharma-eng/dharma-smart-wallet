@@ -2,23 +2,33 @@ pragma solidity 0.5.11;
 
 
 interface DharmaKeyRingInterface {
-  enum ActionType {
+  enum KeyType {
+    None,
     Standard,
-    Admin
+    Admin,
+    Dual
   }
 
   enum AdminActionType {
-    AddKey,
-    RemoveKey,
-    SetThreshold,
+    AddStandardKey,
+    RemoveStandardKey,
+    SetStandardThreshold,
     AddAdminKey,
     RemoveAdminKey,
-    SetAdminThreshold
+    SetAdminThreshold,
+    AddDualKey,
+    RemoveDualKey,
+    SetDualThreshold
   }
 
-  struct KeyGroup {
-    uint128 count;
-    uint128 threshold;
+  struct AdditionalKeyCount {
+    uint128 standard;
+    uint128 admin;
+  }
+
+  struct AdditionalThreshold {
+    uint128 standard;
+    uint128 admin;
   }
 
   function takeAction(
