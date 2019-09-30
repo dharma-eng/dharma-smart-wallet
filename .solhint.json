@@ -1,16 +1,16 @@
 {
-  "extends": "strict",
+  "extends": "solhint:default",
   "rules": {
     "indent": ["warn", 2],
-    "not-rely-on-time": false,
-    "no-inline-assembly": false,
-    "avoid-low-level-calls": false,
-    "avoid-call-value": false,
-    "no-complex-fallback": false,
-    "payable-fallback": false,
-    "avoid-tx-origin": false,
-    "no-empty-blocks": false,
+    "not-rely-on-time": "off",
+    "no-inline-assembly": "off",
+    "avoid-low-level-calls": "off",
+    "avoid-call-value": "off",
+    "no-complex-fallback": "off",
+    "payable-fallback": "off",
+    "avoid-tx-origin": "off",
+    "no-empty-blocks": "off",
     "function-max-lines": 70,
-    "var-name-mixedcase": false
+    "var-name-mixedcase": "off"
   }
 }

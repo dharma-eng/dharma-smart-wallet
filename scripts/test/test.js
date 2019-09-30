@@ -1551,7 +1551,7 @@ module.exports = {test: async function (provider, testingContext) {
     [],
     true,
     value => {
-      console.log(value)
+      //console.log(value)
     }
   )
 
@@ -1571,7 +1571,7 @@ module.exports = {test: async function (provider, testingContext) {
     receipt => {
       // TODO: verify logs
       if (testingContext !== 'coverage') {
-        console.log(receipt.events)
+        //console.log(receipt.events)
       }
       //console.log(receipt.events.ExternalError.returnValues)
       //console.log(receipt.events.ExternalError)
@@ -1769,7 +1769,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       // TODO: verify logs
-      console.log(receipt.events)
+      //console.log(receipt.events)
     },
     originalAddress
   )
@@ -1808,7 +1808,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       if (testingContext !== 'coverage') {
-        console.log(receipt.events)
+        //console.log(receipt.events)
       }
       // TODO: verify logs
       //console.log(receipt.events.ExternalError.returnValues)
@@ -1838,7 +1838,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       if (testingContext !== 'coverage') {
-        console.log(receipt.events)
+        //console.log(receipt.events)
       }
       // TODO: verify logs
       //console.log(receipt.events.ExternalError.returnValues)
@@ -1867,7 +1867,7 @@ module.exports = {test: async function (provider, testingContext) {
     ],
     true,
     receipt => {
-      console.log(receipt.events.ExternalError)
+      //console.log(receipt.events.ExternalError)
       // TODO: verify logs
       //console.log(receipt.events.ExternalError.returnValues)
       //console.log(receipt.events.ExternalError)
@@ -2819,7 +2819,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       // TODO: verify logs
-      console.log(receipt.events)
+      //console.log(receipt.events)
     },
     originalAddress
   )
@@ -2866,7 +2866,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       // TODO: verify logs
-      console.log(receipt.events)
+      //console.log(receipt.events)
     },
     originalAddress
   )
@@ -3161,7 +3161,7 @@ module.exports = {test: async function (provider, testingContext) {
 
         assert.strictEqual(events[0].eventName, 'NewUserSigningKey')
         assert.strictEqual(events[0].returnValues.userSigningKey, addressTwo)
-        console.log(events)
+        //console.log(events)
 
         // TODO: test more events
       }
@@ -3510,7 +3510,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       // TODO: verify
-      console.log(receipt.events)
+      //console.log(receipt.events)
     }
   )
 
@@ -3523,7 +3523,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {    
       // TODO: verify
-      console.log(receipt.events)
+      //console.log(receipt.events)
     }
   )
 
@@ -3558,7 +3558,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {    
       // TODO: verify
-      console.log(receipt.events)
+      //console.log(receipt.events)
     }
   )
 
@@ -3582,7 +3582,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {    
       // TODO: verify
-      console.log(receipt.events)
+      //console.log(receipt.events)
     }
   )
 
@@ -3628,8 +3628,8 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       // TODO: verify logs
-      console.log(receipt.events[0])
-      console.log(receipt.events.ExternalError)
+      //console.log(receipt.events[0])
+      //console.log(receipt.events.ExternalError)
     },
     originalAddress
   )
@@ -3722,8 +3722,8 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       // TODO: verify logs
-      console.log(receipt.events[0])
-      console.log(receipt.events.ExternalError)
+      //console.log(receipt.events[0])
+      //console.log(receipt.events.ExternalError)
     },
     originalAddress
   )
@@ -3770,7 +3770,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       // TODO: verify logs
-      console.log(receipt)
+      //console.log(receipt)
     },
     originalAddress
   )
@@ -3898,7 +3898,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       // TODO: verify logs
-      console.log(receipt.events)
+      //console.log(receipt.events)
     },
     originalAddress
   )
@@ -3946,7 +3946,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       // TODO: verify logs
-      console.log(receipt)
+      //console.log(receipt)
     },
     originalAddress
   )
@@ -3999,7 +3999,7 @@ module.exports = {test: async function (provider, testingContext) {
     ],
     true,
     receipt => {
-      console.log(receipt)
+      //console.log(receipt)
     }
   )
 
@@ -4119,7 +4119,7 @@ module.exports = {test: async function (provider, testingContext) {
     ],
     true,
     receipt => {
-      console.log(receipt.events)
+      //console.log(receipt.events)
     },
     originalAddress
   )
@@ -4166,7 +4166,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {
       // TODO: verify logs
-      console.log(receipt.events)
+      //console.log(receipt.events)
     },
     originalAddress
   )
@@ -4187,7 +4187,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {    
       // TODO: verify
-      console.log(receipt.events)
+      //console.log(receipt.events)
     }
   )
 
@@ -4219,7 +4219,7 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {    
       // TODO: verify
-      console.log(receipt.events)
+      //console.log(receipt.events)
     }
   )
 
