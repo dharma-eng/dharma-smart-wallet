@@ -51,12 +51,10 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   // store timestamp and last implementation in case of Adharma Contingency.
   // Note that this is specific to a particular controller and beacon.
   struct AdharmaContingency {
+    bool armed;
     bool activated;
     uint256 activationTime;
   }
-
-  // store a safeguard against accidentally triggering the Adharma Contingency.
-  bool private _adharmaContingencyArmed;
 
   mapping(address => mapping (address => address)) private _lastImplementation;
 
@@ -92,9 +90,6 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     );
     _setInitialTimelockInterval(this.modifyTimelockInterval.selector, 4 weeks);
     _setInitialTimelockInterval(this.upgrade.selector, 7 days);
-
-    // Upgrade to the Adharma Smart Wallet implementation in case of emergency.
-    _adharmaContingencyArmed = false;
 
     // Set the initial owner as the initial heartbeater.
     _heartbeater = tx.origin;
@@ -135,15 +130,16 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
    * @param implementation the address of the new implementation.
    */
   function upgrade(
-    address controller,
-    address beacon,
-    address implementation
+    address controller, address beacon, address implementation
   ) external onlyOwner {
     // Ensure that the timelock has been set and is completed.
     _enforceTimelock(
       this.upgrade.selector, abi.encode(controller, beacon, implementation)
     );
     
+    // Reset the heartbeat to the current time.
+    _lastHeartbeat = now;
+
     // Call controller with beacon to upgrade and implementation to upgrade to.
     _upgrade(controller, beacon, implementation);
   }
@@ -190,9 +186,13 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   /**
    * @notice Arm the Adharma Contingency upgrade. This is required as an extra
    * safeguard against accidentally triggering the Adharma Contingency.
+   * @param controller address of controller to arm.
+   * @param beacon address of upgrade beacon to arm.
    * @param armed Boolean that signifies the desired armed status.
    */
-  function armAdharmaContingency(bool armed) external {
+  function armAdharmaContingency(
+    address controller, address beacon, bool armed
+  ) external {
     // Determine if 90 days have passed since the last heartbeat.
     (bool expired, ) = heartbeatStatus();
     require(
@@ -201,7 +201,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     );
 
     // Arm (or disarm) the Adharma Contingency.
-    _adharmaContingencyArmed = armed;
+    _adharmaContingency[controller][beacon].armed = armed;
   }
 
   /**
@@ -228,7 +228,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
 
     // Ensure that the Adharma Contingency has been armed.
     require(
-      _adharmaContingencyArmed,
+      _adharmaContingency[controller][beacon].armed,
       "Adharma Contingency is not armed - are SURE you meant to call this?"
     );
 
@@ -237,17 +237,12 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
       "Adharma Contingency is already activated on this controller + beacon."
     );
 
-    // Reset the heartbeat to the current time.
-    _lastHeartbeat = now;
-
     // Mark the Adharma Contingency as having been activated.
     _adharmaContingency[controller][beacon] = AdharmaContingency({
+      armed: false,
       activated: true,
       activationTime: now
     });
-
-    // Disarm the Adharma Contingency so that it is not mistakenly retriggered.
-    _adharmaContingencyArmed = false;
 
     // Trigger the upgrade to the Adharma Smart Wallet implementation contract.
     _upgrade(controller, beacon, _ADHARMA_IMPLEMENTATION);
@@ -279,6 +274,9 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
 
       emit AdharmaContingencyExited(controller, beacon);
     }
+
+    // Reset the heartbeat to the current time.
+    _lastHeartbeat = now;
 
     // Upgrade to the last implementation contract.
     _upgrade(controller, beacon, _lastImplementation[controller][beacon]);
@@ -314,6 +312,9 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
 
     // Exit the contingency state.
     delete _adharmaContingency[controller][beacon];
+
+    // Reset the heartbeat to the current time.
+    _lastHeartbeat = now;
 
     // Call controller with beacon to upgrade and implementation to upgrade to.
     _upgrade(controller, beacon, implementation);

@@ -88,7 +88,7 @@ contract RelayMigrator is Ownable {
 
   // The Dharma Smart Wallet Factory will deploy each new smart wallet.
   DharmaSmartWalletFactoryV1Interface internal constant _DHARMA_SMART_WALLET_FACTORY = (
-    DharmaSmartWalletFactoryV1Interface(0x8D1e00b000e56d5BcB006F3a008Ca6003b9F0033)
+    DharmaSmartWalletFactoryV1Interface(0xfc00C80b0000007F73004edB00094caD80626d8D)
   );
 
   // This contract interfaces with cDai and cUSDC CompoundV2 contracts.
@@ -199,9 +199,10 @@ contract RelayMigrator is Ownable {
   }
 
   /**
-   * @notice Deploy smart wallets for each relay, using the global key from the
-   * Dharma Key Registry as the initial user signing key. Anyone may call this
-   * method once registration is completed until deployments are completed.
+   * @notice Deploy smart wallets for each relay, using the initial user signing
+   * key registered to each relay contract as an initialization argument. Anyone
+   * may call this method once registration is completed until deployments are
+   * completed.
    */
   function deploySmartWallets() external {
     require(

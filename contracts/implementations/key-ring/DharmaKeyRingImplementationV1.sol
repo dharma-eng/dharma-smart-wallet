@@ -75,14 +75,15 @@ contract DharmaKeyRingImplementationV1 is
     );
 
     for (uint256 i = 0; i < keys.length; i++) {
-      require(
-        _keys[uint160(keys[i])] == KeyType.None,
-        "Cannot supply duplicate keys."
-      );
+      uint160 key = uint160(keys[i]);
+
+      require(key != uint160(0), "Cannot supply the null address as a key.");
+
+      require(_keys[key] == KeyType.None, "Cannot supply duplicate keys.");
 
       KeyType keyType = KeyType(keyTypes[i]);
 
-      _keys[uint160(keys[i])] = keyType;
+      _keys[key] = keyType;
 
       bool isStandard = (keyType == KeyType.Standard || keyType == KeyType.Dual);
       bool isAdmin = (keyType == KeyType.Admin || keyType == KeyType.Dual);
@@ -140,6 +141,8 @@ contract DharmaKeyRingImplementationV1 is
     bool isAdmin = adminActionKeyCategory != 1;
 
     if (adminActionCategory == 0) { // Add
+      require(argument != uint160(0), "Cannot supply null address as a key.");
+
       require(_keys[argument] == KeyType.None, "Key already exists.");
 
       _additionalKeyCounts = AdditionalKeyCount({
