@@ -2,6 +2,8 @@
 
 > Proposed implementation for an upgradeable, joint-custody, meta-transaction-enabled smart wallet for Dharma users.
 
+*AUDIT CHECKPOINT - October 1st, 2019*
+
 Currently Deployed Contracts (production) and example txs:
 DharmaUpgradeBeaconEnvoy
 https://etherscan.io/address/0x000000000067503c398f4c9652530dbc4ea95c02#code
