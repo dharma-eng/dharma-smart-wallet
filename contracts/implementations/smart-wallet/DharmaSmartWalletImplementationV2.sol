@@ -1018,7 +1018,7 @@ contract DharmaSmartWalletImplementationV2 is
     address cToken = asset == AssetType.DAI ? address(_CDAI) : address(_CUSDC);
 
     // Get the current cToken balance for this account.
-    uint256 redeemAmount = _CDAI.balanceOf(address(this));
+    uint256 redeemAmount = IERC20(cToken).balanceOf(address(this));
 
     // Attempt to redeem the underlying balance from the cToken contract.
     (bool ok, bytes memory data) = cToken.call(abi.encodeWithSelector(
