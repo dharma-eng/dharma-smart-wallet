@@ -2,33 +2,33 @@ pragma solidity 0.5.11;
 
 import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "../../helpers/Timelocker.sol";
-import "../../../interfaces/UpgradeBeaconControllerInterface.sol";
+import "../helpers/Timelocker.sol";
+import "../../interfaces/UpgradeBeaconControllerInterface.sol";
 
 
 /**
  * @title DharmaUpgradeBeaconControllerManager
  * @author 0age
  * @notice This contract will be owned by DharmaUpgradeMultisig and will manage
- * upgrades to the global smart wallet implementation via dedicated control over
- * an "upgrade beacon" controller contract (and can additionally be used to
- * manage other upgrade beacon controllers). It implements a set of timelocked
- * functions, where the `setTimelock` function must first be called, with the
- * same arguments that the function will be supplied with. Then, a given time
- * interval must first fully transpire before the timelock functions can be
- * successfully called.
+ * upgrades to the global smart wallet and key ring implementation contracts via
+ * dedicated control over the "upgrade beacon" controller contracts (and can
+ * additionally be used to manage other upgrade beacon controllers). It contains
+ * a set of timelocked functions, where the `setTimelock` function must first be
+ * called, with the same arguments that the function will be supplied with.
+ * Then, a given time interval must first fully transpire before the timelock
+ * functions can be successfully called.
  *
  * The timelocked functions currently implemented include:
  *  upgrade(address controller, address implementation)
  *  transferControllerOwnership(address controller, address newOwner)
  *  modifyTimelockInterval(bytes4 functionSelector, uint256 newTimelockInterval)
  *
- * It also specifies a dedicated implementation, meant for the Dharma Smart
- * Wallet upgrade beacon, that can be triggered in an emergency or in the event
- * of an extended period of inactivity from Dharma that allows for the address
- * contained at storage slot zero (the user signing key) to withdraw any funds
- * on the user's smart wallet and otherwise take full control over the smart
- * wallet.
+ * It also specifies dedicated implementations for the Dharma Smart Wallet and
+ * Dharma Key Ring upgrade beacons that can be triggered in an emergency or in
+ * the event of an extended period of inactivity from Dharma. These contingency
+ * implementations give the user the ability to withdraw any funds on their
+ * smart wallet by submitting a transaction directly from the account of any of
+ * their signing keys, but are otherwise kept as simple as possible.
  *
  * This contract can transfer ownership of any upgrade beacon controller it owns
  * (subject to the timelock on `transferControllerOwnership`), in order to
@@ -42,13 +42,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   event AdharmaContingencyActivated(address controller, address beacon);
   event AdharmaContingencyExited(address controller, address beacon);
 
-  // store the Adharma Contingency implementation. Note that this is specific to
-  // smart wallets, and should not be invoked on other upgrade beacons.
-  address private constant _ADHARMA_IMPLEMENTATION = address(
-    0x00000000Fde3b69fECd50C8A4c001678f00011ab
-  );
-
-  // store timestamp and last implementation in case of Adharma Contingency.
+  // Store timestamp and last implementation in case of Adharma Contingency.
   // Note that this is specific to a particular controller and beacon.
   struct AdharmaContingency {
     bool armed;
@@ -56,13 +50,37 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     uint256 activationTime;
   }
 
+  // Store the last implementation address for each controller + beacon pair.
   mapping(address => mapping (address => address)) private _lastImplementation;
 
-  mapping(address => mapping (address => AdharmaContingency)) private _adharmaContingency;
+  // Store information on contingency status of each controller + beacon pair.
+  mapping(address => mapping (address => AdharmaContingency)) private _adharma;
 
   // Track the last heartbeat timestamp as well as the current heartbeat address
   uint256 private _lastHeartbeat;
   address private _heartbeater;
+
+  // Store the address of the Dharma Smart Wallet Upgrade Beacon as a constant.
+  address private constant _DHARMA_SMART_WALLET_UPGRADE_BEACON = address(
+    0x000000000026750c571ce882B17016557279ADaa
+  );
+
+  // Store the Adharma Smart Wallet Contingency implementation. Note that this
+  // is specific to the smart wallet and will not be activated on other beacons.
+  address private constant _ADHARMA_SMART_WALLET_IMPLEMENTATION = address(
+    0x00000000Fde3b69fECd50C8A4c001678f00011ab
+  );
+
+  // Store the address of the Dharma Key Ring Upgrade Beacon as a constant.
+  address private constant _DHARMA_KEY_RING_UPGRADE_BEACON = address(
+    0x0000000000000000000000000000000000000000 // TODO: deploy and set
+  );
+
+  // Store the Adharma Key Ring Contingency implementation. Note that this is
+  // specific to the key ring and will not be activated on other beacons.
+  address private constant _ADHARMA_KEY_RING_IMPLEMENTATION = address(
+    0x0000000000000000000000000000000000000000 // TODO: deploy and set
+  );
 
   /**
    * @notice In the constructor, set the initial owner of this contract, the
@@ -70,16 +88,18 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
    */
   constructor() public {
     // Ensure that the Adharma implementation has the correct runtime code.
-    bytes32 adharmaHash;
-    bytes32 expectedAdharmaHash = bytes32(
+    bytes32 adharmaSmartWalletHash;
+    bytes32 expectedAdharmaSmartWalletHash = bytes32(
       0x75889568a40bc5b3e7ccf3c6579a0730705f089c083e36c52bbc911024afa47f
     );
-    address adharmaImplementation = _ADHARMA_IMPLEMENTATION;
-    assembly { adharmaHash := extcodehash(adharmaImplementation) }
+    address adharmaSmartWallet = _ADHARMA_SMART_WALLET_IMPLEMENTATION;
+    assembly { adharmaSmartWalletHash := extcodehash(adharmaSmartWallet) }
     require(
-      adharmaHash == expectedAdharmaHash,
+      adharmaSmartWalletHash == expectedAdharmaSmartWalletHash,
       "Adharma implementation code hash does not match expected code hash."
     );
+
+    // TODO: check adharmaKeyRingHash as well
 
     // Set the transaction submitter as the initial owner of this contract.
     _transferOwnership(tx.origin);
@@ -201,7 +221,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     );
 
     // Arm (or disarm) the Adharma Contingency.
-    _adharmaContingency[controller][beacon].armed = armed;
+    _adharma[controller][beacon].armed = armed;
   }
 
   /**
@@ -228,24 +248,30 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
 
     // Ensure that the Adharma Contingency has been armed.
     require(
-      _adharmaContingency[controller][beacon].armed,
+      _adharma[controller][beacon].armed,
       "Adharma Contingency is not armed - are SURE you meant to call this?"
     );
 
     require(
-      !_adharmaContingency[controller][beacon].activated,
+      !_adharma[controller][beacon].activated,
       "Adharma Contingency is already activated on this controller + beacon."
     );
 
     // Mark the Adharma Contingency as having been activated.
-    _adharmaContingency[controller][beacon] = AdharmaContingency({
+    _adharma[controller][beacon] = AdharmaContingency({
       armed: false,
       activated: true,
       activationTime: now
     });
 
-    // Trigger the upgrade to the Adharma Smart Wallet implementation contract.
-    _upgrade(controller, beacon, _ADHARMA_IMPLEMENTATION);
+    // Trigger the upgrade to the correct Adharma implementation contract.
+    if (beacon == _DHARMA_SMART_WALLET_UPGRADE_BEACON) {
+      _upgrade(controller, beacon, _ADHARMA_SMART_WALLET_IMPLEMENTATION);
+    } else if (beacon == _DHARMA_KEY_RING_UPGRADE_BEACON) {
+      _upgrade(controller, beacon, _ADHARMA_KEY_RING_IMPLEMENTATION);
+    } else {
+      revert("Only the smart wallet or key ring contingency can be activated.");
+    }
 
     // Emit an event to signal that the Adharma Contingency has been activated.
     emit AdharmaContingencyActivated(controller, beacon);
@@ -269,8 +295,8 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     );
 
     // Exit the contingency state if there is currently one active.
-    if (_adharmaContingency[controller][beacon].activated) {
-      delete _adharmaContingency[controller][beacon];
+    if (_adharma[controller][beacon].activated) {
+      delete _adharma[controller][beacon];
 
       emit AdharmaContingencyExited(controller, beacon);
     }
@@ -300,18 +326,18 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   ) external onlyOwner {
     // Ensure that the Adharma Contingency is currently active.
     require(
-      _adharmaContingency[controller][beacon].activated,
+      _adharma[controller][beacon].activated,
       "Adharma Contingency is not currently activated."
     );
 
     // Ensure that at least 48 hours has elapsed since the contingency commenced.
     require(
-      now > _adharmaContingency[controller][beacon].activationTime + 48 hours,
+      now > _adharma[controller][beacon].activationTime + 48 hours,
       "Cannot exit contingency with a new upgrade until 48 hours have elapsed."
     );
 
     // Exit the contingency state.
-    delete _adharmaContingency[controller][beacon];
+    delete _adharma[controller][beacon];
 
     // Reset the heartbeat to the current time.
     _lastHeartbeat = now;

@@ -35,4 +35,6 @@ interface DharmaKeyRingImplementationV0Interface {
   function getAdminActionID(
     AdminActionType adminActionType, uint160 argument
   ) external view returns (bytes32 adminActionID);
+
+  function getVersion() external pure returns (uint256 version);
 }

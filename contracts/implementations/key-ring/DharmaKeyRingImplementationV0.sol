@@ -116,6 +116,14 @@ contract DharmaKeyRingImplementationV0 is
     adminActionID = _getAdminActionHash(argument);
   }
 
+  /**
+   * @notice Pure function for getting the current Dharma Key Ring version.
+   * @return The current Dharma Key Ring version.
+   */
+  function getVersion() external pure returns (uint256 version) {
+    version = _DHARMA_KEY_RING_VERSION;
+  }
+
   function _getAdminActionHash(
     uint160 argument
   ) internal view returns (bytes32 hash) {

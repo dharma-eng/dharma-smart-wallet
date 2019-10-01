@@ -48,6 +48,9 @@ contract DharmaKeyRingImplementationV1 is
 
   // END STORAGE DECLARATIONS - DO NOT REMOVE OR REORDER STORAGE ABOVE HERE!
 
+  // The key ring version will be used when constructing valid signatures.
+  uint256 internal constant _DHARMA_KEY_RING_VERSION = 1;
+
   // ERC-1271 must return this magic value when `isValidSignature` is called.
   bytes4 internal constant _ERC_1271_MAGIC_VALUE = bytes4(0x20c13b0b);
 
@@ -278,12 +281,26 @@ contract DharmaKeyRingImplementationV1 is
     adminActionID = _getAdminActionHash(adminActionType, argument);
   }
 
+  /**
+   * @notice Pure function for getting the current Dharma Key Ring version.
+   * @return The current Dharma Key Ring version.
+   */
+  function getVersion() external pure returns (uint256 version) {
+    version = _DHARMA_KEY_RING_VERSION;
+  }
+
   function _getStandardActionHash(
     address payable to, uint256 value, bytes memory data
   ) internal view returns (bytes32 hash) {
     hash = keccak256(
       abi.encodePacked(
-        address(this), _nonce, KeyType.Standard, to, value, data
+        address(this),
+        _DHARMA_KEY_RING_VERSION,
+        _nonce,
+        KeyType.Standard,
+        to,
+        value,
+        data
       )
     );
   }
@@ -293,7 +310,12 @@ contract DharmaKeyRingImplementationV1 is
   ) internal view returns (bytes32 hash) {
     hash = keccak256(
       abi.encodePacked(
-        address(this), _nonce, KeyType.Admin, adminActionType, argument
+        address(this),
+        _DHARMA_KEY_RING_VERSION,
+        _nonce,
+        KeyType.Admin,
+        adminActionType,
+        argument
       )
     );
   }
