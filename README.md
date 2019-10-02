@@ -2,66 +2,66 @@
 
 > An upgradeable, joint-custody, meta-transaction-enabled smart wallet for Dharma users.
 
-Currently Deployed Contracts (production) and example txs:
-DharmaUpgradeBeaconEnvoy
-https://etherscan.io/address/0x000000000067503c398f4c9652530dbc4ea95c02#code
-
-DharmaUpgradeBeaconController
+### Currently Deployed Contracts (production) and example txs:
+##### DharmaUpgradeBeaconController
 https://etherscan.io/address/0x00000000002226c940b74d674b85e4be05539663#code
 
-DharmaUpgradeBeacon
+##### DharmaUpgradeBeacon
 https://etherscan.io/address/0x000000000026750c571ce882b17016557279adaa#code
 
-DharmaAccountRecoveryManager
-https://etherscan.io/address/0x00000000d750176e38660203c678d88ee7e28d36#code
-
-DharmaKeyRegistryV1
-https://etherscan.io/address/0x000000005d7065eb9716a410070ee62d51092c98#code
-
-DharmaSmartWalletImplementationV1
-https://etherscan.io/address/0x0000000010a653849f221a573e00f3a37c8c4082#code
-
-DharmaSmartWalletImplementationV2
-https://etherscan.io/address/0x000000000088387c42fe85a60df4dce8e34eea4e#code
-
-DharmaSmartWalletFactoryV1
-https://etherscan.io/address/0xfc00c80b0000007f73004edb00094cad80626d8d#code
-
-Example UpgradeBeaconProxyV1 instance
-https://etherscan.io/address/0x1eb2bc53fc25a917cca3f031913a3522933a5b92#code
-
-DharmaKeyRingUpgradeBeaconController
+##### DharmaKeyRingUpgradeBeaconController
 https://etherscan.io/address/0x00000000011df015e8ad00d7b2486a88c2eb8210#code
 
-DharmaKeyRingUpgradeBeacon
+##### DharmaKeyRingUpgradeBeacon
 https://etherscan.io/address/0x0000000000bda2152794ac8c76b2dc86cba57cad#code
 
-DharmaKeyRingImplementationV0
+##### DharmaUpgradeBeaconEnvoy
+https://etherscan.io/address/0x000000000067503c398f4c9652530dbc4ea95c02#code
+
+##### DharmaAccountRecoveryManager
+https://etherscan.io/address/0x00000000d750176e38660203c678d88ee7e28d36#code
+
+##### DharmaKeyRegistryV1
+https://etherscan.io/address/0x000000005d7065eb9716a410070ee62d51092c98#code
+
+##### DharmaSmartWalletImplementationV1
+https://etherscan.io/address/0x0000000010a653849f221a573e00f3a37c8c4082#code
+
+##### DharmaSmartWalletImplementationV2
+https://etherscan.io/address/0x000000000088387c42fe85a60df4dce8e34eea4e#code
+
+##### DharmaSmartWalletFactoryV1
+https://etherscan.io/address/0xfc00c80b0000007f73004edb00094cad80626d8d#code
+
+##### Example UpgradeBeaconProxyV1 instance
+https://etherscan.io/address/0x1eb2bc53fc25a917cca3f031913a3522933a5b92#code
+
+##### DharmaKeyRingImplementationV0
 https://etherscan.io/address/0x0000000000f732b182f375af6baa1770d83077ed#code
 
-AdharmaSmartWalletImplementation
+##### AdharmaSmartWalletImplementation
 https://etherscan.io/address/0x00000000fde3b69fecd50c8a4c001678f00011ab#code
 
-AdharmaKeyRingImplementation
+##### AdharmaKeyRingImplementation
 https://etherscan.io/address/0x00000000480003d5ee4f51134ce73cc9ac00f693#code
 
-DharmaUpgradeBeaconControllerManager
+##### DharmaUpgradeBeaconControllerManager
 https://etherscan.io/address/0x0000000000b4004dd6771bf29079c3699e5d9c95#code
 
-Implementation Set on Upgrade Beacon:
+##### Implementation Set on Upgrade Beacon
 https://etherscan.io/tx/0xb11b065a67bff15e70863e843c43ca231f7cb53cce7d9a5a85e1e8e3e7b14d32#eventlog
 
-First Dharma Smart Wallet deploy through Factory (with deposits):
+##### First Dharma Smart Wallet deploy through Factory (with deposits)
 https://etherscan.io/tx/0xcac4120cacd385f9ee4a29f9c6e8fd8fb39977eed0bce4c9f2150741dc95e901
 
-First Dharma Smart Wallet withdrawals:
+##### First Dharma Smart Wallet withdrawals
 https://etherscan.io/tx/0x484ab51c86ba6794af4460aae7b17f56b63ac0b4223f38bcf4d7a87029fff378
 https://etherscan.io/tx/0xb13acf0ad97efef0138e0f1ff0e7f9e682a4d8e7eb7e33b4e3a1ecaa55b9dca9
 
-Dharma Key Registry V1 seting a global key:
+##### Dharma Key Registry V1 seting a global key
 https://etherscan.io/tx/0xbbe90a37df4488d725b602a4c214856cd0d5c414fe52e0010ece6060210966e1
 
-Upgrade to DharmaSmartWalletImplementationV2:
+##### Upgrade to DharmaSmartWalletImplementationV2
 https://etherscan.io/tx/0xc12cf1c3ca9ef8503cdd5536d8d42d29f8f833d24fb3dcdbea00b18c0b2aa52f#eventlog
 
 # Summary
