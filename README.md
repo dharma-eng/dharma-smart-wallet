@@ -1,8 +1,6 @@
 # Dharma Smart Wallet (dharma-smart-wallet)
 
-> Proposed implementation for an upgradeable, joint-custody, meta-transaction-enabled smart wallet for Dharma users.
-
-*AUDIT CHECKPOINT - October 1st, 2019*
+> An upgradeable, joint-custody, meta-transaction-enabled smart wallet for Dharma users.
 
 Currently Deployed Contracts (production) and example txs:
 DharmaUpgradeBeaconEnvoy
@@ -29,8 +27,26 @@ https://etherscan.io/address/0x000000000088387c42fe85a60df4dce8e34eea4e#code
 DharmaSmartWalletFactoryV1
 https://etherscan.io/address/0xfc00c80b0000007f73004edb00094cad80626d8d#code
 
-UpgradeBeaconProxyV1
+Example UpgradeBeaconProxyV1 instance
 https://etherscan.io/address/0x1eb2bc53fc25a917cca3f031913a3522933a5b92#code
+
+DharmaKeyRingUpgradeBeaconController
+https://etherscan.io/address/0x00000000011df015e8ad00d7b2486a88c2eb8210#code
+
+DharmaKeyRingUpgradeBeacon
+https://etherscan.io/address/0x0000000000bda2152794ac8c76b2dc86cba57cad#code
+
+DharmaKeyRingImplementationV0
+https://etherscan.io/address/0x0000000000f732b182f375af6baa1770d83077ed#code
+
+AdharmaSmartWalletImplementation
+https://etherscan.io/address/0x00000000fde3b69fecd50c8a4c001678f00011ab#code
+
+AdharmaKeyRingImplementation
+https://etherscan.io/address/0x00000000480003d5ee4f51134ce73cc9ac00f693#code
+
+DharmaUpgradeBeaconControllerManager
+https://etherscan.io/address/0x0000000000b4004dd6771bf29079c3699e5d9c95#code
 
 Implementation Set on Upgrade Beacon:
 https://etherscan.io/tx/0xb11b065a67bff15e70863e843c43ca231f7cb53cce7d9a5a85e1e8e3e7b14d32#eventlog
@@ -45,7 +61,7 @@ https://etherscan.io/tx/0xb13acf0ad97efef0138e0f1ff0e7f9e682a4d8e7eb7e33b4e3a1ec
 Dharma Key Registry V1 seting a global key:
 https://etherscan.io/tx/0xbbe90a37df4488d725b602a4c214856cd0d5c414fe52e0010ece6060210966e1
 
-Upgrade to DharmaSmartWalletImplementationV2"
+Upgrade to DharmaSmartWalletImplementationV2:
 https://etherscan.io/tx/0xc12cf1c3ca9ef8503cdd5536d8d42d29f8f833d24fb3dcdbea00b18c0b2aa52f#eventlog
 
 # Summary
@@ -105,16 +121,16 @@ The initial implementation for Dharma smart wallets will work as follows:
   - if any other account is the caller, read the implementation address from storage and return it.
 - each user's smart wallet will refer to this contract in order to retrieve the current implementation
 - any time this contract's stored implementation is updated, the update will immediately go out to all user smart wallets
-- implemented in raw EVM assembly - no Solidity compiler bugs and a vanishingly small attack surface.
+- alternative implementation in raw EVM assembly - no Solidity compiler bugs and a vanishingly small attack surface.
 
 ##### 5) Dharma Smart Wallet Factory V1
 - public, unowned, non-upgradeable contract - can be called by anyone, and if there's an issue a new factory can easily be deployed
 - deploys and sets up new Dharma Smart Wallets as "minimal upgradable proxies" that get their implementation from the Dharma Smart Wallet Beacon
 - each smart wallet address can be known ahead of time based on the Dharma Key, so once users have a Dharma Key they can send funds to that address before the smart wallet has even been deployed
-- implemented in a "bare-metal" fashion so that contract deployments are as inexpensive as possible while still having an easy-to-use interface and emitting appropriate events
+- alternative implemention in a "bare-metal" fashion so that contract deployments are as inexpensive as possible while still having an easy-to-use interface and emitting appropriate events
 
-##### 6) Smart Wallet Implementation Contract V1
-- a contract that will contain all the logic of the global smart contract - **for now this contract is still just a stub!**
+##### 6) Smart Wallet Implementation Contracts
+- contracts that contain all the logic used by each smart contract instance
 - a new implementation contract is deployed every time an upgrade is going to take place
 - the multisig then instructs the upgrade manager contract to set the new implementation on an "upgrade beacon" contract (explained in the upgradeability RFC)
 - there are an important set of rules and limitations on how to structure implementation contracts that we won't get into here (but do let me know if you'd like to learn more about it)
@@ -125,7 +141,7 @@ The initial implementation for Dharma smart wallets will work as follows:
 - has a built-in time lock for added protection, and may be configurable by the user as part of future upgrades
 - recommendation: [Gnosis Safe](https://github.com/gnosis/safe-contracts/blob/development/contracts/GnosisSafe.sol)
 
-##### 8) Actual User Smart Walletsup
+##### 8) Actual User Smart Wallets
 - These all point to the same upgrade beacon - when the implementation is modified on that upgrade beacon, **all user smart wallets are upgraded at once**
 - They are much cheaper to deploy and set up than regular contracts
 - Using a smart wallet has a lot of advantages over using an externally-owned account (i.e. a regular key): you can have batch actions in one transaction, shared custody, account recovery, withdrawal limits, etc.
@@ -154,48 +170,27 @@ You can also run code coverage if you like:
 $ yarn coverage
 ```
 
+There is also an option to run tests against a fork of mainnet - be warned that these tests take a long time.
+```sh
+$ yarn forkStart
+$ yarn test
+$ yarn stop
+```
+
+Finally, there is an option to run code coverage against a mainnet fork (same caveat as above):
+```sh
+$ yarn forkCoverage
+```
+
 ## Technical Details
 There are two potential ways to implement the upgrade beacon contract and the proxy contracts that reference the upgrade beacon: with Solidity code, or with raw EVM assembly.
 
 ### Solidity Version
 A Solidity-only implementation is the clear winner in terms of ease of developer comprehension and readability of the codebase. Admittedly, the Solidity implementation still contains a fair bit of inline assembly, anyway - there's really no easy way around it. It's looking quite likely that we'll take this approach, but I'll lay out my rationale at the end for using some limited code segments with raw EVM opcodes if you're interested to learn a little more about the alternative path.
 
-
 ##### Upgrade Beacon
 - a dedicated controller can set an implementation address in storage
 - retrieves and returns that implementation address for any other caller
-
-```Solidity
-contract DharmaUpgradeBeacon {
-  address private _implementation;
-  address private constant _CONTROLLER = address(
-    0x1234512345123451234512345123451234512345
-  );
-
-  /**
-   * @notice In the fallback function, allow only the controller to update the
-   * implementation address - for all other callers, return the current address.
-   */
-  function () external {
-    if (msg.sender == _CONTROLLER) {
-      // assembly required as fallback functions do not natively take arguments.
-      assembly {
-        // set the first word from calldata as the new implementation.
-        sstore(0, calldataload(0))
-      }
-    } else {
-      // move implementation into memory so it can be accessed from assembly.
-      address implementation = _implementation;
-      // assembly required as fallback functions do not natively return values.
-      assembly {
-        // put the implementation into scratch space and return it.
-        mstore(0, implementation)
-        return(0, 32)
-      }
-    }
-  }
-}
-```
 
 ##### Upgrade Beacon Proxy (deployment)
 - gets current implementation contract address from the upgrade beacon via `STATICCALL`
@@ -207,80 +202,6 @@ contract DharmaUpgradeBeacon {
 - `DELEGATECALL`s into the implementation contract, passing along calldata
 - returns or reverts based on `DELEGATECALL` status, supplying return buffer in either case
 
-```Solidity
-contract UpgradeBeaconProxy {
-  address private constant _UPGRADE_BEACON = address(
-    0x6789067890678906789067890678906789067890
-  );
-
-  constructor(bytes memory initializationCalldata) public payable {
-    // Get the current implementation address from the upgrade beacon.
-    address implementation = _getImplementation();
-
-    // Delegatecall into the implementation, supplying initialization calldata.
-    (ok, returnData) = implementation.delegatecall(initializationCalldata);
-
-    // If initialization failed, revert and include the revert message.
-    if (!ok) {
-      assembly {
-        returndatacopy(0, 0, returndatasize)
-        revert(0, returndatasize)
-      }
-    }
-  }
-
-  function () external payable {
-    // Get the current implementation address from the upgrade beacon.
-    address implementation = _getImplementation();
-
-    // Delegate execution to implementation contract provided by upgrade beacon.
-    _delegate(implementation);
-  }
-
-  /**
-   * @dev Returns the current implementation from the upgrade beacon.
-   * @return Address of the implementation.
-   */
-  function _getImplementation() internal view returns (address implementation) {
-    // Get the current implementation address from the upgrade beacon.
-    (bool ok, bytes memory returnData) = _UPGRADE_BEACON.staticcall("");
-    if (!ok) {
-      assembly {
-        returndatacopy(0, 0, returndatasize)
-        revert(0, returndatasize)
-      }
-    }
-    implementation = abi.decode(returnData, (address));
-  }
-
-  /**
-   * @dev Delegates execution to an implementation contract.
-   * This is a low level function that doesn't return to its internal call site.
-   * It will return to the external caller whatever the implementation returns.
-   * @param implementation Address to delegate.
-   */
-  function _delegate(address implementation) internal {
-    assembly {
-      // Copy msg.data. We take full control of memory in this inline assembly
-      // block because it will not return to Solidity code. We overwrite the
-      // Solidity scratch pad at memory position 0.
-      calldatacopy(0, 0, calldatasize)
-
-      // Call the implementation.
-      // out and outsize are 0 because we don't know the size yet.
-      let result := delegatecall(gas, implementation, 0, calldatasize, 0, 0)
-
-      // Copy the returned data.
-      returndatacopy(0, 0, returndatasize)
-
-      switch result
-      // delegatecall returns 0 on error.
-      case 0 { revert(0, returndatasize) }
-      default { return(0, returndatasize) }
-    }
-  }
-}
-```
 ### Raw EVM Opcode Version
 
 If we care about cost savings *(which, honestly, we might not)*, it is important that the proxies are especially efficient, both to deploy and to use, since *every* smart wallet contract will incur any overhead that the proxy pattern introduces. These contracts are well-suited to assembly since they have very specific, targeted behavior.  Another key benefit of using assembly is that the contracts are not susceptible to Solidity compiler bugs, and are therefore better candidates for formal verification.
@@ -394,8 +315,9 @@ pc  op  name                      [stack] <memory> {return_buffer} *return* ~rev
 33  fa  STATICCALL                [0, 0, 0, 0, cds, 0, 1] <impl>
 
 // flip success status stack item. Note that a call to upgrade beacon above will
-// never fail unless gas runs out or the call stack depth is too great, in which
-// case the next delegatecall will also fail, so we can infer it will be 1 => 0
+// never fail (assuming the target is a valid upgrade beacon) unless gas runs
+// out or the call stack depth is too great, in which case the next delegatecall
+// will also fail, so we can infer it will be 1 => 0
 34  15  ISZERO                    [0, 0, 0, 0, cds, 0, 0]
 
 // take the implementation from memory and place it onto the stack.

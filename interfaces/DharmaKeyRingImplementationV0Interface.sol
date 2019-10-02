@@ -33,8 +33,22 @@ interface DharmaKeyRingImplementationV0Interface {
   ) external;
 
   function getAdminActionID(
+    AdminActionType adminActionType, uint160 argument, uint256 nonce
+  ) external view returns (bytes32 adminActionID);
+
+  function getNextAdminActionID(
     AdminActionType adminActionType, uint160 argument
   ) external view returns (bytes32 adminActionID);
+
+  function getKeyCount() external view returns (
+    uint256 standardKeyCount, uint256 adminKeyCount
+  );
+
+  function getKeyType(
+    address key
+  ) external view returns (bool standard, bool admin);
+
+  function getNonce() external returns (uint256 nonce);
 
   function getVersion() external pure returns (uint256 version);
 }

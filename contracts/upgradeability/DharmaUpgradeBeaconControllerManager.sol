@@ -73,13 +73,13 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
 
   // Store the address of the Dharma Key Ring Upgrade Beacon as a constant.
   address private constant _DHARMA_KEY_RING_UPGRADE_BEACON = address(
-    0x0000000000000000000000000000000000000000 // TODO: deploy and set
+    0x0000000000BDA2152794ac8c76B2dc86cbA57cad
   );
 
   // Store the Adharma Key Ring Contingency implementation. Note that this is
   // specific to the key ring and will not be activated on other beacons.
   address private constant _ADHARMA_KEY_RING_IMPLEMENTATION = address(
-    0x0000000000000000000000000000000000000000 // TODO: deploy and set
+    0x00000000480003d5eE4F51134CE73Cc9AC00f693
   );
 
   /**
@@ -87,7 +87,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
    * initial minimum timelock interval values, and some initial variable values.
    */
   constructor() public {
-    // Ensure that the Adharma implementation has the correct runtime code.
+    // Ensure Adharma Smart Wallet implementation has the correct runtime code.
     bytes32 adharmaSmartWalletHash;
     bytes32 expectedAdharmaSmartWalletHash = bytes32(
       0x75889568a40bc5b3e7ccf3c6579a0730705f089c083e36c52bbc911024afa47f
@@ -96,10 +96,20 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     assembly { adharmaSmartWalletHash := extcodehash(adharmaSmartWallet) }
     require(
       adharmaSmartWalletHash == expectedAdharmaSmartWalletHash,
-      "Adharma implementation code hash does not match expected code hash."
+      "Adharma Smart Wallet implementation runtime code hash is incorrect."
     );
 
-    // TODO: check adharmaKeyRingHash as well
+    // Ensure Adharma Key Ring implementation has the correct runtime code.
+    bytes32 adharmaKeyRingHash;
+    bytes32 expectedAdharmaKeyRingHash = bytes32(
+      0x72f85d929335f00aee7e110513479e43febf22b0ee7826ee4f8cfc767be6c001
+    );
+    address adharmaKeyRing = _ADHARMA_KEY_RING_IMPLEMENTATION;
+    assembly { adharmaKeyRingHash := extcodehash(adharmaKeyRing) }
+    require(
+      adharmaKeyRingHash == expectedAdharmaKeyRingHash,
+      "Adharma Key Ring implementation runtime code hash is incorrect."
+    );
 
     // Set the transaction submitter as the initial owner of this contract.
     _transferOwnership(tx.origin);

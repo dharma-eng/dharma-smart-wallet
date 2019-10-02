@@ -6,11 +6,13 @@ const constants = require('./constants.js')
 let DharmaUpgradeBeaconArtifact;
 let DharmaUpgradeBeaconControllerArtifact;
 let DharmaUpgradeBeaconEnvoyArtifact;
+let DharmaKeyRingUpgradeBeaconArtifact;
 let DharmaKeyRegistryV1Artifact;
 let DharmaAccountRecoveryManagerArtifact;
 let DharmaSmartWalletFactoryV1Artifact;
 let UpgradeBeaconProxyV1Artifact;
 let AdharmaSmartWalletImplementationArtifact;
+let AdharmaKeyRingImplementationArtifact;
 let DharmaUpgradeBeaconControllerManagerArtifact;
 
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
@@ -20,6 +22,8 @@ const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaK
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
 const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV2.json')
+
+const DharmaKeyRingImplementationV0Artifact = require('../../build/contracts/DharmaKeyRingImplementationV0.json')
 
 const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
 const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
@@ -66,21 +70,25 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconEnvoyArtifact = require('../../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
     DharmaUpgradeBeaconControllerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconController.json')
     DharmaUpgradeBeaconArtifact = require('../../../build/contracts/DharmaUpgradeBeacon.json')
+    DharmaKeyRingUpgradeBeaconArtifact = require('../../../build/contracts/DharmaKeyRingUpgradeBeacon.json')
     DharmaKeyRegistryV1Artifact = require('../../../build/contracts/DharmaKeyRegistryV1.json')
     DharmaSmartWalletFactoryV1Artifact = require('../../../build/contracts/DharmaSmartWalletFactoryV1.json')
     UpgradeBeaconProxyV1Artifact = require('../../../build/contracts/UpgradeBeaconProxyV1.json')
     DharmaAccountRecoveryManagerArtifact = require('../../../build/contracts/DharmaAccountRecoveryManager.json')
     AdharmaSmartWalletImplementationArtifact = require('../../../build/contracts/AdharmaSmartWalletImplementation.json')
+    AdharmaKeyRingImplementationArtifact = require('../../../build/contracts/AdharmaKeyRingImplementation.json')
     DharmaUpgradeBeaconControllerManagerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
   } else {
     DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
     DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
     DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
+    DharmaKeyRingUpgradeBeaconArtifact = require('../../build/contracts/DharmaKeyRingUpgradeBeacon.json')
     DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
     DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
     UpgradeBeaconProxyV1Artifact = require('../../build/contracts/UpgradeBeaconProxyV1.json')
     DharmaAccountRecoveryManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
     AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
+    AdharmaKeyRingImplementationArtifact = require('../../build/contracts/AdharmaKeyRingImplementation.json')
     DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
   }
 
@@ -107,6 +115,16 @@ module.exports = {test: async function (provider, testingContext) {
   const DharmaUpgradeBeacon = new web3.eth.Contract(
     DharmaUpgradeBeaconArtifact.abi,
     constants.UPGRADE_BEACON_ADDRESS
+  )
+
+  const DharmaKeyRingUpgradeBeaconController = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerArtifact.abi,
+    constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS
+  )
+
+  const DharmaKeyRingUpgradeBeacon = new web3.eth.Contract(
+    DharmaKeyRingUpgradeBeaconArtifact.abi,
+    constants.KEY_RING_UPGRADE_BEACON_ADDRESS
   )
 
   const DharmaAccountRecoveryManager = new web3.eth.Contract(
@@ -184,6 +202,13 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconArtifact.bytecode
   )
 
+  const DharmaKeyRingUpgradeBeaconDeployer = new web3.eth.Contract(
+    DharmaKeyRingUpgradeBeaconArtifact.abi
+  )
+  DharmaKeyRingUpgradeBeaconDeployer.options.data = (
+    DharmaKeyRingUpgradeBeaconArtifact.bytecode
+  )
+
   const BadBeaconDeployer = new web3.eth.Contract(BadBeaconArtifact.abi)
   BadBeaconDeployer.options.data = BadBeaconArtifact.bytecode
 
@@ -227,7 +252,17 @@ module.exports = {test: async function (provider, testingContext) {
       ['0000000000000000000000000000000000000000000000000000000000000000']
     )
   )
-  
+ 
+  const AdharmaKeyRingImplementationDeployer = new web3.eth.Contract(
+    AdharmaKeyRingImplementationArtifact.abi
+  )
+  AdharmaKeyRingImplementationDeployer.options.data = (
+    swapMetadataHash(
+      AdharmaKeyRingImplementationArtifact.bytecode,
+      ['0000000000000000000000000000000000000000000000000000000000000000']
+    )
+  )
+
   const DharmaAccountRecoveryManagerDeployer = new web3.eth.Contract(
     DharmaAccountRecoveryManagerArtifact.abi
   )
@@ -264,6 +299,16 @@ module.exports = {test: async function (provider, testingContext) {
   DharmaSmartWalletImplementationV2Deployer.options.data = (
     swapMetadataHash(
       DharmaSmartWalletImplementationV2Artifact.bytecode,
+      ['0000000000000000000000000000000000000000000000000000000000000000']
+    )
+  )
+
+  const DharmaKeyRingImplementationV0Deployer = new web3.eth.Contract(
+    DharmaKeyRingImplementationV0Artifact.abi
+  )
+  DharmaKeyRingImplementationV0Deployer.options.data = (
+    swapMetadataHash(
+      DharmaKeyRingImplementationV0Artifact.bytecode,
       ['0000000000000000000000000000000000000000000000000000000000000000']
     )
   )
@@ -1012,6 +1057,73 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
+  let currentKeyRingUpgradeBeaconControllerCode;
+  await runTest(
+    'Checking Key Ring Upgrade Beacon Controller runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS],
+    true,
+    value => {
+      currentKeyRingUpgradeBeaconControllerCode = value;
+    }
+  )
+
+  if (
+    currentKeyRingUpgradeBeaconControllerCode !== swapMetadataHash(
+      DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
+      constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_METADATA
+    )
+  ) {
+    await runTest(
+      `DharmaKeyRingUpgradeBeaconController contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_SALT,
+        swapMetadataHash(
+          DharmaUpgradeBeaconControllerArtifact.bytecode,
+          constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_METADATA
+        )
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaKeyRingUpgradeBeaconController contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_SALT,
+        swapMetadataHash(
+          DharmaUpgradeBeaconControllerArtifact.bytecode,
+          constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_METADATA
+        )
+      ]
+    )
+  }
+
+  await runTest(
+    'Deployed Key Ring Upgrade Beacon Controller code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [DharmaKeyRingUpgradeBeaconController.options.address],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
+        constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_METADATA
+      ))
+    }
+  )
+
   await runTest(
     `DharmaUpgradeBeaconController contract deployment`,
     DharmaUpgradeBeaconControllerDeployer,
@@ -1102,6 +1214,80 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
+  let currentKeyRingUpgradeBeaconCode;
+  await runTest(
+    'Checking Upgrade Beacon runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.KEY_RING_UPGRADE_BEACON_ADDRESS],
+    true,
+    value => {
+      currentKeyRingUpgradeBeaconCode = value;
+    }
+  )
+
+  if (
+    currentKeyRingUpgradeBeaconCode !== swapMetadataHash(
+      DharmaKeyRingUpgradeBeaconArtifact.deployedBytecode,
+      constants.KEY_RING_UPGRADE_BEACON_METADATA
+    )
+  ) {
+    await runTest(
+      `DharmaKeyRingUpgradeBeacon contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        constants.KEY_RING_UPGRADE_BEACON_SALT,
+        swapMetadataHash(
+          DharmaKeyRingUpgradeBeaconArtifact.bytecode,
+          constants.KEY_RING_UPGRADE_BEACON_METADATA
+        )
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, constants.KEY_RING_UPGRADE_BEACON_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaUpgradeBeacon contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        constants.KEY_RING_UPGRADE_BEACON_SALT,
+        swapMetadataHash(
+          DharmaKeyRingUpgradeBeaconArtifact.bytecode,
+          constants.KEY_RING_UPGRADE_BEACON_METADATA
+        )
+      ]
+    )
+  }
+
+  await runTest(
+    'Deployed Key Ring Upgrade Beacon code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [DharmaKeyRingUpgradeBeacon.options.address],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaKeyRingUpgradeBeaconArtifact.deployedBytecode,
+        constants.KEY_RING_UPGRADE_BEACON_METADATA
+      ))
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeacon contract deployment`,
+    DharmaKeyRingUpgradeBeaconDeployer,
+    '',
+    'deploy'
+  )
+
   let currentKeyRegistryCode;
   await runTest(
     'Checking Key Registry runtime code',
@@ -1186,6 +1372,13 @@ module.exports = {test: async function (provider, testingContext) {
   const DharmaSmartWalletImplementationV2 = await runTest(
     `DharmaSmartWalletImplementationV2 contract deployment`,
     DharmaSmartWalletImplementationV2Deployer,
+    '',
+    'deploy'
+  )
+
+  const DharmaKeyRingImplementationV0 = await runTest(
+    `DharmaKeyRingImplementationV0 contract deployment`,
+    DharmaKeyRingImplementationV0Deployer,
     '',
     'deploy'
   )
@@ -1413,6 +1606,80 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
+  let currentAdharmaKeyRingImplementationCode;
+  await runTest(
+    'Checking Adharma key ring implementation runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.ADHARMA_KEY_RING_IMPLEMENTATION_ADDRESS],
+    true,
+    value => {
+      currentAdharmaKeyRingImplementationCode = value;
+    }
+  )
+
+  if (
+    currentAdharmaKeyRingImplementationCode !== swapMetadataHash(
+      AdharmaKeyRingImplementationArtifact.deployedBytecode,
+      constants.ADHARMA_KEY_RING_IMPLEMENTATION_METADATA
+    )
+  ) {
+    await runTest(
+      `AdharmaKeyRingImplementation contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        constants.ADHARMA_KEY_RING_IMPLEMENTATION_SALT,
+        swapMetadataHash(
+          AdharmaKeyRingImplementationArtifact.bytecode,
+          constants.ADHARMA_KEY_RING_IMPLEMENTATION_METADATA
+        )
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, constants.ADHARMA_KEY_RING_IMPLEMENTATION_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `AdharmaKeyRingImplementation contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        constants.ADHARMA_KEY_RING_IMPLEMENTATION_SALT,
+        swapMetadataHash(
+          AdharmaKeyRingImplementationArtifact.bytecode,
+          constants.ADHARMA_KEY_RING_IMPLEMENTATION_METADATA
+        )
+      ]
+    )
+  }
+
+  await runTest(
+    'Deployed AdharmaSmartWalletImplementation code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.ADHARMA_KEY_RING_IMPLEMENTATION_ADDRESS],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        AdharmaKeyRingImplementationArtifact.deployedBytecode,
+        constants.ADHARMA_KEY_RING_IMPLEMENTATION_METADATA
+      ))
+    }
+  )
+
+  await runTest(
+    `AdharmaKeyRingImplementation contract deployment`,
+    AdharmaKeyRingImplementationDeployer,
+    '',
+    'deploy'
+  )
+
   let currentUpgradeBeaconControllerManagerCode;
   await runTest(
     'Checking Upgrade Beacon Controller Manager runtime code',
@@ -1543,6 +1810,22 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'IndestructibleRegistry can register the key ring upgrade beacon as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [constants.KEY_RING_UPGRADE_BEACON_ADDRESS]
+  )  
+
+  await runTest(
+    'IndestructibleRegistry can register the key ring upgrade beacon controller as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS]
+  )
+
+  await runTest(
     'IndestructibleRegistry can register the upgrade beacon envoy as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -1584,11 +1867,19 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'IndestructibleRegistry can register the Adharma implementation as indestructible',
+    'IndestructibleRegistry can register the Adharma smart wallet implementation as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
     'send',
     [constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS]
+  )
+
+  await runTest(
+    'IndestructibleRegistry can register the Adharma key ring implementation as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [constants.ADHARMA_KEY_RING_IMPLEMENTATION_ADDRESS]
   )
 
   await runTest(
@@ -1616,6 +1907,14 @@ module.exports = {test: async function (provider, testingContext) {
       [DharmaSmartWalletImplementationV2.options.address]
     )
   }
+
+  await runTest(
+    'IndestructibleRegistry can register V0 key ring implementation as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [DharmaKeyRingImplementationV0.options.address]
+  )
 
   const CodeHashCache = await runTest(
     `CodeHashCache contract deployment`,

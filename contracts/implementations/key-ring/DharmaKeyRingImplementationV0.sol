@@ -13,7 +13,11 @@ import "../../../interfaces/ERC1271.sol";
  * on the Dharma Smart Wallet to support multiple user signing keys. For this V0
  * implementation, new Dual keys (standard + admin) can be added, but cannot be
  * removed, and the action threshold is fixed at one. Upgrades are managed by an
- * upgrade beacon, similar to the one utilized by the Dharma Smart Wallet.
+ * upgrade beacon, similar to the one utilized by the Dharma Smart Wallet. Note
+ * that this implementation only implements the minimum feature set required to
+ * support multiple user signing keys on the current Dharma Smart Wallet, and
+ * that it will likely be replaced with a new, more full-featured implementation
+ * relatively soon.
  */
 contract DharmaKeyRingImplementationV0 is
   DharmaKeyRingImplementationV0Interface,
@@ -43,6 +47,18 @@ contract DharmaKeyRingImplementationV0 is
   // ERC-1271 must return this magic value when `isValidSignature` is called.
   bytes4 internal constant _ERC_1271_MAGIC_VALUE = bytes4(0x20c13b0b);
 
+  /**
+   * @notice In initializer, set up an initial user signing key. For V0, the
+   * adminThreshold and executorThreshold arguments must both be equal to 1 and
+   * exactly one key with a key type of 3 (Dual key) must be supplied. Note that
+   * this initializer is only callable while the key ring instance is still in
+   * the contract creation phase.
+   * @param adminThreshold uint128 Must be equal to 1 in V0.
+   * @param executorThreshold uint128 Must be equal to 1 in V0.
+   * @param keys address[] The initial user signing key for the key ring. Must
+   * have exactly one non-null key in V0.
+   * @param keyTypes uint8[] Must be equal to [3].
+   */
   function initialize(
     uint128 adminThreshold,
     uint128 executorThreshold,
@@ -52,6 +68,7 @@ contract DharmaKeyRingImplementationV0 is
     // Ensure that this function is only callable during contract construction.
     assembly { if extcodesize(address) { revert(0, 0) } }
 
+    // V0 only allows setting a singly Dual key with thresholds both set to 1.
     require(keys.length == 1, "Must supply exactly one key in V0.");
 
     require(keys[0] != address(0), "Cannot supply the null address as a key.");
@@ -67,13 +84,20 @@ contract DharmaKeyRingImplementationV0 is
       executorThreshold == 1, "Executor threshold must be exactly one in V0."
     );
 
+    // Set the key and emit a corresponding event.
     _keys[uint160(keys[0])] = KeyType.Dual;
-
     emit KeyModified(keys[0], true, true);
 
     // Note: skip additional key counts + thresholds setup in V0 (only one key).
   }
 
+  /**
+   * @notice Supply a signature from one of the existing keys on the keyring in
+   * order to add a new key. 
+   * @param adminActionType uint8 Must be equal to 6 in V0.
+   * @param argument uint160 The signing address to add to the key ring.
+   * @param signatures bytes A signature from an existing key on the key ring.
+   */
   function takeAdminAction(
     AdminActionType adminActionType, uint160 argument, bytes calldata signatures
   ) external {
@@ -87,33 +111,69 @@ contract DharmaKeyRingImplementationV0 is
 
     require(_keys[argument] == KeyType.None, "Key already exists.");
 
-    _verifyOrderedSignatures(_getAdminActionHash(argument), signatures);
+    // Verify signature against an admin action hash derived from the argument.
+    _verifySignature(_getAdminActionHash(argument, _nonce), signatures);
 
+    // Increment the key count for both standard and admin keys.
     _additionalKeyCounts.standard++;
     _additionalKeyCounts.admin++;
 
+    // Set the key and emit a corresponding event.
     _keys[argument] = KeyType.Dual;
-
     emit KeyModified(address(argument), true, true);
 
+    // Increment the nonce.
     _nonce++;
   }
 
+  /**
+   * @notice View function that implements ERC-1271 and validates a signature
+   * against one of the keys on the keyring based on the supplied data. The data
+   * must be ABI encoded as (bytes32, uint8, bytes) - in V0, only the first
+   * bytes32 parameter is used to validate the supplied signature.
+   * @param data bytes The data used to validate the signature.
+   * @param signature bytes A signature from an existing key on the key ring.
+   * @return The 4-byte magic value to signify a valid signature in ERC-1271, if
+   * the signature is valid.
+   */
   function isValidSignature(
-    bytes calldata data, bytes calldata signatures
+    bytes calldata data, bytes calldata signature
   ) external view returns (bytes4 magicValue) {
     (bytes32 hash, , ) = abi.decode(data, (bytes32, uint8, bytes));
 
-    _verifyOrderedSignatures(hash, signatures);
+    _verifySignature(hash, signature);
 
     magicValue = _ERC_1271_MAGIC_VALUE;
   }
 
+  /**
+   * @notice View function that returns the message hash that must be signed in
+   * order to add a new key to the key ring based on the supplied parameters.
+   * @param adminActionType uint8 Unused in V0, as only action type 6 is valid.
+   * @param argument uint160 The signing address to add to the key ring.
+   * @param nonce uint256 The nonce to use when deriving the message hash.
+   * @return The message hash to sign.
+   */
   function getAdminActionID(
+    AdminActionType adminActionType, uint160 argument, uint256 nonce
+  ) external view returns (bytes32 adminActionID) {
+    adminActionType;
+    adminActionID = _getAdminActionHash(argument, nonce);
+  }
+
+  /**
+   * @notice View function that returns the message hash that must be signed in
+   * order to add a new key to the key ring based on the supplied parameters and
+   * using the current nonce of the key ring.
+   * @param adminActionType uint8 Unused in V0, as only action type 6 is valid.
+   * @param argument uint160 The signing address to add to the key ring.
+   * @return The message hash to sign.
+   */
+  function getNextAdminActionID(
     AdminActionType adminActionType, uint160 argument
   ) external view returns (bytes32 adminActionID) {
     adminActionType;
-    adminActionID = _getAdminActionHash(argument);
+    adminActionID = _getAdminActionHash(argument, _nonce);
   }
 
   /**
@@ -124,17 +184,66 @@ contract DharmaKeyRingImplementationV0 is
     version = _DHARMA_KEY_RING_VERSION;
   }
 
+  /**
+   * @notice View function for getting the current number of both standard and
+   * admin keys that are set on the Dharma Key Ring. For V0, these should be the
+   * same value as one another.
+   * @return The number of standard and admin keys set on the Dharma Key Ring.
+   */
+  function getKeyCount() external view returns (
+    uint256 standardKeyCount, uint256 adminKeyCount
+  ) {
+    AdditionalKeyCount memory additionalKeyCount = _additionalKeyCounts;
+    standardKeyCount = uint256(additionalKeyCount.standard) + 1;
+    adminKeyCount = uint256(additionalKeyCount.admin) + 1;
+  }
+
+  /**
+   * @notice View function for getting standard and admin key status of a given
+   * address. For V0, these should both be true, or both be false (i.e. the key
+   * is not set).
+   * @param key address An account to check for key type information.
+   * @return Booleans for standard and admin key status for the given address.
+   */
+  function getKeyType(
+    address key
+  ) external view returns (bool standard, bool admin) {
+    KeyType keyType = _keys[uint160(key)];
+    standard = (keyType == KeyType.Standard || keyType == KeyType.Dual);
+    admin = (keyType == KeyType.Admin || keyType == KeyType.Dual);
+  }
+
+  /**
+   * @notice View function for getting the current nonce of the Dharma Key Ring.
+   * @return The current nonce set on the Dharma Key Ring.
+   */
+  function getNonce() external returns (uint256 nonce) {
+    nonce = _nonce;
+  }
+
+  /**
+   * @notice Internal view function for deriving the message hash that must be
+   * signed in order to add a new key to the key ring based on given parameters.
+   * Note that V0 does not include a prefix when constructing the message hash.
+   * @return The message hash to sign.
+   */
   function _getAdminActionHash(
-    uint160 argument
+    uint160 argument, uint256 nonce
   ) internal view returns (bytes32 hash) {
     hash = keccak256(
       abi.encodePacked(
-        address(this), _DHARMA_KEY_RING_VERSION, _nonce, argument
+        address(this), _DHARMA_KEY_RING_VERSION, nonce, argument
       )
     );
   }
 
-  function _verifyOrderedSignatures(
+  /**
+   * @notice Internal view function for verifying a signature and a message hash
+   * against the mapping of keys currently stored on the key ring. For V0, all
+   * stored keys are the Dual key type, and only a single signature is provided
+   * for verification at once since the threshold is fixed at one signature.
+   */
+  function _verifySignature(
     bytes32 hash, bytes memory signature
   ) internal view {   
     require(
