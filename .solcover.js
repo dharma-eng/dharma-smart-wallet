@@ -1,7 +1,7 @@
 module.exports = {
   norpc: true,
   testCommand: 'node --max-old-space-size=4096 ./scripts/test/testCoverage.js',
-  compileCommand: '../node_modules/.bin/truffle compile',
+  compileCommand: 'node --max-old-space-size=4096 ../node_modules/.bin/truffle compile',
   copyPackages: ['web3'],
   skipFiles: [
     'openzeppelin-upgradeability/cryptography/ECDSA.sol',
@@ -14,7 +14,15 @@ module.exports = {
     'openzeppelin-upgradeability/upgradeability/UpgradeabilityProxy.sol',
     'openzeppelin-upgradeability/utils/Address.sol',
     'mock/MockCodeCheck.sol',
+    'mock/RelayContract.sol',
+    'mock/RelayContractV2.sol',
+    'implementations/smart-wallet/DharmaSmartWalletImplementationV0.sol',
+    'implementations/smart-wallet/DharmaSmartWalletImplementationV1.sol',
+    'implementations/smart-wallet/DharmaSmartWalletImplementationV2.sol',
     'test/UpgradeBeaconImplementationCheck.sol',
+    'test/BadBeacon.sol',
+    'test/BadBeaconTwo.sol',
+    'helpers/DharmaKeyRegistryV1Mimic.sol',
     'helpers/ImmutableCreate2Factory.sol',
     'helpers/CodeHashCache.sol',
     'helpers/IndestructibleRegistry.sol'

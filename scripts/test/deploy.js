@@ -22,6 +22,7 @@ const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaK
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
 const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV2.json')
+const DharmaSmartWalletImplementationV3Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV3.json')
 
 const DharmaKeyRingImplementationV0Artifact = require('../../build/contracts/DharmaKeyRingImplementationV0.json')
 
@@ -299,6 +300,16 @@ module.exports = {test: async function (provider, testingContext) {
   DharmaSmartWalletImplementationV2Deployer.options.data = (
     swapMetadataHash(
       DharmaSmartWalletImplementationV2Artifact.bytecode,
+      ['0000000000000000000000000000000000000000000000000000000000000000']
+    )
+  )
+
+  const DharmaSmartWalletImplementationV3Deployer = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV3Artifact.abi
+  )
+  DharmaSmartWalletImplementationV3Deployer.options.data = (
+    swapMetadataHash(
+      DharmaSmartWalletImplementationV3Artifact.bytecode,
       ['0000000000000000000000000000000000000000000000000000000000000000']
     )
   )
@@ -1376,6 +1387,13 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
+  const DharmaSmartWalletImplementationV3 = await runTest(
+    `DharmaSmartWalletImplementationV3 contract deployment`,
+    DharmaSmartWalletImplementationV3Deployer,
+    '',
+    'deploy'
+  )
+
   const DharmaKeyRingImplementationV0 = await runTest(
     `DharmaKeyRingImplementationV0 contract deployment`,
     DharmaKeyRingImplementationV0Deployer,
@@ -1905,6 +1923,14 @@ module.exports = {test: async function (provider, testingContext) {
       'registerAsIndestructible',
       'send',
       [DharmaSmartWalletImplementationV2.options.address]
+    )
+
+    await runTest(
+      'IndestructibleRegistry can register V3 implementation as indestructible',
+      IndestructibleRegistry,
+      'registerAsIndestructible',
+      'send',
+      [DharmaSmartWalletImplementationV3.options.address]
     )
   }
 

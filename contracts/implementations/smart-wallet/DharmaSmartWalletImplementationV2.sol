@@ -1017,8 +1017,8 @@ contract DharmaSmartWalletImplementationV2 is
     // Get cToken address for the asset type. (No custom ETH withdrawal action.)
     address cToken = asset == AssetType.DAI ? address(_CDAI) : address(_CUSDC);
 
-    // Get the current cToken balance for this account.
-    uint256 redeemAmount = IERC20(cToken).balanceOf(address(this));
+    // WARNING: Known bug on V2 where balanceOf always checks cDAI. Fixed on V3.
+    uint256 redeemAmount = _CDAI.balanceOf(address(this));
 
     // Attempt to redeem the underlying balance from the cToken contract.
     (bool ok, bytes memory data) = cToken.call(abi.encodeWithSelector(

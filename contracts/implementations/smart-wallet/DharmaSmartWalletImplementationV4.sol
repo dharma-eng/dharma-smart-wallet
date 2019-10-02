@@ -1,6 +1,7 @@
-pragma solidity 0.5.11; // optimization runs: 200, evm version: petersburg
+pragma solidity 0.5.11;
 // WARNING - `executeActionWithAtomicBatchCalls` has a `bytes[]` argument that
-// requires ABIEncoderV2. Exercise caution when calling that specific function.
+// requires ABIEncoderV2, and the alternatives are pretty convoluted. Consider
+// losing that function and ABIEncoderV2 for the V1 smart wallet implementation.
 pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/utils/Address.sol";
@@ -8,7 +9,9 @@ import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
 import "../../../interfaces/DharmaSmartWalletImplementationV1Interface.sol";
+import "../../../interfaces/DharmaSmartWalletImplementationV4Interface.sol";
 import "../../../interfaces/CTokenInterface.sol";
+import "../../../interfaces/CEtherInterface.sol";
 import "../../../interfaces/USDCV1Interface.sol";
 import "../../../interfaces/ComptrollerInterface.sol";
 import "../../../interfaces/DharmaKeyRegistryInterface.sol";
@@ -16,23 +19,21 @@ import "../../../interfaces/ERC1271.sol";
 
 
 /**
- * @title DharmaSmartWalletImplementationV3
- * @author 0age
- * @notice The V3 implementation for the Dharma smart wallet is a joint-custody,
+ * @title DharmaSmartWalletImplementationV4
+ * @notice The V4 implementation for the Dharma smart wallet is a joint-custody,
  * meta-transaction-enabled wallet with helper functions to facilitate lending
- * funds using CompoundV2. It makes a few minor fixes and changes to the V1
- * implementation to improve efficiency and reliability for an initial save-only
- * Dharma Smart Wallet. It also contains methods to support account recovery and
- * generic actions, including in an atomic batch. The smart wallet instances
- * utilizing this implementation are deployed through the Dharma Smart Wallet
- * Factory via `CREATE2`, which allows for their address to be known ahead of
- * time, and any Dai or USDC that has already been sent into that address will
- * automatically be deposited into Compound upon deployment of the new smart
- * wallet instance.
+ * and borrowing funds using CompoundV2. It also contains methods to support
+ * account recovery and generic actions, including in an atomic batch. The smart
+ * wallet instances utilizing this implementation are deployed through the
+ * Dharma Smart Wallet Factory via `CREATE2`, which allows for their address to
+ * be known ahead of time, and any Dai, USDC, or Ether that has already been
+ * sent into that address will automatically be deposited into Compound upon
+ * deployment of the new smart wallet instance.
  */
-contract DharmaSmartWalletImplementationV3 is
+contract DharmaSmartWalletImplementationV4 is
   DharmaSmartWalletImplementationV0Interface,
-  DharmaSmartWalletImplementationV1Interface {
+  DharmaSmartWalletImplementationV1Interface,
+  DharmaSmartWalletImplementationV4Interface {
   using Address for address;
   using ECDSA for bytes32;
   // WARNING: DO NOT REMOVE OR REORDER STORAGE WHEN WRITING NEW IMPLEMENTATIONS!
@@ -56,7 +57,7 @@ contract DharmaSmartWalletImplementationV3 is
   // END STORAGE DECLARATIONS - DO NOT REMOVE OR REORDER STORAGE ABOVE HERE!
 
   // The smart wallet version will be used when constructing valid signatures.
-  uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 3;
+  uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 4;
 
   // The Dharma Key Registry holds a public key for verifying meta-transactions.
   DharmaKeyRegistryInterface internal constant _DHARMA_KEY_REGISTRY = (
@@ -76,6 +77,10 @@ contract DharmaSmartWalletImplementationV3 is
 
   CTokenInterface internal constant _CUSDC = CTokenInterface(
     0x39AA39c021dfbaE8faC545936693aC917d5E7563 // mainnet
+  );
+
+  CEtherInterface internal constant _CETH = CEtherInterface(
+    0x4Ddc2D193948926D02f9B1fE9e1daa0718270ED5 // mainnet
   );
 
   IERC20 internal constant _DAI = IERC20(
@@ -100,11 +105,25 @@ contract DharmaSmartWalletImplementationV3 is
   // ERC-1271 must return this magic value when `isValidSignature` is called.
   bytes4 internal constant _ERC_1271_MAGIC_VALUE = bytes4(0x20c13b0b);
 
+  // Automatically deposit ETH if enough gas is supplied to fallback function.
+  // TODO: determine the appropriate value to use!
+  uint256 internal constant _AUTOMATIC_ETH_DEPOSIT_GAS = 100000;
+
+  function () external payable {
+    if (
+      msg.sender != address(_CETH) &&        // do not redeposit on withdrawals.
+      gasleft() > _AUTOMATIC_ETH_DEPOSIT_GAS // only deposit with adequate gas.
+    ) {
+      _depositEtherOnCompound();
+    }
+  }
+
   /**
    * @notice In initializer, set up user signing key, set approval on the cDAI
-   * and cUSDC contracts, and deposit any Dai or USDC already at the address to
-   * Compound. Note that this initializer is only callable while the smart
-   * wallet instance is still in the contract creation phase.
+   * and cUSDC contracts, deposit any Dai, USDC, and ETH already at the address
+   * to Compound, and enter markets for cDAI, cUSDC, and cETH. Note that this
+   * initializer is only callable while the smart wallet instance is still in
+   * the contract creation phase.
    * @param userSigningKey address The initial user signing key for the smart
    * wallet.
    */
@@ -132,22 +151,32 @@ contract DharmaSmartWalletImplementationV3 is
       // Try to deposit any USDC balance on Compound.
       _depositOnCompound(AssetType.USDC, usdcBalance);
     }
+
+    // Try to deposit any Ether balance on Compound.
+    _depositOnCompound(AssetType.ETH, address(this).balance);
+
+    // Enter DAI + USDC + ETH markets to enable using them as borrow collateral.
+    _enterMarkets();
   }
 
   /**
-   * @notice Deposit all Dai and USDC currently residing at this address to
-   * Compound. Note that "repay" is not currently implemented, but the function
-   * is still named "repayAndDeposit" so that infrastructure around calling this
-   * function will not need to be altered for a future smart wallet version. If
-   * some step of this function fails, the function itself will still succeed,
-   * but an ExternalError with information on what went wrong will be emitted.
+   * @notice Use all Dai, USDC, and ETH currently residing at this address to
+   * first repay any outstanding borrows, then to deposit and mint corresponding
+   * cTokens on Compound. If some step of this function fails, the function
+   * itself will still succeed, but an ExternalError with information on what
+   * went wrong will be emitted.
    */
   function repayAndDeposit() external {
     // Get the current Dai balance on this contract.
     uint256 daiBalance = _DAI.balanceOf(address(this));
 
-    // Deposit any available Dai.
-    _depositOnCompound(AssetType.DAI, daiBalance);
+    if (daiBalance > 0) {
+      // First use funds to try to repay Dai borrow balance.
+      uint256 remainingDai = _repayOnCompound(AssetType.DAI, daiBalance);
+
+      // Then deposit any remaining Dai.
+      _depositOnCompound(AssetType.DAI, remainingDai);
+    }
 
     // Get the current USDC balance on this contract.
     uint256 usdcBalance = _USDC.balanceOf(address(this));
@@ -158,15 +187,24 @@ contract DharmaSmartWalletImplementationV3 is
       // If allowance is insufficient, try to set it before depositing.
       if (usdcAllowance < usdcBalance) {
         if (_setFullApproval(AssetType.USDC)) {
-          // Deposit any available USDC.
-          _depositOnCompound(AssetType.USDC, usdcBalance);
+          // First use funds to try to repay Dai borrow balance.
+          uint256 remainingUsdc = _repayOnCompound(AssetType.USDC, usdcBalance);
+
+          // Then deposit any remaining USDC.
+          _depositOnCompound(AssetType.USDC, remainingUsdc);
         }
       // Otherwise, go ahead and try the deposit.
       } else {
-        // Deposit any available USDC.
-        _depositOnCompound(AssetType.USDC, usdcBalance);
+        // First use funds to try to repay Dai borrow balance.
+        uint256 remainingUsdc = _repayOnCompound(AssetType.USDC, usdcBalance);
+
+        // Then deposit any remaining USDC.
+        _depositOnCompound(AssetType.USDC, remainingUsdc);
       }
     }
+
+    // Deposit any Ether balance on this contract.
+    _depositEtherOnCompound();
   }
 
   /**
@@ -231,9 +269,10 @@ contract DharmaSmartWalletImplementationV3 is
       this._withdrawDaiAtomic.selector, amount, recipient
     ));
 
-    // If the atomic call failed, emit an event signifying a transfer failure.
+    // If the atomic call failed, diagnose the reason and emit an event.
     if (!ok) {
-      emit ExternalError(address(_DAI), "DAI contract reverted on transfer.");
+      // This revert could be caused by cDai MathError or Dai transfer error.
+      _diagnoseAndEmitErrorRelatedToWithdrawal(AssetType.DAI);
     } else {
       // Set ok to false if the call succeeded but the withdrawal failed.
       ok = abi.decode(returnData, (bool));
@@ -246,9 +285,9 @@ contract DharmaSmartWalletImplementationV3 is
    * the maximum amount if specified using `uint256(-1)`, to the supplied
    * recipient address by redeeming the underlying Dai from the cDAI contract
    * and transferring it to the recipient. An ExternalError will be emitted and
-   * the transfer will be skipped if the call to `redeem` or `redeemUnderlying`
-   * fails, and any revert will be caught by `withdrawDai` and diagnosed in
-   * order to emit an appropriate ExternalError as well.
+   * the transfer will be skipped if the call to `redeemUnderlying` fails, and
+   * any revert will be caught by `withdrawDai` and diagnosed in order to emit
+   * an appropriate ExternalError as well.
    * @param amount uint256 The amount of Dai to withdraw.
    * @param recipient address The account to transfer the withdrawn Dai to.
    * @return True if the withdrawal succeeded, otherwise false.
@@ -262,20 +301,72 @@ contract DharmaSmartWalletImplementationV3 is
 
     // If amount = 0xfff...fff, withdraw the maximum amount possible.
     bool maxWithdraw = (amount == uint256(-1));
+    uint256 redeemUnderlyingAmount;
     if (maxWithdraw) {
-      // Attempt to withdraw all Dai from Compound before proceeding.
-      if (_withdrawMaxFromCompound(AssetType.DAI)) {
-        // At this point dai transfer should never fail - wrap it just in case.
-        require(_DAI.transfer(recipient, _DAI.balanceOf(address(this))));
-        success = true;
-      }
+      redeemUnderlyingAmount = _CDAI.balanceOfUnderlying(address(this));
     } else {
-      // Attempt to withdraw specified Dai from Compound before proceeding.
-      if (_withdrawFromCompound(AssetType.DAI, amount)) {
-        // At this point dai transfer should never fail - wrap it just in case.
+      redeemUnderlyingAmount = amount;
+    }
+
+    // Attempt to withdraw specified Dai amount from Compound before proceeding.
+    if (_withdrawFromCompound(AssetType.DAI, redeemUnderlyingAmount)) {
+      // At this point dai transfer *should* never fail - wrap it just in case.
+      if (maxWithdraw) {
+        require(_DAI.transfer(recipient, _DAI.balanceOf(address(this))));
+      } else {
         require(_DAI.transfer(recipient, amount));
-        success = true;
       }
+      success = true;
+    }
+  }
+
+  function borrowDai(
+    uint256 amount,
+    address recipient,
+    uint256 minimumActionGas,
+    bytes calldata userSignature,
+    bytes calldata dharmaSignature
+  ) external returns (bool ok) {
+    // Ensure caller and/or supplied signatures are valid and increment nonce.
+    _validateActionAndIncrementNonce(
+      ActionType.DAIBorrow,
+      abi.encode(amount, recipient),
+      minimumActionGas,
+      userSignature,
+      dharmaSignature
+    );
+
+    // Set the self-call context so we can call _borrowDaiAtomic.
+    _selfCallContext = this.borrowDai.selector;
+
+    // Make the atomic self-call - if borrow fails on cDAI, it will succeed but
+    // nothing will happen except firing an ExternalError event. If the second
+    // part of the self-call (the Dai transfer) fails, it will revert and roll
+    // back the first part of the call, and we'll fire an ExternalError event
+    // after returning from the failed call.
+    bytes memory returnData;
+    (ok, returnData) = address(this).call(abi.encodeWithSelector(
+      this._borrowDaiAtomic.selector, amount, recipient
+    ));
+    if (!ok) {
+      emit ExternalError(address(_DAI), "DAI contract reverted on transfer.");
+    } else {
+      // Ensure that ok == false in the event the borrow failed.
+      ok = abi.decode(returnData, (bool));
+    }
+  }
+
+  function _borrowDaiAtomic(
+    uint256 amount,
+    address recipient
+  ) external returns (bool success) {
+    // Ensure caller is this contract and self-call context is correctly set.
+    _enforceSelfCallFrom(this.borrowDai.selector);
+
+    if (_borrowFromCompound(AssetType.DAI, amount)) {
+      // at this point dai transfer *should* never fail - wrap it just in case.
+      require(_DAI.transfer(recipient, amount));
+      success = true;
     }
   }
 
@@ -341,8 +432,8 @@ contract DharmaSmartWalletImplementationV3 is
       this._withdrawUSDCAtomic.selector, amount, recipient
     ));
     if (!ok) {
-      // Find out why USDC transfer reverted (doesn't give revert reasons).
-      _diagnoseAndEmitUSDCSpecificError(_USDC.transfer.selector);
+      // This revert could be caused by cUSDC MathError or USDC transfer error.
+      _diagnoseAndEmitErrorRelatedToWithdrawal(AssetType.USDC);
     } else {
       // Ensure that ok == false in the event the withdrawal failed.
       ok = abi.decode(returnData, (bool));
@@ -371,44 +462,73 @@ contract DharmaSmartWalletImplementationV3 is
 
     // If amount = 0xfff...fff, withdraw the maximum amount possible.
     bool maxWithdraw = (amount == uint256(-1));
+    uint256 redeemUnderlyingAmount;
     if (maxWithdraw) {
-      // Attempt to withdraw all USDC from Compound before proceeding.
-      if (_withdrawMaxFromCompound(AssetType.USDC)) {
-        // Ensure that the USDC transfer does not fail.
-        require(_USDC.transfer(recipient, _USDC.balanceOf(address(this))));
-        success = true;
-      }
+      redeemUnderlyingAmount = _CUSDC.balanceOfUnderlying(address(this));
     } else {
-      // Attempt to withdraw specified USDC from Compound before proceeding.
-      if (_withdrawFromCompound(AssetType.USDC, amount)) {
-        // Ensure that the USDC transfer does not fail.
+      redeemUnderlyingAmount = amount;
+    }
+
+    // Try to withdraw specified USDC amount from Compound before proceeding.
+    if (_withdrawFromCompound(AssetType.USDC, redeemUnderlyingAmount)) {
+      // Ensure that the USDC transfer does not fail.
+      if (maxWithdraw) {
+        require(_USDC.transfer(recipient, _USDC.balanceOf(address(this))));
+      } else {
         require(_USDC.transfer(recipient, amount));
-        success = true;
       }
+      success = true;
     }
   }
 
-  /**
-   * @notice Withdraw Ether to a provided recipient address by transferring it
-   * to a recipient. This is only intended to be utilized on V3 as a mechanism
-   * for recovering Ether from this contract.
-   * @param amount uint256 The amount of Ether to withdraw.
-   * @param recipient address The account to transfer the Ether to.
-   * @param minimumActionGas uint256 The minimum amount of gas that must be
-   * provided to this call - be aware that additional gas must still be included
-   * to account for the cost of overhead incurred up until the start of this
-   * function call.
-   * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. If the user
-   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
-   * will be used. A unique hash returned from `getCustomActionID` is prefixed
-   * and hashed to create the message hash for the signature.
-   * @param dharmaSignature bytes A signature that resolves to the public key
-   * returned for this account from the Dharma Key Registry. A unique hash
-   * returned from `getCustomActionID` is prefixed and hashed to create the
-   * signed message.
-   * @return True if the transfer succeeded, otherwise false.
-   */
+  function borrowUSDC(
+    uint256 amount,
+    address recipient,
+    uint256 minimumActionGas,
+    bytes calldata userSignature,
+    bytes calldata dharmaSignature
+  ) external returns (bool ok) {
+    // Ensure caller and/or supplied signatures are valid and increment nonce.
+    _validateActionAndIncrementNonce(
+      ActionType.USDCBorrow,
+      abi.encode(amount, recipient),
+      minimumActionGas,
+      userSignature,
+      dharmaSignature
+    );
+
+    // Set the self-call context so we can call _borrowUSDCAtomic.
+    _selfCallContext = this.borrowUSDC.selector;
+
+    // Make the atomic self-call - if borrow fails on cUSDC, it will succeed but
+    // nothing will happen except firing an ExternalError event. If the second
+    // part of the self-call (USDC transfer) fails, it will revert and roll back
+    // the first part of the call, and we'll fire an ExternalError event after
+    // returning from the failed call.
+    bytes memory returnData;
+    (ok, returnData) = address(this).call(abi.encodeWithSelector(
+      this._borrowUSDCAtomic.selector, amount, recipient
+    ));
+    if (!ok) {
+      // Find out why USDC transfer reverted (doesn't give revert reasons).
+      _diagnoseAndEmitUSDCSpecificError(_USDC.transfer.selector);
+    } else {
+      // Ensure that ok == false in the event the borrow failed.
+      ok = abi.decode(returnData, (bool));
+    }
+  }
+
+  function _borrowUSDCAtomic(uint256 amount, address recipient) external returns (bool success) {
+    // Ensure caller is this contract and self-call context is correctly set.
+    _enforceSelfCallFrom(this.borrowUSDC.selector);
+
+    if (_borrowFromCompound(AssetType.USDC, amount)) {
+      // ensure that the USDC transfer does not fail.
+      require(_USDC.transfer(recipient, amount));
+      success = true;
+    }
+  }
+
   function withdrawEther(
     uint256 amount,
     address payable recipient,
@@ -425,10 +545,36 @@ contract DharmaSmartWalletImplementationV3 is
       dharmaSignature
     );
 
-    // Attempt to perform the transfer and emit an event if it fails.
-    (ok, ) = recipient.call.gas(2300).value(amount)("");
+    // Set the self-call context so we can call _withdrawEtherAtomic.
+    _selfCallContext = this.withdrawEther.selector;
+
+    // Make the atomic self-call - if redeemUnderlying fails on cDAI, it will
+    // succeed but nothing will happen except firing an ExternalError event. If
+    // the second part of the self-call (the Dai transfer) fails, it will revert
+    // and roll back the first part of the call, and we'll fire an ExternalError
+    // event after returning from the failed call.
+    bytes memory returnData;
+    (ok, returnData) = address(this).call(abi.encodeWithSelector(
+      this._withdrawEtherAtomic.selector, amount, recipient
+    ));
     if (!ok) {
-      emit ExternalError(recipient, "Recipient rejected ether transfer.");
+      emit ExternalError(address(this), "Ether transfer was unsuccessful.");
+    } else {
+      // Ensure that ok == false in the event the withdrawal failed.
+      ok = abi.decode(returnData, (bool));
+    }
+  }
+
+  function _withdrawEtherAtomic(
+    uint256 amount,
+    address payable recipient
+  ) external returns (bool success) {
+    // Ensure caller is this contract and self-call context is correctly set.
+    _enforceSelfCallFrom(this.withdrawEther.selector);
+
+    if (_withdrawFromCompound(AssetType.ETH, amount)) {
+      recipient.transfer(amount);
+      success = true;
     }
   }
 
@@ -461,31 +607,6 @@ contract DharmaSmartWalletImplementationV3 is
     );
   }
 
-  /**
-   * @notice Perform a generic call to another contract. Note that accounts with
-   * no code may not be specified, nor may the smart wallet itself. In order to
-   * increment the nonce and invalidate the signature, a call to this function
-   * with a valid target, signatutes, and gas will always succeed. To determine
-   * whether the call made as part of the action was successful or not, either
-   * the return values or the `CallSuccess` or `CallFailure` event can be used.
-   * @param to address The contract to call.
-   * @param data bytes The calldata to provide when making the call.
-   * @param minimumActionGas uint256 The minimum amount of gas that must be
-   * provided to this call - be aware that additional gas must still be included
-   * to account for the cost of overhead incurred up until the start of this
-   * function call.
-   * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. If the user
-   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
-   * will be used. A unique hash returned from `getCustomActionID` is prefixed
-   * and hashed to create the message hash for the signature.
-   * @param dharmaSignature bytes A signature that resolves to the public key
-   * returned for this account from the Dharma Key Registry. A unique hash
-   * returned from `getCustomActionID` is prefixed and hashed to create the
-   * signed message.
-   * @return A boolean signifying the status of the call, as well as any data
-   * returned from the call.
-   */
   function executeAction(
     address to,
     bytes calldata data,
@@ -577,26 +698,29 @@ contract DharmaSmartWalletImplementationV3 is
   }
 
   /**
-   * @notice Retrieve the Dai and USDC balances held by the smart wallet, both
-   * directly and held in Compound. This is not a view function since Compound
+   * @notice Retrieve the Dai, USDC, and ETH balances held by the smart wallet,
+   * both directly and in Compound. This is not a view function since Compound
    * will calculate accrued interest as part of the underlying balance checks,
    * but can still be called from an off-chain source as though it were a view
    * function.
-   * @return The Dai balance, the USDC balance, the underlying Dai balance of
-   * the cDAI balance, and the underlying USDC balance of the cUSDC balance.
+   * @return The Dai balance, the USDC balance, the ETH balance, the underlying
+   * Dai balance of the cDAI balance, the underlying USDC balance of the cUSDC
+   * balance, and the underlying ETH balance of the cEther balance.
    */
   function getBalances() external returns (
     uint256 daiBalance,
     uint256 usdcBalance,
-    uint256 etherBalance, // always returns 0
+    uint256 etherBalance,
     uint256 cDaiUnderlyingDaiBalance,
     uint256 cUsdcUnderlyingUsdcBalance,
-    uint256 cEtherUnderlyingEtherBalance // always returns 0
+    uint256 cEtherUnderlyingEtherBalance
   ) {
     daiBalance = _DAI.balanceOf(address(this));
     usdcBalance = _USDC.balanceOf(address(this));
+    etherBalance = address(this).balance;
     cDaiUnderlyingDaiBalance = _CDAI.balanceOfUnderlying(address(this));
     cUsdcUnderlyingUsdcBalance = _CUSDC.balanceOfUnderlying(address(this));
+    cEtherUnderlyingEtherBalance = _CETH.balanceOfUnderlying(address(this));
   }
 
   /**
@@ -626,9 +750,9 @@ contract DharmaSmartWalletImplementationV3 is
    * action. The current nonce will be used, which means that it will only be
    * valid for the next action taken.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2), 
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
-   * ETHWithdrawal (6).
+   * actions in V4 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5),
+   * ETHWithdrawal (6), DAIBorrow (7), and USDCBorrow (8).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
    * for other action types.
    * @param recipient address The account to transfer withdrawn funds to, the
@@ -665,9 +789,9 @@ contract DharmaSmartWalletImplementationV3 is
    * action. Any nonce value may be supplied, which enables constructing valid
    * message hashes for multiple future actions ahead of time.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2), 
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
-   * ETHWithdrawal (6).
+   * actions in V4 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5),
+   * ETHWithdrawal (6), DAIBorrow (7), and USDCBorrow (8).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
    * for other action types.
    * @param recipient address The account to transfer withdrawn funds to, the
@@ -952,31 +1076,26 @@ contract DharmaSmartWalletImplementationV3 is
    * current exchange rate (due to lack of sufficient precision on the tokens).
    */
   function _depositOnCompound(AssetType asset, uint256 balance) internal {
-    // Only perform a deposit if the balance is non-zero. This could also take
-    // into account the safe deposit threshold for each asset - for instance, a
-    // deposit of 1 wei of Dai will mint 0 cDai, since cDai precision is lower.
-    if (balance > 0) {
-      // Get cToken address for the asset type.
-      address cToken = asset == AssetType.DAI ? address(_CDAI) : address(_CUSDC);
+    // Get cToken address for the asset type.
+    address cToken = asset == AssetType.DAI ? address(_CDAI) : address(_CUSDC);
 
-      // Attempt to mint the balance on the cToken contract.
-      (bool ok, bytes memory data) = cToken.call(abi.encodeWithSelector(
-        // Note: since both cTokens have the same interface, just use cDAI's.
-        _CDAI.mint.selector, balance
-      ));
+    // Attempt to mint the balance on the cToken contract.
+    (bool ok, bytes memory data) = cToken.call(abi.encodeWithSelector(
+      // Note: since both cTokens have the same interface, just use cDAI's.
+      _CDAI.mint.selector, balance
+    ));
 
-      // Log an external error if something went wrong with the attempt.
-      _checkCompoundInteractionAndLogAnyErrors(
-        asset, _CDAI.mint.selector, ok, data
-      );
-    }
+    // Log an external error if something went wrong with the attempt.
+    _checkCompoundInteractionAndLogAnyErrors(
+      asset, _CDAI.mint.selector, ok, data
+    );
   }
 
   /**
    * @notice Internal function for withdrawing a given underlying asset balance
    * from the corresponding cToken. Note that the requested balance may not be
    * currently available on Compound, which will cause the withdrawal to fail.
-   * @param asset uint256 The asset's ID, either Dai (0) or USDC (1).
+   * @param asset uint256 The asset's ID, either Dai (0), USDC (1), or ETH (2).
    * @param balance uint256 The amount of the asset to withdraw, denominated in
    * the underlying token. Note that an attempt to withdraw "dust" (i.e. very
    * small amounts) may result in 0 underlying tokens being redeemed, or in
@@ -988,8 +1107,18 @@ contract DharmaSmartWalletImplementationV3 is
     AssetType asset,
     uint256 balance
   ) internal returns (bool success) {
-    // Get cToken address for the asset type. (No custom ETH withdrawal action.)
-    address cToken = asset == AssetType.DAI ? address(_CDAI) : address(_CUSDC);
+    // Get cToken address for the asset type.
+    address cToken;
+
+    if (asset == AssetType.DAI) {
+      cToken = address(_CDAI);
+    } else { // Note: `else if` breaks code coverage.
+      if (asset == AssetType.USDC) {
+        cToken = address(_CUSDC);
+      } else {
+        cToken = address(_CETH);
+      }
+    }
 
     // Attempt to redeem the underlying balance from the cToken contract.
     (bool ok, bytes memory data) = cToken.call(abi.encodeWithSelector(
@@ -1003,33 +1132,81 @@ contract DharmaSmartWalletImplementationV3 is
     );
   }
 
-  /**
-   * @notice Internal function for withdrawing the total underlying asset
-   * balance from the corresponding cToken. Note that the requested balance may
-   * not be currently available on Compound, which will cause the withdrawal to
-   * fail.
-   * @param asset uint256 The asset's ID, either Dai (0) or USDC (1).
-   * @return True if the withdrawal succeeded, otherwise false.
-   */
-  function _withdrawMaxFromCompound(
-    AssetType asset
-  ) internal returns (bool success) {
-    // Get cToken address for the asset type. (No custom ETH withdrawal action.)
+  function _repayOnCompound(
+    AssetType asset,
+    uint256 balance
+  ) internal returns (uint256 remainingBalance) {
+    // Get cToken address for the asset type. (ETH borrowing is not supported.)
     address cToken = asset == AssetType.DAI ? address(_CDAI) : address(_CUSDC);
 
-    // Get the current cToken balance for this account.
-    uint256 redeemAmount = IERC20(cToken).balanceOf(address(this));
+    // TODO: handle errors originating from this call (reverts on MathError).
+    uint256 borrowBalance = CTokenInterface(cToken).borrowBalanceCurrent(
+      address(this)
+    );
 
-    // Attempt to redeem the underlying balance from the cToken contract.
+    // Skip repayment if there is no borrow balance.
+    if (borrowBalance == 0) {
+      return balance;
+    }
+
+    uint256 borrowBalanceToRepay;
+    if (borrowBalance > balance) {
+      borrowBalanceToRepay = balance;
+    } else {
+      borrowBalanceToRepay = borrowBalance;
+    }
+    // Note: SafeMath not needed since balance >= borrowBalanceToRepay
+    remainingBalance = balance - borrowBalanceToRepay;
+
+    // Attempt to repay the balance on the cToken contract.
     (bool ok, bytes memory data) = cToken.call(abi.encodeWithSelector(
-      // Note: function selector is the same for each cToken so just use cDAI's.
-      _CDAI.redeem.selector, redeemAmount
+      // Note: since both cTokens have the same interface, just use cDAI's.
+      _CDAI.repayBorrow.selector, borrowBalanceToRepay
+    ));
+
+    // Log an external error if something went wrong with the attempt.
+    bool success = _checkCompoundInteractionAndLogAnyErrors(
+      asset, _CDAI.repayBorrow.selector, ok, data
+    );
+
+    // Reset remaining balance to initial balance if repay was not successful.
+    if (!success) {
+      remainingBalance = balance;
+    }
+  }
+
+  function _borrowFromCompound(
+    AssetType asset,
+    uint256 underlyingToBorrow
+  ) internal returns (bool success) {
+    // Get cToken address for the asset type. (ETH borrowing is not supported.)
+    address cToken = asset == AssetType.DAI ? address(_CDAI) : address(_CUSDC);
+
+    // Attempt to borrow the underlying amount from the cToken contract.
+    (bool ok, bytes memory data) = cToken.call(abi.encodeWithSelector(
+      // Note: since both cTokens have the same interface, just use cDAI's.
+      _CDAI.borrow.selector, underlyingToBorrow
     ));
 
     // Log an external error if something went wrong with the attempt.
     success = _checkCompoundInteractionAndLogAnyErrors(
-      asset, _CDAI.redeem.selector, ok, data
+      asset, _CDAI.borrow.selector, ok, data
     );
+  }
+
+  function _depositEtherOnCompound() internal {
+    uint256 balance = address(this).balance;
+    if (balance > 0) {
+      // Attempt to mint the full ETH balance on the cEther contract.
+      (bool ok, bytes memory data) = address(_CETH).call.value(balance)(
+        abi.encodeWithSelector(_CETH.mint.selector)
+      );
+
+      // Log an external error if something went wrong with the attempt.
+      _checkCompoundInteractionAndLogAnyErrors(
+        AssetType.ETH, _CETH.mint.selector, ok, data
+      );
+    }
   }
 
   /**
@@ -1042,9 +1219,9 @@ contract DharmaSmartWalletImplementationV3 is
    * errors, which can be guarded against by supplying a minimum action gas
    * requirement).
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2), 
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
-   * ETHWithdrawal (6).
+   * actions in V4 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5),
+   * ETHWithdrawal (6), DAIBorrow (7), and USDCBorrow (8).
    * @param arguments bytes ABI-encoded arguments for the action.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
    * provided to this call - be aware that additional gas must still be included
@@ -1140,6 +1317,58 @@ contract DharmaSmartWalletImplementationV3 is
   }
 
   /**
+   * @notice Internal function for entering cDAI, cUSDC, and cETH markets. This
+   * is performed now so that V0 smart wallets will not need to be reinitialized
+   * in order to support using these assets as collateral when borrowing funds.
+   */
+  function _enterMarkets() internal {
+    // Create input array with each cToken address on which to enter a market. 
+    address[] memory marketsToEnter = new address[](3);
+    marketsToEnter[0] = address(_CDAI);
+    marketsToEnter[1] = address(_CUSDC);
+    marketsToEnter[2] = address(_CETH);
+
+    // Attempt to enter each market by calling into the Comptroller contract.
+    (bool ok, bytes memory data) = address(_COMPTROLLER).call(
+      abi.encodeWithSelector(_COMPTROLLER.enterMarkets.selector, marketsToEnter)
+    );
+
+    // Log an external error if something went wrong with the attempt.
+    if (ok) {
+      uint256[] memory compoundErrors = abi.decode(data, (uint256[]));
+      for (uint256 i = 0; i < compoundErrors.length; i++) {
+        uint256 compoundError = compoundErrors[i];
+        if (compoundError != _COMPOUND_SUCCESS) {
+          emit ExternalError(
+            address(_COMPTROLLER),
+            string(
+              abi.encodePacked(
+                "Compound Comptroller contract returned error code ",
+                uint8((compoundError / 10) + 48),
+                uint8((compoundError % 10) + 48),
+                " while attempting to call enterMarkets."
+              )
+            )
+          );
+        }
+      }
+    } else {
+      // Decode the revert reason in the event one was returned.
+      string memory revertReason = _decodeRevertReason(data);
+
+      emit ExternalError(
+        address(_COMPTROLLER),
+        string(
+          abi.encodePacked(
+            "Compound Comptroller contract reverted on enterMarkets: ",
+            revertReason
+          )
+        )
+      );
+    }
+  }
+
+  /**
    * @notice Internal function to determine whether a call to a given cToken
    * succeeded, and to emit a relevant ExternalError event if it failed. The
    * failure can be caused by a call that reverts, or by a call that does not
@@ -1209,6 +1438,51 @@ contract DharmaSmartWalletImplementationV3 is
           )
         )
       );
+    }
+  }
+
+  /**
+   * @notice Internal function to diagnose the reason that a withdrawal attempt
+   * failed and to emit a corresponding ExternalError event. Errors related to
+   * the call to `redeemUnderlying` on the cToken are handled by
+   * `_checkCompoundInteractionAndLogAnyErrors` - if the error did not originate
+   * from that call, it could be caused by a call to `balanceOfUnderlying` (i.e.
+   * when attempting a maximum withdrawal) or by the call to `transfer` on the
+   * underlying token after the withdrawal has been completed.
+   * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
+   */
+  function _diagnoseAndEmitErrorRelatedToWithdrawal(AssetType asset) internal {
+    // Get called contract address and name of contract (no need for selector).
+    (address cToken, string memory name, ) = _getCTokenDetails(
+      asset, bytes4(0)
+    );
+
+    // Revert could be caused by cToken MathError or underlying transfer error.
+    (bool check, ) = cToken.call(abi.encodeWithSelector(
+      // Note: since both cTokens have the same interface, just use cDAI's.
+      _CDAI.balanceOfUnderlying.selector, address(this)
+    ));
+    if (!check) {
+      emit ExternalError(
+        cToken,
+        string(
+          abi.encodePacked(
+            name, " contract reverted on call to balanceOfUnderlying."
+          )
+        )
+      );
+    } else {
+      if (asset == AssetType.DAI) {
+        emit ExternalError(address(_DAI), "DAI contract reverted on transfer.");
+      } else { // Note: `else if` breaks code coverage.
+        if (asset == AssetType.ETH) {
+          // Note: this should log the address of the recipient.
+          emit ExternalError(address(this), "ETH transfer reverted.");
+        } else {
+          // Find out why USDC transfer reverted (doesn't give revert reasons).
+          _diagnoseAndEmitUSDCSpecificError(_USDC.transfer.selector);
+        }
+      }   
     }
   }
 
@@ -1292,9 +1566,9 @@ contract DharmaSmartWalletImplementationV3 is
    * is derived by prefixing (according to EIP-191 0x45) and hashing an actionID
    * returned from `getCustomActionID`.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2), 
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
-   * ETHWithdrawal (6).
+   * actions in V4 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5),
+   * ETHWithdrawal (6), DAIBorrow (7), and USDCBorrow (8).
    * @param arguments bytes ABI-encoded arguments for the action.
    * @param userSignature bytes A signature that resolves to the public key
    * set for this account in storage slot zero, `_userSigningKey`. If the user
@@ -1343,9 +1617,9 @@ contract DharmaSmartWalletImplementationV3 is
    * when reconstructing an action ID during protected function execution based
    * on the supplied parameters.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2), 
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
-   * ETHWithdrawal (6).
+   * actions in V4 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5),
+   * ETHWithdrawal (6), DAIBorrow (7), and USDCBorrow (8).
    * @param arguments bytes ABI-encoded arguments for the action.
    * @param nonce uint256 The nonce to use.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
@@ -1365,34 +1639,19 @@ contract DharmaSmartWalletImplementationV3 is
     address userSigningKey,
     address dharmaSigningKey
   ) internal view returns (bytes32 actionID) {
-    if (action == ActionType.Cancel) {
-      // actionID is constructed according to EIP-191-0x45 to prevent replays.
-      actionID = keccak256(
-        abi.encodePacked(
-          address(this),
-          _DHARMA_SMART_WALLET_VERSION,
-          userSigningKey,
-          dharmaSigningKey,
-          nonce,
-          minimumActionGas,
-          action
-        )
-      );
-    } else {
-      // actionID is constructed according to EIP-191-0x45 to prevent replays.
-      actionID = keccak256(
-        abi.encodePacked(
-          address(this),
-          _DHARMA_SMART_WALLET_VERSION,
-          userSigningKey,
-          dharmaSigningKey,
-          nonce,
-          minimumActionGas,
-          action,
-          arguments
-        )
-      );
-    }
+    // The actionID is constructed according to EIP-191-0x45 to prevent replays.
+    actionID = keccak256(
+      abi.encodePacked(
+        address(this),
+        _DHARMA_SMART_WALLET_VERSION,
+        userSigningKey,
+        dharmaSigningKey,
+        nonce,
+        minimumActionGas,
+        action,
+        arguments
+      )
+    );
   }
 
   /**
@@ -1415,16 +1674,29 @@ contract DharmaSmartWalletImplementationV3 is
     if (asset == AssetType.DAI) {
       account = address(_CDAI);
       name = "cDAI";
-    } else {
-      account = address(_CUSDC);
-      name = "cUSDC";
+    } else { // Note: `else if` breaks code coverage.
+      if (asset == AssetType.USDC) {
+        account = address(_CUSDC);
+        name = "cUSDC";
+      } else {
+        account = address(_CETH);
+        name = "cEther";
+      }
     }
 
     // Note: since both cTokens have the same interface, just use cDAI's.
     if (functionSelector == _CDAI.mint.selector) {
       functionName = "mint";
-    } else {
-      functionName = "redeemUnderlying";
+    } else { // Note: `else if` breaks code coverage.
+      if (functionSelector == _CDAI.redeemUnderlying.selector) {
+        functionName = "redeemUnderlying";
+      } else {
+        if (functionSelector == _CDAI.borrow.selector) {
+          functionName = "borrow";
+        } else {
+          functionName = "repayBorrow";
+        }
+      }
     }
   }
 
