@@ -1424,7 +1424,10 @@ contract DharmaSmartWalletImplementationV3 is
     if (functionSelector == _CDAI.mint.selector) {
       functionName = "mint";
     } else {
-      functionName = "redeemUnderlying";
+      functionName = string(abi.encodePacked(
+        "redeem",
+        functionSelector == _CDAI.redeemUnderlying.selector ? "Underlying" : ""
+      ));
     }
   }
 

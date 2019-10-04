@@ -6,7 +6,7 @@ import "../../interfaces/DharmaKeyRegistryInterface.sol";
 
 
 /**
- * @title DharmaKeyRegistryV1
+ * @title DharmaKeyRegistryV2
  * @author 0age
  * @notice The Dharma Key Registry is an owned contract that holds the public
  * user signing keys that will be used by the Dharma Smart Wallet. Each time a
@@ -16,9 +16,11 @@ import "../../interfaces/DharmaKeyRegistryInterface.sol";
  * has not been set for that smart wallet, it will return the global public key.
  * Otherwise, it will return the specific signing key. Additional view functions
  * are also provided for retrieving public keys directly. Only the owner may
- * update these keys.
+ * update these keys. Also, note that the V2 key registry includes an additional
+ * mapping to track all global keys that have been used, and only allows a given
+ * global key to be set one time.
  */
-contract DharmaKeyRegistryV1 is Ownable, DharmaKeyRegistryInterface {
+contract DharmaKeyRegistryV2 is Ownable, DharmaKeyRegistryInterface {
   using ECDSA for bytes32;
 
   // The global public key serves as the default signing key.
@@ -27,13 +29,16 @@ contract DharmaKeyRegistryV1 is Ownable, DharmaKeyRegistryInterface {
   // Specific keys may also be set on a per-caller basis.
   mapping (address => address) private _specificKeys;
 
+  // Maintain a mapping of all used global keys (to prevent reuse).
+  mapping (address => bool) private _usedGlobalKeys;
+
   /**
    * @notice In the constructor, set the initial global key and the initial
    * owner to tx.origin.
    */
   constructor() public {
     // Initially set the global key to the account of the transaction submitter.
-    _globalKey = tx.origin;
+    _registerGlobalKey(tx.origin);
 
     // Also set the initial owner to the account of the transaction submitter.
     _transferOwnership(tx.origin);
@@ -71,8 +76,8 @@ contract DharmaKeyRegistryV1 is Ownable, DharmaKeyRegistryInterface {
     // Ensure that the provided signature resolves to the provided global key.
     require(globalKey == signer, "Invalid signature for supplied global key.");
 
-    // Update the global key to the provided global key.
-    _globalKey = globalKey;
+    // Update global key to the provided global key and prevent future reuse.
+    _registerGlobalKey(globalKey);
   }
 
   /**
@@ -150,5 +155,23 @@ contract DharmaKeyRegistryV1 is Ownable, DharmaKeyRegistryInterface {
       specificKey != address(0),
       "No specific key set for the provided account."
     );
+  }
+
+  /**
+   * @notice Internal function to set a new global key once contract ownership
+   * and signature validity have both been checked, or during contract creation.
+   * The provided global key must not have been used previously, and once set it
+   * will be registered as having been used.
+   * @param globalKey address The new global public key.
+   */
+  function _registerGlobalKey(address globalKey) internal {
+    // Ensure that the global key has not been used previously.
+    require(!_usedGlobalKeys[globalKey], "Key has been used previously.");
+
+    // Update the global key to the provided global key.
+    _globalKey = globalKey;
+
+    // Mark the key as having been used previously.
+    _usedGlobalKeys[globalKey] = true;
   }
 }

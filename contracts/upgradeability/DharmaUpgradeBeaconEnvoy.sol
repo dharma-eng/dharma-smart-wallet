@@ -1,5 +1,7 @@
 pragma solidity 0.5.11;
 
+import "../../interfaces/DharmaUpgradeBeaconEnvoyInterface.sol";
+
 
 /**
  * @title DharmaUpgradeBeaconEnvoy
@@ -8,7 +10,7 @@ pragma solidity 0.5.11;
  * to retrieve the implementation address, since a call from the controller will
  * instead trigger an update of the upgrade beacon's implementation.
  */
-contract DharmaUpgradeBeaconEnvoy {
+contract DharmaUpgradeBeaconEnvoy is DharmaUpgradeBeaconEnvoyInterface {
   /**
    * @notice View function to check the existing implementation on a given
    * beacon. This is accomplished via a staticcall to the beacon with no data,

@@ -31,7 +31,7 @@ contract Timelocker {
   // Fire an event any time a minimum timelock interval is modified.
   event TimelockIntervalModified(
     bytes4 functionSelector, // selector of the function 
-    uint256 oldInterval,     // new minimum timelock interval for the function
+    uint256 oldInterval,     // old minimum timelock interval for the function
     uint256 newInterval      // new minimum timelock interval for the function
   );
 

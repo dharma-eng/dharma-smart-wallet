@@ -7,21 +7,25 @@ let AdharmaSmartWalletImplementationArtifact;
 
 const DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
 const DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
+const DharmaKeyRingUpgradeBeaconArtifact = require('../../build/contracts/DharmaKeyRingUpgradeBeacon.json')
+
 const DharmaAccountRecoveryManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
 const DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
 const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
-const ComptrollerArtifact = require('../../build/contracts/ComptrollerInterface.json')
 
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
 const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV2.json')
 const DharmaSmartWalletImplementationV3Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV3.json')
 
+const DharmaKeyRingImplementationV0Artifact = require('../../build/contracts/DharmaKeyRingImplementationV0.json')
+
 const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
 const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
 const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
 const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
+const ComptrollerArtifact = require('../../build/contracts/ComptrollerInterface.json')
 
 const contractNames = Object.assign({}, constants.CONTRACT_NAMES)
 
@@ -76,6 +80,16 @@ module.exports = {test: async function (provider, testingContext) {
   const DharmaUpgradeBeacon = new web3.eth.Contract(
     DharmaUpgradeBeaconArtifact.abi,
     constants.UPGRADE_BEACON_ADDRESS
+  )
+
+  const DharmaKeyRingUpgradeBeaconController = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerArtifact.abi,
+    constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS
+  )
+
+  const DharmaKeyRingUpgradeBeacon = new web3.eth.Contract(
+    DharmaKeyRingUpgradeBeaconArtifact.abi,
+    constants.KEY_RING_UPGRADE_BEACON_ADDRESS
   )
 
   const DharmaAccountRecoveryManager = new web3.eth.Contract(
@@ -151,6 +165,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   DharmaSmartWalletImplementationV3Deployer.options.data = (
     DharmaSmartWalletImplementationV3Artifact.bytecode
+  )
+
+  const DharmaKeyRingImplementationV0Deployer = new web3.eth.Contract(
+    DharmaKeyRingImplementationV0Artifact.abi
+  )
+  DharmaKeyRingImplementationV0Deployer.options.data = (
+    DharmaKeyRingImplementationV0Artifact.bytecode
   )
 
   const UpgradeBeaconImplementationCheckDeployer = new web3.eth.Contract(
@@ -856,6 +877,13 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
+  const DharmaKeyRingImplementationV0 = await runTest(
+    `DharmaKeyRingImplementationV0 contract deployment`,
+    DharmaKeyRingImplementationV0Deployer,
+    '',
+    'deploy'
+  )
+
   await runTest(
     'Dharma Upgrade Beacon Controller cannot set null address as implementation',
     DharmaUpgradeBeaconController,
@@ -1028,6 +1056,67 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     value => {
       assert.strictEqual(value, DharmaSmartWalletImplementationV0.options.address)
+    }
+  )
+
+  await runTest(
+    'Dharma Key Ring Upgrade Beacon Controller can set initial key ring upgrade beacon implementation',
+    DharmaKeyRingUpgradeBeaconController,
+    'upgrade',
+    'send',
+    [
+      DharmaKeyRingUpgradeBeacon.options.address,
+      DharmaKeyRingImplementationV0.options.address
+    ],
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.upgradeBeacon,
+          DharmaKeyRingUpgradeBeacon.options.address
+        )
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.oldImplementation,
+          constants.NULL_ADDRESS
+        )
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
+          constants.EMPTY_HASH
+        )
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.newImplementation,
+          DharmaKeyRingImplementationV0.options.address
+        )
+        /* TODO
+        assert.strictEqual(
+          receipt.events.Upgraded.returnValues.newImplementationCodeHash,
+          ...
+        )
+        */
+      }
+    }
+  )
+
+  const KeyRingUpgradeBeaconImplementationCheck = await runTest(
+    `KeyRingUpgradeBeaconImplementationCheck deployment`,
+    UpgradeBeaconImplementationCheckDeployer,
+    '',
+    'deploy',
+    [
+      DharmaKeyRingUpgradeBeacon.options.address,
+      DharmaKeyRingImplementationV0.options.address
+    ]
+  )
+
+  await runTest(
+    'DharmaKeyRingUpgradeBeacon has the implementation set',
+    DharmaKeyRingUpgradeBeaconController,
+    'getImplementation',
+    'call',
+    [DharmaKeyRingUpgradeBeacon.options.address],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaKeyRingImplementationV0.options.address)
     }
   )
 

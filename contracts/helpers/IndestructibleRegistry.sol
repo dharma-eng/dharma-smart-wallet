@@ -1,4 +1,4 @@
-pragma solidity 0.5.11;
+pragma solidity 0.5.11; // optimization runs: 65536, version: petersburg
 
 
 /**
@@ -85,7 +85,7 @@ contract IndestructibleRegistry {
    */
   function _isPotentiallyDestructible(
     address target
-  ) internal view returns (bool potentiallyDestructible) {
+  ) internal view returns (bool) {
     // Get the size of the target.
     uint256 size;
     assembly { size := extcodesize(target) }
@@ -141,5 +141,8 @@ contract IndestructibleRegistry {
         reachable = true;
       }
     }
+
+    // If no impermissible opcodes were found, return false - indestructible!
+    return false;
   }
 }
