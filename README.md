@@ -70,6 +70,9 @@ https://etherscan.io/tx/0xbbe90a37df4488d725b602a4c214856cd0d5c414fe52e0010ece60
 ##### Upgrade to DharmaSmartWalletImplementationV2
 https://etherscan.io/tx/0xc12cf1c3ca9ef8503cdd5536d8d42d29f8f833d24fb3dcdbea00b18c0b2aa52f#eventlog
 
+##### Implementation Set on keyring Upgrade Beacon
+https://etherscan.io/tx/0xcdf785050d7cd41a30eee0666aca312fd6254189d981a55fa3a18cab2fb3f624#eventlog
+
 # Summary
 Explore a minimal implementation of a smart wallet that:
 
