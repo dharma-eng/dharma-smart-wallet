@@ -39,6 +39,12 @@ https://etherscan.io/address/0x1eb2bc53fc25a917cca3f031913a3522933a5b92#code
 ##### DharmaKeyRingImplementationV0
 https://etherscan.io/address/0x0000000000f732b182f375af6baa1770d83077ed#code
 
+##### DharmaKeyRingFactoryV1
+https://etherscan.io/address/0x00dd005247b300f700cfdff89c00e2acc94c7b00#code
+
+##### Example KeyRingUpgradeBeaconProxyV1
+https://etherscan.io/address/0x0c2b7c1b73229483464d3fc4db4d4c2130374e4f#code
+
 ##### AdharmaSmartWalletImplementation
 https://etherscan.io/address/0x00000000fde3b69fecd50c8a4c001678f00011ab#code
 
