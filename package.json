@@ -1,13 +1,13 @@
 {
   "name": "dharma-smart-wallet",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "",
   "dependencies": {
     "@gnosis.pm/safe-contracts": "1.0.0",
     "@openzeppelin/contracts": "2.3.0",
     "ethereumjs-util": "^6.1.0",
     "ethlint": "^1.2.5",
-    "ganache-cli": "6.3.0",
+    "ganache-cli": "6.7.0",
     "ganache-cli-coverage": "https://github.com/frangio/ganache-cli/releases/download/v6.4.1-coverage/ganache-cli-coverage-6.4.1.tgz",
     "js-sha256": "^0.9.0",
     "solhint": "^2.3.0",
