@@ -59,7 +59,7 @@ contract DharmaAccountRecoveryManager is Ownable, Timelocker {
    * functions that already have other timelocks on them, but only if they have
    * different arguments (i.e. a new wallet or user signing key is specified).
    * Only the owner may call this function.
-   * @param functionSelector selector of the function to be called.   
+   * @param functionSelector selector of the function to be called.
    * @param arguments The abi-encoded arguments of the function to be called -
    * in the case of `recover`, it is the smart wallet address and the new user
    * signing key.
@@ -94,7 +94,7 @@ contract DharmaAccountRecoveryManager is Ownable, Timelocker {
       !_accountRecoveryDisabled[wallet],
       "This wallet has elected to opt out of account recovery functionality."
     );
-    
+
     // Call the specified smart wallet and supply the new user signing key.
     DharmaSmartWalletRecovery(wallet).recover(newUserSigningKey);
   }

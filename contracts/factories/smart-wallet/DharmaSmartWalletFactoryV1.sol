@@ -14,7 +14,7 @@ import "../../../interfaces/DharmaSmartWalletInitializer.sol";
  */
 contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
   // Use Dharma Smart Wallet initializer to construct initialization calldata.
-  DharmaSmartWalletInitializer private _INITIALIZER;
+  DharmaSmartWalletInitializer private _initializer;
 
   /**
    * @notice Deploy a new smart wallet address using the provided user signing
@@ -28,10 +28,10 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
   ) external returns (address wallet) {
     // Get initialization calldata from initialize selector & user signing key.
     bytes memory initializationCalldata = abi.encodeWithSelector(
-      _INITIALIZER.initialize.selector,
+      _initializer.initialize.selector,
       userSigningKey
     );
-    
+
     // Initialize and deploy new user smart wallet as an Upgrade Beacon proxy.
     wallet = _deployUpgradeBeaconProxyInstance(initializationCalldata);
 
@@ -52,10 +52,10 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
   ) external view returns (address wallet) {
     // Get initialization calldata from initialize selector & user signing key.
     bytes memory initializationCalldata = abi.encodeWithSelector(
-      _INITIALIZER.initialize.selector,
+      _initializer.initialize.selector,
       userSigningKey
     );
-    
+
     // Determine the user's smart wallet address based on the user signing key.
     wallet = _computeNextAddress(initializationCalldata);
   }
@@ -134,7 +134,7 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
 
     // Set the initial nonce to be provided when constructing the salt.
     nonce = 0;
-    
+
     // Declare variable for code size of derived address.
     uint256 codeSize;
 

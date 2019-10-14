@@ -1,7 +1,7 @@
 {
   "extends": "solhint:default",
   "rules": {
-    "indent": ["warn", 2],
+    "indent": "off",
     "not-rely-on-time": "off",
     "no-inline-assembly": "off",
     "avoid-low-level-calls": "off",

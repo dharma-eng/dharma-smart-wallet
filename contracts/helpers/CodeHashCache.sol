@@ -26,7 +26,7 @@ contract CodeHashCache {
    */
   function registerCodeHash(address target) external {
     // Ensure that the target contract has not already had a hash registered.
-    require(_cachedHashes[target] == bytes32(0), "Target already registered.");    
+    require(_cachedHashes[target] == bytes32(0), "Target already registered.");
 
     // Ensure that the target contract currently has runtime code.
     uint256 currentCodeSize;

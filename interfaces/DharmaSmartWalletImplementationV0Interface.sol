@@ -4,7 +4,7 @@ pragma solidity 0.5.11;
 interface DharmaSmartWalletImplementationV0Interface {
   // Fires when a new user signing key is set on the smart wallet.
   event NewUserSigningKey(address userSigningKey);
-  
+
   // Fires when an error occurs as part of an attempted action.
   event ExternalError(address indexed source, string revertReason);
 
@@ -71,9 +71,9 @@ interface DharmaSmartWalletImplementationV0Interface {
   );
 
   function getUserSigningKey() external view returns (address userSigningKey);
-  
+
   function getNonce() external view returns (uint256 nonce);
-  
+
   function getNextCustomActionID(
     ActionType action,
     uint256 amount,

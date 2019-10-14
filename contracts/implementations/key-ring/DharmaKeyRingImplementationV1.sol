@@ -14,7 +14,7 @@ import "../../../interfaces/ERC1271.sol";
  * on the Dharma Smart Wallet to support multiple user signing keys. It
  * distinguishes between Admin keys, which are used to modify sigining keys that
  * are set on the key ring or to set a new signing key for the user on the smart
- * wallet, and Standard or Executor keys, which are used when calling 
+ * wallet, and Standard or Executor keys, which are used when calling
  * `isValidSignature` from the smart wallet in order to validate all other smart
  * wallet actions. Upgrades are managed by an upgrade beacon, similar to the one
  * utilized by the Dharma Smart Wallet.
@@ -156,7 +156,7 @@ contract DharmaKeyRingImplementationV1 is
       _keys[argument] = KeyType(adminActionKeyCategory);
     } else if (adminActionCategory == 1) { // Remove
       require(_keys[argument] != KeyType.None, "Key does not exist.");
-      
+
       if (isStandard) {
         require(
           _additionalThresholds.standard > _additionalKeyCounts.standard,
@@ -175,7 +175,7 @@ contract DharmaKeyRingImplementationV1 is
         standard: _additionalKeyCounts.standard - (isStandard ? 1 : 0),
         admin: _additionalKeyCounts.admin - (isAdmin ? 1 : 0)
       });
-      
+
       KeyType currentKeyType = _keys[argument];
       if (
         adminActionKeyCategory == 3 ||
@@ -206,7 +206,7 @@ contract DharmaKeyRingImplementationV1 is
           "Cannot increase admin threshold above number of admin keys."
         );
       }
-      
+
       _additionalThresholds = AdditionalThreshold({
         standard: isStandard ? threshold : _additionalThresholds.standard,
         admin: isAdmin ? threshold : _additionalThresholds.admin
@@ -324,7 +324,7 @@ contract DharmaKeyRingImplementationV1 is
     KeyType requiredKeyType, bytes32 hash, bytes memory signatures
   ) internal view {
     uint160[] memory signers = hash.recoverGroup(signatures);
-    
+
     uint256 threshold = (
       requiredKeyType == KeyType.Standard
         ? uint256(_additionalThresholds.standard)
@@ -335,7 +335,7 @@ contract DharmaKeyRingImplementationV1 is
       signers.length >= threshold,
       "Supplied number of signatures does not meet the required threshold."
     );
-    
+
     uint160 lastSigner = 0;
     for (uint256 i = 0; i < signers.length; i++) {
       uint160 signer = signers[i];

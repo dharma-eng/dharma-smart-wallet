@@ -11,7 +11,7 @@ interface DharmaSmartWalletImplementationV1Interface {
     bytes data,
     bytes returnData
   );
-  
+
   event CallFailure(
     bytes32 actionID,
     uint256 nonce,

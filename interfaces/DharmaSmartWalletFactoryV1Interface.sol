@@ -8,7 +8,7 @@ interface DharmaSmartWalletFactoryV1Interface {
   function newSmartWallet(
     address userSigningKey
   ) external returns (address wallet);
-  
+
   function getNextSmartWallet(
     address userSigningKey
   ) external view returns (address wallet);

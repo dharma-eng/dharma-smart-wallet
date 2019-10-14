@@ -5,7 +5,7 @@ interface CTokenInterface {
   function mint(uint256 mintAmount) external returns (uint256 err);
 
   function redeem(uint256 redeemAmount) external returns (uint256 err);
-  
+
   function redeemUnderlying(uint256 redeemAmount) external returns (uint256 err);
 
   function balanceOf(address account) external returns (uint256 balance);
@@ -18,7 +18,7 @@ interface CTokenInterface {
 
   // NOTE: we could use borrowBalanceStored if interest has already been accrued
   function borrowBalanceCurrent(address account) external returns (uint256 err);
-  
+
   function getAccountSnapshot(address account) external view returns (
     uint256 err,
     uint256 cTokenBalance,

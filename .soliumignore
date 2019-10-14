@@ -1,0 +1,15 @@
+# skip
+node_modules
+contracts/mock/RelayContract.sol
+contracts/mock/RelayContractV2.sol
+
+# disagree with indentation error
+contracts/helpers/FactoryFactFinder.sol
+contracts/upgradeability/DharmaUpgradeBeaconController.sol
+
+# parsing error due to dynamic abi.decode - try again in later version
+contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV0.sol
+contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV1.sol
+contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV2.sol
+contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV3.sol
+contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV4.sol

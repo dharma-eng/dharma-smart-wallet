@@ -93,7 +93,7 @@ contract DharmaKeyRingImplementationV0 is
 
   /**
    * @notice Supply a signature from one of the existing keys on the keyring in
-   * order to add a new key. 
+   * order to add a new key.
    * @param adminActionType uint8 Must be equal to 6 in V0.
    * @param argument uint160 The signing address to add to the key ring.
    * @param signatures bytes A signature from an existing key on the key ring.
@@ -245,7 +245,7 @@ contract DharmaKeyRingImplementationV0 is
    */
   function _verifySignature(
     bytes32 hash, bytes memory signature
-  ) internal view {   
+  ) internal view {
     require(
       _keys[uint160(hash.recover(signature))] == KeyType.Dual,
       "Supplied signature does not have a signer with the required key type."

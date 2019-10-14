@@ -183,7 +183,7 @@ contract DharmaKeyRingFactoryV1 is DharmaKeyRingFactoryV1Interface {
     bytes memory initializationCalldata = _constructInitializationCalldata(
       userSigningKey
     );
-    
+
     // Determine the user's key ring address based on the user signing key.
     keyRing = _computeNextAddress(initializationCalldata);
   }
@@ -202,7 +202,7 @@ contract DharmaKeyRingFactoryV1 is DharmaKeyRingFactoryV1Interface {
     bytes memory initializationCalldata = _constructInitializationCalldata(
       userSigningKey
     );
-    
+
     // Deploy and initialize new user key ring as an Upgrade Beacon proxy.
     keyRing = _deployUpgradeBeaconProxyInstance(initializationCalldata);
 
@@ -250,7 +250,7 @@ contract DharmaKeyRingFactoryV1 is DharmaKeyRingFactoryV1Interface {
 
   function _constructInitializationCalldata(
     address userSigningKey
-  ) internal pure returns (bytes memory initializationCalldata) {
+  ) private pure returns (bytes memory initializationCalldata) {
     address[] memory keys = new address[](1);
     keys[0] = userSigningKey;
 
@@ -299,7 +299,7 @@ contract DharmaKeyRingFactoryV1 is DharmaKeyRingFactoryV1Interface {
 
     // Set the initial nonce to be provided when constructing the salt.
     nonce = 0;
-    
+
     // Declare variable for code size of derived address.
     uint256 codeSize;
 

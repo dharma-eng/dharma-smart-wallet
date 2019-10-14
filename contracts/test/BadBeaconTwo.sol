@@ -13,7 +13,7 @@ contract BadBeaconTwo {
     address implementation = address(0);
     assembly {
       mstore(0, implementation)
-      return(0, 32)  
+      return(0, 32)
     }
   }
 }

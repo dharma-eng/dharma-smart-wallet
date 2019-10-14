@@ -27,7 +27,7 @@ contract KeyRingUpgradeBeaconProxyV1 {
   constructor(bytes memory initializationCalldata) public payable {
     // Delegatecall into the implementation, supplying initialization calldata.
     (bool ok, ) = _implementation().delegatecall(initializationCalldata);
-    
+
     // Revert and include revert data if delegatecall to implementation reverts.
     if (!ok) {
       assembly {
@@ -56,7 +56,7 @@ contract KeyRingUpgradeBeaconProxyV1 {
   function _implementation() private view returns (address implementation) {
     // Get the current implementation address from the upgrade beacon.
     (bool ok, bytes memory returnData) = _KEY_RING_UPGRADE_BEACON.staticcall("");
-    
+
     // Revert and pass along revert message if call to upgrade beacon reverts.
     require(ok, string(returnData));
 

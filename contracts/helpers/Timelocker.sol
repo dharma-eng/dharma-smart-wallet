@@ -23,14 +23,14 @@ contract Timelocker {
 
   // Fire an event any time a timelock is initiated.
   event TimelockInitiated(
-    bytes4 functionSelector, // selector of the function 
+    bytes4 functionSelector, // selector of the function
     uint256 timeComplete,    // timestamp at which the function can be called
     bytes arguments          // abi-encoded function arguments to call with
   );
 
   // Fire an event any time a minimum timelock interval is modified.
   event TimelockIntervalModified(
-    bytes4 functionSelector, // selector of the function 
+    bytes4 functionSelector, // selector of the function
     uint256 oldInterval,     // old minimum timelock interval for the function
     uint256 newInterval      // new minimum timelock interval for the function
   );
@@ -42,7 +42,7 @@ contract Timelocker {
   mapping(bytes4 => uint256) private _timelockIntervals;
 
   /**
-   * @notice Public function for setting a new timelock interval for a given 
+   * @notice Public function for setting a new timelock interval for a given
    * function selector. The default for this function may also be modified, but
    * excessive values will cause the `modifyTimelockInterval` function to become
    * unusable.
@@ -104,7 +104,7 @@ contract Timelocker {
    * arbitrarily long duration. Keep in mind that new timelocks may be created
    * with a shorter duration on functions that already have other timelocks on
    * them, but only if they have different arguments.
-   * @param functionSelector selector of the function to be called.   
+   * @param functionSelector selector of the function to be called.
    * @param arguments The abi-encoded arguments of the function to be called.
    * @param extraTime Additional time in seconds to add to the minimum timelock
    * interval for the given function.
@@ -154,7 +154,7 @@ contract Timelocker {
   ) internal {
     // Ensure that this function is only callable during contract construction.
     assembly { if extcodesize(address) { revert(0, 0) } }
-    
+
     // Set the timelock interval and emit a `TimelockIntervalModified` event.
     _setTimelockInterval(functionSelector, newTimelockInterval);
   }
@@ -162,7 +162,7 @@ contract Timelocker {
   /**
    * @notice Internal function to ensure that a timelock is complete and to
    * clear the existing timelock so it cannot later be reused.
-   * @param functionSelector function to be called.   
+   * @param functionSelector function to be called.
    * @param arguments The abi-encoded arguments of the function to be called.
    */
   function _enforceTimelock(
@@ -186,7 +186,7 @@ contract Timelocker {
   }
 
   /**
-   * @notice Private function for setting a new timelock interval for a given 
+   * @notice Private function for setting a new timelock interval for a given
    * function selector.
    * @param functionSelector the selector of the function to set the timelock
    * interval for.
@@ -199,7 +199,7 @@ contract Timelocker {
   ) private {
     // Get the existing timelock interval, if any.
     uint256 oldTimelockInterval = _timelockIntervals[functionSelector];
-    
+
     // Update the timelock interval on the provided function.
     _timelockIntervals[functionSelector] = newTimelockInterval;
 

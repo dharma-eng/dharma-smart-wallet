@@ -144,7 +144,7 @@ contract DharmaKeyRegistryV1 is Ownable, DharmaKeyRegistryInterface {
   ) external view returns (address specificKey) {
     // Retrieve the specific key, if any, for the account.
     specificKey = _specificKeys[account];
-    
+
     // Revert in the event that there is no specific key set.
     require(
       specificKey != address(0),

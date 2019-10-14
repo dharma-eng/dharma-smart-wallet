@@ -38,7 +38,7 @@ contract DharmaUpgradeBeaconController {
   // that the implementation has not been altered since it was initially set.
   mapping(address => bytes32) private _codeHashAtLastUpgrade;
 
-  // The Upgrade Beacon Envoy is used to check the implementation of a beacon. 
+  // The Upgrade Beacon Envoy is used to check the implementation of a beacon.
   DharmaUpgradeBeaconEnvoyInterface private constant _UPGRADE_BEACON_ENVOY = (
     DharmaUpgradeBeaconEnvoyInterface(
       0x000000000067503c398F4c9652530DBC4eA95C02
@@ -54,7 +54,7 @@ contract DharmaUpgradeBeaconController {
     // Set the transaction submitter as the initial owner of this contract.
     _owner = tx.origin;
     emit OwnershipTransferred(address(0), tx.origin);
-    
+
     // Ensure the upgrade beacon envoy has the expected runtime code.
     address envoy = address(_UPGRADE_BEACON_ENVOY);
     bytes32 envoyCodeHash;

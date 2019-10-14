@@ -90,7 +90,7 @@ contract IndestructibleRegistry {
     uint256 size;
     assembly { size := extcodesize(target) }
     require(size > 0, "No code at target.");
-    
+
     // Get code at the target and the location data starts and ends in memory.
     uint256 dataStart;
     bytes memory extcode = new bytes(size);
@@ -100,14 +100,14 @@ contract IndestructibleRegistry {
     }
     uint256 dataEnd = dataStart + size;
     require (dataEnd > dataStart, "SafeMath: addition overflow.");
-    
+
     // Look for any reachable, impermissible opcodes.
     bool reachable = true;
     uint256 op;
     for (uint256 i = dataStart; i < dataEnd; i++) {
       // Get the opcode in question.
       assembly { op := shr(0xf8, mload(i)) }
-      
+
       // Check the opcode if it is reachable (i.e. not a constant or metadata).
       if (reachable) {
         // If execution is halted, mark opcodes that follow as unreachable.
@@ -127,7 +127,7 @@ contract IndestructibleRegistry {
           i += (op - 95);
           continue;
         }
-        
+
         // If opcode is impermissible, return true - potential destructibility!
         if (
           op == 242 || // callcode
@@ -137,7 +137,7 @@ contract IndestructibleRegistry {
           return true; // potentially destructible!
         }
       } else if (op == 91) { // jumpdest
-        // Whenever a JUMPDEST is found, mark opcodes that follow as reachable. 
+        // Whenever a JUMPDEST is found, mark opcodes that follow as reachable.
         reachable = true;
       }
     }

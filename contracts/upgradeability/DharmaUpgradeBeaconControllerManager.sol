@@ -134,7 +134,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
    * mind that new timelocks may be created with a shorter duration on functions
    * that already have other timelocks on them, but only if they have different
    * arguments.
-   * @param functionSelector selector of the function to be called.   
+   * @param functionSelector selector of the function to be called.
    * @param arguments The abi-encoded arguments of the function to be called -
    * in the case of `update`, it is the beacon address and the implementation
    * address, each encoded as left-padded 32-byte values.
@@ -166,7 +166,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     _enforceTimelock(
       this.upgrade.selector, abi.encode(controller, beacon, implementation)
     );
-    
+
     // Reset the heartbeat to the current time.
     _lastHeartbeat = now;
 
@@ -189,7 +189,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
       this.transferControllerOwnership.selector,
       abi.encode(controller, newOwner)
     );
-    
+
     // Transfer ownership of the controller to the new owner.
     Ownable(controller).transferOwnership(newOwner);
   }

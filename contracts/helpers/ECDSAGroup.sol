@@ -45,7 +45,7 @@ library ECDSAGroup {
       }
 
       // EIP-2 still allows signature malleability for ecrecover(). Remove
-      // this possibility and make the signature unique. 
+      // this possibility and make the signature unique.
       if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) {
         continue;
       }

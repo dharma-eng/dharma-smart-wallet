@@ -23,7 +23,7 @@ import "../../interfaces/RelayContractInterface.sol";
  *    wallet address will be recorded for each relay contract. Once a smart
  *    wallet has been deployed for each relay contract, the deployment phase
  *    will be marked as ended, and the final group of deployed smart wallets
- *    should be verified by calling `getTotalDeployedSmartWallets` and 
+ *    should be verified by calling `getTotalDeployedSmartWallets` and
  *    `getRegisteredRelayContract`, making sure that each relay contract has a
  *    corresponding smart wallet, and updating that information for each user.
  *  - Phase three: Approval Assignment. Each relay contract will need to call
@@ -168,7 +168,7 @@ contract RelayMigrator is Ownable {
       );
 
       assembly { codeHash := extcodehash(relayContract) }
-      
+
       require(
         codeHash == _RELAY_CODE_HASH_ONE ||
         codeHash == _RELAY_CODE_HASH_TWO ||

@@ -9,7 +9,7 @@ interface DharmaSmartWalletImplementationV4Interface {
     bytes calldata userSignature,
     bytes calldata dharmaSignature
   ) external returns (bool ok);
-  
+
   function borrowUSDC(
     uint256 amount,
     address recipient,
