@@ -26,5 +26,5 @@ jobs:
           key: v1-dependencies-{{ checksum "package.json" }}
 
       # run tests!
-      - run: yarn ci
+      - run: yarn all
       - run: coverage && cat coverage/lcov.info | coveralls
