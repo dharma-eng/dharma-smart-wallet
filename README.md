@@ -2,6 +2,8 @@
 
 > An upgradeable, joint-custody, meta-transaction-enabled smart wallet for Dharma users.
 
+[![CircleCI](https://circleci.com/gh/dharmaprotocol/dharma-smart-wallet/tree/master.svg?style=svg&circle-token=cfe6c9bcab23789a52477ff865f9fe2d66e87ce7)](https://circleci.com/gh/dharmaprotocol/dharma-smart-wallet/tree/master)
+
 ### Currently Deployed Contracts (production) and example txs:
 ##### DharmaUpgradeBeaconController
 https://etherscan.io/address/0x00000000002226c940b74d674b85e4be05539663#code
