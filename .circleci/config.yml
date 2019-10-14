@@ -16,8 +16,6 @@ jobs:
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
 
-      - run: yarn global add coveralls
-
       - run: yarn install
 
       - save_cache:
@@ -27,4 +25,3 @@ jobs:
 
       # run tests!
       - run: yarn all
-      - run: coverage && cat coverage/lcov.info | coveralls
