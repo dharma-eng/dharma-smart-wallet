@@ -3008,11 +3008,8 @@ module.exports = {test: async function (provider, testingContext) {
       daiUserWithdrawalSignature,
       daiWithdrawalSignature
     ],
-    true,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt.events)
-    },
+    false,
+    receipt => {},
     originalAddress
   )
 
@@ -3023,7 +3020,7 @@ module.exports = {test: async function (provider, testingContext) {
     'call',
     [
       4, // DaiWithdrawal,
-      '100000000000000',
+      '1000000000000000',
       address,
       0
     ],
@@ -3049,7 +3046,7 @@ module.exports = {test: async function (provider, testingContext) {
     'withdrawDai',
     'send',
     [
-      '100000000000000',
+      '1000000000000000',
       address,
       0,
       daiUserWithdrawalSignature,
