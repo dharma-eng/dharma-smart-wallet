@@ -218,8 +218,8 @@ contract DharmaSmartWalletImplementationV3 is
       dharmaSignature
     );
 
-    // Ensure that a non-zero amount has been supplied.
-    require(amount != 0, "No amount supplied.");
+    // Ensure that an amount of at least 0.001 Dai has been supplied.
+    require(amount > 999999999999999, "Insufficient amount supplied.");
 
     // Ensure that a non-zero recipient has been supplied.
     require(recipient != address(0), "No recipient supplied.");
@@ -334,8 +334,8 @@ contract DharmaSmartWalletImplementationV3 is
       dharmaSignature
     );
 
-    // Ensure that a non-zero amount has been supplied.
-    require(amount != 0, "No amount supplied.");
+    // Ensure that an amount of at least 0.001 USDC has been supplied.
+    require(amount > 999, "Insufficient amount supplied.");
 
     // Ensure that a non-zero recipient has been supplied.
     require(recipient != address(0), "No recipient supplied.");
@@ -960,10 +960,11 @@ contract DharmaSmartWalletImplementationV3 is
    * current exchange rate (due to lack of sufficient precision on the tokens).
    */
   function _depositOnCompound(AssetType asset, uint256 balance) internal {
-    // Only perform a deposit if the balance is non-zero. This could also take
-    // into account the safe deposit threshold for each asset - for instance, a
-    // deposit of 1 wei of Dai will mint 0 cDai, since cDai precision is lower.
-    if (balance > 0) {
+    // Only perform a deposit if the balance is at least .001 Dai or USDC.
+    if (
+      asset == AssetType.DAI && balance > 999999999999999 || // 18 decimals
+      asset == AssetType.USDC && balance > 999               // 6 decimals
+    ) {
       // Get cToken address for the asset type.
       address cToken = asset == AssetType.DAI ? address(_CDAI) : address(_CUSDC);
 
