@@ -20,7 +20,7 @@ import "../../../interfaces/ERC1271.sol";
  * @author 0age
  * @notice The V3 implementation for the Dharma smart wallet is a joint-custody,
  * meta-transaction-enabled wallet with helper functions to facilitate lending
- * funds using CompoundV2. It makes a few minor fixes and changes to the V1
+ * funds using CompoundV2. It makes a few minor fixes and changes to the V2
  * implementation to improve efficiency and reliability for an initial save-only
  * Dharma Smart Wallet. It also contains methods to support account recovery and
  * generic actions, including in an atomic batch. The smart wallet instances
@@ -218,13 +218,19 @@ contract DharmaSmartWalletImplementationV3 is
       dharmaSignature
     );
 
-    // Set the self-call context so we can call _withdrawDaiAtomic.
+    // Ensure that a non-zero amount has been supplied.
+    require(amount != 0, "No amount supplied.");
+
+    // Ensure that a non-zero recipient has been supplied.
+    require(recipient != address(0), "No recipient supplied.");
+
+    // Set the self-call context in order to call _withdrawDaiAtomic.
     _selfCallContext = this.withdrawDai.selector;
 
     // Make the atomic self-call - if redeemUnderlying fails on cDAI, it will
     // succeed but nothing will happen except firing an ExternalError event. If
     // the second part of the self-call (the Dai transfer) fails, it will revert
-    // and roll back the first part of the call, and we'll fire an ExternalError
+    // and roll back the first part of the call as well as fire an ExternalError
     // event after returning from the failed call.
     bytes memory returnData;
     (ok, returnData) = address(this).call(abi.encodeWithSelector(
@@ -328,13 +334,19 @@ contract DharmaSmartWalletImplementationV3 is
       dharmaSignature
     );
 
-    // Set the self-call context so we can call _withdrawUSDCAtomic.
+    // Ensure that a non-zero amount has been supplied.
+    require(amount != 0, "No amount supplied.");
+
+    // Ensure that a non-zero recipient has been supplied.
+    require(recipient != address(0), "No recipient supplied.");
+
+    // Set the self-call context in order to call _withdrawUSDCAtomic.
     _selfCallContext = this.withdrawUSDC.selector;
 
     // Make the atomic self-call - if redeemUnderlying fails on cUSDC, it will
     // succeed but nothing will happen except firing an ExternalError event. If
     // the second part of the self-call (USDC transfer) fails, it will revert
-    // and roll back the first part of the call, and we'll fire an ExternalError
+    // and roll back the first part of the call as well as fire an ExternalError
     // event after returning from the failed call.
     bytes memory returnData;
     (ok, returnData) = address(this).call(abi.encodeWithSelector(
@@ -344,7 +356,7 @@ contract DharmaSmartWalletImplementationV3 is
       // Find out why USDC transfer reverted (doesn't give revert reasons).
       _diagnoseAndEmitUSDCSpecificError(_USDC.transfer.selector);
     } else {
-      // Ensure that ok == false in the event the withdrawal failed.
+      // Set ok to false if the call succeeded but the withdrawal failed.
       ok = abi.decode(returnData, (bool));
     }
   }
@@ -571,6 +583,9 @@ contract DharmaSmartWalletImplementationV3 is
       msg.sender == _ACCOUNT_RECOVERY_MANAGER,
       "Only the account recovery manager may call this function."
     );
+
+    // Increment nonce to prevent signature reuse should original key be reset.
+    _nonce++;
 
     // Set up the user's new dharma key and emit a corresponding event.
     _setUserSigningKey(newUserSigningKey);
@@ -899,13 +914,6 @@ contract DharmaSmartWalletImplementationV3 is
   }
 
   /**
-   * @notice Internal function for incrementing the nonce.
-   */
-  function _incrementNonce() internal {
-    _nonce++;
-  }
-
-  /**
    * @notice Internal function for setting the allowance of a given ERC20 asset
    * to the maximum value. This enables the corresponding cToken for the asset
    * to pull in tokens in order to make deposits.
@@ -1136,7 +1144,7 @@ contract DharmaSmartWalletImplementationV3 is
     }
 
     // Increment nonce in order to prevent reuse of signatures after the call.
-    _incrementNonce();
+    _nonce++;
   }
 
   /**

@@ -242,8 +242,8 @@ contract DharmaKeyRingImplementationV1 is
           data[2] == byte(0x2b) &&
           data[3] == byte(0x3c)
         )
-        ? KeyType.Admin
-        : KeyType.Standard
+          ? KeyType.Admin
+          : KeyType.Standard
       ),
       _getStandardActionHash(to, value, data),
       signatures
@@ -261,9 +261,7 @@ contract DharmaKeyRingImplementationV1 is
 
     // Calling setUserSigningKey (ActionType 1) requires admin signatures.
     _verifyOrderedSignatures(
-      action != 1 ? KeyType.Standard : KeyType.Admin,
-      hash,
-      signatures
+      action != 1 ? KeyType.Standard : KeyType.Admin, hash, signatures
     );
 
     magicValue = _ERC_1271_MAGIC_VALUE;
@@ -323,6 +321,8 @@ contract DharmaKeyRingImplementationV1 is
   function _verifyOrderedSignatures(
     KeyType requiredKeyType, bytes32 hash, bytes memory signatures
   ) internal view {
+    require(requiredKeyType != KeyType.None, "No key type supplied.");
+
     uint160[] memory signers = hash.recoverGroup(signatures);
 
     uint256 threshold = (
