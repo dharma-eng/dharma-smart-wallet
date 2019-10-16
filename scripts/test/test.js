@@ -11,6 +11,7 @@ const DharmaKeyRingUpgradeBeaconArtifact = require('../../build/contracts/Dharma
 
 const DharmaAccountRecoveryManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
 const DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
+const DharmaKeyRegistryV2Artifact = require('../../build/contracts/DharmaKeyRegistryV2.json')
 const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
 
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
@@ -100,6 +101,11 @@ module.exports = {test: async function (provider, testingContext) {
   const DharmaKeyRegistryV1 = new web3.eth.Contract(
     DharmaKeyRegistryV1Artifact.abi,
     constants.KEY_REGISTRY_ADDRESS
+  )
+
+  const DharmaKeyRegistryV2 = new web3.eth.Contract(
+    DharmaKeyRegistryV2Artifact.abi,
+    constants.KEY_REGISTRY_V2_ADDRESS
   )
 
   const DharmaSmartWalletFactoryV1 = new web3.eth.Contract(
@@ -833,6 +839,40 @@ module.exports = {test: async function (provider, testingContext) {
     value => {
       assert.strictEqual(value, address)
     }
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 gets the new global key correctly',
+    DharmaKeyRegistryV2,
+    'getGlobalKey',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  const messageV2 = (
+    DharmaKeyRegistryV2.options.address +
+    address.slice(2) +
+    web3.utils.asciiToHex(
+      "This signature demonstrates that the supplied signing key is valid."
+    ).slice(2)
+  )
+
+  const v2KeySignature = signHashedPrefixedHashedHexString(messageV2, address)
+
+  await runTest(
+    'Dharma Key Registry V2 cannot set a previously used global key',
+    DharmaKeyRegistryV2,
+    'setGlobalKey',
+    'send',
+    [
+      address,
+      v2KeySignature
+    ],
+    false
   )
 
   const BadBeacon = await runTest(
@@ -4364,13 +4404,11 @@ module.exports = {test: async function (provider, testingContext) {
   await runTest(
     'smart wallet account recovery can be initiated',
     DharmaAccountRecoveryManager,
-    'setTimelock',
+    'initiateAccountRecovery',
     'send',
     [
-      '0x648bf774', // function selector: recover(address,address)
-      '0x' + // arguments: the wallet to reset + 
-      UserSmartWalletV3.options.address.slice(2).padStart(64, '0') +
-      originalAddress.slice(2).padStart(64, '0'),
+      UserSmartWalletV3.options.address,
+      originalAddress,
       0 // extraTime in seconds
     ],
     true,

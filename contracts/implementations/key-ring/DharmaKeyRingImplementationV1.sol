@@ -1,8 +1,7 @@
 pragma solidity 0.5.11;
 
-import "../../helpers/ECDSAGroup.sol";
+import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "../../../interfaces/DharmaKeyRingImplementationV0Interface.sol";
-import "../../../interfaces/DharmaKeyRingImplementationV1Interface.sol";
 import "../../../interfaces/ERC1271.sol";
 
 
@@ -11,25 +10,23 @@ import "../../../interfaces/ERC1271.sol";
  * @author 0age
  * @notice The Dharma Key Ring is a smart contract that implements ERC-1271 and
  * can be used in place of an externally-owned account for the user signing key
- * on the Dharma Smart Wallet to support multiple user signing keys. It
- * distinguishes between Admin keys, which are used to modify sigining keys that
- * are set on the key ring or to set a new signing key for the user on the smart
- * wallet, and Standard or Executor keys, which are used when calling
- * `isValidSignature` from the smart wallet in order to validate all other smart
- * wallet actions. Upgrades are managed by an upgrade beacon, similar to the one
- * utilized by the Dharma Smart Wallet.
- * @dev There are multiple enhancements that can be made to this POC from here,
- * including (but not limited to):
- *   - Iterating over all keys that have been set on the keyring
- *   - Allowing for other smart contracts to be specified as signers
- *   - Allowing for keys that have a more restrictive set of permissions
+ * on the Dharma Smart Wallet to support multiple user signing keys. For this V1
+ * implementation, new Dual keys (standard + admin) can be added, but cannot be
+ * removed, and the action threshold is fixed at one. Upgrades are managed by an
+ * upgrade beacon, similar to the one utilized by the Dharma Smart Wallet. Note
+ * that this implementation only implements the minimum feature set required to
+ * support multiple user signing keys on the current Dharma Smart Wallet, and
+ * that it will likely be replaced with a new, more full-featured implementation
+ * relatively soon. V1 differs from V0 in that it requires that an adminActionID
+ * must be prefixed (according to EIP-191 0x45) and hashed in order to construct
+ * a valid signature (note that the message hash given to `isValidSignature` is
+ * assumed to have already been appropriately constructed to fit the caller's
+ * requirements and so does not apply an additional prefix).
  */
 contract DharmaKeyRingImplementationV1 is
   DharmaKeyRingImplementationV0Interface,
-  DharmaKeyRingImplementationV1Interface,
   ERC1271 {
-  using ECDSAGroup for bytes32;
-
+  using ECDSA for bytes32;
   // WARNING: DO NOT REMOVE OR REORDER STORAGE WHEN WRITING NEW IMPLEMENTATIONS!
 
   // Track all keys as an address (as uint160) => key type mapping in slot zero.
@@ -44,7 +41,7 @@ contract DharmaKeyRingImplementationV1 is
   AdditionalKeyCount private _additionalKeyCounts;
 
   // Track the required threshold standard and admin actions in storage slot 3.
-  AdditionalThreshold private _additionalThresholds;
+  // AdditionalThreshold private _additionalThresholds;
 
   // END STORAGE DECLARATIONS - DO NOT REMOVE OR REORDER STORAGE ABOVE HERE!
 
@@ -54,229 +51,135 @@ contract DharmaKeyRingImplementationV1 is
   // ERC-1271 must return this magic value when `isValidSignature` is called.
   bytes4 internal constant _ERC_1271_MAGIC_VALUE = bytes4(0x20c13b0b);
 
+  /**
+   * @notice In initializer, set up an initial user signing key. For V1, the
+   * adminThreshold and executorThreshold arguments must both be equal to 1 and
+   * exactly one key with a key type of 3 (Dual key) must be supplied. Note that
+   * this initializer is only callable while the key ring instance is still in
+   * the contract creation phase.
+   * @param adminThreshold uint128 Must be equal to 1 in V1.
+   * @param executorThreshold uint128 Must be equal to 1 in V1.
+   * @param keys address[] The initial user signing key for the key ring. Must
+   * have exactly one non-null key in V1.
+   * @param keyTypes uint8[] Must be equal to [3].
+   */
   function initialize(
     uint128 adminThreshold,
     uint128 executorThreshold,
     address[] calldata keys,
-    uint8[] calldata keyTypes // 1: standard, 2: admin, 3: dual
+    uint8[] calldata keyTypes // must all be 3 (Dual) for V1
   ) external {
     // Ensure that this function is only callable during contract construction.
     assembly { if extcodesize(address) { revert(0, 0) } }
 
-    uint128 adminKeys;
-    uint128 executorKeys;
+    // V1 only allows setting a singly Dual key with thresholds both set to 1.
+    require(keys.length == 1, "Must supply exactly one key in V1.");
 
-    require(keys.length > 0, "Must supply at least one key.");
-
-    require(adminThreshold > 0, "Admin threshold cannot be zero.");
-
-    require(executorThreshold > 0, "Executor threshold cannot be zero.");
+    require(keys[0] != address(0), "Cannot supply the null address as a key.");
 
     require(
-      keys.length == keyTypes.length,
-      "Length of keys array and keyTypes arrays must be the same."
+      keyTypes.length == 1 && keyTypes[0] == uint8(3),
+      "Must supply exactly one Dual keyType (3) in V1."
     );
 
-    for (uint256 i = 0; i < keys.length; i++) {
-      uint160 key = uint160(keys[i]);
-
-      require(key != uint160(0), "Cannot supply the null address as a key.");
-
-      require(_keys[key] == KeyType.None, "Cannot supply duplicate keys.");
-
-      KeyType keyType = KeyType(keyTypes[i]);
-
-      _keys[key] = keyType;
-
-      bool isStandard = (keyType == KeyType.Standard || keyType == KeyType.Dual);
-      bool isAdmin = (keyType == KeyType.Admin || keyType == KeyType.Dual);
-
-      emit KeyModified(keys[i], isStandard, isAdmin);
-
-      if (isStandard) {
-        executorKeys++;
-      }
-
-      if (isAdmin) {
-        adminKeys++;
-      }
-    }
-
-    require(adminKeys > 0, "Must supply at least one admin key.");
-
-    require(executorKeys > 0, "Must supply at least one executor key.");
+    require(adminThreshold == 1, "Admin threshold must be exactly one in V1.");
 
     require(
-      adminThreshold >= adminKeys,
-      "Admin threshold cannot be less than the total supplied admin keys."
+      executorThreshold == 1, "Executor threshold must be exactly one in V1."
     );
 
-    require(
-      executorThreshold >= executorKeys,
-      "Executor threshold cannot be less than the total supplied executor keys."
-    );
+    // Set the key and emit a corresponding event.
+    _keys[uint160(keys[0])] = KeyType.Dual;
+    emit KeyModified(keys[0], true, true);
 
-    if (adminKeys > 1 || executorKeys > 1) {
-      _additionalKeyCounts = AdditionalKeyCount({
-        standard: executorKeys - 1,
-        admin: adminKeys - 1
-      });
-    }
-
-    if (adminThreshold > 1 || executorThreshold > 1) {
-      _additionalThresholds = AdditionalThreshold({
-        standard: executorThreshold - 1,
-        admin: adminThreshold - 1
-      });
-    }
+    // Note: skip additional key counts + thresholds setup in V1 (only one key).
   }
 
+  /**
+   * @notice Supply a signature from one of the existing keys on the keyring in
+   * order to add a new key.
+   * @param adminActionType uint8 Must be equal to 6 in V1.
+   * @param argument uint160 The signing address to add to the key ring.
+   * @param signatures bytes A signature from an existing key on the key ring.
+   */
   function takeAdminAction(
     AdminActionType adminActionType, uint160 argument, bytes calldata signatures
   ) external {
-    _verifyOrderedSignatures(
-      KeyType.Admin, _getAdminActionHash(adminActionType, argument), signatures
+    // Only Admin Action Type 6 (AddDualKey) is supported in V1.
+    require(
+      adminActionType == AdminActionType.AddDualKey,
+      "Only adding new Dual key types (admin action type 6) is supported in V1."
     );
 
-    uint8 adminActionCategory = uint8(adminActionType) % 3;
-    uint8 adminActionKeyCategory = uint8(adminActionType) / 3 + 1;
-    bool isStandard = adminActionKeyCategory != 2;
-    bool isAdmin = adminActionKeyCategory != 1;
+    require(argument != uint160(0), "Cannot supply the null address as a key.");
 
-    if (adminActionCategory == 0) { // Add
-      require(argument != uint160(0), "Cannot supply null address as a key.");
+    require(_keys[argument] == KeyType.None, "Key already exists.");
 
-      require(_keys[argument] == KeyType.None, "Key already exists.");
+    // Verify signature against a hash of the prefixed admin admin actionID.
+    _verifySignature(
+      _getAdminActionID(argument, _nonce).toEthSignedMessageHash(), signatures
+    );
 
-      _additionalKeyCounts = AdditionalKeyCount({
-        standard: _additionalKeyCounts.standard + (isStandard ? 1 : 0),
-        admin: _additionalKeyCounts.admin + (isAdmin ? 1 : 0)
-      });
+    // Increment the key count for both standard and admin keys.
+    _additionalKeyCounts.standard++;
+    _additionalKeyCounts.admin++;
 
-      _keys[argument] = KeyType(adminActionKeyCategory);
-    } else if (adminActionCategory == 1) { // Remove
-      require(_keys[argument] != KeyType.None, "Key does not exist.");
+    // Set the key and emit a corresponding event.
+    _keys[argument] = KeyType.Dual;
+    emit KeyModified(address(argument), true, true);
 
-      if (isStandard) {
-        require(
-          _additionalThresholds.standard > _additionalKeyCounts.standard,
-          "Cannot reduce number of standard keys below required threshold."
-        );
-      }
-
-      if (isAdmin) {
-        require(
-          _additionalThresholds.admin > _additionalKeyCounts.admin,
-          "Cannot reduce number of admin keys below required threshold."
-        );
-      }
-
-      _additionalKeyCounts = AdditionalKeyCount({
-        standard: _additionalKeyCounts.standard - (isStandard ? 1 : 0),
-        admin: _additionalKeyCounts.admin - (isAdmin ? 1 : 0)
-      });
-
-      KeyType currentKeyType = _keys[argument];
-      if (
-        adminActionKeyCategory == 3 ||
-        currentKeyType == KeyType(adminActionKeyCategory)
-      ) {
-        delete _keys[argument];
-      } else if (currentKeyType == KeyType.Dual) {
-        _keys[argument] = KeyType(isStandard ? 2 : 1);
-      } else {
-        revert("Supplied key type is not currently set.");
-      }
-
-    } else if (adminActionCategory == 2) { // SetThreshold
-      uint128 threshold = uint128(argument);
-      require(threshold > 0, "Cannot reduce threshold to zero.");
-      threshold--;
-
-      if (isStandard) {
-        require(
-          threshold <= _additionalKeyCounts.standard,
-          "Cannot increase standard threshold above number of standard keys."
-        );
-      }
-
-      if (isAdmin) {
-        require(
-          threshold <= _additionalKeyCounts.admin,
-          "Cannot increase admin threshold above number of admin keys."
-        );
-      }
-
-      _additionalThresholds = AdditionalThreshold({
-        standard: isStandard ? threshold : _additionalThresholds.standard,
-        admin: isAdmin ? threshold : _additionalThresholds.admin
-      });
-
-      emit ThresholdModified(
-        uint256(_additionalThresholds.standard),
-        uint256(_additionalThresholds.admin)
-      );
-    }
-
-    if (adminActionCategory != 2) {
-      emit KeyModified(
-        address(argument),
-        _keys[argument] == KeyType.Standard || _keys[argument] == KeyType.Dual,
-        _keys[argument] == KeyType.Admin || _keys[argument] == KeyType.Dual
-      );
-    }
-
+    // Increment the nonce.
     _nonce++;
   }
 
-  function takeAction(
-    address payable to, uint256 value, bytes calldata data, bytes calldata signatures
-  ) external returns (bool ok, bytes memory returnData) {
-    // admin-only: 0x44f62b3c => setUserSigningKey(address,uint256,bytes,bytes)
-    _verifyOrderedSignatures(
-      (
-        (
-          data.length >= 4 &&
-          data[0] == byte(0x44) &&
-          data[1] == byte(0xf6) &&
-          data[2] == byte(0x2b) &&
-          data[3] == byte(0x3c)
-        )
-          ? KeyType.Admin
-          : KeyType.Standard
-      ),
-      _getStandardActionHash(to, value, data),
-      signatures
-    );
-
-    _nonce++;
-
-    (ok, returnData) = to.call.value(value)(data);
-  }
-
+  /**
+   * @notice View function that implements ERC-1271 and validates a signature
+   * against one of the keys on the keyring based on the supplied data. The data
+   * must be ABI encoded as (bytes32, uint8, bytes) - in V1, only the first
+   * bytes32 parameter is used to validate the supplied signature.
+   * @param data bytes The data used to validate the signature.
+   * @param signature bytes A signature from an existing key on the key ring.
+   * @return The 4-byte magic value to signify a valid signature in ERC-1271, if
+   * the signature is valid.
+   */
   function isValidSignature(
-    bytes calldata data, bytes calldata signatures
+    bytes calldata data, bytes calldata signature
   ) external view returns (bytes4 magicValue) {
-    (bytes32 hash, uint8 action, ) = abi.decode(data, (bytes32, uint8, bytes));
+    (bytes32 hash, , ) = abi.decode(data, (bytes32, uint8, bytes));
 
-    // Calling setUserSigningKey (ActionType 1) requires admin signatures.
-    _verifyOrderedSignatures(
-      action != 1 ? KeyType.Standard : KeyType.Admin, hash, signatures
-    );
+    _verifySignature(hash, signature);
 
     magicValue = _ERC_1271_MAGIC_VALUE;
   }
 
-  function getActionID(
-    address payable to, uint256 value, bytes calldata data
-  ) external view returns (bytes32 actionID) {
-    actionID = _getStandardActionHash(to, value, data);
+  /**
+   * @notice View function that returns the message hash that must be signed in
+   * order to add a new key to the key ring based on the supplied parameters.
+   * @param adminActionType uint8 Unused in V1, as only action type 6 is valid.
+   * @param argument uint160 The signing address to add to the key ring.
+   * @param nonce uint256 The nonce to use when deriving the message hash.
+   * @return The message hash to sign.
+   */
+  function getAdminActionID(
+    AdminActionType adminActionType, uint160 argument, uint256 nonce
+  ) external view returns (bytes32 adminActionID) {
+    adminActionType;
+    adminActionID = _getAdminActionID(argument, nonce);
   }
 
-  function getAdminActionID(
+  /**
+   * @notice View function that returns the message hash that must be signed in
+   * order to add a new key to the key ring based on the supplied parameters and
+   * using the current nonce of the key ring.
+   * @param adminActionType uint8 Unused in V1, as only action type 6 is valid.
+   * @param argument uint160 The signing address to add to the key ring.
+   * @return The message hash to sign.
+   */
+  function getNextAdminActionID(
     AdminActionType adminActionType, uint160 argument
   ) external view returns (bytes32 adminActionID) {
-    adminActionID = _getAdminActionHash(adminActionType, argument);
+    adminActionType;
+    adminActionID = _getAdminActionID(argument, _nonce);
   }
 
   /**
@@ -287,65 +190,73 @@ contract DharmaKeyRingImplementationV1 is
     version = _DHARMA_KEY_RING_VERSION;
   }
 
-  function _getStandardActionHash(
-    address payable to, uint256 value, bytes memory data
-  ) internal view returns (bytes32 hash) {
-    hash = keccak256(
+  /**
+   * @notice View function for getting the current number of both standard and
+   * admin keys that are set on the Dharma Key Ring. For V1, these should be the
+   * same value as one another.
+   * @return The number of standard and admin keys set on the Dharma Key Ring.
+   */
+  function getKeyCount() external view returns (
+    uint256 standardKeyCount, uint256 adminKeyCount
+  ) {
+    AdditionalKeyCount memory additionalKeyCount = _additionalKeyCounts;
+    standardKeyCount = uint256(additionalKeyCount.standard) + 1;
+    adminKeyCount = uint256(additionalKeyCount.admin) + 1;
+  }
+
+  /**
+   * @notice View function for getting standard and admin key status of a given
+   * address. For V1, these should both be true, or both be false (i.e. the key
+   * is not set).
+   * @param key address An account to check for key type information.
+   * @return Booleans for standard and admin key status for the given address.
+   */
+  function getKeyType(
+    address key
+  ) external view returns (bool standard, bool admin) {
+    KeyType keyType = _keys[uint160(key)];
+    standard = (keyType == KeyType.Standard || keyType == KeyType.Dual);
+    admin = (keyType == KeyType.Admin || keyType == KeyType.Dual);
+  }
+
+  /**
+   * @notice View function for getting the current nonce of the Dharma Key Ring.
+   * @return The current nonce set on the Dharma Key Ring.
+   */
+  function getNonce() external returns (uint256 nonce) {
+    nonce = _nonce;
+  }
+
+  /**
+   * @notice Internal view function to derive an action ID that is prefixed,
+   * hashed, and signed by an existing key in order to add a new key to the key
+   * ring.
+   * @param argument uint160 The signing address to add to the key ring.
+   * @param nonce uint256 The nonce to use when deriving the adminActionID.
+   * @return The message hash to sign.
+   */
+  function _getAdminActionID(
+    uint160 argument, uint256 nonce
+  ) internal view returns (bytes32 adminActionID) {
+    adminActionID = keccak256(
       abi.encodePacked(
-        address(this),
-        _DHARMA_KEY_RING_VERSION,
-        _nonce,
-        KeyType.Standard,
-        to,
-        value,
-        data
+        address(this), _DHARMA_KEY_RING_VERSION, nonce, argument
       )
     );
   }
 
-  function _getAdminActionHash(
-    AdminActionType adminActionType, uint160 argument
-  ) internal view returns (bytes32 hash) {
-    hash = keccak256(
-      abi.encodePacked(
-        address(this),
-        _DHARMA_KEY_RING_VERSION,
-        _nonce,
-        KeyType.Admin,
-        adminActionType,
-        argument
-      )
-    );
-  }
-
-  function _verifyOrderedSignatures(
-    KeyType requiredKeyType, bytes32 hash, bytes memory signatures
+  /**
+   * @notice Internal view function for verifying a signature and a message hash
+   * against the mapping of keys currently stored on the key ring. For V1, all
+   * stored keys are the Dual key type, and only a single signature is provided
+   * for verification at once since the threshold is fixed at one signature.
+   */
+  function _verifySignature(
+    bytes32 hash, bytes memory signature
   ) internal view {
-    require(requiredKeyType != KeyType.None, "No key type supplied.");
-
-    uint160[] memory signers = hash.recoverGroup(signatures);
-
-    uint256 threshold = (
-      requiredKeyType == KeyType.Standard
-        ? uint256(_additionalThresholds.standard)
-        : uint256(_additionalThresholds.admin)
-    ) + 1;
-
     require(
-      signers.length >= threshold,
-      "Supplied number of signatures does not meet the required threshold."
+      _keys[uint160(hash.recover(signature))] == KeyType.Dual,
+      "Supplied signature does not have a signer with the required key type."
     );
-
-    uint160 lastSigner = 0;
-    for (uint256 i = 0; i < signers.length; i++) {
-      uint160 signer = signers[i];
-      KeyType keyType = _keys[signer];
-      require(
-        keyType == KeyType.Dual || keyType == requiredKeyType,
-        "Supplied signature does not have a signer with the required key type."
-      );
-      require(signer > lastSigner, "Invalid signature ordering.");
-      lastSigner = signer;
-    }
   }
 }

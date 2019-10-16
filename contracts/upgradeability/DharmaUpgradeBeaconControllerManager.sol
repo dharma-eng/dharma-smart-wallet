@@ -1,7 +1,7 @@
 pragma solidity 0.5.11;
 
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "../helpers/TwoStepOwnable.sol";
 import "../helpers/Timelocker.sol";
 import "../../interfaces/UpgradeBeaconControllerInterface.sol";
 
@@ -22,6 +22,9 @@ import "../../interfaces/UpgradeBeaconControllerInterface.sol";
  *  upgrade(address controller, address implementation)
  *  transferControllerOwnership(address controller, address newOwner)
  *  modifyTimelockInterval(bytes4 functionSelector, uint256 newTimelockInterval)
+ *  modifyTimelockExpiration(
+ *    bytes4 functionSelector, uint256 newTimelockExpiration
+ *  )
  *
  * It also specifies dedicated implementations for the Dharma Smart Wallet and
  * Dharma Key Ring upgrade beacons that can be triggered in an emergency or in
@@ -35,7 +38,7 @@ import "../../interfaces/UpgradeBeaconControllerInterface.sol";
  * introduce new upgrade conditions or to otherwise alter the way that upgrades
  * are carried out.
  */
-contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
+contract DharmaUpgradeBeaconControllerManager is TwoStepOwnable, Timelocker {
   using SafeMath for uint256;
 
   // Fire an event whenever the Adharma Contingency is activated or exited.
@@ -56,6 +59,9 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   // Store information on contingency status of each controller + beacon pair.
   mapping(address => mapping (address => AdharmaContingency)) private _adharma;
 
+  // New controller owners must accept ownership before a transfer can occur.
+  mapping(address => mapping(address => bool)) private _willAcceptOwnership;
+
   // Track the last heartbeat timestamp as well as the current heartbeat address
   uint256 private _lastHeartbeat;
   address private _heartbeater;
@@ -68,7 +74,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   // Store the Adharma Smart Wallet Contingency implementation. Note that this
   // is specific to the smart wallet and will not be activated on other beacons.
   address private constant _ADHARMA_SMART_WALLET_IMPLEMENTATION = address(
-    0x00000000Fde3b69fECd50C8A4c001678f00011ab
+    0x0000000053d300f11703dcDD1e90921Db83F0048
   );
 
   // Store the address of the Dharma Key Ring Upgrade Beacon as a constant.
@@ -83,14 +89,15 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   );
 
   /**
-   * @notice In the constructor, set the initial owner of this contract, the
-   * initial minimum timelock interval values, and some initial variable values.
+   * @notice In the constructor, set tx.origin as initial owner, the initial
+   * minimum timelock interval and expiration values, and some initial variable
+   * values.
    */
   constructor() public {
     // Ensure Adharma Smart Wallet implementation has the correct runtime code.
     bytes32 adharmaSmartWalletHash;
     bytes32 expectedAdharmaSmartWalletHash = bytes32(
-      0x75889568a40bc5b3e7ccf3c6579a0730705f089c083e36c52bbc911024afa47f
+      0x2534c2b555b9011741eabee1c96e1683bb4f58483d05d3e654f00fde85c2673c
     );
     address adharmaSmartWallet = _ADHARMA_SMART_WALLET_IMPLEMENTATION;
     assembly { adharmaSmartWalletHash := extcodehash(adharmaSmartWallet) }
@@ -111,15 +118,25 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
       "Adharma Key Ring implementation runtime code hash is incorrect."
     );
 
-    // Set the transaction submitter as the initial owner of this contract.
-    _transferOwnership(tx.origin);
-
     // Set initial minimum timelock interval values.
     _setInitialTimelockInterval(
       this.transferControllerOwnership.selector, 4 weeks
     );
     _setInitialTimelockInterval(this.modifyTimelockInterval.selector, 4 weeks);
+    _setInitialTimelockInterval(
+      this.modifyTimelockExpiration.selector, 4 weeks
+    );
     _setInitialTimelockInterval(this.upgrade.selector, 7 days);
+
+    // Set initial default timelock expiration values.
+    _setInitialTimelockExpiration(
+      this.transferControllerOwnership.selector, 7 days
+    );
+    _setInitialTimelockExpiration(this.modifyTimelockInterval.selector, 7 days);
+    _setInitialTimelockExpiration(
+      this.modifyTimelockExpiration.selector, 7 days
+    );
+    _setInitialTimelockExpiration(this.upgrade.selector, 7 days);
 
     // Set the initial owner as the initial heartbeater.
     _heartbeater = tx.origin;
@@ -127,26 +144,46 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   }
 
   /**
-   * @notice Sets a timelock so that the specified function can be called with
-   * the specified arguments. Note that existing timelocks may be extended, but
-   * not shortened - this can also be used as a method for "cancelling" an
-   * upgrade by extending the timelock to an arbitrarily long duration. Keep in
-   * mind that new timelocks may be created with a shorter duration on functions
-   * that already have other timelocks on them, but only if they have different
-   * arguments.
-   * @param functionSelector selector of the function to be called.
-   * @param arguments The abi-encoded arguments of the function to be called -
-   * in the case of `update`, it is the beacon address and the implementation
-   * address, each encoded as left-padded 32-byte values.
+   * @notice Initiates a timelocked upgrade process via a given controller and
+   * upgrade beacon to a given implementation address. Only the owner may call
+   * this function. Once the timelock period is complete (and before it has
+   * expired) the owner may call `upgrade` to complete the process and trigger
+   * the upgrade.
+   * @param controller address of controller to call into that will trigger the
+   * update to the specified upgrade beacon.
+   * @param beacon address of upgrade beacon to set the new implementation on.
+   * @param implementation the address of the new implementation.
    * @param extraTime Additional time in seconds to add to the timelock.
    */
-  function setTimelock(
-    bytes4 functionSelector,
-    bytes calldata arguments,
+  function initiateUpgrade(
+    address controller,
+    address beacon,
+    address implementation,
     uint256 extraTime
   ) external onlyOwner {
+    require(controller != address(0), "Must specify a controller address.");
+
+    require(beacon != address(0), "Must specify a beacon address.");
+
+    // Ensure that the implementaton contract is not the null address.
+    require(
+      implementation != address(0),
+      "Implementation cannot be the null address."
+    );
+
+    // Ensure that the implementation contract has code via extcodesize.
+    uint256 size;
+    assembly {
+      size := extcodesize(implementation)
+    }
+    require(size > 0, "Implementation must have contract code.");
+
     // Set the timelock and emit a `TimelockInitiated` event.
-    _setTimelock(functionSelector, arguments, extraTime);
+    _setTimelock(
+      this.upgrade.selector,
+      abi.encode(controller, beacon, implementation),
+      extraTime
+    );
   }
 
   /**
@@ -175,15 +212,36 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   }
 
   /**
+   * @notice Allow a new potential owner of an upgrade beacon controller to
+   * accept ownership of the controller.
+   * @param controller address of controller to allow ownership transfer for.
+   * @param willAcceptOwnership a boolean signifying if an ownership transfer to
+   * the caller is acceptable.
+   */
+  function agreeToAcceptOwnership(
+    address controller, bool willAcceptOwnership
+  ) external {
+    require(controller != address(0), "Must specify a controller address.");
+
+    // Register whether or not the new owner is willing to accept ownership.
+    _willAcceptOwnership[controller][msg.sender] = willAcceptOwnership;
+  }
+
+  /**
    * @notice Timelocked function to set a new owner on an upgrade beacon
    * controller that is owned by this contract.
    * @param controller address of controller to transfer ownership of.
    * @param newOwner address to assign ownership of the controller to.
    */
   function transferControllerOwnership(
-    address controller,
-    address newOwner
+    address controller, address newOwner
   ) external onlyOwner {
+    // Ensure that the new owner has confirmed that it can accept ownership.
+    require(
+      _willAcceptOwnership[controller][newOwner],
+      "New owner must agree to accept ownership of the given controller."
+    );
+
     // Ensure that the timelock has been set and is completed.
     _enforceTimelock(
       this.transferControllerOwnership.selector,
@@ -191,7 +249,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
     );
 
     // Transfer ownership of the controller to the new owner.
-    Ownable(controller).transferOwnership(newOwner);
+    TwoStepOwnable(controller).transferOwnership(newOwner);
   }
 
   /**
@@ -223,6 +281,10 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
   function armAdharmaContingency(
     address controller, address beacon, bool armed
   ) external {
+    require(controller != address(0), "Must specify a controller address.");
+
+    require(beacon != address(0), "Must specify a beacon address.");
+
     // Determine if 90 days have passed since the last heartbeat.
     (bool expired, ) = heartbeatStatus();
     require(
@@ -246,8 +308,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
    * implementation on.
    */
   function activateAdharmaContingency(
-    address controller,
-    address beacon
+    address controller, address beacon
   ) external {
     // Determine if 90 days have passed since the last heartbeat.
     (bool expired, ) = heartbeatStatus();
@@ -330,9 +391,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
    * @param implementation the address of the new implementation.
    */
   function exitAdharmaContingency(
-    address controller,
-    address beacon,
-    address implementation
+    address controller, address beacon, address implementation
   ) external onlyOwner {
     // Ensure that the Adharma Contingency is currently active.
     require(
@@ -368,8 +427,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
    * @param newTimelockInterval new minimum time interval for the new timelock.
    */
   function modifyTimelockInterval(
-    bytes4 functionSelector,
-    uint256 newTimelockInterval
+    bytes4 functionSelector, uint256 newTimelockInterval
   ) public onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
@@ -394,8 +452,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
    * which it is set to expire (i.e. 90 days from the last heartbeat).
    */
   function heartbeatStatus() public view returns (
-    bool expired,
-    uint256 expirationTime
+    bool expired, uint256 expirationTime
   ) {
     expirationTime = _lastHeartbeat + 90 days;
     expired = now > expirationTime;
@@ -410,9 +467,7 @@ contract DharmaUpgradeBeaconControllerManager is Ownable, Timelocker {
    * @param implementation the address of the new implementation.
    */
   function _upgrade(
-    address controller,
-    address beacon,
-    address implementation
+    address controller, address beacon, address implementation
   ) private {
     // Ensure that the implementaton contract is not the null address.
     require(

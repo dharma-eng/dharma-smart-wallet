@@ -1,8 +1,8 @@
 pragma solidity 0.5.11; // optimization runs: 200, evm version: petersburg
 
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../helpers/Timelocker.sol";
+import "../helpers/TwoStepOwnable.sol";
 
 
 interface DharmaSmartWalletRecovery {
@@ -22,7 +22,11 @@ interface DharmaSmartWalletRecovery {
  *
  * The timelocked functions currently implemented include:
  *  recover(address wallet, address newUserSigningKey)
+ *  disableAccountRecovery(address wallet)
  *  modifyTimelockInterval(bytes4 functionSelector, uint256 newTimelockInterval)
+ *  modifyTimelockExpiration(
+ *    bytes4 functionSelector, uint256 newTimelockExpiration
+ *  )
  *
  * Note that special care should be taken to differentiate between lost keys and
  * compromised keys, and that the danger of a user being impersonated is
@@ -31,47 +35,70 @@ interface DharmaSmartWalletRecovery {
  * contract at their signing address, reserving this "hard reset" for extremely
  * unusual circumstances and eventually sunsetting it entirely.
  */
-contract DharmaAccountRecoveryManager is Ownable, Timelocker {
+contract DharmaAccountRecoveryManager is TwoStepOwnable, Timelocker {
   using SafeMath for uint256;
 
   // Maintain mapping of smart wallets that have opted out of account recovery.
   mapping(address => bool) private _accountRecoveryDisabled;
 
   /**
-   * @notice In the constructor, set initial minimum timelock interval values.
+   * @notice In the constructor, set the initial owner to the transaction
+   * submitter and initial minimum timelock interval and default timelock
+   * expiration values.
    */
   constructor() public {
-    // Set initial owner to the transaction submitter.
-    _transferOwnership(tx.origin);
-
     // Set initial minimum timelock interval values.
     _setInitialTimelockInterval(this.modifyTimelockInterval.selector, 4 weeks);
+    _setInitialTimelockInterval(
+      this.modifyTimelockExpiration.selector, 4 weeks
+    );
     _setInitialTimelockInterval(this.recover.selector, 7 days);
     _setInitialTimelockInterval(this.disableAccountRecovery.selector, 3 days);
+
+    // Set initial default timelock expiration values.
+    _setInitialTimelockExpiration(this.modifyTimelockInterval.selector, 7 days);
+    _setInitialTimelockExpiration(
+      this.modifyTimelockExpiration.selector, 7 days
+    );
+    _setInitialTimelockExpiration(this.recover.selector, 7 days);
+    _setInitialTimelockExpiration(this.disableAccountRecovery.selector, 7 days);
   }
 
   /**
-   * @notice Sets a timelock so that the specified function can be called with
-   * the specified arguments. Note that existing timelocks may be extended, but
-   * not shortened - this can also be used as a method for "cancelling" an
-   * account recovery by extending the timelock to an arbitrarily long duration.
-   * Keep in mind that new timelocks may be created with a shorter duration on
-   * functions that already have other timelocks on them, but only if they have
-   * different arguments (i.e. a new wallet or user signing key is specified).
-   * Only the owner may call this function.
-   * @param functionSelector selector of the function to be called.
-   * @param arguments The abi-encoded arguments of the function to be called -
-   * in the case of `recover`, it is the smart wallet address and the new user
-   * signing key.
+   * @notice Initiates a timelocked account recovery process for a smart wallet
+   * user signing key. Only the owner may call this function. Once the timelock
+   * period is complete (and before it has expired) the owner may call `recover`
+   * to complete the process and reset the user's signing key.
+   * @param smartWallet the smart wallet address.
+   * @param userSigningKey the new user signing key.
    * @param extraTime Additional time in seconds to add to the timelock.
    */
-  function setTimelock(
-    bytes4 functionSelector,
-    bytes calldata arguments,
-    uint256 extraTime
+  function initiateAccountRecovery(
+    address smartWallet, address userSigningKey, uint256 extraTime
   ) external onlyOwner {
     // Set the timelock and emit a `TimelockInitiated` event.
-    _setTimelock(functionSelector, arguments, extraTime);
+    _setTimelock(
+      this.recover.selector, abi.encode(smartWallet, userSigningKey), extraTime
+    );
+  }
+
+  /**
+   * @notice Initiates a timelocked account recovery disablement process for a
+   * smart wallet. Only the owner may call this function. Once the timelock
+   * period is complete (and before it has expired) the owner may call
+   * `disableAccountRecovery` to complete the process and opt a smart wallet out
+   * of account recovery. Once account recovery has been disabled, it cannot be
+   * reenabled - the process is irreversible.
+   * @param smartWallet the smart wallet address.
+   * @param extraTime Additional time in seconds to add to the timelock.
+   */
+  function initiateAccountRecoveryDisablement(
+    address smartWallet, uint256 extraTime
+  ) external onlyOwner {
+    // Set the timelock and emit a `TimelockInitiated` event.
+    _setTimelock(
+      this.disableAccountRecovery.selector, abi.encode(smartWallet), extraTime
+    );
   }
 
   /**

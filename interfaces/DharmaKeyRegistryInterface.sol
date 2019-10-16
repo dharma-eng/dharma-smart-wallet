@@ -2,6 +2,8 @@ pragma solidity 0.5.11;
 
 
 interface DharmaKeyRegistryInterface {
+  event NewGlobalKey(address oldGlobalKey, address newGlobalKey);
+
   function setGlobalKey(address globalKey, bytes calldata signature) external;
   function setSpecificKey(address account, address specificKey) external;
   function getKey() external view returns (address key);

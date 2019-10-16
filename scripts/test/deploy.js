@@ -8,6 +8,7 @@ let DharmaUpgradeBeaconControllerArtifact;
 let DharmaUpgradeBeaconEnvoyArtifact;
 let DharmaKeyRingUpgradeBeaconArtifact;
 let DharmaKeyRegistryV1Artifact;
+let DharmaKeyRegistryV2Artifact;
 let DharmaAccountRecoveryManagerArtifact;
 let DharmaSmartWalletFactoryV1Artifact;
 let UpgradeBeaconProxyV1Artifact;
@@ -73,6 +74,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconArtifact = require('../../../build/contracts/DharmaUpgradeBeacon.json')
     DharmaKeyRingUpgradeBeaconArtifact = require('../../../build/contracts/DharmaKeyRingUpgradeBeacon.json')
     DharmaKeyRegistryV1Artifact = require('../../../build/contracts/DharmaKeyRegistryV1.json')
+    DharmaKeyRegistryV2Artifact = require('../../../build/contracts/DharmaKeyRegistryV2.json')
     DharmaSmartWalletFactoryV1Artifact = require('../../../build/contracts/DharmaSmartWalletFactoryV1.json')
     UpgradeBeaconProxyV1Artifact = require('../../../build/contracts/UpgradeBeaconProxyV1.json')
     DharmaAccountRecoveryManagerArtifact = require('../../../build/contracts/DharmaAccountRecoveryManager.json')
@@ -85,6 +87,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
     DharmaKeyRingUpgradeBeaconArtifact = require('../../build/contracts/DharmaKeyRingUpgradeBeacon.json')
     DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
+    DharmaKeyRegistryV2Artifact = require('../../build/contracts/DharmaKeyRegistryV2.json')
     DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
     UpgradeBeaconProxyV1Artifact = require('../../build/contracts/UpgradeBeaconProxyV1.json')
     DharmaAccountRecoveryManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
@@ -136,6 +139,11 @@ module.exports = {test: async function (provider, testingContext) {
   const DharmaKeyRegistryV1 = new web3.eth.Contract(
     DharmaKeyRegistryV1Artifact.abi,
     constants.KEY_REGISTRY_ADDRESS
+  )
+
+  const DharmaKeyRegistryV2 = new web3.eth.Contract(
+    DharmaKeyRegistryV2Artifact.abi,
+    constants.KEY_REGISTRY_V2_ADDRESS
   )
 
   const DharmaSmartWalletFactoryV1 = new web3.eth.Contract(
@@ -235,6 +243,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   DharmaKeyRegistryV1Deployer.options.data = (
     DharmaKeyRegistryV1Artifact.bytecode
+  )
+
+  const DharmaKeyRegistryV2Deployer = new web3.eth.Contract(
+    DharmaKeyRegistryV2Artifact.abi
+  )
+  DharmaKeyRegistryV2Deployer.options.data = (
+    DharmaKeyRegistryV2Artifact.bytecode
   )
 
   const DharmaSmartWalletFactoryV1Deployer = new web3.eth.Contract(
@@ -1366,6 +1381,73 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
+  let currentKeyRegistryV2Code;
+  await runTest(
+    'Checking Key Registry V2 runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.KEY_REGISTRY_V2_ADDRESS],
+    true,
+    value => {
+      currentKeyRegistryV2Code = value;
+    }
+  )
+
+  if (
+    currentKeyRegistryV2Code !== swapMetadataHash(
+      DharmaKeyRegistryV2Artifact.deployedBytecode,
+      constants.KEY_REGISTRY_V2_METADATA
+    )
+  ) {
+    await runTest(
+      `DharmaKeyRegistryV2 Code contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        constants.KEY_REGISTRY_V2_SALT,
+        swapMetadataHash(
+          DharmaKeyRegistryV2Artifact.bytecode,
+          constants.KEY_REGISTRY_V2_METADATA
+        )
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, constants.KEY_REGISTRY_V2_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaKeyRegistryV2 contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        constants.KEY_REGISTRY_V2_SALT,
+        swapMetadataHash(
+          DharmaKeyRegistryV2Artifact.bytecode,
+          constants.KEY_REGISTRY_V2_METADATA
+        )
+      ]
+    )
+  }
+
+  await runTest(
+    'Deployed Key Registry code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [DharmaKeyRegistryV2.options.address],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaKeyRegistryV2Artifact.deployedBytecode,
+        constants.KEY_REGISTRY_V2_METADATA
+      ))
+    }
+  )
+
   const DharmaSmartWalletImplementationV0 = await runTest(
     `DharmaSmartWalletImplementationV0 contract deployment`,
     DharmaSmartWalletImplementationV0Deployer,
@@ -1868,11 +1950,19 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'IndestructibleRegistry can register the Dharma Key Registry as indestructible',
+    'IndestructibleRegistry can register DharmaKeyRegistryV1 as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
     'send',
     [constants.KEY_REGISTRY_ADDRESS]
+  )
+
+  await runTest(
+    'IndestructibleRegistry can register DharmaKeyRegistryV2 as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [constants.KEY_REGISTRY_V2_ADDRESS]
   )
 
   await runTest(

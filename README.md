@@ -22,10 +22,13 @@ https://etherscan.io/address/0x0000000000bda2152794ac8c76b2dc86cba57cad#code
 https://etherscan.io/address/0x000000000067503c398f4c9652530dbc4ea95c02#code
 
 ##### DharmaAccountRecoveryManager
-https://etherscan.io/address/0x00000000d750176e38660203c678d88ee7e28d36#code
+https://etherscan.io/address/0x000000006d00ffde550bc5eaa7c24cce36c6657d#code
 
 ##### DharmaKeyRegistryV1
 https://etherscan.io/address/0x000000005d7065eb9716a410070ee62d51092c98#code
+
+##### DharmaKeyRegistryV2
+https://etherscan.io/address/0x00000000f534674c252dfe4b9834a4d62ef40015#code
 
 ##### DharmaSmartWalletImplementationV1
 https://etherscan.io/address/0x0000000010a653849f221a573e00f3a37c8c4082#code
@@ -42,6 +45,9 @@ https://etherscan.io/address/0x1eb2bc53fc25a917cca3f031913a3522933a5b92#code
 ##### DharmaKeyRingImplementationV0
 https://etherscan.io/address/0x0000000000f732b182f375af6baa1770d83077ed#code
 
+##### DharmaKeyRingImplementationV1
+https://etherscan.io/address/0x00000000ea0007cdab60e07437e59e9cc41c2e49#code
+
 ##### DharmaKeyRingFactoryV1
 https://etherscan.io/address/0x00dd005247b300f700cfdff89c00e2acc94c7b00#code
 
@@ -49,13 +55,13 @@ https://etherscan.io/address/0x00dd005247b300f700cfdff89c00e2acc94c7b00#code
 https://etherscan.io/address/0x0c2b7c1b73229483464d3fc4db4d4c2130374e4f#code
 
 ##### AdharmaSmartWalletImplementation
-https://etherscan.io/address/0x00000000fde3b69fecd50c8a4c001678f00011ab#code
+https://etherscan.io/address/0x0000000053d300f11703dcdd1e90921db83f0048#code
 
 ##### AdharmaKeyRingImplementation
 https://etherscan.io/address/0x00000000480003d5ee4f51134ce73cc9ac00f693#code
 
 ##### DharmaUpgradeBeaconControllerManager
-https://etherscan.io/address/0x0000000000b4004dd6771bf29079c3699e5d9c95#code
+https://etherscan.io/address/0x00000000007de1d7ce62fffeddcc1663b701e875#code
 
 ##### Implementation Set on Upgrade Beacon
 https://etherscan.io/tx/0xb11b065a67bff15e70863e843c43ca231f7cb53cce7d9a5a85e1e8e3e7b14d32#eventlog
@@ -73,8 +79,11 @@ https://etherscan.io/tx/0xbbe90a37df4488d725b602a4c214856cd0d5c414fe52e0010ece60
 ##### Upgrade to DharmaSmartWalletImplementationV2
 https://etherscan.io/tx/0xc12cf1c3ca9ef8503cdd5536d8d42d29f8f833d24fb3dcdbea00b18c0b2aa52f#eventlog
 
-##### Implementation Set on keyring Upgrade Beacon
+##### V0 Implementation Set on keyring Upgrade Beacon
 https://etherscan.io/tx/0xcdf785050d7cd41a30eee0666aca312fd6254189d981a55fa3a18cab2fb3f624#eventlog
+
+##### V1 Implementation Set on keyring Upgrade Beacon
+https://etherscan.io/tx/0xbe6a44535505b0409820fe4e2c1cec4adc6a9abde8ea0287960c899e5b149105#eventlog
 
 # Summary
 Explore a minimal implementation of a smart wallet that:

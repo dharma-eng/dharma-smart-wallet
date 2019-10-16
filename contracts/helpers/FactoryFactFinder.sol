@@ -6,7 +6,7 @@ import "../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
 
 
 /**
- * @title FactoryFactFinder (staging)
+ * @title FactoryFactFinder
  * @author 0age
  * @notice This contract facilitates determining information on counterfactual
  * deployment addresses, as well as current deployment statuses, of Dharma Smart
@@ -15,13 +15,13 @@ import "../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
 contract FactoryFactFinder {
   DharmaSmartWalletFactoryV1Interface private constant _smartWalletFactory = (
     DharmaSmartWalletFactoryV1Interface(
-      0x8D1e00b000e56d5BcB006F3a008Ca6003b9F0033
+      0xfc00C80b0000007F73004edB00094caD80626d8D
     )
   );
 
   DharmaKeyRingFactoryV1Interface private constant _keyRingFactory = (
     DharmaKeyRingFactoryV1Interface(
-      0x06f3342295530DdFF6182f7a40906FD60cd19100
+      0x00DD005247B300f700cFdfF89C00e2aCC94c7b00
     )
   );
 

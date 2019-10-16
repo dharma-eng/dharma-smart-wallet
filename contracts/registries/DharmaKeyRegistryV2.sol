@@ -1,7 +1,7 @@
 pragma solidity 0.5.11;
 
-import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
+import "../helpers/TwoStepOwnable.sol";
 import "../../interfaces/DharmaKeyRegistryInterface.sol";
 
 
@@ -20,7 +20,7 @@ import "../../interfaces/DharmaKeyRegistryInterface.sol";
  * mapping to track all global keys that have been used, and only allows a given
  * global key to be set one time.
  */
-contract DharmaKeyRegistryV2 is Ownable, DharmaKeyRegistryInterface {
+contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
   using ECDSA for bytes32;
 
   // The global public key serves as the default signing key.
@@ -39,9 +39,6 @@ contract DharmaKeyRegistryV2 is Ownable, DharmaKeyRegistryInterface {
   constructor() public {
     // Initially set the global key to the account of the transaction submitter.
     _registerGlobalKey(tx.origin);
-
-    // Also set the initial owner to the account of the transaction submitter.
-    _transferOwnership(tx.origin);
   }
 
   /**
@@ -55,8 +52,7 @@ contract DharmaKeyRegistryV2 is Ownable, DharmaKeyRegistryInterface {
    * resolve to the supplied global key.
    */
   function setGlobalKey(
-    address globalKey,
-    bytes calldata signature
+    address globalKey, bytes calldata signature
   ) external onlyOwner {
     // Ensure that the provided global key is not the null address.
     require(globalKey != address(0), "A global key must be supplied.");
@@ -89,8 +85,7 @@ contract DharmaKeyRegistryV2 is Ownable, DharmaKeyRegistryInterface {
    * @param specificKey address The new specific public key.
    */
   function setSpecificKey(
-    address account,
-    address specificKey
+    address account, address specificKey
   ) external onlyOwner {
     // Update specific key for provided account to the provided specific key.
     _specificKeys[account] = specificKey;
@@ -167,6 +162,9 @@ contract DharmaKeyRegistryV2 is Ownable, DharmaKeyRegistryInterface {
   function _registerGlobalKey(address globalKey) internal {
     // Ensure that the global key has not been used previously.
     require(!_usedGlobalKeys[globalKey], "Key has been used previously.");
+
+    // Emit an event signifying that the global key has been modified.
+    emit NewGlobalKey(_globalKey, globalKey);
 
     // Update the global key to the provided global key.
     _globalKey = globalKey;
