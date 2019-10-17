@@ -1,3 +1,5 @@
+![Dharma Smart Wallet](https://i.ibb.co/6sV9hbb/Smart-Wallet-Banner.png)
+
 # Dharma Smart Wallet (dharma-smart-wallet)
 
 > An upgradeable, joint-custody, meta-transaction-enabled smart wallet for Dharma users.
