@@ -24,7 +24,7 @@ https://etherscan.io/address/0x0000000000bda2152794ac8c76b2dc86cba57cad#code
 https://etherscan.io/address/0x000000000067503c398f4c9652530dbc4ea95c02#code
 
 ##### DharmaAccountRecoveryManager
-https://etherscan.io/address/0x000000006d00ffde550bc5eaa7c24cce36c6657d#code
+https://etherscan.io/address/0x00000000008ac532ee543e89cfc462827afb9369#code
 
 ##### DharmaKeyRegistryV1
 https://etherscan.io/address/0x000000005d7065eb9716a410070ee62d51092c98#code
@@ -63,7 +63,7 @@ https://etherscan.io/address/0x0000000053d300f11703dcdd1e90921db83f0048#code
 https://etherscan.io/address/0x00000000480003d5ee4f51134ce73cc9ac00f693#code
 
 ##### DharmaUpgradeBeaconControllerManager
-https://etherscan.io/address/0x00000000007de1d7ce62fffeddcc1663b701e875#code
+https://etherscan.io/address/0x000000000075a05df21466285a7ff8c9df5a11ed#code
 
 ##### Implementation Set on Upgrade Beacon
 https://etherscan.io/tx/0xb11b065a67bff15e70863e843c43ca231f7cb53cce7d9a5a85e1e8e3e7b14d32#eventlog
