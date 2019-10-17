@@ -53,6 +53,9 @@ https://etherscan.io/address/0x00000000ea0007cdab60e07437e59e9cc41c2e49#code
 ##### DharmaKeyRingFactoryV1
 https://etherscan.io/address/0x00dd005247b300f700cfdff89c00e2acc94c7b00#code
 
+##### DharmaKeyRingFactoryV2
+https://etherscan.io/address/0x2484000059004afb720000dc738434fa6200f49d#code
+
 ##### Example KeyRingUpgradeBeaconProxyV1
 https://etherscan.io/address/0x0c2b7c1b73229483464d3fc4db4d4c2130374e4f#code
 
