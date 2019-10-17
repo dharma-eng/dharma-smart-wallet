@@ -156,17 +156,16 @@ contract DharmaAccountRecoveryManager is TwoStepOwnable, Timelocker {
   }
 
   /**
-   * @notice Sets a new timelock interval for a given function selector. The
-   * default for this function may also be modified, but has a maximum allowable
-   * value of eight weeks. Only the owner may call this function.
+   * @notice Sets the timelock for a new timelock interval for a given function
+   * selector. Only the owner may call this function.
    * @param functionSelector the selector of the function to set the timelock
    * interval for.
    * @param newTimelockInterval The new timelock interval to set for the given
    * function selector.
+   * @param extraTime Additional time in seconds to add to the timelock.
    */
-  function modifyTimelockInterval(
-    bytes4 functionSelector,
-    uint256 newTimelockInterval
+  function initiateModifyTimelockInterval(
+    bytes4 functionSelector, uint256 newTimelockInterval, uint256 extraTime
   ) public onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
@@ -182,7 +181,98 @@ contract DharmaAccountRecoveryManager is TwoStepOwnable, Timelocker {
       );
     }
 
+    // Set the timelock and emit a `TimelockInitiated` event.
+    _setTimelock(
+      this.modifyTimelockInterval.selector,
+      abi.encode(functionSelector, newTimelockInterval),
+      extraTime
+    );
+  }
+
+  /**
+   * @notice Sets a new timelock interval for a given function selector. The
+   * default for this function may also be modified, but has a maximum allowable
+   * value of eight weeks. Only the owner may call this function.
+   * @param functionSelector the selector of the function to set the timelock
+   * interval for.
+   * @param newTimelockInterval The new timelock interval to set for the given
+   * function selector.
+   */
+  function modifyTimelockInterval(
+    bytes4 functionSelector, uint256 newTimelockInterval
+  ) public onlyOwner {
+    // Ensure that a function selector is specified (no 0x00000000 selector).
+    require(
+      functionSelector != bytes4(0),
+      "Function selector cannot be empty."
+    );
+
     // Continue via logic in the inherited `modifyTimelockInterval` function.
     Timelocker.modifyTimelockInterval(functionSelector, newTimelockInterval);
+  }
+
+  /**
+   * @notice Sets a new timelock expiration for a given function selector. The
+   * default Only the owner may call this function. New expiration durations may
+   * not exceed one month.
+   * @param functionSelector the selector of the function to set the timelock
+   * expiration for.
+   * @param newTimelockExpiration The new timelock expiration to set for the
+   * given function selector.
+   * @param extraTime Additional time in seconds to add to the timelock.
+   */
+  function initiateTimelockExpiration(
+    bytes4 functionSelector, uint256 newTimelockExpiration, uint256 extraTime
+  ) public onlyOwner {
+    // Ensure that a function selector is specified (no 0x00000000 selector).
+    require(
+      functionSelector != bytes4(0),
+      "Function selector cannot be empty."
+    );
+
+    // Ensure that the supplied default expiration does not exceed 1 month.
+    require(
+      newTimelockExpiration <= 30 days,
+      "New timelock expiration cannot exceed one month."
+    );
+
+    // Ensure a timelock expiration under one hour is not set on this function.
+    if (functionSelector == this.modifyTimelockExpiration.selector) {
+      require(
+        newTimelockExpiration >= 60 minutes,
+        "Expiration of modifyTimelockExpiration must be at least an hour long."
+      );
+    }
+
+    // Set the timelock and emit a `TimelockInitiated` event.
+    _setTimelock(
+      this.modifyTimelockExpiration.selector,
+      abi.encode(functionSelector, newTimelockExpiration),
+      extraTime
+    );
+  }
+
+  /**
+   * @notice Sets a new timelock expiration for a given function selector. The
+   * default for this function may also be modified, but has a minimum allowable
+   * value of one hour. Only the owner may call this function.
+   * @param functionSelector the selector of the function to set the timelock
+   * expiration for.
+   * @param newTimelockExpiration The new timelock expiration to set for the
+   * given function selector.
+   */
+  function modifyTimelockExpiration(
+    bytes4 functionSelector, uint256 newTimelockExpiration
+  ) public onlyOwner {
+    // Ensure that a function selector is specified (no 0x00000000 selector).
+    require(
+      functionSelector != bytes4(0),
+      "Function selector cannot be empty."
+    );
+
+    // Continue via logic in the inherited `newTimelockExpiration` function.
+    Timelocker.modifyTimelockExpiration(
+      functionSelector, newTimelockExpiration
+    );
   }
 }
