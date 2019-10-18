@@ -207,8 +207,8 @@ contract DharmaAccountRecoveryManager is TwoStepOwnable, Timelocker {
       "Function selector cannot be empty."
     );
 
-    // Continue via logic in the inherited `modifyTimelockInterval` function.
-    Timelocker.modifyTimelockInterval(functionSelector, newTimelockInterval);
+    // Continue via logic in the inherited `_modifyTimelockInterval` function.
+    _modifyTimelockInterval(functionSelector, newTimelockInterval);
   }
 
   /**
@@ -270,8 +270,8 @@ contract DharmaAccountRecoveryManager is TwoStepOwnable, Timelocker {
       "Function selector cannot be empty."
     );
 
-    // Continue via logic in the inherited `newTimelockExpiration` function.
-    Timelocker.modifyTimelockExpiration(
+    // Continue via logic in the inherited `_modifyTimelockExpiration` function.
+    _modifyTimelockExpiration(
       functionSelector, newTimelockExpiration
     );
   }

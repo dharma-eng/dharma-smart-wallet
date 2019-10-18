@@ -7,16 +7,23 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  * @title Timelocker
  * @author 0age
  * @notice This contract allows contracts that inherit it to implement timelocks
- * on functions, where the `setTimelock` function must first be called, with the
- * same arguments that the function will be supplied with. Then, a given time
+ * on functions, where the `_setTimelock` internal function must first be called
+ * and passed the target function selector and arguments. Then, a given time
  * interval must first fully transpire before the timelock functions can be
- * successfully called. It also includes a `modifyTimelockInterval` function
- * that is itself able to be timelocked, and that is given a function selector
- * and a new timelock interval for the function as arguments. To make a function
- * timelocked, use the `_enforceTimelock` internal function. To set initial
- * minimum timelock intervals, use the `_setInitialTimelockInterval` internal
- * function - it can only be used from within a constructor. Finally, there are
- * two public getters: `getTimelock` and `getTimelockInterval`.
+ * successfully called. Furthermore, once a timelock is complete, it will expire
+ * after a period of time. It also includes a `modifyTimelockInterval` function
+ * and a `modifyTimelockExpiration` function, both of which implement timelocks,
+ * and that are given a function selector and a new timelock interval or default
+ * expiration time for the specified function as arguments. IT IS IMPORTANT THAT
+ * THESE FUNCTIONS ARE OVERRIDDEN IN WHATEVER CONTRACT INHERITS TIMELOCKER, as
+ * they do not implement any access control since Timelocker is not an ownable.
+ *
+ * To make a function timelocked, use the `_enforceTimelock` internal function.
+ * To set initial defult minimum timelock intervals and expirations, use the
+ * `_setInitialTimelockInterval` and `_setInitialTimelockExpiration` internal
+ * functions - they can only be used during contract creation. Finally, there
+ * are three public getters: `getTimelock`, `getDefaultTimelockInterval`, and
+ * `getDefaultTimelockExpiration`.
  */
 contract Timelocker {
   using SafeMath for uint256;
@@ -49,24 +56,31 @@ contract Timelocker {
     uint128 expires;
   }
 
+  // Functions have a timelock interval and time from completion to expiration.
+  struct TimelockDefaults {
+    uint128 interval;
+    uint128 expiration;
+  }
+
   // Implement a timelock for each function and set of arguments.
   mapping(bytes4 => mapping(bytes32 => Timelock)) private _timelocks;
 
-  // Implement a default timelock interval for each timelocked function.
-  mapping(bytes4 => uint256) private _timelockIntervals;
+  // Implement default timelock intervals and expirations for each function.
+  mapping(bytes4 => TimelockDefaults) private _timelockDefaults;
 
-  // Implement a default timelock expiration for each timelocked function.
-  mapping(bytes4 => uint256) private _timelockExpirations;
+  // Only allow one new interval or expiration change at a time per function.
+  mapping(bytes4 => mapping(bytes4 => bytes32)) private _protectedTimelockIDs;
 
-  bytes32 private constant _EMPTY_HASH = bytes32(
-    0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470
+  // Store reused revert reasons as constants.
+  string constant _SHOULD_OVERRIDE = (
+    "This function should be overridden by the inheriting contract."
   );
 
   /**
-   * @notice Public function for setting a new timelock interval for a given
-   * function selector. The default for this function may also be modified, but
-   * excessive values will cause the `modifyTimelockInterval` function to become
-   * unusable.
+   * @notice Public "stub" function for setting a new timelock interval. Be sure
+   * to override the stub of this function with appropriate access controls, and
+   * to call the corresponding internal function from within the overriding
+   * function, in order to modify timelock intervals.
    * @param functionSelector the selector of the function to set the timelock
    * interval for.
    * @param newTimelockInterval the new minimum timelock interval to set for the
@@ -75,54 +89,22 @@ contract Timelocker {
   function modifyTimelockInterval(
     bytes4 functionSelector, uint256 newTimelockInterval
   ) public {
-    // Ensure that the new timelock interval will not cause an overflow error.
-    require(
-      newTimelockInterval < 365000000000000 days,
-      "New timelock interval is too large."
-    );
-
-    // Ensure that the timelock has been set and is completed.
-    _enforceTimelock(
-      this.modifyTimelockInterval.selector, abi.encode()
-    );
-
-    // Set new timelock interval and emit a `TimelockIntervalModified` event.
-    _setTimelockInterval(functionSelector, newTimelockInterval);
+    revert(_SHOULD_OVERRIDE);
   }
 
   /**
-   * @notice Public function for setting a new timelock expiration for a given
-   * function selector. Once the minimum interval has elapsed, the timelock will
-   * expire once the specified expiration time has elapsed. Setting this value
-   * too low will result in timelocks that are very difficult to execute
-   * correctly.
+   * @notice Public "stub" function for setting a new timelock expiration. Be
+   * sure to override the stub of this function with appropriate access controls
+   * in order to modify timelock expirations.
    * @param functionSelector the selector of the function to set the timelock
-   * expiration for.
-   * @param newTimelockExpiration the new minimum timelock expiration to set for
+   * interval for.
+   * @param newTimelockExpiration the new default timelock expiration to set for
    * the given function.
    */
   function modifyTimelockExpiration(
     bytes4 functionSelector, uint256 newTimelockExpiration
   ) public {
-    // Ensure that the new timelock expiration will not cause an overflow error.
-    require(
-      newTimelockExpiration < 365000000000000 days,
-      "New timelock expiration is too large."
-    );
-
-    // Ensure that the new timelock expiration will not cause an overflow error.
-    require(
-      newTimelockExpiration > 1 minutes,
-      "New timelock expiration is too short."
-    );
-
-    // Ensure that the timelock has been set and is completed.
-    _enforceTimelock(
-      this.modifyTimelockExpiration.selector, abi.encode()
-    );
-
-    // Set new default expiration and emit a `TimelockExpirationModified` event.
-    _setTimelockExpiration(functionSelector, newTimelockExpiration);
+    revert(_SHOULD_OVERRIDE);
   }
 
   /**
@@ -143,15 +125,7 @@ contract Timelocker {
     uint256 expirationTime
   ) {
     // Get timelock ID using the supplied function arguments.
-    bytes32 timelockID;
-    if (
-      functionSelector == this.modifyTimelockInterval.selector ||
-      functionSelector == this.modifyTimelockExpiration.selector
-    ) {
-      timelockID = _EMPTY_HASH;
-    } else {
-      timelockID = keccak256(abi.encodePacked(arguments));
-    }
+    bytes32 timelockID = keccak256(abi.encodePacked(arguments));
 
     // Get information on the current timelock, if one exists.
     completionTime = uint256(_timelocks[functionSelector][timelockID].complete);
@@ -167,10 +141,12 @@ contract Timelocker {
    * @param functionSelector function to retrieve the timelock interval for.
    * @return The current minimum timelock interval for the given function.
    */
-  function getTimelockInterval(
+  function getDefaultTimelockInterval(
     bytes4 functionSelector
-  ) public view returns (uint256 timelockInterval) {
-    timelockInterval = _timelockIntervals[functionSelector];
+  ) public view returns (uint256 defaultTimelockInterval) {
+    defaultTimelockInterval = uint256(
+      _timelockDefaults[functionSelector].interval
+    );
   }
 
   /**
@@ -179,10 +155,12 @@ contract Timelocker {
    * @param functionSelector function to retrieve the timelock expiration for.
    * @return The current default timelock expiration for the given function.
    */
-  function getTimelockExpiration(
+  function getDefaultTimelockExpiration(
     bytes4 functionSelector
-  ) public view returns (uint256 timelockExpiration) {
-    timelockExpiration = _timelockExpirations[functionSelector];
+  ) public view returns (uint256 defaultTimelockExpiration) {
+    defaultTimelockExpiration = uint256(
+      _timelockDefaults[functionSelector].expiration
+    );
   }
 
   /**
@@ -201,33 +179,62 @@ contract Timelocker {
   function _setTimelock(
     bytes4 functionSelector, bytes memory arguments, uint256 extraTime
   ) internal {
-    // Get timelock using current time, inverval for timelock ID, & extra time.
-    uint256 timelock = _timelockIntervals[functionSelector].add(now).add(
-      extraTime
-    );
-
-    // Get expiration time using timelock duration plus default expiration time.
-    uint256 expiration = timelock.add(_timelockExpirations[functionSelector]);
-
     // Get timelock ID using the supplied function arguments.
-    bytes32 timelockID;
+    bytes32 timelockID = keccak256(abi.encodePacked(arguments));
+
+    // For timelock interval or expiration changes, first drop any existing
+    // timelock for the function being modified if the argument has changed.
     if (
       functionSelector == this.modifyTimelockInterval.selector ||
       functionSelector == this.modifyTimelockExpiration.selector
     ) {
-      timelockID = _EMPTY_HASH;
-    } else {
-      timelockID = keccak256(abi.encodePacked(arguments));
+      // Determine the function that will be modified by the timelock.
+      (bytes4 modifiedFunction, uint256 duration) = abi.decode(
+        arguments, (bytes4, uint256)
+      );
+
+      // Ensure that the new timelock duration will not cause an overflow error.
+      require(
+        duration < 365000000000000 days,
+        "Specified default timelock duration to modify is too large."
+      );
+
+      // Determine the current timelockID, if any, for the modified function.
+      bytes32 currentTimelockID = (
+        _protectedTimelockIDs[functionSelector][modifiedFunction]
+      );
+
+      // Drop existing timelock if it exists and has a different timelockID.
+      if (currentTimelockID != bytes32(0) && currentTimelockID != timelockID) {
+        delete _timelocks[functionSelector][currentTimelockID];
+      }
+
+      // Register the current timelockID.
+      _protectedTimelockIDs[functionSelector][modifiedFunction] = timelockID;
     }
+
+    // Get timelock using current time, inverval for timelock ID, & extra time.
+    uint256 timelock = uint256(
+      _timelockDefaults[functionSelector].interval
+    ).add(now).add(extraTime);
+
+    // Get expiration time using timelock duration plus default expiration time.
+    uint256 expiration = timelock.add(
+      uint256(_timelockDefaults[functionSelector].expiration)
+    );
 
     // Get the current timelock, if one exists.
     Timelock storage timelockStorage = _timelocks[functionSelector][timelockID];
 
+    // Determine the duration of the current timelock.
     uint256 currentTimelock = uint256(timelockStorage.complete);
 
     // Ensure that the timelock duration does not decrease. Note that a new,
     // shorter timelock may still be set up on the same function in the event
-    // that it is provided with different arguments.
+    // that it is provided with different arguments. Also note that this can be
+    // circumvented when modifying intervals or expirations by setting a new
+    // timelock (removing the old one), then resetting the original timelock but
+    // with a shorter duration.
     require(
       currentTimelock == 0 || timelock > currentTimelock,
       "Existing timelocks may only be extended."
@@ -239,6 +246,54 @@ contract Timelocker {
 
     // Emit an event with all of the relevant information.
     emit TimelockInitiated(functionSelector, timelock, arguments, expiration);
+  }
+
+  /**
+   * @notice Internal function for setting a new timelock interval for a given
+   * function selector. The default for this function may also be modified, but
+   * excessive values will cause the `modifyTimelockInterval` function to become
+   * unusable.
+   * @param functionSelector the selector of the function to set the timelock
+   * interval for.
+   * @param newTimelockInterval the new minimum timelock interval to set for the
+   * given function.
+   */
+  function _modifyTimelockInterval(
+    bytes4 functionSelector, uint256 newTimelockInterval
+  ) internal {
+    // Ensure that the timelock has been set and is completed.
+    _enforceTimelock(
+      this.modifyTimelockInterval.selector,
+      abi.encode(functionSelector, newTimelockInterval)
+    );
+
+    // Set new timelock interval and emit a `TimelockIntervalModified` event.
+    _setTimelockInterval(functionSelector, newTimelockInterval);
+  }
+
+  /**
+   * @notice Internal function for setting a new timelock expiration for a given
+   * function selector. Once the minimum interval has elapsed, the timelock will
+   * expire once the specified expiration time has elapsed. Setting this value
+   * too low will result in timelocks that are very difficult to execute
+   * correctly. Be sure to override the public version of this function with
+   * appropriate access controls.
+   * @param functionSelector the selector of the function to set the timelock
+   * expiration for.
+   * @param newTimelockExpiration the new minimum timelock expiration to set for
+   * the given function.
+   */
+  function _modifyTimelockExpiration(
+    bytes4 functionSelector, uint256 newTimelockExpiration
+  ) internal {
+    // Ensure that the timelock has been set and is completed.
+    _enforceTimelock(
+      this.modifyTimelockExpiration.selector,
+      abi.encode(functionSelector, newTimelockExpiration)
+    );
+
+    // Set new default expiration and emit a `TimelockExpirationModified` event.
+    _setTimelockExpiration(functionSelector, newTimelockExpiration);
   }
 
   /**
@@ -320,10 +375,12 @@ contract Timelocker {
     bytes4 functionSelector, uint256 newTimelockInterval
   ) private {
     // Get the existing timelock interval, if any.
-    uint256 oldTimelockInterval = _timelockIntervals[functionSelector];
+    uint256 oldTimelockInterval = uint256(
+      _timelockDefaults[functionSelector].interval
+    );
 
     // Update the timelock interval on the provided function.
-    _timelockIntervals[functionSelector] = newTimelockInterval;
+    _timelockDefaults[functionSelector].interval = uint128(newTimelockInterval);
 
     // Emit a `TimelockIntervalModified` event with the appropriate arguments.
     emit TimelockIntervalModified(
@@ -342,11 +399,21 @@ contract Timelocker {
   function _setTimelockExpiration(
     bytes4 functionSelector, uint256 newTimelockExpiration
   ) private {
+    // Ensure that the new timelock expiration is not too short.
+    require(
+      newTimelockExpiration > 1 minutes,
+      "New timelock expiration is too short."
+    );
+
     // Get the existing timelock expiration, if any.
-    uint256 oldTimelockExpiration = _timelockExpirations[functionSelector];
+    uint256 oldTimelockExpiration = uint256(
+      _timelockDefaults[functionSelector].expiration
+    );
 
     // Update the timelock expiration on the provided function.
-    _timelockExpirations[functionSelector] = newTimelockExpiration;
+    _timelockDefaults[functionSelector].expiration = uint128(
+      newTimelockExpiration
+    );
 
     // Emit a `TimelockExpirationModified` event with the appropriate arguments.
     emit TimelockExpirationModified(
