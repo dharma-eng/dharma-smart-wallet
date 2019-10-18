@@ -1,4 +1,4 @@
-![Dharma Smart Wallet](https://i.ibb.co/6sV9hbb/Smart-Wallet-Banner.png)
+![Dharma Smart Wallet](https://i.ibb.co/GpdW464/Smart-Wallet-Banner.png)
 
 # Dharma Smart Wallet (dharma-smart-wallet)
 
