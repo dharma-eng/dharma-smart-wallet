@@ -7,6 +7,8 @@
 ![GitHub](https://img.shields.io/github/license/dharmaprotocol/dharma-smart-wallet.svg)
 ![CircleCI](https://img.shields.io/circleci/build/github/dharmaprotocol/dharma-smart-wallet/master?token=cfe6c9bcab23789a52477ff865f9fe2d66e87ce7)
 
+*Audit Revisions Checkpoint - October 18th, 2019*
+
 ### Currently Deployed Contracts (production) and example txs:
 ##### DharmaUpgradeBeaconController
 https://etherscan.io/address/0x00000000002226c940b74d674b85e4be05539663#code
