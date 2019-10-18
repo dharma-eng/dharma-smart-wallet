@@ -80,7 +80,7 @@ contract TwoStepOwnable {
    */
   function acceptOwnership() public {
     require(
-      msg.sender != _newPotentialOwner,
+      msg.sender == _newPotentialOwner,
       "TwoStepOwnable: current owner must set caller as new potential owner."
     );
 
