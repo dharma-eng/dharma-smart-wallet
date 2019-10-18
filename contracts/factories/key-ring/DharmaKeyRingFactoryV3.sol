@@ -8,7 +8,7 @@ import "../../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
 
 
 /**
- * @title DharmaKeyRingFactoryV2
+ * @title DharmaKeyRingFactoryV3
  * @author 0age
  * @notice This contract deploys new Dharma Key Ring instances as "Upgrade
  * Beacon" proxies that reference a shared implementation contract specified by
@@ -17,13 +17,12 @@ import "../../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
  * signing key on the keyring and making a withdrawal from the associated smart
  * wallet. It prevents operations from or being applied to the wrong keyring if
  * another caller frontruns them by passing the target deployment address as an
- * additional argument and checking for existence of a contract at that address.
- * This factory builds on V1 by additionally including a helper function for
- * deriving adminActionIDs for keyrings that have not yet been deployed in order
- * to support creation of the signature parameter provided as part of calls to
- * `newKeyRingAndAdditionalKey`.
+ * additional argument and checking for existence of a keyring contract at that
+ * address. This factory builds on V2 by utilizing extcodehash, rather than
+ * extcodesize, to validate whether a target key ring instance is deployed to a
+ * given address or not.
  */
-contract DharmaKeyRingFactoryV2 is DharmaKeyRingFactoryV2Interface {
+contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
   // Use DharmaKeyRing initialize selector to construct initialization calldata.
   bytes4 private constant _INITIALIZE_SELECTOR = bytes4(0x30fc201f);
 
@@ -32,15 +31,27 @@ contract DharmaKeyRingFactoryV2 is DharmaKeyRingFactoryV2Interface {
     0x0000000000BDA2152794ac8c76B2dc86cbA57cad
   );
 
+  // The keyring instance runtime code hash is used to verify expected targets.
+  bytes32 private constant _KEY_RING_INSTANCE_RUNTIME_HASH = bytes32(
+    0x0000000000000000000000000000000000000000000000000000000000000001
+  );
+
   /**
-   * @notice In the constructor, ensure that the initialize selector constant is
-   * correct.
+   * @notice In the constructor, ensure that the initialize selector constant
+   * and key ring instance runtime code hash are both correct.
    */
   constructor() public {
     DharmaKeyRingInitializer initializer;
     require(
       initializer.initialize.selector == _INITIALIZE_SELECTOR,
       "Incorrect initializer selector supplied."
+    );
+
+    require(
+      _KEY_RING_INSTANCE_RUNTIME_HASH == keccak256(
+        type(KeyRingUpgradeBeaconProxyV1).runtimeCode
+      ),
+      "Incorrect keyring runtime code hash supplied."
     );
   }
 
@@ -49,9 +60,9 @@ contract DharmaKeyRingFactoryV2 is DharmaKeyRingFactoryV2Interface {
    * @param userSigningKey address The user signing key, supplied as a
    * constructor argument.
    * @param targetKeyRing address The expected counterfactual address of the new
-   * keyring - if a contract is already deployed to this address, the deployment
-   * step will be skipped (supply the null address for this argument to force a
-   * deployment of a new key ring).
+   * keyring - if a keyring contract is already deployed to this address, the
+   * deployment step will be skipped (supply the null address for this argument
+   * to force a deployment of a new key ring).
    * @return The address of the new key ring.
    */
   function newKeyRing(
@@ -67,9 +78,9 @@ contract DharmaKeyRingFactoryV2 is DharmaKeyRingFactoryV2Interface {
    * @param userSigningKey address The user signing key, supplied as a
    * constructor argument.
    * @param targetKeyRing address The expected counterfactual address of the new
-   * keyring - if a contract is already deployed to this address, the deployment
-   * step will be skipped and the supplied address will be used for all
-   * subsequent steps.
+   * keyring - if a keyring contract is already deployed to this address, the
+   * deployment step will be skipped and the supplied address will be used for
+   * all subsequent steps.
    * @param additionalSigningKey address The second user signing key, supplied
    * as an argument to `takeAdminAction` on the newly-deployed keyring.
    * @param signature bytes A signature approving the addition of the second key
@@ -99,9 +110,9 @@ contract DharmaKeyRingFactoryV2 is DharmaKeyRingFactoryV2Interface {
    * @param userSigningKey address The user signing key, supplied as a
    * constructor argument.
    * @param targetKeyRing address The expected counterfactual address of the new
-   * keyring - if a contract is already deployed to this address, the deployment
-   * step will be skipped and the supplied address will be used for all
-   * subsequent steps.
+   * keyring - if a keyring contract is already deployed to this address, the
+   * deployment step will be skipped and the supplied address will be used for
+   * all subsequent steps.
    * @param smartWallet address The smart wallet to make the withdrawal from and
    * that has the keyring to be deployed set as its user singing address.
    * @param amount uint256 The amount of Dai to withdraw.
@@ -148,9 +159,9 @@ contract DharmaKeyRingFactoryV2 is DharmaKeyRingFactoryV2Interface {
    * @param userSigningKey address The user signing key, supplied as a
    * constructor argument.
    * @param targetKeyRing address The expected counterfactual address of the new
-   * keyring - if a contract is already deployed to this address, the deployment
-   * step will be skipped and the supplied address will be used for all
-   * subsequent steps.
+   * keyring - if a keyring contract is already deployed to this address, the
+   * deployment step will be skipped and the supplied address will be used for
+   * all subsequent steps.
    * @param smartWallet address The smart wallet to make the withdrawal from and
    * that has the keyring to be deployed set as its user singing address.
    * @param amount uint256 The amount of USDC to withdraw.
@@ -240,16 +251,16 @@ contract DharmaKeyRingFactoryV2 is DharmaKeyRingFactoryV2Interface {
    * deployment will be skipped and the supplied address will be returned.
    * @param userSigningKey address The user signing key, supplied as a
    * constructor argument during deployment.
-   * @return The address of the new key ring, or of the supplied key ring if a
-   * contract already exists at the supplied address.
+   * @return The address of the new key ring, or of the supplied key ring if one
+   * already exists at the supplied address.
    */
   function _deployNewKeyRingIfNeeded(
     address userSigningKey, address expectedKeyRing
   ) internal returns (address keyRing) {
     // Only deploy if a key ring doesn't already exist at the expected address.
-    uint256 size;
-    assembly { size := extcodesize(expectedKeyRing) }
-    if (size == 0) {
+    bytes32 hash;
+    assembly { hash := extcodehash(expectedKeyRing) }
+    if (hash != _KEY_RING_INSTANCE_RUNTIME_HASH) {
       // Get initialization calldata using the initial user signing key.
       bytes memory initializationCalldata = _constructInitializationCalldata(
         userSigningKey
@@ -261,12 +272,10 @@ contract DharmaKeyRingFactoryV2 is DharmaKeyRingFactoryV2Interface {
       // Emit an event to signal the creation of the new key ring contract.
       emit KeyRingDeployed(keyRing, userSigningKey);
     } else {
-      // Note: specifying an address that was not returned from `getNextKeyRing`
-      // will cause this assumption to fail. Furthermore, the key ring at the
-      // expected address may have been modified so that the supplied user
-      // signing key is no longer a valid key - therefore, treat this helper as
-      // a way to protect against race conditions, not as a primary mechanism
-      // for interacting with key ring contracts.
+      // Note: the key ring at the expected address may have been modified so
+      // that the supplied user signing key is no longer a valid key. Therefore,
+      // treat this helper as a way to protect against race conditions, not as a
+      // primary mechanism for interacting with key ring contracts.
       keyRing = expectedKeyRing;
     }
   }
@@ -395,9 +404,10 @@ contract DharmaKeyRingFactoryV2 is DharmaKeyRingFactoryV2Interface {
   }
 
   /**
-   * @notice Private function for getting the version of the current key ring
-   * implementation by using the upgrade beacon to determine the implementation
-   * and then calling into the returned implementation contract directly.
+   * @notice Private view function for getting the version of the current key
+   * ring implementation by using the upgrade beacon to determine the
+   * implementation and then calling into the returned implementation contract
+   * directly.
    */
   function _getKeyRingVersion() private view returns (uint256 version) {
     // Perform the staticcall into the key ring upgrade beacon.

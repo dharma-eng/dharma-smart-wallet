@@ -32,6 +32,9 @@ contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
   // Maintain a mapping of all used global keys (to prevent reuse).
   mapping (address => bool) private _usedGlobalKeys;
 
+  // Maintain a mapping of all used specific keys per user (to prevent reuse).
+  mapping (address => mapping(address => bool)) private _usedSpecificKeys;
+
   /**
    * @notice In the constructor, set the initial global key and the initial
    * owner to tx.origin.
@@ -87,8 +90,20 @@ contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
   function setSpecificKey(
     address account, address specificKey
   ) external onlyOwner {
+    // Ensure that the specific key has not been used previously.
+    require(
+      !_usedSpecificKeys[account][specificKey],
+      "Key has been used previously for this specific account."
+    );
+
+    // Emit an event signifying that the specific key has been modified.
+    emit NewSpecificKey(account, _specificKeys[account], specificKey);
+
     // Update specific key for provided account to the provided specific key.
     _specificKeys[account] = specificKey;
+
+    // Mark the specific key as having been used previously.
+    _usedSpecificKeys[account][specificKey] = true;
   }
 
   /**

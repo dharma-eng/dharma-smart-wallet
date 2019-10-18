@@ -71,7 +71,7 @@ contract TwoStepOwnable {
    * Can only be called by the current owner.
    */
   function cancelOwnershipTransfer() public onlyOwner {
-    _newPotentialOwner = address(0);
+    delete _newPotentialOwner;
   }
 
   /**

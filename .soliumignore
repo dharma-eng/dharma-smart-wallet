@@ -2,6 +2,7 @@
 node_modules
 contracts/mock/RelayContract.sol
 contracts/mock/RelayContractV2.sol
+interfaces/RelayContractInterface.sol
 
 # disagree with indentation error
 contracts/helpers/FactoryFactFinder.sol

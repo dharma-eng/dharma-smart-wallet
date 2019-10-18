@@ -3,10 +3,11 @@ pragma solidity 0.5.11; // optimization runs: 200, evm version: petersburg
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../helpers/Timelocker.sol";
 import "../helpers/TwoStepOwnable.sol";
-
+import "../../interfaces/DharmaAccountRecoveryManagerInterface.sol";
 
 interface DharmaSmartWalletRecovery {
   function recover(address newUserSigningKey) external;
+  function getUserSigningKey() external view returns (address userSigningKey);
 }
 
 
@@ -35,7 +36,10 @@ interface DharmaSmartWalletRecovery {
  * contract at their signing address, reserving this "hard reset" for extremely
  * unusual circumstances and eventually sunsetting it entirely.
  */
-contract DharmaAccountRecoveryManager is TwoStepOwnable, Timelocker {
+contract DharmaAccountRecoveryManager is
+  DharmaAccountRecoveryManagerInterface,
+  TwoStepOwnable,
+  Timelocker {
   using SafeMath for uint256;
 
   // Maintain mapping of smart wallets that have opted out of account recovery.
@@ -108,8 +112,7 @@ contract DharmaAccountRecoveryManager is TwoStepOwnable, Timelocker {
    * @param newUserSigningKey Address of the new signing key for the user.
    */
   function recover(
-    address wallet,
-    address newUserSigningKey
+    address wallet, address newUserSigningKey
   ) external onlyOwner {
     // Ensure that the timelock has been set and is completed.
     _enforceTimelock(
@@ -122,8 +125,25 @@ contract DharmaAccountRecoveryManager is TwoStepOwnable, Timelocker {
       "This wallet has elected to opt out of account recovery functionality."
     );
 
+    // Declare the proper interface for the smart wallet in question.
+    DharmaSmartWalletRecovery walletToRecover = DharmaSmartWalletRecovery(
+      wallet
+    );
+
+    // Attempt to get current signing key - a failure should not block recovery.
+    address oldUserSigningKey;
+    (bool ok, bytes memory data) = wallet.call(abi.encodeWithSelector(
+      walletToRecover.getUserSigningKey.selector
+    ));
+    if (ok && data.length == 32) {
+      oldUserSigningKey = abi.decode(data, (address));
+    }
+
     // Call the specified smart wallet and supply the new user signing key.
     DharmaSmartWalletRecovery(wallet).recover(newUserSigningKey);
+
+    // Emit an event to signify that the wallet in question was recovered.
+    emit Recovery(wallet, oldUserSigningKey, newUserSigningKey);
   }
 
   /**
@@ -139,6 +159,9 @@ contract DharmaAccountRecoveryManager is TwoStepOwnable, Timelocker {
 
     // Register the specified wallet as having opted out of account recovery.
     _accountRecoveryDisabled[wallet] = true;
+
+    // Emit an event to signify the wallet in question is no longer recoverable.
+    emit RecoveryDisabled(wallet);
   }
 
   /**
@@ -166,7 +189,7 @@ contract DharmaAccountRecoveryManager is TwoStepOwnable, Timelocker {
    */
   function initiateModifyTimelockInterval(
     bytes4 functionSelector, uint256 newTimelockInterval, uint256 extraTime
-  ) public onlyOwner {
+  ) external onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -200,7 +223,7 @@ contract DharmaAccountRecoveryManager is TwoStepOwnable, Timelocker {
    */
   function modifyTimelockInterval(
     bytes4 functionSelector, uint256 newTimelockInterval
-  ) public onlyOwner {
+  ) external onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -223,7 +246,7 @@ contract DharmaAccountRecoveryManager is TwoStepOwnable, Timelocker {
    */
   function initiateTimelockExpiration(
     bytes4 functionSelector, uint256 newTimelockExpiration, uint256 extraTime
-  ) public onlyOwner {
+  ) external onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -263,7 +286,7 @@ contract DharmaAccountRecoveryManager is TwoStepOwnable, Timelocker {
    */
   function modifyTimelockExpiration(
     bytes4 functionSelector, uint256 newTimelockExpiration
-  ) public onlyOwner {
+  ) external onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),

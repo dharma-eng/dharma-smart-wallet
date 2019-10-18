@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
 import "../../../interfaces/DharmaSmartWalletImplementationV1Interface.sol";
+import "../../../interfaces/DharmaSmartWalletImplementationV3Interface.sol";
 import "../../../interfaces/CTokenInterface.sol";
 import "../../../interfaces/USDCV1Interface.sol";
 import "../../../interfaces/ComptrollerInterface.sol";
@@ -32,7 +33,8 @@ import "../../../interfaces/ERC1271.sol";
  */
 contract DharmaSmartWalletImplementationV3 is
   DharmaSmartWalletImplementationV0Interface,
-  DharmaSmartWalletImplementationV1Interface {
+  DharmaSmartWalletImplementationV1Interface,
+  DharmaSmartWalletImplementationV3Interface {
   using Address for address;
   using ECDSA for bytes32;
   // WARNING: DO NOT REMOVE OR REORDER STORAGE WHEN WRITING NEW IMPLEMENTATIONS!
@@ -60,13 +62,13 @@ contract DharmaSmartWalletImplementationV3 is
 
   // DharmaKeyRegistryV2 holds a public key for verifying meta-transactions.
   DharmaKeyRegistryInterface internal constant _DHARMA_KEY_REGISTRY = (
-    DharmaKeyRegistryInterface(0x00000000F534674C252dfe4B9834A4d62Ef40015)
+    DharmaKeyRegistryInterface(0x5a74865419815411f00A81956A6010FA7c454d5E)
   );
 
   // Account recovery is facilitated using a hard-coded recovery manager,
   // controlled by Dharma and implementing appropriate timelocks.
   address internal constant _ACCOUNT_RECOVERY_MANAGER = address(
-    0x000000005bF12f10B4e7001adF7E7400e49431fa
+    0x63dF833dC3aDdA75B971ebAE1BffCCe66E16000d
   );
 
   // This contract interfaces with Dai, USDC, and related CompoundV2 contracts.
@@ -441,6 +443,8 @@ contract DharmaSmartWalletImplementationV3 is
     (ok, ) = recipient.call.gas(2300).value(amount)("");
     if (!ok) {
       emit ExternalError(recipient, "Recipient rejected ether transfer.");
+    } else {
+      emit EthWithdrawal(amount, recipient);
     }
   }
 
@@ -463,6 +467,9 @@ contract DharmaSmartWalletImplementationV3 is
     uint256 minimumActionGas,
     bytes calldata signature
   ) external {
+    // Get the current nonce.
+    uint256 nonceToCancel = _nonce;
+
     // Ensure the caller or the supplied signature is valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.Cancel,
@@ -471,6 +478,9 @@ contract DharmaSmartWalletImplementationV3 is
       signature,
       signature
     );
+
+    // Emit an event to validate that the nonce is no longer valid.
+    emit Cancel(nonceToCancel);
   }
 
   /**
@@ -641,7 +651,7 @@ contract DharmaSmartWalletImplementationV3 is
    * action. The current nonce will be used, which means that it will only be
    * valid for the next action taken.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2),
    * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
    * ETHWithdrawal (6).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
@@ -680,7 +690,7 @@ contract DharmaSmartWalletImplementationV3 is
    * action. Any nonce value may be supplied, which enables constructing valid
    * message hashes for multiple future actions ahead of time.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2),
    * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
    * ETHWithdrawal (6).
    * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
@@ -1051,7 +1061,7 @@ contract DharmaSmartWalletImplementationV3 is
    * errors, which can be guarded against by supplying a minimum action gas
    * requirement).
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2),
    * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
    * ETHWithdrawal (6).
    * @param arguments bytes ABI-encoded arguments for the action.
@@ -1301,7 +1311,7 @@ contract DharmaSmartWalletImplementationV3 is
    * is derived by prefixing (according to EIP-191 0x45) and hashing an actionID
    * returned from `getCustomActionID`.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2),
    * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
    * ETHWithdrawal (6).
    * @param arguments bytes ABI-encoded arguments for the action.
@@ -1352,7 +1362,7 @@ contract DharmaSmartWalletImplementationV3 is
    * when reconstructing an action ID during protected function execution based
    * on the supplied parameters.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2), 
+   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2),
    * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
    * ETHWithdrawal (6).
    * @param arguments bytes ABI-encoded arguments for the action.

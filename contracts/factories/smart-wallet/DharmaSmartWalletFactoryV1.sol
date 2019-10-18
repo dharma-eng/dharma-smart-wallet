@@ -147,7 +147,7 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
               abi.encodePacked(    // pack all inputs to the hash together.
                 bytes1(0xff),      // pass in the control character.
                 address(this),     // pass in the address of this contract.
-                nonce,              // pass in the salt from above.
+                nonce,             // pass in the salt from above.
                 initCodeHash       // pass in hash of contract creation code.
               )
             )

@@ -4,6 +4,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../helpers/TwoStepOwnable.sol";
 import "../helpers/Timelocker.sol";
 import "../../interfaces/UpgradeBeaconControllerInterface.sol";
+import "../../interfaces/DharmaUpgradeBeaconControllerManagerInterface.sol";
 
 
 /**
@@ -38,20 +39,11 @@ import "../../interfaces/UpgradeBeaconControllerInterface.sol";
  * introduce new upgrade conditions or to otherwise alter the way that upgrades
  * are carried out.
  */
-contract DharmaUpgradeBeaconControllerManager is TwoStepOwnable, Timelocker {
+contract DharmaUpgradeBeaconControllerManager is
+  DharmaUpgradeBeaconControllerManagerInterface,
+  TwoStepOwnable,
+  Timelocker {
   using SafeMath for uint256;
-
-  // Fire an event whenever the Adharma Contingency is activated or exited.
-  event AdharmaContingencyActivated(address controller, address beacon);
-  event AdharmaContingencyExited(address controller, address beacon);
-
-  // Store timestamp and last implementation in case of Adharma Contingency.
-  // Note that this is specific to a particular controller and beacon.
-  struct AdharmaContingency {
-    bool armed;
-    bool activated;
-    uint256 activationTime;
-  }
 
   // Store the last implementation address for each controller + beacon pair.
   mapping(address => mapping (address => address)) private _lastImplementation;
@@ -286,7 +278,7 @@ contract DharmaUpgradeBeaconControllerManager is TwoStepOwnable, Timelocker {
     require(beacon != address(0), "Must specify a beacon address.");
 
     // Determine if 90 days have passed since the last heartbeat.
-    (bool expired, ) = heartbeatStatus();
+    (bool expired, ) = _heartbeatStatus();
     require(
       isOwner() || expired,
       "Only callable by the owner or after 90 days without a heartbeat."
@@ -311,7 +303,7 @@ contract DharmaUpgradeBeaconControllerManager is TwoStepOwnable, Timelocker {
     address controller, address beacon
   ) external {
     // Determine if 90 days have passed since the last heartbeat.
-    (bool expired, ) = heartbeatStatus();
+    (bool expired, ) = _heartbeatStatus();
     require(
       isOwner() || expired,
       "Only callable by the owner or after 90 days without a heartbeat."
@@ -429,7 +421,7 @@ contract DharmaUpgradeBeaconControllerManager is TwoStepOwnable, Timelocker {
    */
   function initiateModifyTimelockInterval(
     bytes4 functionSelector, uint256 newTimelockInterval, uint256 extraTime
-  ) public onlyOwner {
+  ) external onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -463,7 +455,7 @@ contract DharmaUpgradeBeaconControllerManager is TwoStepOwnable, Timelocker {
    */
   function modifyTimelockInterval(
     bytes4 functionSelector, uint256 newTimelockInterval
-  ) public onlyOwner {
+  ) external onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -486,7 +478,7 @@ contract DharmaUpgradeBeaconControllerManager is TwoStepOwnable, Timelocker {
    */
   function initiateTimelockExpiration(
     bytes4 functionSelector, uint256 newTimelockExpiration, uint256 extraTime
-  ) public onlyOwner {
+  ) external onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -526,7 +518,7 @@ contract DharmaUpgradeBeaconControllerManager is TwoStepOwnable, Timelocker {
    */
   function modifyTimelockExpiration(
     bytes4 functionSelector, uint256 newTimelockExpiration
-  ) public onlyOwner {
+  ) external onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -543,7 +535,18 @@ contract DharmaUpgradeBeaconControllerManager is TwoStepOwnable, Timelocker {
    * @notice Determine if the deadman's switch has expired and get the time at
    * which it is set to expire (i.e. 90 days from the last heartbeat).
    */
-  function heartbeatStatus() public view returns (
+  function heartbeatStatus() external view returns (
+    bool expired, uint256 expirationTime
+  ) {
+    (expired, expirationTime) = _heartbeatStatus();
+  }
+
+  /**
+   * @notice Internal view function to determine if the deadman's switch has
+   * expired and to get the time at which it is set to expire (i.e. 90 days from
+   * the last heartbeat).
+   */
+  function _heartbeatStatus() internal view returns (
     bool expired, uint256 expirationTime
   ) {
     expirationTime = _lastHeartbeat + 90 days;

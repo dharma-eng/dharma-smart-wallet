@@ -77,7 +77,7 @@ contract Timelocker {
   );
 
   /**
-   * @notice Public "stub" function for setting a new timelock interval. Be sure
+   * @notice External stub function for setting new timelock intervals. Be sure
    * to override the stub of this function with appropriate access controls, and
    * to call the corresponding internal function from within the overriding
    * function, in order to modify timelock intervals.
@@ -88,12 +88,13 @@ contract Timelocker {
    */
   function modifyTimelockInterval(
     bytes4 functionSelector, uint256 newTimelockInterval
-  ) public {
+  ) external {
+    (functionSelector, newTimelockInterval);
     revert(_SHOULD_OVERRIDE);
   }
 
   /**
-   * @notice Public "stub" function for setting a new timelock expiration. Be
+   * @notice External stub for setting new default timelock expirations. Be sure
    * sure to override the stub of this function with appropriate access controls
    * in order to modify timelock expirations.
    * @param functionSelector the selector of the function to set the timelock
@@ -103,7 +104,8 @@ contract Timelocker {
    */
   function modifyTimelockExpiration(
     bytes4 functionSelector, uint256 newTimelockExpiration
-  ) public {
+  ) external {
+    (functionSelector, newTimelockExpiration);
     revert(_SHOULD_OVERRIDE);
   }
 
