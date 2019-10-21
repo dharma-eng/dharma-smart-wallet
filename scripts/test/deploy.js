@@ -106,11 +106,16 @@ module.exports = {test: async function (provider, testingContext) {
   let counts = {}
 
   /*
-  console.log(DharmaUpgradeBeaconControllerArtifact.bytecode)
-  console.log(swapMetadataHash(
-    DharmaUpgradeBeaconControllerArtifact.bytecode,
-    constants.UPGRADE_BEACON_CONTROLLER_METADATA
-  ))
+  console.log(
+    swapMetadataHash(
+      DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
+      constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+    ),
+    web3.utils.keccak256(swapMetadataHash(
+      DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
+      constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+    ), {encoding: 'hex'})
+  )
   process.exit(0)
   */
 

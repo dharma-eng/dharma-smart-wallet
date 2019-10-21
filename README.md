@@ -7,70 +7,27 @@
 ![GitHub](https://img.shields.io/github/license/dharmaprotocol/dharma-smart-wallet.svg)
 ![CircleCI](https://img.shields.io/circleci/build/github/dharmaprotocol/dharma-smart-wallet/master?token=cfe6c9bcab23789a52477ff865f9fe2d66e87ce7)
 
-*Audit Revisions Checkpoint - October 18th, 2019*
+| Core Contracts                                                                                                                                  | Implementations                                                                                                                              | Factories                                                                                                                             |
+|-------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| <a href="https://etherscan.io/address/0x00000000005330029d3de861454979d0dd8c89dc#code" target="_blank">DharmaUpgradeBeaconControllerManager</a> |                                                             Dharma Smart Wallet                                                              |                                                         Dharma Smart Wallet                                                           |
+| <a href="https://etherscan.io/address/0x00000000002226c940b74d674b85e4be05539663#code" target="_blank">DharmaUpgradeBeaconController</a>        | <a href="https://etherscan.io/address/0x0000000053d300f11703dcdd1e90921db83f0048#code" target="_blank">AdharmaSmartWalletImplementation</a>  | <a href="https://etherscan.io/address/0xfc00c80b0000007f73004edb00094cad80626d8d#code" target="_blank">DharmaSmartWalletFactoryV1</a> |
+| <a href="https://etherscan.io/address/0x000000000026750c571ce882b17016557279adaa#code" target="_blank">DharmaUpgradeBeacon</a>                  | <a href="https://etherscan.io/address/0x0000000010a653849f221a573e00f3a37c8c4082#code" target="_blank">DharmaSmartWalletImplementationV1</a> | DharmaSmartWalletFactoryV2                                                                                                            |
+| <a href="https://etherscan.io/address/0x00000000011df015e8ad00d7b2486a88c2eb8210#code" target="_blank">DharmaKeyRingUpgradeBeaconController</a> | <a href="https://etherscan.io/address/0x000000000088387c42fe85a60df4dce8e34eea4e#code" target="_blank">DharmaSmartWalletImplementationV2</a> |                                                                                                                                       |
+| <a href="https://etherscan.io/address/0x0000000000bda2152794ac8c76b2dc86cba57cad#code" target="_blank">DharmaKeyRingUpgradeBeacon</a>           | DharmaSmartWalletImplementationV3                                                                                                            |                                                           Dharma Key Ring                                                             |
+| <a href="https://etherscan.io/address/0x000000000067503c398f4c9652530dbc4ea95c02#code" target="_blank">DharmaUpgradeBeaconEnvoy</a>             |                                                                                                                                              | <a href="https://etherscan.io/address/0x00dd005247b300f700cfdff89c00e2acc94c7b00#code" target="_blank">DharmaKeyRingFactoryV1</a>     |
+| <a href="https://etherscan.io/address/0x000000005d7065eb9716a410070ee62d51092c98#code" target="_blank">DharmaKeyRegistryV1</a>                  |                                                               Dharma Key Ring                                                                | <a href="https://etherscan.io/address/0x2484000059004afb720000dc738434fa6200f49d#code" target="_blank">DharmaKeyRingFactoryV2</a>     |
+| <a href="https://etherscan.io/address/0x00000000ea4044b4b60091836a6d47554f43a100#code" target="_blank">DharmaKeyRegistryV2</a>                  | <a href="https://etherscan.io/address/0x00000000480003d5ee4f51134ce73cc9ac00f693#code" target="_blank">AdharmaKeyRingImplementation</a>      | DharmaKeyRingFactoryV3                                                                                                                |
+| <a href="https://etherscan.io/address/0x00000000003709edea9182789f1153e59cfe849e#code" target="_blank">DharmaAccountRecoveryManager</a>         | <a href="https://etherscan.io/address/0x00000000ea0007cdab60e07437e59e9cc41c2e49#code" target="_blank">DharmaKeyRingImplementationV1</a>     |                                                                                                                                       |
 
 ### Currently Deployed Contracts (production) and example txs:
-##### DharmaUpgradeBeaconController
-https://etherscan.io/address/0x00000000002226c940b74d674b85e4be05539663#code
-
-##### DharmaUpgradeBeacon
-https://etherscan.io/address/0x000000000026750c571ce882b17016557279adaa#code
-
-##### DharmaKeyRingUpgradeBeaconController
-https://etherscan.io/address/0x00000000011df015e8ad00d7b2486a88c2eb8210#code
-
-##### DharmaKeyRingUpgradeBeacon
-https://etherscan.io/address/0x0000000000bda2152794ac8c76b2dc86cba57cad#code
-
-##### DharmaUpgradeBeaconEnvoy
-https://etherscan.io/address/0x000000000067503c398f4c9652530dbc4ea95c02#code
-
-##### DharmaAccountRecoveryManager
-https://etherscan.io/address/0x000000005bf12f10b4e7001adf7e7400e49431fa#code
-
-##### DharmaKeyRegistryV1
-https://etherscan.io/address/0x000000005d7065eb9716a410070ee62d51092c98#code
-
-##### DharmaKeyRegistryV2
-https://etherscan.io/address/0x00000000f534674c252dfe4b9834a4d62ef40015#code
-
-##### DharmaSmartWalletImplementationV1
-https://etherscan.io/address/0x0000000010a653849f221a573e00f3a37c8c4082#code
-
-##### DharmaSmartWalletImplementationV2
-https://etherscan.io/address/0x000000000088387c42fe85a60df4dce8e34eea4e#code
-
-##### DharmaSmartWalletFactoryV1
-https://etherscan.io/address/0xfc00c80b0000007f73004edb00094cad80626d8d#code
 
 ##### Example UpgradeBeaconProxyV1 instance
 https://etherscan.io/address/0x1eb2bc53fc25a917cca3f031913a3522933a5b92#code
 
-##### DharmaKeyRingImplementationV0
-https://etherscan.io/address/0x0000000000f732b182f375af6baa1770d83077ed#code
-
-##### DharmaKeyRingImplementationV1
-https://etherscan.io/address/0x00000000ea0007cdab60e07437e59e9cc41c2e49#code
-
-##### DharmaKeyRingFactoryV1
-https://etherscan.io/address/0x00dd005247b300f700cfdff89c00e2acc94c7b00#code
-
-##### DharmaKeyRingFactoryV2
-https://etherscan.io/address/0x2484000059004afb720000dc738434fa6200f49d#code
-
 ##### Example KeyRingUpgradeBeaconProxyV1
 https://etherscan.io/address/0x0c2b7c1b73229483464d3fc4db4d4c2130374e4f#code
 
-##### AdharmaSmartWalletImplementation
-https://etherscan.io/address/0x0000000053d300f11703dcdd1e90921db83f0048#code
-
-##### AdharmaKeyRingImplementation
-https://etherscan.io/address/0x00000000480003d5ee4f51134ce73cc9ac00f693#code
-
-##### DharmaUpgradeBeaconControllerManager
-https://etherscan.io/address/0x0000000000ccdfcb0aadf8e9a9b6794ce56b76eb#code
-
-##### Implementation Set on Upgrade Beacon
+##### V1 Implementation Set on Smart Wallet Upgrade Beacon
 https://etherscan.io/tx/0xb11b065a67bff15e70863e843c43ca231f7cb53cce7d9a5a85e1e8e3e7b14d32#eventlog
 
 ##### First Dharma Smart Wallet deploy through Factory (with deposits)
@@ -83,13 +40,13 @@ https://etherscan.io/tx/0xb13acf0ad97efef0138e0f1ff0e7f9e682a4d8e7eb7e33b4e3a1ec
 ##### Dharma Key Registry V1 seting a global key
 https://etherscan.io/tx/0xbbe90a37df4488d725b602a4c214856cd0d5c414fe52e0010ece6060210966e1
 
-##### Upgrade to DharmaSmartWalletImplementationV2
+##### V2 Implementation Set on Smart Wallet Upgrade Beacon
 https://etherscan.io/tx/0xc12cf1c3ca9ef8503cdd5536d8d42d29f8f833d24fb3dcdbea00b18c0b2aa52f#eventlog
 
-##### V0 Implementation Set on keyring Upgrade Beacon
+##### V0 Implementation Set on Key Ring Upgrade Beacon
 https://etherscan.io/tx/0xcdf785050d7cd41a30eee0666aca312fd6254189d981a55fa3a18cab2fb3f624#eventlog
 
-##### V1 Implementation Set on keyring Upgrade Beacon
+##### V1 Implementation Set on Key Ring Upgrade Beacon
 https://etherscan.io/tx/0xbe6a44535505b0409820fe4e2c1cec4adc6a9abde8ea0287960c899e5b149105#eventlog
 
 # Summary

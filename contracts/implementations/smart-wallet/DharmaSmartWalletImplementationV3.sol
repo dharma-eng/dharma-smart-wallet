@@ -62,13 +62,13 @@ contract DharmaSmartWalletImplementationV3 is
 
   // DharmaKeyRegistryV2 holds a public key for verifying meta-transactions.
   DharmaKeyRegistryInterface internal constant _DHARMA_KEY_REGISTRY = (
-    DharmaKeyRegistryInterface(0x5a74865419815411f00A81956A6010FA7c454d5E)
+    DharmaKeyRegistryInterface(0x00000000EA4044b4b60091836A6D47554F43a100)
   );
 
   // Account recovery is facilitated using a hard-coded recovery manager,
   // controlled by Dharma and implementing appropriate timelocks.
   address internal constant _ACCOUNT_RECOVERY_MANAGER = address(
-    0xf9fc01c402e5Ca1aFE240fbc04Fd58b6079Df6AB
+    0x00000000003709EDEA9182789f1153E59CFe849e
   );
 
   // This contract interfaces with Dai, USDC, and related CompoundV2 contracts.
