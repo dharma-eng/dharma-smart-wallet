@@ -68,7 +68,7 @@ contract DharmaSmartWalletImplementationV3 is
   // Account recovery is facilitated using a hard-coded recovery manager,
   // controlled by Dharma and implementing appropriate timelocks.
   address internal constant _ACCOUNT_RECOVERY_MANAGER = address(
-    0x63dF833dC3aDdA75B971ebAE1BffCCe66E16000d
+    0xf9fc01c402e5Ca1aFE240fbc04Fd58b6079Df6AB
   );
 
   // This contract interfaces with Dai, USDC, and related CompoundV2 contracts.
@@ -101,6 +101,10 @@ contract DharmaSmartWalletImplementationV3 is
 
   // ERC-1271 must return this magic value when `isValidSignature` is called.
   bytes4 internal constant _ERC_1271_MAGIC_VALUE = bytes4(0x20c13b0b);
+
+  // Minimum supported deposit & non-maximum withdrawal size is .001 underlying.
+  uint256 private constant _JUST_UNDER_ONE_1000th_DAI = 999999999999999;
+  uint256 private constant _JUST_UNDER_ONE_1000th_USDC = 999;
 
   /**
    * @notice In initializer, set up user signing key, set approval on the cDAI
@@ -221,7 +225,7 @@ contract DharmaSmartWalletImplementationV3 is
     );
 
     // Ensure that an amount of at least 0.001 Dai has been supplied.
-    require(amount > 999999999999999, "Insufficient amount supplied.");
+    require(amount > _JUST_UNDER_ONE_1000th_DAI, "Insufficient Dai supplied.");
 
     // Ensure that a non-zero recipient has been supplied.
     require(recipient != address(0), "No recipient supplied.");
@@ -337,7 +341,7 @@ contract DharmaSmartWalletImplementationV3 is
     );
 
     // Ensure that an amount of at least 0.001 USDC has been supplied.
-    require(amount > 999, "Insufficient amount supplied.");
+    require(amount > _JUST_UNDER_ONE_1000th_USDC, "Insufficient USDC supplied.");
 
     // Ensure that a non-zero recipient has been supplied.
     require(recipient != address(0), "No recipient supplied.");
@@ -972,8 +976,8 @@ contract DharmaSmartWalletImplementationV3 is
   function _depositOnCompound(AssetType asset, uint256 balance) internal {
     // Only perform a deposit if the balance is at least .001 Dai or USDC.
     if (
-      asset == AssetType.DAI && balance > 999999999999999 || // 18 decimals
-      asset == AssetType.USDC && balance > 999               // 6 decimals
+      asset == AssetType.DAI && balance > _JUST_UNDER_ONE_1000th_DAI ||
+      asset == AssetType.USDC && balance > _JUST_UNDER_ONE_1000th_USDC
     ) {
       // Get cToken address for the asset type.
       address cToken = asset == AssetType.DAI ? address(_CDAI) : address(_CUSDC);

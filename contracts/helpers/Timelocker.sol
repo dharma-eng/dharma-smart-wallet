@@ -76,6 +76,9 @@ contract Timelocker {
     "This function should be overridden by the inheriting contract."
   );
 
+  // Set a ridiculously high duration in order to protect against overflows.
+  uint256 private constant _A_TRILLION_YEARS = 365000000000000 days;
+
   /**
    * @notice External stub function for setting new timelock intervals. Be sure
    * to override the stub of this function with appropriate access controls, and
@@ -181,6 +184,9 @@ contract Timelocker {
   function _setTimelock(
     bytes4 functionSelector, bytes memory arguments, uint256 extraTime
   ) internal {
+    // Ensure that the specified extra time will not cause an overflow error.
+    require(extraTime < _A_TRILLION_YEARS, "Supplied extra time is too large.");
+
     // Get timelock ID using the supplied function arguments.
     bytes32 timelockID = keccak256(abi.encodePacked(arguments));
 
@@ -197,8 +203,8 @@ contract Timelocker {
 
       // Ensure that the new timelock duration will not cause an overflow error.
       require(
-        duration < 365000000000000 days,
-        "Specified default timelock duration to modify is too large."
+        duration < _A_TRILLION_YEARS,
+        "Supplied default timelock duration to modify is too large."
       );
 
       // Determine the current timelockID, if any, for the modified function.
@@ -206,13 +212,16 @@ contract Timelocker {
         _protectedTimelockIDs[functionSelector][modifiedFunction]
       );
 
-      // Drop existing timelock if it exists and has a different timelockID.
-      if (currentTimelockID != bytes32(0) && currentTimelockID != timelockID) {
-        delete _timelocks[functionSelector][currentTimelockID];
-      }
+      // Determine if current timelockID differs from what is currently set.
+      if (currentTimelockID != timelockID) {
+        // Drop existing timelock if one exists and has a different timelockID.
+        if (currentTimelockID != bytes32(0)) {
+          delete _timelocks[functionSelector][currentTimelockID];
+        }
 
-      // Register the current timelockID.
-      _protectedTimelockIDs[functionSelector][modifiedFunction] = timelockID;
+        // Register the new timelockID as the current protected timelockID.
+        _protectedTimelockIDs[functionSelector][modifiedFunction] = timelockID;
+      }
     }
 
     // Get timelock using current time, inverval for timelock ID, & extra time.
@@ -269,6 +278,11 @@ contract Timelocker {
       abi.encode(functionSelector, newTimelockInterval)
     );
 
+    // Clear out the existing timelockID protection for the given function.
+    delete _protectedTimelockIDs[
+      this.modifyTimelockInterval.selector
+    ][functionSelector];
+
     // Set new timelock interval and emit a `TimelockIntervalModified` event.
     _setTimelockInterval(functionSelector, newTimelockInterval);
   }
@@ -293,6 +307,11 @@ contract Timelocker {
       this.modifyTimelockExpiration.selector,
       abi.encode(functionSelector, newTimelockExpiration)
     );
+
+    // Clear out the existing timelockID protection for the given function.
+    delete _protectedTimelockIDs[
+      this.modifyTimelockExpiration.selector
+    ][functionSelector];
 
     // Set new default expiration and emit a `TimelockExpirationModified` event.
     _setTimelockExpiration(functionSelector, newTimelockExpiration);
@@ -376,6 +395,12 @@ contract Timelocker {
   function _setTimelockInterval(
     bytes4 functionSelector, uint256 newTimelockInterval
   ) private {
+    // Ensure that the new timelock interval will not cause an overflow error.
+    require(
+      newTimelockInterval < _A_TRILLION_YEARS,
+      "Supplied minimum timelock interval is too large."
+    );
+
     // Get the existing timelock interval, if any.
     uint256 oldTimelockInterval = uint256(
       _timelockDefaults[functionSelector].interval
@@ -401,6 +426,12 @@ contract Timelocker {
   function _setTimelockExpiration(
     bytes4 functionSelector, uint256 newTimelockExpiration
   ) private {
+    // Ensure that the new timelock expiration will not cause an overflow error.
+    require(
+      newTimelockExpiration < _A_TRILLION_YEARS,
+      "Supplied default timelock expiration is too large."
+    );
+
     // Ensure that the new timelock expiration is not too short.
     require(
       newTimelockExpiration > 1 minutes,

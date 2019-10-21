@@ -35,7 +35,7 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
 
   // Use the smart wallet instance runtime code hash to verify expected targets.
   bytes32 private constant _SMART_WALLET_INSTANCE_RUNTIME_HASH = bytes32(
-    0x0000000000000000000000000000000000000000000000000000000000000001
+    0xe25d4f154acb2394ee6c18d64fb5635959ba063d57f83091ec9cf34be16224d7
   );
 
   /**
@@ -77,7 +77,9 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
 
   /**
    * @notice Deploy a new smart wallet address using the provided user signing
-   * key and immediately set a new user signing key on the new smart wallet.
+   * key and immediately set a new user signing key on the new smart wallet. If
+   * the existing signing address is a key ring, be sure that it has been
+   * deployed before calling this function.
    * @param userSigningKey address The user signing key, supplied as a
    * constructor argument.
    * @param targetSmartWallet address The expected counterfactual address of the
@@ -122,7 +124,8 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
    * @notice Deploy a new smart wallet address using the provided user signing
    * key and immediately increment the nonce, cancelling any outstanding actions
    * by invalidating their signatures. Note that this only cancels actions that
-   * depend on a nonce of zero.
+   * depend on a nonce of zero.  If the existing signing address is a key ring,
+   * be sure that it has been deployed before calling this function.
    * @param userSigningKey address The user signing key, supplied as a
    * constructor argument.
    * @param targetSmartWallet address The expected counterfactual address of the
@@ -244,6 +247,13 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
    * deployment will be skipped and the supplied address will be returned.
    * @param userSigningKey address The user signing key, supplied as a
    * constructor argument during deployment.
+   * @param expectedSmartWallet address The intended address of the smart
+   * wallet. If a smart wallet is already deployed to that address, this
+   * function will do nothing (except return this address), but if it is not, it
+   * will determine whether the next smart wallet with the given user signing
+   * key will be deployed to this address and deploy it if there is a match.
+   * Otherwise, it will revert before attempting to deploy. Passing the null
+   * address will deploy a smart wallet to whatever address is available.
    * @return The address of the new smart wallet, or of the supplied smart
    * wallet if one already exists at the supplied address.
    */
@@ -259,8 +269,41 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
         _INITIALIZE_SELECTOR, userSigningKey
       );
 
-      // Deploy and initialize new user smart wallet as an Upgrade Beacon proxy.
-      smartWallet = _deployUpgradeBeaconProxyInstance(initializationCalldata);
+      // Place creation code & constructor args of new proxy instance in memory.
+      bytes memory initCode = abi.encodePacked(
+        type(UpgradeBeaconProxyV1).creationCode,
+        abi.encode(initializationCalldata)
+      );
+
+      // Get salt and deployment address using the supplied initialization code.
+      (uint256 salt, address target) = _getSaltAndTarget(initCode);
+
+      // Only require that target matches an expected target if one is supplied.
+      if (expectedSmartWallet != address(0)) {
+        // Only proceed with deployment if target matches the required target.
+        require(
+          target == expectedSmartWallet,
+          "Target deployment address doesn't match expected deployment address."
+        );
+      }
+
+      // Deploy the new upgrade beacon proxy contract using `CREATE2`.
+      assembly {
+        let encoded_data := add(32, initCode) // load initialization code.
+        let encoded_size := mload(initCode)   // load the init code's length.
+        smartWallet := create2(               // call `CREATE2` w/ 4 arguments.
+          callvalue,                          // forward any supplied endowment.
+          encoded_data,                       // pass in initialization code.
+          encoded_size,                       // pass in init code's length.
+          salt                                // pass in the salt value.
+        )
+
+        // Pass along failure message and revert if contract deployment fails.
+        if iszero(smartWallet) {
+          returndatacopy(0, 0, returndatasize)
+          revert(0, returndatasize)
+        }
+      }
 
       // Emit an event to signal the creation of the new smart wallet.
       emit SmartWalletDeployed(smartWallet, userSigningKey);
@@ -271,44 +314,6 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
       // conditions, not as a primary mechanism for interacting with smart
       // wallet contracts.
       smartWallet = expectedSmartWallet;
-    }
-  }
-
-  /**
-   * @notice Private function to deploy an upgrade beacon proxy via `CREATE2`.
-   * @param initializationCalldata bytes The calldata that will be supplied to
-   * the `DELEGATECALL` from the deployed contract to the implementation set on
-   * the upgrade beacon during contract creation.
-   * @return The address of the newly-deployed upgrade beacon proxy.
-   */
-  function _deployUpgradeBeaconProxyInstance(
-    bytes memory initializationCalldata
-  ) private returns (address upgradeBeaconProxyInstance) {
-    // Place creation code and constructor args of new proxy instance in memory.
-    bytes memory initCode = abi.encodePacked(
-      type(UpgradeBeaconProxyV1).creationCode,
-      abi.encode(initializationCalldata)
-    );
-
-    // Get salt to use during deployment using the supplied initialization code.
-    (uint256 salt, ) = _getSaltAndTarget(initCode);
-
-    // Deploy the new upgrade beacon proxy contract using `CREATE2`.
-    assembly {
-      let encoded_data := add(0x20, initCode) // load initialization code.
-      let encoded_size := mload(initCode)     // load the init code's length.
-      upgradeBeaconProxyInstance := create2(  // call `CREATE2` w/ 4 arguments.
-        callvalue,                            // forward any supplied endowment.
-        encoded_data,                         // pass in initialization code.
-        encoded_size,                         // pass in init code's length.
-        salt                                  // pass in the salt value.
-      )
-
-      // Pass along failure message and revert if contract deployment fails.
-      if iszero(upgradeBeaconProxyInstance) {
-        returndatacopy(0, 0, returndatasize)
-        revert(0, returndatasize)
-      }
     }
   }
 

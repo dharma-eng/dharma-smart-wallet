@@ -20,7 +20,9 @@ import "../../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
  * additional argument and checking for existence of a keyring contract at that
  * address. This factory builds on V2 by utilizing extcodehash, rather than
  * extcodesize, to validate whether a target key ring instance is deployed to a
- * given address or not.
+ * given address or not, and by validating that the targeted key ring is set as
+ * the user signing address on a corresponding smart wallet before attempting to
+ * apply a given operation that would otherwise fail.
  */
 contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
   // Use DharmaKeyRing initialize selector to construct initialization calldata.
@@ -33,7 +35,7 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
 
   // The keyring instance runtime code hash is used to verify expected targets.
   bytes32 private constant _KEY_RING_INSTANCE_RUNTIME_HASH = bytes32(
-    0x0000000000000000000000000000000000000000000000000000000000000001
+    0xb15b24278e79e856d35b262e76ff7d3a759b17e625ff72adde4116805af59648
   );
 
   /**
@@ -142,13 +144,22 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
     bytes calldata userSignature,
     bytes calldata dharmaSignature
   ) external returns (address keyRing, bool withdrawalSuccess) {
+    // Declare the interface for the supplied smart wallet.
+    DharmaSmartWalletImplementationV0Interface wallet = (
+      DharmaSmartWalletImplementationV0Interface(smartWallet)
+    );
+
+    // Ensure target key ring is set as user signing key on the smart wallet.
+    require(
+      wallet.getUserSigningKey() == targetKeyRing,
+      "Target key ring is not set as user signing key on supplied smart wallet."
+    );
+
     // Deploy and initialize a keyring if needed and emit a corresponding event.
     keyRing = _deployNewKeyRingIfNeeded(userSigningKey, targetKeyRing);
 
     // Attempt to withdraw Dai from the provided smart wallet.
-    withdrawalSuccess = DharmaSmartWalletImplementationV0Interface(
-      smartWallet
-    ).withdrawDai(
+    withdrawalSuccess = wallet.withdrawDai(
       amount, recipient, minimumActionGas, userSignature, dharmaSignature
     );
   }
@@ -191,13 +202,22 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
     bytes calldata userSignature,
     bytes calldata dharmaSignature
   ) external returns (address keyRing, bool withdrawalSuccess) {
+    // Declare the interface for the supplied smart wallet.
+    DharmaSmartWalletImplementationV0Interface wallet = (
+      DharmaSmartWalletImplementationV0Interface(smartWallet)
+    );
+
+    // Ensure target key ring is set as user signing key on the smart wallet.
+    require(
+      wallet.getUserSigningKey() == targetKeyRing,
+      "Target key ring is not set as user signing key on supplied smart wallet."
+    );
+
     // Deploy and initialize a keyring if needed and emit a corresponding event.
     keyRing = _deployNewKeyRingIfNeeded(userSigningKey, targetKeyRing);
 
     // Attempt to withdraw USDC from the provided smart wallet.
-    withdrawalSuccess = DharmaSmartWalletImplementationV0Interface(
-      smartWallet
-    ).withdrawUSDC(
+    withdrawalSuccess = wallet.withdrawUSDC(
       amount, recipient, minimumActionGas, userSignature, dharmaSignature
     );
   }
@@ -251,6 +271,13 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
    * deployment will be skipped and the supplied address will be returned.
    * @param userSigningKey address The user signing key, supplied as a
    * constructor argument during deployment.
+   * @param expectedKeyRing address The intended address of the key ring. If a
+   * key ring is already deployed to that address, this function will do nothing
+   * (except return this address), but if it is not, it will determine whether
+   * the next keyring with the given user signing key will be deployed to this
+   * address and deploy it if there is a match. Otherwise, it will revert before
+   * attempting to deploy. Passing the null address will deploy a key ring to
+   * whatever address is available.
    * @return The address of the new key ring, or of the supplied key ring if one
    * already exists at the supplied address.
    */
@@ -266,8 +293,41 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
         userSigningKey
       );
 
-      // Deploy and initialize new user key ring as an Upgrade Beacon proxy.
-      keyRing = _deployUpgradeBeaconProxyInstance(initializationCalldata);
+      // Place creation code & constructor args of new proxy instance in memory.
+      bytes memory initCode = abi.encodePacked(
+        type(KeyRingUpgradeBeaconProxyV1).creationCode,
+        abi.encode(initializationCalldata)
+      );
+
+      // Get salt and deployment address using the supplied initialization code.
+      (uint256 salt, address target) = _getSaltAndTarget(initCode);
+
+      // Only require that target matches an expected target if one is supplied.
+      if (expectedKeyRing != address(0)) {
+        // Only proceed with deployment if target matches the required target.
+        require(
+          target == expectedKeyRing,
+          "Target deployment address doesn't match expected deployment address."
+        );
+      }
+
+      // Deploy the new upgrade beacon proxy contract using `CREATE2`.
+      assembly {
+        let encoded_data := add(32, initCode) // load initialization code.
+        let encoded_size := mload(initCode)   // load the init code's length.
+        keyRing := create2(                   // call `CREATE2` w/ 4 arguments.
+          callvalue,                          // forward any supplied endowment.
+          encoded_data,                       // pass in initialization code.
+          encoded_size,                       // pass in init code's length.
+          salt                                // pass in the salt value.
+        )
+
+        // Pass along failure message and revert if contract deployment fails.
+        if iszero(keyRing) {
+          returndatacopy(0, 0, returndatasize)
+          revert(0, returndatasize)
+        }
+      }
 
       // Emit an event to signal the creation of the new key ring contract.
       emit KeyRingDeployed(keyRing, userSigningKey);
@@ -277,44 +337,6 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
       // treat this helper as a way to protect against race conditions, not as a
       // primary mechanism for interacting with key ring contracts.
       keyRing = expectedKeyRing;
-    }
-  }
-
-  /**
-   * @notice Private function to deploy an upgrade beacon proxy via `CREATE2`.
-   * @param initializationCalldata bytes The calldata that will be supplied to
-   * the `DELEGATECALL` from the deployed contract to the implementation set on
-   * the upgrade beacon during contract creation.
-   * @return The address of the newly-deployed upgrade beacon proxy.
-   */
-  function _deployUpgradeBeaconProxyInstance(
-    bytes memory initializationCalldata
-  ) private returns (address upgradeBeaconProxyInstance) {
-    // Place creation code and constructor args of new proxy instance in memory.
-    bytes memory initCode = abi.encodePacked(
-      type(KeyRingUpgradeBeaconProxyV1).creationCode,
-      abi.encode(initializationCalldata)
-    );
-
-    // Get salt to use during deployment using the supplied initialization code.
-    (uint256 salt, ) = _getSaltAndTarget(initCode);
-
-    // Deploy the new upgrade beacon proxy contract using `CREATE2`.
-    assembly {
-      let encoded_data := add(0x20, initCode) // load initialization code.
-      let encoded_size := mload(initCode)     // load the init code's length.
-      upgradeBeaconProxyInstance := create2(  // call `CREATE2` w/ 4 arguments.
-        callvalue,                            // forward any supplied endowment.
-        encoded_data,                         // pass in initialization code.
-        encoded_size,                         // pass in init code's length.
-        salt                                  // pass in the salt value.
-      )
-
-      // Pass along failure message and revert if contract deployment fails.
-      if iszero(upgradeBeaconProxyInstance) {
-        returndatacopy(0, 0, returndatasize)
-        revert(0, returndatasize)
-      }
     }
   }
 
