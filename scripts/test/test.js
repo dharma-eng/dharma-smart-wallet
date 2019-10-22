@@ -112,7 +112,7 @@ module.exports = {test: async function (provider, testingContext) {
     constants.KEY_REGISTRY_V2_ADDRESS
   )
 
-  const DharmaSmartWalletFactoryV1 = new web3.eth.Contract(
+  const DharmaSmartWalletFactoryV1OnChain = new web3.eth.Contract(
     DharmaSmartWalletFactoryV1Artifact.abi,
     constants.FACTORY_ADDRESS
   )
@@ -1376,6 +1376,14 @@ module.exports = {test: async function (provider, testingContext) {
     value => {
       assert.strictEqual(value, '0x9999999999999999999999999999999999999999')
     }
+  )
+
+  const DharmaSmartWalletFactoryV1 = await runTest(
+    `DharmaSmartWalletFactoryV1 contract deployment`,
+    DharmaSmartWalletFactoryV1Deployer,
+    '',
+    'deploy',
+    []
   )
 
   let targetWalletAddress;
@@ -4647,6 +4655,134 @@ module.exports = {test: async function (provider, testingContext) {
     []
   )
 
+  await runTest(
+    `AdharmaSmartWalletImplementation cannot be initialized directly post-deployment`,
+    AdharmaSmartWalletImplementation,
+    'initialize',
+    'send',
+    [address],
+    false
+  )
+
+  await runTest(
+    `AdharmaSmartWalletImplementation cannot be used to perform calls directly`,
+    AdharmaSmartWalletImplementation,
+    'performCall',
+    'send',
+    [address, 1, '0x'],
+    false
+  )
+
+  await runTest(
+    `AdharmaKeyRingImplementation cannot be initialized directly post-deployment`,
+    AdharmaKeyRingImplementation,
+    'initialize',
+    'send',
+    [1, 1, [address], [3]],
+    false
+  )
+
+  await runTest(
+    `AdharmaKeyRingImplementation cannot be used to take action directly`,
+    AdharmaKeyRingImplementation,
+    'takeAction',
+    'send',
+    [address, 1, '0x', '0x'],
+    false
+  )
+
+  await runTest(
+    `UpgradeBeaconProxyV1 contract deployment fails with no init data`,
+    UpgradeBeaconProxyV1Deployer,
+    '',
+    'deploy',
+    ['0x'],
+    false
+  )
+
+  await runTest(
+    `KeyRingUpgradeBeaconProxyV1 contract deployment fails with no init data`,
+    KeyRingUpgradeBeaconProxyV1Deployer,
+    '',
+    'deploy',
+    ['0x'],
+    false
+  )
+
+  const UpgradeBeaconProxyV1 = await runTest(
+    `UpgradeBeaconProxyV1 contract deployment (direct)`,
+    UpgradeBeaconProxyV1Deployer,
+    '',
+    'deploy',
+    [web3.eth.abi.encodeFunctionCall({
+      name: 'initialize',
+      type: 'function',
+      inputs: [{
+          type: 'address',
+          name: 'userSigningKey'
+      }]
+    }, [address])]
+  )
+
+  const UpgradeBeaconProxyV1Implementation = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV3Artifact.abi,
+    UpgradeBeaconProxyV1.options.address
+  )
+
+  await runTest(
+    `UpgradeBeaconProxyV1 can retrieve its user signing key`,
+    UpgradeBeaconProxyV1Implementation,
+    'getUserSigningKey',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  const KeyRingUpgradeBeaconProxyV1 = await runTest(
+    `KeyRingUpgradeBeaconProxyV1 contract deployment (direct)`,
+    KeyRingUpgradeBeaconProxyV1Deployer,
+    '',
+    'deploy',
+    [web3.eth.abi.encodeFunctionCall({
+      name: 'initialize',
+      type: 'function',
+      inputs: [{
+          type: 'uint128',
+          name: 'adminThreshold'
+      },{
+          type: 'uint128',
+          name: 'executorThreshold'
+      },{
+          type: 'address[]',
+          name: 'keys'
+      },{
+          type: 'uint8[]',
+          name: 'keyTypes'
+      }]
+    }, [1, 1, [address], [3]])]
+  )
+
+  const KeyRingUpgradeBeaconProxyV1Implementation = new web3.eth.Contract(
+    DharmaKeyRingImplementationV1Artifact.abi,
+    KeyRingUpgradeBeaconProxyV1.options.address
+  )
+
+  await runTest(
+    `KeyRingUpgradeBeaconProxyV1 can retrieve its user signing key`,
+    KeyRingUpgradeBeaconProxyV1Implementation,
+    'getKeyType',
+    'call',
+    [address],
+    true,
+    values => {
+      assert.ok(values.standard)
+      assert.ok(values.admin)
+    }
+  )
+
   // NOTE: these two either need to have the runtime requirement stripped out,
   // or to use coverage without instrumentation. Skip coverage for now, as they
   // are not yet in use.
@@ -4981,6 +5117,187 @@ module.exports = {test: async function (provider, testingContext) {
       v2KeySignatureCoverage
     ],
     false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController initially gets zero for lastImplementation`,
+    DharmaUpgradeBeaconControllerCoverage,
+    'getCodeHashAtLastUpgrade',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.strictEqual(value, constants.NULL_BYTES_32)
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController cannot call upgrade from non-owner account`,
+    DharmaUpgradeBeaconControllerCoverage,
+    'upgrade',
+    'send',
+    [DharmaUpgradeBeaconCoverage.options.address, DharmaUpgradeBeaconController.options.address],
+    false,
+    receipt => {},
+    addressTwo
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController can set implementation on upgrade beacon contract`,
+    DharmaUpgradeBeaconController,
+    'upgrade',
+    'send',
+    [DharmaUpgradeBeaconCoverage.options.address, DharmaUpgradeBeaconController.options.address]
+  )
+
+  await runTest(
+    `DharmaKeyRingUpgradeBeaconController can set implementation on key ring upgrade beacon contract`,
+    DharmaKeyRingUpgradeBeaconController,
+    'upgrade',
+    'send',
+    [DharmaKeyRingUpgradeBeaconCoverage.options.address, DharmaUpgradeBeaconController.options.address]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconEnvoy throws when given invalid beacon`,
+    DharmaUpgradeBeaconEnvoy,
+    'getImplementation',
+    'call',
+    [DharmaUpgradeBeaconEnvoy.options.address],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconEnvoy throws when given non-contract beacon`,
+    DharmaUpgradeBeaconEnvoy,
+    'getImplementation',
+    'call',
+    [address],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconEnvoy can get the implementation of a valid beacon`,
+    DharmaUpgradeBeaconEnvoy,
+    'getImplementation',
+    'call',
+    [DharmaKeyRingUpgradeBeaconCoverage.options.address],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaUpgradeBeaconController.options.address)
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController cannot set null implementation on an upgrade beacon contract`,
+    DharmaUpgradeBeaconControllerCoverage,
+    'upgrade',
+    'send',
+    [DharmaUpgradeBeaconCoverage.options.address, constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController cannot set non-contract implementation`,
+    DharmaUpgradeBeaconControllerCoverage,
+    'upgrade',
+    'send',
+    [DharmaUpgradeBeaconCoverage.options.address, address],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController cannot set null address beacon`,
+    DharmaUpgradeBeaconControllerCoverage,
+    'upgrade',
+    'send',
+    [constants.NULL_ADDRESS, DharmaUpgradeBeaconControllerCoverage.options.address],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController cannot set non-contract address beacon`,
+    DharmaUpgradeBeaconControllerCoverage,
+    'upgrade',
+    'send',
+    [address, DharmaUpgradeBeaconControllerCoverage.options.address],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController cannot set unowned bad beacon`,
+    DharmaUpgradeBeaconControllerCoverage,
+    'upgrade',
+    'send',
+    [BadBeaconTwo.options.address, DharmaUpgradeBeaconControllerCoverage.options.address],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController cannot set unowned beacon (Note that it still logs an event!)`,
+    DharmaUpgradeBeaconControllerCoverage,
+    'upgrade',
+    'send',
+    [DharmaUpgradeBeaconCoverage.options.address, DharmaUpgradeBeaconControllerCoverage.options.address]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController can get implementation of a beacon`,
+    DharmaUpgradeBeaconControllerCoverage,
+    'getImplementation',
+    'call',
+    [DharmaUpgradeBeaconCoverage.options.address],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaUpgradeBeaconController.options.address)
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController can get owner`,
+    DharmaUpgradeBeaconControllerCoverage,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController can call isOwner and value is ok`,
+    DharmaUpgradeBeaconControllerCoverage,
+    'isOwner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(value)
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController cannot transfer ownership to null address`,
+    DharmaUpgradeBeaconControllerCoverage,
+    'transferOwnership',
+    'send',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController can transfer ownership`,
+    DharmaUpgradeBeaconControllerCoverage,
+    'transferOwnership',
+    'send',
+    [address]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController can renounce ownership`,
+    DharmaUpgradeBeaconControllerCoverage,
+    'renounceOwnership'
   )
 
   console.log(

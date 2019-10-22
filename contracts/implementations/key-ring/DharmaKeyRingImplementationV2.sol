@@ -23,6 +23,11 @@ import "../../../interfaces/ERC1271.sol";
  *   - Iterating over all keys that have been set on the keyring
  *   - Allowing for other smart contracts to be specified as signers
  *   - Allowing for keys that have a more restrictive set of permissions
+ *
+ * NOTE: this implementation is still under development and has sparse comments
+ * and areas for improvement. The actual V2 implementation will likely be quite
+ * different than what is currently contained here.
+ *
  */
 contract DharmaKeyRingImplementationV2 is
   DharmaKeyRingImplementationV0Interface,
