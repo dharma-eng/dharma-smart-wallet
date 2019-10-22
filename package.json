@@ -1,7 +1,7 @@
 {
   "name": "dharma-smart-wallet",
   "version": "1.0.0",
-  "description": "An upgradeable, meta-transaction-enabled smart wallet that enables Dharma users to keep custody of their funds, with an added security backstop provided by Dharma Labs.",
+  "description": "An upgradeable, meta-transaction-enabled smart wallet for earning interest on stablecoins while retaining custody of funds, with an added security backstop provided by Dharma Labs.",
   "author": "Dharma Labs",
   "license": "MIT",
   "dependencies": {

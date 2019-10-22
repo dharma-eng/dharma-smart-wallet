@@ -2,7 +2,7 @@
 
 # Dharma Smart Wallet (dharma-smart-wallet)
 
-> An upgradeable, meta-transaction-enabled smart wallet that enables Dharma users to keep custody of their funds, with an added security backstop provided by Dharma Labs.
+> An upgradeable, meta-transaction-enabled smart wallet for earning interest on stablecoins while retaining custody of funds, with an added security backstop provided by Dharma Labs.
 
 ![GitHub](https://img.shields.io/github/license/dharmaprotocol/dharma-smart-wallet.svg)
 ![CircleCI](https://img.shields.io/circleci/build/github/dharmaprotocol/dharma-smart-wallet/master?token=cfe6c9bcab23789a52477ff865f9fe2d66e87ce7)
@@ -42,7 +42,7 @@ The **Dharma Key Ring** is an N/M "multisig" smart contract, controlled and conf
 
 ## Overview
 The Dharma Smart Wallet and Dharma Key Ring are designed with the following assumptions in mind:
-- Dharma users are content to **share custody** of their smart wallet with Dharma Labs serving as a security backstop in order to better protect their funds from loss and from external adversaries and to simplify the process of earning interest on their stablecoins. If users decide they would rather use a fully self-custodial wallet and handle the details themselves, they will migrate away from the smart wallet by transferring their funds to a new address, or wait for upgrades to the smart wallet that unlock options for greater degrees of self-custody.
+- Dharma users will **share custody** of their smart wallet, with Dharma Labs serving as a **security backstop**, in order to better protect their funds from loss and from external adversaries and to simplify the process of earning interest on their stablecoins. The security backstop gives users the liberty to store keys in contexts that would be insufficient taken in isolation, such as in their web browser, while still maintaining non-custodial assurances that, were Dharma's key to ever become compromised, their funds would stay securely in their possession. If users decide they would rather use a fully self-custodial wallet and handle the details themselves, they will migrate away from the smart wallet by transferring their funds to a new address, or wait for upgrades to the smart wallet that unlock options for greater degrees of self-custody.
 - Users are content to **let Dharma make upgrades to their smart wallets**, and do not require opt-in upgrades. However, a seven-day timelock on upgrades will let users "opt-out" of unwanted upgrades by giving them a window of time to withdraw their funds from the smart wallet.
 - The initial wallet implementation uses a **subsidized [meta-transaction](https://medium.com/@austin_48503/ethereum-meta-transactions-90ccf0859e84) mechanism**, where Dharma pays for the gas - in other words, there is no need to implement strict gas metering or extra fees in order to pay the transaction relayer back (as a matter of fact, **the user won't have to deal with gas or transaction submissions at all**).
 - The wallet validates protected actions using **standard ethereum message signatures** ([ECDSA](https://tools.ietf.org/search/rfc4492) + [ecrecover](https://solidity.readthedocs.io/en/v0.5.10/units-and-global-variables.html#mathematical-and-cryptographic-functions) + [EIP-191](http://eips.ethereum.org/EIPS/eip-191)) with **replay protection** baked in. Additionally, the Dharma Smart Wallet supports [EIP-1271](https://eips.ethereum.org/EIPS/eip-1271), which allows for the Dharma Key Ring to hold multiple signing keys and to eventually support per-key and per-action-type permissions and thresholds.
