@@ -3,23 +3,33 @@ var fs = require('fs')
 var util = require('ethereumjs-util')
 const constants = require('./constants.js')
 
-let AdharmaSmartWalletImplementationArtifact;
+const AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
+const AdharmaKeyRingImplementationArtifact = require('../../build/contracts/AdharmaKeyRingImplementation.json')
 
+const DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
 const DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
 const DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
 const DharmaKeyRingUpgradeBeaconArtifact = require('../../build/contracts/DharmaKeyRingUpgradeBeacon.json')
+const DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
 
 const DharmaAccountRecoveryManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
 const DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
 const DharmaKeyRegistryV2Artifact = require('../../build/contracts/DharmaKeyRegistryV2.json')
 const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
+const DharmaSmartWalletFactoryV2Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV2.json')
 
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
 const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV2.json')
 const DharmaSmartWalletImplementationV3Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV3.json')
 
-const DharmaKeyRingImplementationV0Artifact = require('../../build/contracts/DharmaKeyRingImplementationV0.json')
+const DharmaKeyRingImplementationV1Artifact = require('../../build/contracts/DharmaKeyRingImplementationV1.json')
+const DharmaKeyRingFactoryV1Artifact = require('../../build/contracts/DharmaKeyRingFactoryV1.json')
+const DharmaKeyRingFactoryV2Artifact = require('../../build/contracts/DharmaKeyRingFactoryV2.json')
+const DharmaKeyRingFactoryV3Artifact = require('../../build/contracts/DharmaKeyRingFactoryV3.json')
+
+const UpgradeBeaconProxyV1Artifact = require('../../build/contracts/UpgradeBeaconProxyV1.json')
+const KeyRingUpgradeBeaconProxyV1Artifact = require('../../build/contracts/KeyRingUpgradeBeaconProxyV1.json')
 
 const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
 const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
@@ -61,12 +71,6 @@ function swapMetadataHash(bytecode, newMetadataHashes) {
 }
 
 module.exports = {test: async function (provider, testingContext) {
-  if (testingContext === 'coverage') {
-    AdharmaSmartWalletImplementationArtifact = require('../../../build/contracts/AdharmaSmartWalletImplementation.json')
-  } else {
-    AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
-  }
-
   var web3 = provider
   let passed = 0
   let failed = 0
@@ -131,6 +135,22 @@ module.exports = {test: async function (provider, testingContext) {
     constants.CDAI_MAINNET_ADDRESS
   )
 
+  const DAI = new web3.eth.Contract(
+    IERC20Artifact.abi, constants.DAI_MAINNET_ADDRESS
+  )
+
+  const USDC = new web3.eth.Contract(
+    IERC20Artifact.abi, constants.USDC_MAINNET_ADDRESS
+  )
+
+  const CDAI = new web3.eth.Contract(
+    IERC20Artifact.abi, constants.CDAI_MAINNET_ADDRESS
+  )
+
+  const CUSDC = new web3.eth.Contract(
+    IERC20Artifact.abi, constants.CUSDC_MAINNET_ADDRESS
+  )
+
   const BadBeaconDeployer = new web3.eth.Contract(BadBeaconArtifact.abi)
   BadBeaconDeployer.options.data = BadBeaconArtifact.bytecode
 
@@ -173,11 +193,18 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaSmartWalletImplementationV3Artifact.bytecode
   )
 
-  const DharmaKeyRingImplementationV0Deployer = new web3.eth.Contract(
-    DharmaKeyRingImplementationV0Artifact.abi
+  const AdharmaKeyRingImplementationDeployer = new web3.eth.Contract(
+    AdharmaKeyRingImplementationArtifact.abi
   )
-  DharmaKeyRingImplementationV0Deployer.options.data = (
-    DharmaKeyRingImplementationV0Artifact.bytecode
+  AdharmaKeyRingImplementationDeployer.options.data = (
+    AdharmaKeyRingImplementationArtifact.bytecode
+  )
+
+  const DharmaKeyRingImplementationV1Deployer = new web3.eth.Contract(
+    DharmaKeyRingImplementationV1Artifact.abi
+  )
+  DharmaKeyRingImplementationV1Deployer.options.data = (
+    DharmaKeyRingImplementationV1Artifact.bytecode
   )
 
   const UpgradeBeaconImplementationCheckDeployer = new web3.eth.Contract(
@@ -192,20 +219,102 @@ module.exports = {test: async function (provider, testingContext) {
   )
   MockCodeCheckDeployer.options.data = MockCodeCheckArtifact.bytecode
 
-  const DAI = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.DAI_MAINNET_ADDRESS
+  const DharmaUpgradeBeaconControllerDeployer = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerArtifact.abi
+  )
+  DharmaUpgradeBeaconControllerDeployer.options.data = (
+    DharmaUpgradeBeaconControllerArtifact.bytecode
   )
 
-  const USDC = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.USDC_MAINNET_ADDRESS
+  const DharmaUpgradeBeaconDeployer = new web3.eth.Contract(
+    DharmaUpgradeBeaconArtifact.abi
+  )
+  DharmaUpgradeBeaconDeployer.options.data = (
+    DharmaUpgradeBeaconArtifact.bytecode
   )
 
-  const CDAI = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.CDAI_MAINNET_ADDRESS
+  const DharmaKeyRingUpgradeBeaconDeployer = new web3.eth.Contract(
+    DharmaKeyRingUpgradeBeaconArtifact.abi
+  )
+  DharmaKeyRingUpgradeBeaconDeployer.options.data = (
+    DharmaKeyRingUpgradeBeaconArtifact.bytecode
   )
 
-  const CUSDC = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.CUSDC_MAINNET_ADDRESS
+  const DharmaUpgradeBeaconEnvoyDeployer = new web3.eth.Contract(
+    DharmaUpgradeBeaconEnvoyArtifact.abi
+  )
+  DharmaUpgradeBeaconEnvoyDeployer.options.data = (
+    DharmaUpgradeBeaconEnvoyArtifact.bytecode
+  )
+
+  const DharmaUpgradeBeaconControllerManagerDeployer = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerManagerArtifact.abi
+  )
+  DharmaUpgradeBeaconControllerManagerDeployer.options.data = (
+    DharmaUpgradeBeaconControllerManagerArtifact.bytecode
+  )
+
+  const UpgradeBeaconProxyV1Deployer = new web3.eth.Contract(
+    UpgradeBeaconProxyV1Artifact.abi
+  )
+  UpgradeBeaconProxyV1Deployer.options.data = (
+    UpgradeBeaconProxyV1Artifact.bytecode
+  )
+
+  const KeyRingUpgradeBeaconProxyV1Deployer = new web3.eth.Contract(
+    KeyRingUpgradeBeaconProxyV1Artifact.abi
+  )
+  KeyRingUpgradeBeaconProxyV1Deployer.options.data = (
+    KeyRingUpgradeBeaconProxyV1Artifact.bytecode
+  )
+
+  const DharmaKeyRegistryV2Deployer = new web3.eth.Contract(
+    DharmaKeyRegistryV2Artifact.abi
+  )
+  DharmaKeyRegistryV2Deployer.options.data = (
+    DharmaKeyRegistryV2Artifact.bytecode
+  )
+
+  const DharmaSmartWalletFactoryV1Deployer = new web3.eth.Contract(
+    DharmaSmartWalletFactoryV1Artifact.abi
+  )
+  DharmaSmartWalletFactoryV1Deployer.options.data = (
+    DharmaSmartWalletFactoryV1Artifact.bytecode
+  )
+
+  const DharmaSmartWalletFactoryV2Deployer = new web3.eth.Contract(
+    DharmaSmartWalletFactoryV2Artifact.abi
+  )
+  DharmaSmartWalletFactoryV2Deployer.options.data = (
+    DharmaSmartWalletFactoryV2Artifact.bytecode
+  )
+
+  const DharmaKeyRingFactoryV1Deployer = new web3.eth.Contract(
+    DharmaKeyRingFactoryV1Artifact.abi
+  )
+  DharmaKeyRingFactoryV1Deployer.options.data = (
+    DharmaKeyRingFactoryV1Artifact.bytecode
+  )
+
+  const DharmaKeyRingFactoryV2Deployer = new web3.eth.Contract(
+    DharmaKeyRingFactoryV2Artifact.abi
+  )
+  DharmaKeyRingFactoryV2Deployer.options.data = (
+    DharmaKeyRingFactoryV2Artifact.bytecode
+  )
+
+  const DharmaKeyRingFactoryV3Deployer = new web3.eth.Contract(
+    DharmaKeyRingFactoryV3Artifact.abi
+  )
+  DharmaKeyRingFactoryV3Deployer.options.data = (
+    DharmaKeyRingFactoryV3Artifact.bytecode
+  )
+
+  const DharmaAccountRecoveryManagerDeployer = new web3.eth.Contract(
+    DharmaAccountRecoveryManagerArtifact.abi
+  )
+  DharmaAccountRecoveryManagerDeployer.options.data = (
+    DharmaAccountRecoveryManagerArtifact.bytecode
   )
 
   // get available addresses and assign them to various roles
@@ -917,9 +1026,9 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
-  const DharmaKeyRingImplementationV0 = await runTest(
-    `DharmaKeyRingImplementationV0 contract deployment`,
-    DharmaKeyRingImplementationV0Deployer,
+  const DharmaKeyRingImplementationV1 = await runTest(
+    `DharmaKeyRingImplementationV1 contract deployment`,
+    DharmaKeyRingImplementationV1Deployer,
     '',
     'deploy'
   )
@@ -1106,7 +1215,7 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [
       DharmaKeyRingUpgradeBeacon.options.address,
-      DharmaKeyRingImplementationV0.options.address
+      DharmaKeyRingImplementationV1.options.address
     ],
     true,
     receipt => {
@@ -1125,7 +1234,7 @@ module.exports = {test: async function (provider, testingContext) {
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.newImplementation,
-          DharmaKeyRingImplementationV0.options.address
+          DharmaKeyRingImplementationV1.options.address
         )
         /* TODO
         assert.strictEqual(
@@ -1144,7 +1253,7 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy',
     [
       DharmaKeyRingUpgradeBeacon.options.address,
-      DharmaKeyRingImplementationV0.options.address
+      DharmaKeyRingImplementationV1.options.address
     ]
   )
 
@@ -1156,7 +1265,7 @@ module.exports = {test: async function (provider, testingContext) {
     [DharmaKeyRingUpgradeBeacon.options.address],
     true,
     value => {
-      assert.strictEqual(value, DharmaKeyRingImplementationV0.options.address)
+      assert.strictEqual(value, DharmaKeyRingImplementationV1.options.address)
     }
   )
 
@@ -4448,6 +4557,430 @@ module.exports = {test: async function (provider, testingContext) {
       // TODO: verify
       //console.log(receipt.events)
     }
+  )
+
+  // COVERAGE TESTING - deployments
+  const DharmaUpgradeBeaconControllerManager = await runTest(
+    `DharmaUpgradeBeaconControllerManager contract deployment`,
+    DharmaUpgradeBeaconControllerManagerDeployer,
+    '',
+    'deploy'
+  )
+
+  const DharmaUpgradeBeaconControllerCoverage = await runTest(
+    `DharmaUpgradeBeaconController contract deployment`,
+    DharmaUpgradeBeaconControllerDeployer,
+    '',
+    'deploy'
+  )
+
+  const DharmaAccountRecoveryManagerCoverage = await runTest(
+    `DharmaAccountRecoveryManager contract deployment`,
+    DharmaAccountRecoveryManagerDeployer,
+    '',
+    'deploy'
+  )
+
+  const DharmaKeyRegistryV2Coverage = await runTest(
+    `DharmaKeyRegistryV2 contract deployment`,
+    DharmaKeyRegistryV2Deployer,
+    '',
+    'deploy'
+  )
+
+  const DharmaUpgradeBeaconCoverage = await runTest(
+    `DharmaUpgradeBeacon (smart wallet) contract deployment`,
+    DharmaUpgradeBeaconDeployer,
+    '',
+    'deploy'
+  )
+
+  const DharmaKeyRingUpgradeBeaconCoverage = await runTest(
+    `DharmaKeyRingUpgradeBeacon contract deployment`,
+    DharmaKeyRingUpgradeBeaconDeployer,
+    '',
+    'deploy'
+  )
+
+  const DharmaUpgradeBeaconEnvoy = await runTest(
+    `DharmaUpgradeBeaconEnvoy contract deployment`,
+    DharmaUpgradeBeaconEnvoyDeployer,
+    '',
+    'deploy'
+  )
+
+  const AdharmaSmartWalletImplementation = await runTest(
+    `AdharmaSmartWalletImplementation contract deployment`,
+    AdharmaSmartWalletImplementationDeployer,
+    '',
+    'deploy'
+  )
+
+  const AdharmaKeyRingImplementation = await runTest(
+    `AdharmaKeyRingImplementation contract deployment`,
+    AdharmaKeyRingImplementationDeployer,
+    '',
+    'deploy'
+  )
+
+  const DharmaSmartWalletFactoryV1Coverage = await runTest(
+    `DharmaSmartWalletFactoryV1 contract deployment`,
+    DharmaSmartWalletFactoryV1Deployer,
+    '',
+    'deploy',
+    []
+  )
+
+  const DharmaKeyRingFactoryV1 = await runTest(
+    `DharmaKeyRingFactoryV1 contract deployment`,
+    DharmaKeyRingFactoryV1Deployer,
+    '',
+    'deploy',
+    []
+  )
+
+  const DharmaKeyRingFactoryV2 = await runTest(
+    `DharmaKeyRingFactoryV2 contract deployment`,
+    DharmaKeyRingFactoryV2Deployer,
+    '',
+    'deploy',
+    []
+  )
+
+  // NOTE: these two either need to have the runtime requirement stripped out,
+  // or to use coverage without instrumentation. Skip coverage for now, as they
+  // are not yet in use.
+  // (actually, they're not working yet, period... skip them for now)
+  /*
+  if (testingContext !== 'coverage') {
+    const DharmaSmartWalletFactoryV2 = await runTest(
+      `DharmaSmartWalletFactoryV2 contract deployment`,
+      DharmaSmartWalletFactoryV2Deployer,
+      '',
+      'deploy',
+      []
+    )
+
+    const DharmaKeyRingFactoryV3 = await runTest(
+      `DharmaKeyRingFactoryV3 contract deployment`,
+      DharmaKeyRingFactoryV3Deployer,
+      '',
+      'deploy',
+      []
+    )
+  }
+  */
+
+  await runTest(
+    'Dharma Key Registry V2 gets the initial global key correctly',
+    DharmaKeyRegistryV2Coverage,
+    'getGlobalKey',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 attempt to get an unset specific key throws',
+    DharmaKeyRegistryV2Coverage,
+    'getSpecificKey',
+    'call',
+    [address],
+    false
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 gets the global key when requesting unset key',
+    DharmaKeyRegistryV2Coverage,
+    'getKey',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 cannot set a new empty global key',
+    DharmaKeyRegistryV2Coverage,
+    'setGlobalKey',
+    'send',
+    [
+      constants.NULL_ADDRESS,
+      '0x'
+    ],
+    false,
+    receipt => {},
+    originalAddress
+  )
+
+  const messageCoverage = (
+    DharmaKeyRegistryV2Coverage.options.address +
+    addressTwo.slice(2) +
+    web3.utils.asciiToHex(
+      "This signature demonstrates that the supplied signing key is valid."
+    ).slice(2)
+  )
+
+  const newKeySignatureCoverage = signHashedPrefixedHashedHexString(messageCoverage, addressTwo)
+
+  const badNewKeySignatureCoverage = signHashedPrefixedHashedHexString('0x12', addressTwo)
+
+  await runTest(
+    'Dharma Key Registry V2 cannot set a new global key unless called by owner',
+    DharmaKeyRegistryV2Coverage,
+    'setGlobalKey',
+    'send',
+    [
+      addressTwo,
+      newKeySignatureCoverage
+    ],
+    false,
+    receipt => {},
+    addressTwo
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 cannot set an empty global key',
+    DharmaKeyRegistryV2Coverage,
+    'setGlobalKey',
+    'send',
+    [
+      constants.NULL_ADDRESS,
+      newKeySignatureCoverage
+    ],
+    false
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 cannot set a new global key with a bad signature',
+    DharmaKeyRegistryV2Coverage,
+    'setGlobalKey',
+    'send',
+    [
+      addressTwo,
+      badNewKeySignatureCoverage
+    ],
+    false
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 can set a new global key correctly',
+    DharmaKeyRegistryV2Coverage,
+    'setGlobalKey',
+    'send',
+    [
+      addressTwo,
+      newKeySignatureCoverage
+    ]
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 gets the new global key correctly',
+    DharmaKeyRegistryV2Coverage,
+    'getGlobalKey',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, addressTwo)
+    }
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 cannot set a new specific key unless called by owner',
+    DharmaKeyRegistryV2Coverage,
+    'setSpecificKey',
+    'send',
+    [
+      address,
+      DharmaKeyRegistryV2.options.address
+    ],
+    false,
+    receipt => {},
+    originalAddress
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 gets global key for a user if no specific key set',
+    DharmaKeyRegistryV2Coverage,
+    'getKeyForUser',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.strictEqual(value, addressTwo)
+    }
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 can set a new specific key',
+    DharmaKeyRegistryV2Coverage,
+    'setSpecificKey',
+    'send',
+    [
+      address,
+      DharmaKeyRegistryV2.options.address
+    ]
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 gets specific key for user if one is set',
+    DharmaKeyRegistryV2Coverage,
+    'getKeyForUser',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaKeyRegistryV2.options.address)
+    }
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 gets the new specific key correctly',
+    DharmaKeyRegistryV2Coverage,
+    'getSpecificKey',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaKeyRegistryV2.options.address)
+    }
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 gets the specific key when requesting set key',
+    DharmaKeyRegistryV2Coverage,
+    'getKey',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaKeyRegistryV2.options.address)
+    }
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 cannot reuse a specific key',
+    DharmaKeyRegistryV2Coverage,
+    'setSpecificKey',
+    'send',
+    [
+      address,
+      DharmaKeyRegistryV2.options.address
+    ],
+    false
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 new owner cannot accept ownership before added',
+    DharmaKeyRegistryV2Coverage,
+    'acceptOwnership',
+    'send',
+    [],
+    false
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 cannot prepare to transfer to the null address',
+    DharmaKeyRegistryV2Coverage,
+    'transferOwnership',
+    'send',
+    [
+      constants.NULL_ADDRESS
+    ],
+    false
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 can prepare to transfer to a new owner',
+    DharmaKeyRegistryV2Coverage,
+    'transferOwnership',
+    'send',
+    [
+      address
+    ]
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 can cancel an ownership transfer',
+    DharmaKeyRegistryV2Coverage,
+    'cancelOwnershipTransfer'
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 new owner cannot accept ownership after cancellation',
+    DharmaKeyRegistryV2Coverage,
+    'acceptOwnership',
+    'send',
+    [],
+    false
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 can prepare to transfer to a new owner again',
+    DharmaKeyRegistryV2Coverage,
+    'transferOwnership',
+    'send',
+    [
+      address
+    ]
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 new owner can accept ownership',
+    DharmaKeyRegistryV2Coverage,
+    'acceptOwnership'
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 gets the new owner',
+    DharmaKeyRegistryV2Coverage,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  await runTest(
+    'Dharma Key Registry V2 gets the global key correctly',
+    DharmaKeyRegistryV2Coverage,
+    'getGlobalKey',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, addressTwo)
+    }
+  )
+
+  const messageV2Coverage = (
+    DharmaKeyRegistryV2Coverage.options.address +
+    address.slice(2) +
+    web3.utils.asciiToHex(
+      "This signature demonstrates that the supplied signing key is valid."
+    ).slice(2)
+  )
+
+  const v2KeySignatureCoverage = signHashedPrefixedHashedHexString(messageV2Coverage, address)
+
+  await runTest(
+    'Dharma Key Registry V2 cannot set a previously used global key',
+    DharmaKeyRegistryV2Coverage,
+    'setGlobalKey',
+    'send',
+    [
+      address,
+      v2KeySignatureCoverage
+    ],
+    false
   )
 
   console.log(
