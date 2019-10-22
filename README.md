@@ -2,23 +2,23 @@
 
 # Dharma Smart Wallet (dharma-smart-wallet)
 
-> An upgradeable, joint-custody, meta-transaction-enabled smart wallet for Dharma users.
+> An upgradeable, meta-transaction-enabled smart wallet that enables Dharma users to keep custody of their funds with an added security backstop.
 
 ![GitHub](https://img.shields.io/github/license/dharmaprotocol/dharma-smart-wallet.svg)
 ![CircleCI](https://img.shields.io/circleci/build/github/dharmaprotocol/dharma-smart-wallet/master?token=cfe6c9bcab23789a52477ff865f9fe2d66e87ce7)
 
 ## Summary
-The **Dharma Smart Wallet** is a 2/2 "multisig" smart contract that:
+The **Dharma Smart Wallet** is a 2/2 "multisig" smart contract, controlled by the user's Dharma Key Ring and by Dharma Labs, that:
 - allows users to **make deposits and mint cDai or cUSDC from Compound** by simply sending Dai or USDC to their smart wallet address, even **before a contract has been deployed** to that address
-- allows users to **make withdrawals without paying for gas**, by providing signed messages that are validated against their **Dharma KeyRing contract** and by the **Dharma Key Registry**
+- allows users to **make withdrawals without paying for gas**, by providing signed messages that are validated against both the user's **Dharma Key Ring contract** and against the **Dharma Key Registry** and relayed by Dharma
 - allows users to **recover their account if access is lost or compromised** after a seven-day timelock, or to opt out of account recovery entirely, via the **Account Recovery Manager**
-- allows for **upgrades to all user smart wallets at once**, without requiring any action on behalf of the user, and with a seven-day timelock before upgrading to a new implementation, using the **Upgrade Beacon Controller Manager**
+- allows for **upgrades to all user smart wallets at once**, without requiring any action on behalf of the user, and with a seven-day timelock prior to each upgrade, using the **Upgrade Beacon Controller Manager**
 
-The **Dharma Key Ring** is an N/M "multisig" smart contract that:
-- is **owned and controlled entirely by the user** and controls access to their Dharma Smart Wallet so that they **retain custody over their own funds at all times**
+The **Dharma Key Ring** is an N/M "multisig" smart contract, controlled and configured by the user, that:
+- enables flexible, secure access to their Dharma Smart Wallet so that they **retain custody over their own funds at all times**
 - allows users to **take actions on their smart wallet without paying for gas**, simply by providing signed messages that map to keys that they have set on their key ring
 - allows users to **add multiple devices to their Dharma Smart Wallet** using existing devices so that their **keys stay on their own devices**, not in the cloud
-- allows for **upgrades to all user key rings at once**, without requiring any action on behalf of the user, and with a seven-day timelock before upgrading to a new implementation, using the **Upgrade Beacon Controller Manager**
+- allows for **upgrades to all user key rings at once**, without requiring any action on behalf of the user, and with a seven-day timelock prior to each upgrade, using the **Upgrade Beacon Controller Manager**
 
 ## Table of Contents
 - [Contract Deployment Addresses & Verified Source Code](#contract-deployment-addresses-&-verified-source-code)
@@ -42,19 +42,19 @@ The **Dharma Key Ring** is an N/M "multisig" smart contract that:
 
 ## Overview
 The Dharma Smart Wallet and Dharma Key Ring are designed with the following assumptions in mind:
-- Dharma users are content to **share joint custody** of the smart wallet with Dharma in order to better protect their funds from loss and from external adversaries and to simplify the process of earning interest on their stablecoins. If users decide they would rather use a fully non-custodial wallet and handle the details themselves, they will migrate away from the smart wallet by transferring their funds to a new address, or wait for upgrades to the smart wallet that unlock options for greater levels of custody.
-- Users are content to **let Dharma make upgrades to their smart wallets**, and do not require opt-in upgrades. That being said, there is a seven-day timelock placed on upgrades that gives users a window of time to "opt-out" by transferring their funds from the smart wallet.
+- Dharma users are content to **share custody** of their smart wallet with Dharma Labs serving as a security backstop in order to better protect their funds from loss and from external adversaries and to simplify the process of earning interest on their stablecoins. If users decide they would rather use a fully self-custodial wallet and handle the details themselves, they will migrate away from the smart wallet by transferring their funds to a new address, or wait for upgrades to the smart wallet that unlock options for greater degrees of self-custody.
+- Users are content to **let Dharma make upgrades to their smart wallets**, and do not require opt-in upgrades. However, a seven-day timelock on upgrades will let users "opt-out" of unwanted upgrades by giving them a window of time to withdraw their funds from the smart wallet.
 - The initial wallet implementation will use a **subsidized [meta-transaction](https://medium.com/@austin_48503/ethereum-meta-transactions-90ccf0859e84) mechanism**, where Dharma pays for the gas - in other words, there is no need to implement strict gas metering or extra fees in order to pay the transaction relayer back (as a matter of fact, **the user won't have to deal with gas or transaction submissions at all**).
 - All signatures will use **standard ethereum message signatures** ([ECDSA](https://tools.ietf.org/search/rfc4492) + [ecrecover](https://solidity.readthedocs.io/en/v0.5.10/units-and-global-variables.html#mathematical-and-cryptographic-functions) + [EIP-191](http://eips.ethereum.org/EIPS/eip-191)) with **replay protection** baked in. Additionally, the Dharma Smart Wallet supports [EIP-1271](https://eips.ethereum.org/EIPS/eip-1271), which allows for the Dharma Key Ring to hold multiple signing keys and to eventually support per-key and per-action-type permissions and thresholds.
-- The smart wallet will **not be set up to do anything too fancy**, like deploy contracts or run arbitrary code - it will just make transfers and calls into other accounts. 
+- The smart wallet is **not set up to do anything too fancy**, like deploy contracts or run arbitrary code - it only needs to be able to make transfers and calls into other contract accounts. 
 
 The current implementation of the Dharma Smart Wallet works as follows:
-- Smart wallet deployments and stablecoin deposits can be initiated by anyone who is willing to pay the gas. Smart Wallet addresses are counterfactual based on the initial user signing key, so can be safely deployed by anyone using a Dharma Smart Wallet Factory, and withdrawals atomically redeem and transfer the relevant stablecoin Therefore, expect any Dai or USDC that are sent to the smart wallet address to quickly be converted to cDAI or cUSDC.
-- Every withdrawal requires both a signature from the user **and** a signature from Dharma's hot key in order to be accepted. Either party may cancel a given signature at any time prior to execution.
-- The Dharma Account Recovery Manager will only be used in the event that a user has lost access to their Dharma Key Ring or it has been compromised and they need to set a new one, and will not have any other control over the user's smart wallet. A user can also permanently opt out of account recovery, though this is not recommended unless the user is highly confident in their own key management.
-- Both required signatures must be provided at the same time - this enables actions to be taken in a single transaction, and also lets an account that is not a signatory on the wallet submit the transaction and pay for the gas. We can safely skip one of the signature verifications if the submitting account *is* a signatory.
+- Smart wallet deployments and stablecoin deposits can be initiated by anyone who is willing to pay the gas. Smart wallet addresses are counterfactual based on the initial user signing key, and can be safely deployed by anyone using a Dharma Smart Wallet Factory, as withdrawals will atomically redeem and transfer the relevant stablecoin. Therefore, expect any Dai or USDC sent to the smart wallet address to quickly be converted to cDAI or cUSDC.
+- Every withdrawal requires both a signature from both the user **and** from Dharma Labs in order to be accepted. Either party may cancel a given signature at any time prior to execution.
+- The Dharma Account Recovery Manager will only be used in the event that a user has lost access to their Dharma Key Ring or it has been compromised - it will not have any other control over the user's smart wallet. Furthermore, the Account Recovery Manager enforces a seven-day timelock before any account can be recovered. A user can also permanently opt out of account recovery through the Account Recovery Manager, though this is not recommended unless the user is highly confident in their own key management.
+- Both required signatures must be provided at the same time - this enables actions to be taken in a single transaction, and also lets an account that is not a signatory on the wallet submit the transaction and pay for the gas. One of the signatures can be omitted if the submitting account _is_ a valid signatory.
 - To protect against replay attacks, every call to the smart wallet will include a nonce that must match the current nonce on the smart wallet, as well as an optional minimum gas amount, and each time the smart wallet is called with enough gas and valid signatures that nonce will be incremented. This applies even when the action being taken by the smart wallet reverts, in which case an event will be emitted.
-- Additional features will be rolled out incrementally, like the ability to assume greater custody over the smart wallet or to designate alternate recovery mechanisms for the smart wallet.
+- Additional features will be rolled out incrementally, like the ability to assume greater degrees of self-custody over the smart wallet or to designate alternate recovery mechanisms for the smart wallet.
 
 The Dharma Smart Wallet is controlled by the Dharma Key Ring:
 - It implements [EIP-1271](https://eips.ethereum.org/EIPS/eip-1271), which allows for the Dharma Key Ring to hold multiple signing keys and to eventually support per-key and per-action-type permissions and thresholds. It is not intended to be used for _submitting_ transactions, but instead as a source for _validating_ signatures passed to it by the Dharma Smart Wallet and other sources.

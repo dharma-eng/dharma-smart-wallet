@@ -15,7 +15,7 @@ import "../../../interfaces/DharmaKeyRegistryInterface.sol";
  * @author 0age
  * @notice The V0 implementation for the Dharma Smart Wallet contains helper
  * functions to facilitate lending funds to CompoundV2 and for preparing Dharma
- * users for a smooth transition to a joint-custody smart wallet. It supports
+ * users for a smooth transition to a non-custodial smart wallet. It supports
  * meta-transactions, signed by a key corresponding to the public key returned
  * by the Dharma Key Registry and relayed by any transaction submitter that has
  * provided the specified gas requirement. The smart wallet instances utilizing

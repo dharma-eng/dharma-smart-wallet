@@ -20,15 +20,20 @@ import "../../../interfaces/ERC1271.sol";
 
 /**
  * @title DharmaSmartWalletImplementationV4
- * @notice The V4 implementation for the Dharma smart wallet is a joint-custody,
+ * @notice The V4 implementation for the Dharma smart wallet is a non-custodial,
  * meta-transaction-enabled wallet with helper functions to facilitate lending
- * and borrowing funds using CompoundV2. It also contains methods to support
+ * funds using CompoundV2, and with a security backstop provided by Dharma Labs
+ * prior to making withdrawals or borrows. It also contains methods to support
  * account recovery and generic actions, including in an atomic batch. The smart
  * wallet instances utilizing this implementation are deployed through the
  * Dharma Smart Wallet Factory via `CREATE2`, which allows for their address to
  * be known ahead of time, and any Dai, USDC, or Ether that has already been
  * sent into that address will automatically be deposited into Compound upon
  * deployment of the new smart wallet instance.
+ *
+ * NOTE: this implementation is still under development and has known bugs and
+ * areas for improvement. The actual V4 implementation will likely be quite
+ * different than what is currently contained here.
  */
 contract DharmaSmartWalletImplementationV4 is
   DharmaSmartWalletImplementationV0Interface,
