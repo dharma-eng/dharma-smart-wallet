@@ -16,15 +16,20 @@ module.exports = {
     'mock/MockCodeCheck.sol',
     'mock/RelayContract.sol',
     'mock/RelayContractV2.sol',
+    'implementations/key-ring/DharmaKeyRingImplementationV0.sol',
+    'implementations/key-ring/DharmaKeyRingImplementationV2.sol',
     'implementations/smart-wallet/DharmaSmartWalletImplementationV0.sol',
     'implementations/smart-wallet/DharmaSmartWalletImplementationV1.sol',
     'implementations/smart-wallet/DharmaSmartWalletImplementationV2.sol',
-    'test/UpgradeBeaconImplementationCheck.sol',
+    'implementations/smart-wallet/DharmaSmartWalletImplementationV4.sol',
+    'registries/DharmaKeyRegistryV1.sol',
     'test/BadBeacon.sol',
     'test/BadBeaconTwo.sol',
+    'test/UpgradeBeaconImplementationCheck.sol',
+    'helpers/CodeHashCache.sol',
     'helpers/DharmaKeyRegistryV1Mimic.sol',
     'helpers/ImmutableCreate2Factory.sol',
-    'helpers/CodeHashCache.sol',
-    'helpers/IndestructibleRegistry.sol'
+    'helpers/IndestructibleRegistry.sol',
+    'helpers/RelayMigrator.sol'
   ]
 }

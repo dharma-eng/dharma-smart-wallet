@@ -14,8 +14,8 @@ The **Dharma Smart Wallet** is a 2/2 "multisig" smart contract, controlled by th
 - allows users to **recover their account if access is lost or compromised** after a seven-day timelock, or to opt out of account recovery entirely, via the **Account Recovery Manager**
 - allows for **upgrades to all user smart wallets at once**, without requiring any action on behalf of the user, and with a seven-day timelock prior to each upgrade, using the **Upgrade Beacon Controller Manager**
 
-The **Dharma Key Ring** is an N/M "multisig" smart contract, controlled and configured by the user, that:
-- enables flexible, secure access to their Dharma Smart Wallet so that **users retain custody over their own funds at all times**
+The **Dharma Key Ring** is an N/M "multisig" smart contract, controlled and configured by the user and set as one of the two signatories on their Dharma Smart Wallet, that:
+- provides users with flexible, secure access to their Dharma Smart Wallet so that they **retain custody over their own funds at all times**
 - allows users to **take actions on their smart wallet without paying for gas or submitting transactions themselves**, simply by providing signed messages that map to keys that they have set on their key ring
 - allows users to **add multiple devices to their Dharma Smart Wallet** using existing devices so that their **keys stay on their own devices**, not in the cloud
 - allows for **upgrades to all user key rings at once**, without requiring any action on behalf of the user, and with a seven-day timelock prior to each upgrade, using the **Upgrade Beacon Controller Manager**

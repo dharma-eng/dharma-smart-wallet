@@ -1,7 +1,9 @@
 {
   "name": "dharma-smart-wallet",
-  "version": "0.2.0",
-  "description": "",
+  "version": "1.0.0",
+  "description": "An upgradeable, meta-transaction-enabled smart wallet that enables Dharma users to keep custody of their funds, with an added security backstop provided by Dharma Labs.",
+  "author": "Dharma Labs",
+  "license": "MIT",
   "dependencies": {
     "@gnosis.pm/safe-contracts": "1.0.0",
     "@openzeppelin/contracts": "2.3.0",
