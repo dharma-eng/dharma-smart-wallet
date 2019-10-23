@@ -2152,6 +2152,14 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'IndestructibleRegistry can register V0 key ring implementation as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [DharmaKeyRingImplementationV0.options.address]
+  )
+
+  await runTest(
     'IndestructibleRegistry can register V1 implementation as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -2183,23 +2191,15 @@ module.exports = {test: async function (provider, testingContext) {
       'send',
       [DharmaSmartWalletImplementationV4.options.address]
     )
+
+    await runTest(
+      'IndestructibleRegistry can register V1 key ring implementation as indestructible',
+      IndestructibleRegistry,
+      'registerAsIndestructible',
+      'send',
+      [DharmaKeyRingImplementationV1.options.address]
+    )
   }
-
-  await runTest(
-    'IndestructibleRegistry can register V0 key ring implementation as indestructible',
-    IndestructibleRegistry,
-    'registerAsIndestructible',
-    'send',
-    [DharmaKeyRingImplementationV0.options.address]
-  )
-
-  await runTest(
-    'IndestructibleRegistry can register V1 key ring implementation as indestructible',
-    IndestructibleRegistry,
-    'registerAsIndestructible',
-    'send',
-    [DharmaKeyRingImplementationV1.options.address]
-  )
 
   /*
   await runTest(

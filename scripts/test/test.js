@@ -2377,7 +2377,6 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  // ABCDE
   await runTest(
     'V2 user smart wallet can be called and still has original dharma key set',
     UserSmartWallet,
@@ -4653,6 +4652,276 @@ module.exports = {test: async function (provider, testingContext) {
     '',
     'deploy',
     []
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV1 cannot create a V1 key ring with no key`,
+    DharmaKeyRingFactoryV1,
+    'newKeyRing',
+    'send',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV1 cannot create a V1 key ring and set a new null key`,
+    DharmaKeyRingFactoryV1,
+    'newKeyRingAndAdditionalKey',
+    'send',
+    [address, constants.NULL_ADDRESS, '0x'],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV1 cannot create a V1 key ring and set a duplicate key`,
+    DharmaKeyRingFactoryV1,
+    'newKeyRingAndAdditionalKey',
+    'send',
+    [address, address, '0x'],
+    false
+  )
+
+  let nextKeyRing;
+  await runTest(
+    `DharmaKeyRingFactoryV1 can get the address of the next key ring`,
+    DharmaKeyRingFactoryV1,
+    'getNextKeyRing',
+    'call',
+    [address],
+    true,
+    value => {
+      nextKeyRing = value;
+    }
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV1 can create a V1 key ring`,
+    DharmaKeyRingFactoryV1,
+    'newKeyRing',
+    'send',
+    [address]
+  )
+
+  const KeyRingInstance = new web3.eth.Contract(
+    DharmaKeyRingImplementationV1Artifact.abi,
+    nextKeyRing
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV1 gets new key ring after a deploy with same input`,
+    DharmaKeyRingFactoryV1,
+    'getNextKeyRing',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(nextKeyRing !== value)
+    }
+  )
+
+  await runTest(
+    `KeyRingInstance can get the version of the key ring`,
+    KeyRingInstance,
+    'getVersion',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '1')
+    }
+  )
+
+  await runTest(
+    `KeyRingInstance can get the nonce of the key ring`,
+    KeyRingInstance,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '0')
+    }
+  )
+
+  await runTest(
+    `KeyRingInstance can get the key count of the key ring`,
+    KeyRingInstance,
+    'getKeyCount',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value.adminKeyCount, '1')
+      assert.strictEqual(value.standardKeyCount, '1')
+    }
+  )
+
+  await runTest(
+    `KeyRingInstance can does not verify a bad signature`,
+    KeyRingInstance,
+    'isValidSignature',
+    'call',
+    [
+      web3.eth.abi.encodeParameters(
+        ['bytes32', 'uint8', 'bytes'],
+        [constants.NULL_BYTES_32, 1, '0x']
+      ),
+      '0x'
+    ],
+    false
+  )
+
+  let adminActionID
+  await runTest(
+    `KeyRingInstance can get an adminActionID using getNextAdminActionID`,
+    KeyRingInstance,
+    'getNextAdminActionID',
+    'call',
+    [1, 1],
+    true,
+    value => {
+      adminActionID = value
+    }
+  )
+
+  await runTest(
+    `KeyRingInstance getAdminActionID matches getNextAdminActionID`,
+    KeyRingInstance,
+    'getAdminActionID',
+    'call',
+    [1, 1, 0],
+    true,
+    value => {
+      assert.strictEqual(value, adminActionID)
+    }
+  )
+
+  await runTest(
+    `KeyRingInstance cannot add a non-dual key in V1`,
+    KeyRingInstance,
+    'takeAdminAction',
+    'send',
+    [1, 1, '0x'],
+    false
+  ) 
+
+  await runTest(
+    `KeyRingInstance cannot add key that already exists`,
+    KeyRingInstance,
+    'takeAdminAction',
+    'send',
+    [6, address, '0x'],
+    false
+  )
+
+  const takeAdminActionSignature = signHashedPrefixedHexString(
+    adminActionID,
+    address
+  )
+
+  await runTest(
+    `KeyRingInstance can verify a valid signature`,
+    KeyRingInstance,
+    'isValidSignature',
+    'call',
+    [
+      web3.eth.abi.encodeParameters(
+        ['bytes32', 'uint8', 'bytes'],
+        [
+          web3.utils.keccak256(
+            // prefix => "\x19Ethereum Signed Message:\n32"
+            "0x19457468657265756d205369676e6564204d6573736167653a0a3332" +
+            adminActionID.slice(2),
+            {encoding: "hex"}
+          ), 1, '0x']
+      ),
+      takeAdminActionSignature
+    ],
+    true,
+    value => {
+      assert.strictEqual(value, '0x20c13b0b')
+    }
+  )
+
+  await runTest(
+    `KeyRingInstance can add a new key with a valid signature`,
+    KeyRingInstance,
+    'takeAdminAction',
+    'send',
+    [6, 1, takeAdminActionSignature],
+    true
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV2 cannot create a V1 key ring with no key`,
+    DharmaKeyRingFactoryV2,
+    'newKeyRing',
+    'send',
+    [constants.NULL_ADDRESS, constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV2 cannot create a V1 key ring and set a new null key`,
+    DharmaKeyRingFactoryV2,
+    'newKeyRingAndAdditionalKey',
+    'send',
+    [address, constants.NULL_ADDRESS, constants.NULL_ADDRESS, '0x'],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV2 cannot create a V1 key ring and set a duplicate key`,
+    DharmaKeyRingFactoryV2,
+    'newKeyRingAndAdditionalKey',
+    'send',
+    [address, constants.NULL_ADDRESS, address, '0x'],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV2 can get the address of the next key ring`,
+    DharmaKeyRingFactoryV2,
+    'getNextKeyRing',
+    'call',
+    [address],
+    true,
+    value => {
+      nextKeyRing = value;
+    }
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV2 can create a V1 key ring if the target address matches`,
+    DharmaKeyRingFactoryV2,
+    'newKeyRing',
+    'send',
+    [address, nextKeyRing]
+  )
+
+  const KeyRingInstanceFromV2Factory = new web3.eth.Contract(
+    DharmaKeyRingImplementationV1Artifact.abi,
+    nextKeyRing
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV2 won't deploy a V1 key ring if the target address has one`,
+    DharmaKeyRingFactoryV2,
+    'newKeyRing',
+    'send',
+    [address, KeyRingInstanceFromV2Factory.options.address]
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV2 gets new key ring after a deploy with same input`,
+    DharmaKeyRingFactoryV2,
+    'getNextKeyRing',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(nextKeyRing !== value)
+    }
   )
 
   await runTest(
