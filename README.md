@@ -5,7 +5,8 @@
 > An upgradeable, meta-transaction-enabled smart wallet for earning interest on stablecoins while retaining custody of funds, with an added security backstop provided by Dharma Labs.
 
 ![GitHub](https://img.shields.io/github/license/dharma-eng/dharma-smart-wallet.svg)
-![CircleCI](https://img.shields.io/circleci/build/github/dharma-eng/dharma-smart-wallet/master?token=cfe6c9bcab23789a52477ff865f9fe2d66e87ce7)
+[![Build Status](https://travis-ci.org/dharma-eng/dharma-smart-wallet.svg?branch=master)](https://travis-ci.org/dharma-eng/dharma-smart-wallet)
+[![Coverage](https://coveralls.io/repos/github/dharma-eng/dharma-smart-wallet/badge.svg?branch=master)](https://coveralls.io/github/dharma-eng/dharma-smart-wallet?branch=master)
 
 ## Summary
 The **Dharma Smart Wallet** is a 2/2 "multisig" smart contract, controlled by the user's Dharma Key Ring and by Dharma Labs, that:
