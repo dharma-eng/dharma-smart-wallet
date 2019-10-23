@@ -7,7 +7,9 @@
 ![GitHub](https://img.shields.io/github/license/dharma-eng/dharma-smart-wallet.svg)
 [![Build Status](https://travis-ci.org/dharma-eng/dharma-smart-wallet.svg?branch=master)](https://travis-ci.org/dharma-eng/dharma-smart-wallet)
 [![Coverage](https://coveralls.io/repos/github/dharma-eng/dharma-smart-wallet/badge.svg?branch=master)](https://coveralls.io/github/dharma-eng/dharma-smart-wallet?branch=master)
-[![Audit](https://img.shields.io/badge/audited%20by-Trail%20of%20Bits-brightgreen)](https://github.com/trailofbits/publications/blob/master/reviews/dharma-smartwallet.pdf)
+[![Audit](https://img.shields.io/badge/audited%20by-Trail%20of%20Bits-red)](https://github.com/trailofbits/publications/blob/master/reviews/dharma-smartwallet.pdf)
+[![Community](https://img.shields.io/badge/community-Discord-blueviolet)](https://discordapp.com/invite/qvKTDgR)
+
 
 ## Summary
 The **Dharma Smart Wallet** is a 2/2 "multisig" smart contract, controlled by the user's Dharma Key Ring and by Dharma Labs, that:
