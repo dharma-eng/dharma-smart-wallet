@@ -1,6 +1,7 @@
 pragma solidity 0.5.11;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "../../interfaces/TimelockerModifiersInterface.sol";
 
 
 /**
@@ -11,13 +12,10 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
  * and passed the target function selector and arguments. Then, a given time
  * interval must first fully transpire before the timelock functions can be
  * successfully called. Furthermore, once a timelock is complete, it will expire
- * after a period of time. It also includes a `modifyTimelockInterval` function
- * and a `modifyTimelockExpiration` function, both of which implement timelocks,
- * and that are given a function selector and a new timelock interval or default
- * expiration time for the specified function as arguments. IT IS IMPORTANT THAT
- * THESE FUNCTIONS ARE OVERRIDDEN IN WHATEVER CONTRACT INHERITS TIMELOCKER, as
- * they do not implement any access control since Timelocker is not an ownable.
- *
+ * after a period of time. In order to change timelock intervals or expirations,
+ * the inheriting contract needs to implement `modifyTimelockInterval` and
+ * `modifyTimelockExpiration` functions, respectively, as well as functions that
+ * call `_setTimelock` in order to initiate the timelocks for those functions.
  * To make a function timelocked, use the `_enforceTimelock` internal function.
  * To set initial defult minimum timelock intervals and expirations, use the
  * `_setInitialTimelockInterval` and `_setInitialTimelockExpiration` internal
@@ -71,45 +69,37 @@ contract Timelocker {
   // Only allow one new interval or expiration change at a time per function.
   mapping(bytes4 => mapping(bytes4 => bytes32)) private _protectedTimelockIDs;
 
-  // Store reused revert reasons as constants.
-  string constant _SHOULD_OVERRIDE = (
-    "This function should be overridden by the inheriting contract."
+  // Store modifyTimelockInterval function selector as a constant.
+  bytes4 private constant _MODIFY_TIMELOCK_INTERVAL_SELECTOR = bytes4(
+    0xe950c085
+  );
+
+  // Store modifyTimelockExpiration function selector as a constant.
+  bytes4 private constant _MODIFY_TIMELOCK_EXPIRATION_SELECTOR = bytes4(
+    0xd7ce3c6f
   );
 
   // Set a ridiculously high duration in order to protect against overflows.
   uint256 private constant _A_TRILLION_YEARS = 365000000000000 days;
 
   /**
-   * @notice External stub function for setting new timelock intervals. Be sure
-   * to override the stub of this function with appropriate access controls, and
-   * to call the corresponding internal function from within the overriding
-   * function, in order to modify timelock intervals.
-   * @param functionSelector the selector of the function to set the timelock
-   * interval for.
-   * @param newTimelockInterval the new minimum timelock interval to set for the
-   * given function.
+   * @notice In the constructor, confirm that selectors specified as constants
+   * are correct.
    */
-  function modifyTimelockInterval(
-    bytes4 functionSelector, uint256 newTimelockInterval
-  ) external {
-    (functionSelector, newTimelockInterval);
-    revert(_SHOULD_OVERRIDE);
-  }
+  constructor() internal {
+    TimelockerModifiersInterface modifiers;
 
-  /**
-   * @notice External stub for setting new default timelock expirations. Be sure
-   * sure to override the stub of this function with appropriate access controls
-   * in order to modify timelock expirations.
-   * @param functionSelector the selector of the function to set the timelock
-   * interval for.
-   * @param newTimelockExpiration the new default timelock expiration to set for
-   * the given function.
-   */
-  function modifyTimelockExpiration(
-    bytes4 functionSelector, uint256 newTimelockExpiration
-  ) external {
-    (functionSelector, newTimelockExpiration);
-    revert(_SHOULD_OVERRIDE);
+    bytes4 targetModifyInterval = modifiers.modifyTimelockInterval.selector;
+    require(
+      _MODIFY_TIMELOCK_INTERVAL_SELECTOR == targetModifyInterval,
+      "Incorrect modify timelock interval selector supplied."
+    );
+
+    bytes4 targetModifyExpiration = modifiers.modifyTimelockExpiration.selector;
+    require(
+      _MODIFY_TIMELOCK_EXPIRATION_SELECTOR == targetModifyExpiration,
+      "Incorrect modify timelock expiration selector supplied."
+    );
   }
 
   /**
@@ -193,8 +183,8 @@ contract Timelocker {
     // For timelock interval or expiration changes, first drop any existing
     // timelock for the function being modified if the argument has changed.
     if (
-      functionSelector == this.modifyTimelockInterval.selector ||
-      functionSelector == this.modifyTimelockExpiration.selector
+      functionSelector == _MODIFY_TIMELOCK_INTERVAL_SELECTOR ||
+      functionSelector == _MODIFY_TIMELOCK_EXPIRATION_SELECTOR
     ) {
       // Determine the function that will be modified by the timelock.
       (bytes4 modifiedFunction, uint256 duration) = abi.decode(
@@ -273,18 +263,18 @@ contract Timelocker {
     bytes4 functionSelector, uint256 newTimelockInterval
   ) internal {
     // Ensure that the timelock has been set and is completed.
-    _enforceTimelock(
-      this.modifyTimelockInterval.selector,
+    _enforceTimelockPrivate(
+      _MODIFY_TIMELOCK_INTERVAL_SELECTOR,
       abi.encode(functionSelector, newTimelockInterval)
     );
 
     // Clear out the existing timelockID protection for the given function.
     delete _protectedTimelockIDs[
-      this.modifyTimelockInterval.selector
+      _MODIFY_TIMELOCK_INTERVAL_SELECTOR
     ][functionSelector];
 
     // Set new timelock interval and emit a `TimelockIntervalModified` event.
-    _setTimelockInterval(functionSelector, newTimelockInterval);
+    _setTimelockIntervalPrivate(functionSelector, newTimelockInterval);
   }
 
   /**
@@ -303,18 +293,18 @@ contract Timelocker {
     bytes4 functionSelector, uint256 newTimelockExpiration
   ) internal {
     // Ensure that the timelock has been set and is completed.
-    _enforceTimelock(
-      this.modifyTimelockExpiration.selector,
+    _enforceTimelockPrivate(
+      _MODIFY_TIMELOCK_EXPIRATION_SELECTOR,
       abi.encode(functionSelector, newTimelockExpiration)
     );
 
     // Clear out the existing timelockID protection for the given function.
     delete _protectedTimelockIDs[
-      this.modifyTimelockExpiration.selector
+      _MODIFY_TIMELOCK_EXPIRATION_SELECTOR
     ][functionSelector];
 
     // Set new default expiration and emit a `TimelockExpirationModified` event.
-    _setTimelockExpiration(functionSelector, newTimelockExpiration);
+    _setTimelockExpirationPrivate(functionSelector, newTimelockExpiration);
   }
 
   /**
@@ -332,7 +322,7 @@ contract Timelocker {
     assembly { if extcodesize(address) { revert(0, 0) } }
 
     // Set the timelock interval and emit a `TimelockIntervalModified` event.
-    _setTimelockInterval(functionSelector, newTimelockInterval);
+    _setTimelockIntervalPrivate(functionSelector, newTimelockInterval);
   }
 
   /**
@@ -350,19 +340,30 @@ contract Timelocker {
     assembly { if extcodesize(address) { revert(0, 0) } }
 
     // Set the timelock interval and emit a `TimelockExpirationModified` event.
-    _setTimelockExpiration(functionSelector, newTimelockExpiration);
+    _setTimelockExpirationPrivate(functionSelector, newTimelockExpiration);
   }
 
   /**
    * @notice Internal function to ensure that a timelock is complete or expired
    * and to clear the existing timelock if it is complete so it cannot later be
+   * reused. The function to enforce the timelock on is inferred from `msg.sig`.
+   * @param arguments The abi-encoded arguments of the function to be called.
+   */
+  function _enforceTimelock(bytes memory arguments) internal {
+    // Enforce the relevant timelock.
+    _enforceTimelockPrivate(msg.sig, arguments);
+  }
+
+  /**
+   * @notice Private function to ensure that a timelock is complete or expired
+   * and to clear the existing timelock if it is complete so it cannot later be
    * reused.
    * @param functionSelector function to be called.
    * @param arguments The abi-encoded arguments of the function to be called.
    */
-  function _enforceTimelock(
+  function _enforceTimelockPrivate(
     bytes4 functionSelector, bytes memory arguments
-  ) internal {
+  ) private {
     // Get timelock ID using the supplied function arguments.
     bytes32 timelockID = keccak256(abi.encodePacked(arguments));
 
@@ -392,7 +393,7 @@ contract Timelocker {
    * @param newTimelockInterval the new minimum timelock interval to set for the
    * given function.
    */
-  function _setTimelockInterval(
+  function _setTimelockIntervalPrivate(
     bytes4 functionSelector, uint256 newTimelockInterval
   ) private {
     // Ensure that the new timelock interval will not cause an overflow error.
@@ -423,7 +424,7 @@ contract Timelocker {
    * @param newTimelockExpiration the new default timelock expiration to set for
    * the given function.
    */
-  function _setTimelockExpiration(
+  function _setTimelockExpirationPrivate(
     bytes4 functionSelector, uint256 newTimelockExpiration
   ) private {
     // Ensure that the new timelock expiration will not cause an overflow error.

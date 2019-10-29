@@ -25,20 +25,4 @@ interface DharmaAccountRecoveryManagerInterface {
   function accountRecoveryDisabled(
     address wallet
   ) external view returns (bool hasDisabledAccountRecovery);
-
-  function initiateModifyTimelockInterval(
-    bytes4 functionSelector, uint256 newTimelockInterval, uint256 extraTime
-  ) external;
-
-  function modifyTimelockInterval(
-    bytes4 functionSelector, uint256 newTimelockInterval
-  ) external;
-
-  function initiateTimelockExpiration(
-    bytes4 functionSelector, uint256 newTimelockExpiration, uint256 extraTime
-  ) external;
-
-  function modifyTimelockExpiration(
-    bytes4 functionSelector, uint256 newTimelockExpiration
-  ) external;
 }
