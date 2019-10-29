@@ -5,6 +5,7 @@ import "../helpers/TwoStepOwnable.sol";
 import "../helpers/Timelocker.sol";
 import "../../interfaces/UpgradeBeaconControllerInterface.sol";
 import "../../interfaces/DharmaUpgradeBeaconControllerManagerInterface.sol";
+import "../../interfaces/TimelockerModifiersInterface.sol";
 
 
 /**
@@ -41,6 +42,7 @@ import "../../interfaces/DharmaUpgradeBeaconControllerManagerInterface.sol";
  */
 contract DharmaUpgradeBeaconControllerManager is
   DharmaUpgradeBeaconControllerManagerInterface,
+  TimelockerModifiersInterface,
   TwoStepOwnable,
   Timelocker {
   using SafeMath for uint256;
@@ -192,9 +194,7 @@ contract DharmaUpgradeBeaconControllerManager is
     address controller, address beacon, address implementation
   ) external onlyOwner {
     // Ensure that the timelock has been set and is completed.
-    _enforceTimelock(
-      this.upgrade.selector, abi.encode(controller, beacon, implementation)
-    );
+    _enforceTimelock(abi.encode(controller, beacon, implementation));
 
     // Reset the heartbeat to the current time.
     _lastHeartbeat = now;
@@ -220,6 +220,34 @@ contract DharmaUpgradeBeaconControllerManager is
   }
 
   /**
+   * @notice Initiates a timelock to set a new owner on an upgrade beacon
+   * controller that is owned by this contract.
+   * @param controller address of controller to transfer ownership of.
+   * @param newOwner address to assign ownership of the controller to.
+   * @param extraTime Additional time in seconds to add to the timelock.
+   */
+  function initiateTransferControllerOwnership(
+    address controller, address newOwner, uint256 extraTime
+  ) external onlyOwner {
+    require(controller != address(0), "No controller address provided.");
+
+    require(newOwner != address(0), "No new owner address provided.");
+
+    // Ensure that the new owner has confirmed that it can accept ownership.
+    require(
+      _willAcceptOwnership[controller][newOwner],
+      "New owner must agree to accept ownership of the given controller."
+    );
+
+    // Set the timelock and emit a `TimelockInitiated` event.
+    _setTimelock(
+      this.transferControllerOwnership.selector,
+      abi.encode(controller, newOwner),
+      extraTime
+    );
+  }
+
+  /**
    * @notice Timelocked function to set a new owner on an upgrade beacon
    * controller that is owned by this contract.
    * @param controller address of controller to transfer ownership of.
@@ -235,10 +263,7 @@ contract DharmaUpgradeBeaconControllerManager is
     );
 
     // Ensure that the timelock has been set and is completed.
-    _enforceTimelock(
-      this.transferControllerOwnership.selector,
-      abi.encode(controller, newOwner)
-    );
+    _enforceTimelock(abi.encode(controller, newOwner));
 
     // Transfer ownership of the controller to the new owner.
     TwoStepOwnable(controller).transferOwnership(newOwner);
@@ -476,7 +501,7 @@ contract DharmaUpgradeBeaconControllerManager is
    * given function selector.
    * @param extraTime Additional time in seconds to add to the timelock.
    */
-  function initiateTimelockExpiration(
+  function initiateModifyTimelockExpiration(
     bytes4 functionSelector, uint256 newTimelockExpiration, uint256 extraTime
   ) external onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).

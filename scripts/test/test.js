@@ -5604,6 +5604,22 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaAccountRecoveryManagerCoverage,
     'initiateAccountRecovery',
     'send',
+    [constants.UPGRADE_BEACON_ADDRESS, addressTwo, 0]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager can initiate another recovery timelock`,
+    DharmaAccountRecoveryManagerCoverage,
+    'initiateAccountRecovery',
+    'send',
+    [UserSmartWalletV3.options.address, addressTwo, 0]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager can initiate a third recovery timelock`,
+    DharmaAccountRecoveryManagerCoverage,
+    'initiateAccountRecovery',
+    'send',
     [address, addressTwo, 0]
   )
 
@@ -5647,16 +5663,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaAccountRecoveryManagerCoverage,
     'recover',
     'send',
-    [address, addressTwo],
-    false
-  )
-
-  await runTest(
-    `DharmaAccountRecoveryManager cannot call disableAccountRecovery with null smart wallet`,
-    DharmaAccountRecoveryManagerCoverage,
-    'disableAccountRecovery',
-    'send',
-    [constants.NULL_ADDRESS],
+    [constants.UPGRADE_BEACON_ADDRESS, addressTwo],
     false
   )
 
@@ -5679,6 +5686,73 @@ module.exports = {test: async function (provider, testingContext) {
     value => {
       assert.ok(!value)
     }
+  )
+
+  // advance time by 7 days
+  await advanceTime((60 * 60 * 24 * 7) + 5)
+
+  await runTest(
+    `DharmaAccountRecoveryManager can call recover after timelock completion`,
+    DharmaAccountRecoveryManagerCoverage,
+    'recover',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS, addressTwo]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager cannot recover an unowned smart wallet`,
+    DharmaAccountRecoveryManagerCoverage,
+    'recover',
+    'send',
+    [UserSmartWalletV3.options.address, addressTwo],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager cannot recover an EOA`,
+    DharmaAccountRecoveryManagerCoverage,
+    'recover',
+    'send',
+    [address, addressTwo],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager cannot call disableAccountRecovery with null smart wallet`,
+    DharmaAccountRecoveryManagerCoverage,
+    'disableAccountRecovery',
+    'send',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager can call disableAccountRecovery after timelock completion`,
+    DharmaAccountRecoveryManagerCoverage,
+    'disableAccountRecovery',
+    'send',
+    [address]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager can check if account recovery is disabled`,
+    DharmaAccountRecoveryManagerCoverage,
+    'accountRecoveryDisabled',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager cannot recover an account that has disabled recovery`,
+    DharmaAccountRecoveryManagerCoverage,
+    'recover',
+    'send',
+    [address, addressTwo],
+    false
   )
 
   await runTest(
@@ -5709,7 +5783,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaAccountRecoveryManager can call initiateModifyTimelockInterval to set a timelock on another function`,
-    DharmaAccountRecoveryManager,
+    DharmaAccountRecoveryManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xaaaaaaaa', 10000, 0]
@@ -5734,53 +5808,53 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call initiateTimelockExpiration with no selector`,
+    `DharmaAccountRecoveryManager cannot call initiateModifyTimelockExpiration with no selector`,
     DharmaAccountRecoveryManagerCoverage,
-    'initiateTimelockExpiration',
+    'initiateModifyTimelockExpiration',
     'send',
     ['0x00000000', 0, 0],
     false
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call initiateTimelockExpiration to with expiration over one month`,
+    `DharmaAccountRecoveryManager cannot call initiateModifyTimelockExpiration to with expiration over one month`,
     DharmaAccountRecoveryManagerCoverage,
-    'initiateTimelockExpiration',
+    'initiateModifyTimelockExpiration',
     'send',
     ['0xe950c085', 5443200, 0],
     false
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call initiateTimelockExpiration to modify expiration under one minute`,
+    `DharmaAccountRecoveryManager cannot call initiateModifyTimelockExpiration to modify expiration under one minute`,
     DharmaAccountRecoveryManagerCoverage,
-    'initiateTimelockExpiration',
+    'initiateModifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 30, 0],
     false
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call initiateTimelockExpiration to modify expiration under one hour`,
+    `DharmaAccountRecoveryManager cannot call initiateModifyTimelockExpiration to modify expiration under one hour`,
     DharmaAccountRecoveryManagerCoverage,
-    'initiateTimelockExpiration',
+    'initiateModifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 3000, 0],
     false
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager can call initiateTimelockExpiration to set a timelock`,
+    `DharmaAccountRecoveryManager can call initiateModifyTimelockExpiration to set a timelock`,
     DharmaAccountRecoveryManagerCoverage,
-    'initiateTimelockExpiration',
+    'initiateModifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 30000, 0],
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager can call initiateTimelockExpiration to set a timelock on another function`,
-    DharmaAccountRecoveryManager,
-    'initiateTimelockExpiration',
+    `DharmaAccountRecoveryManager can call initiateModifyTimelockExpiration to set a timelock on another function`,
+    DharmaAccountRecoveryManagerCoverage,
+    'initiateModifyTimelockExpiration',
     'send',
     ['0xaaaaaaaa', 300000, 0]
   )
@@ -5803,8 +5877,25 @@ module.exports = {test: async function (provider, testingContext) {
     false
   )
 
+  await runTest(
+    `DharmaAccountRecoveryManager can initiate recovery disablement timelock`,
+    DharmaAccountRecoveryManagerCoverage,
+    'initiateAccountRecoveryDisablement',
+    'send',
+    [addressTwo, 0]
+  )
 
+  // advance time by 2 weeks
+  await advanceTime((60 * 60 * 24 * 7 * 2) + 5)
 
+  await runTest(
+    `DharmaAccountRecoveryManager cannot call disableAccountRecovery after timelock expiration`,
+    DharmaAccountRecoveryManagerCoverage,
+    'disableAccountRecovery',
+    'send',
+    [addressTwo],
+    false
+  )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer ownership from a non-owner`,
@@ -5871,7 +5962,59 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    `DharmaUpgradeBeaconControllerManager can get an empty timelock`,
+    DharmaUpgradeBeaconControllerManager,
+    'getTimelock',
+    'call',
+    ['0x01020304', '0x'],
+    true,
+    value => {
+      assert.ok(!value.exists)
+      assert.ok(!value.completed)
+      assert.ok(!value.expired)
+      assert.strictEqual(value.completionTime, '0')
+      assert.strictEqual(value.expirationTime, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can get an empty default timelock interval`,
+    DharmaUpgradeBeaconControllerManager,
+    'getDefaultTimelockInterval',
+    'call',
+    ['0x01020304'],
+    true,
+    value => {
+      assert.strictEqual(value, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can get an empty default timelock expiration`,
+    DharmaUpgradeBeaconControllerManager,
+    'getDefaultTimelockExpiration',
+    'call',
+    ['0x01020304'],
+    true,
+    value => {
+      assert.strictEqual(value, '0')
+    }
+  )
+
+  await runTest(
     `DharmaUpgradeBeaconControllerManager cannot upgrade before timelock is complete`,
+    DharmaUpgradeBeaconControllerManager,
+    'upgrade',
+    'send',
+    [address, addressTwo, DharmaUpgradeBeaconControllerManager.options.address],
+    false
+  )
+
+  // advance time by 7 days
+  await advanceTime((60 * 60 * 24 * 7) + 5)
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot upgrade an unowned controller`,
     DharmaUpgradeBeaconControllerManager,
     'upgrade',
     'send',
@@ -5906,7 +6049,54 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot initiate controller ownership transfer with null controller`,
+    DharmaUpgradeBeaconControllerManager,
+    'initiateTransferControllerOwnership',
+    'send',
+    [constants.NULL_ADDRESS, addressTwo, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot initiate controller ownership transfer with null new owner`,
+    DharmaUpgradeBeaconControllerManager,
+    'initiateTransferControllerOwnership',
+    'send',
+    [address, constants.NULL_ADDRESS, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot initiate controller ownership transfer if new owner has not accepted`,
+    DharmaUpgradeBeaconControllerManager,
+    'initiateTransferControllerOwnership',
+    'send',
+    [address, addressTwo, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can initiate controller ownership transfer if new owner has accepted`,
+    DharmaUpgradeBeaconControllerManager,
+    'initiateTransferControllerOwnership',
+    'send',
+    [address, address, 0]
+  )
+
+  await runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer controller ownership prior to timelock completion`,
+    DharmaUpgradeBeaconControllerManager,
+    'transferControllerOwnership',
+    'send',
+    [address, address],
+    false
+  )
+
+  // advance time by 4 weeks
+  await advanceTime((60 * 60 * 24 * 7 * 4) + 5)
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot transfer unowned controller ownership`,
     DharmaUpgradeBeaconControllerManager,
     'transferControllerOwnership',
     'send',
@@ -5987,11 +6177,27 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager owner can arm Adharma Contingency`,
+    `DharmaUpgradeBeaconControllerManager owner can arm an Adharma Contingency`,
     DharmaUpgradeBeaconControllerManager,
     'armAdharmaContingency',
     'send',
     [address, address, true]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner can arm fake Adharma Contingency on smart wallet`,
+    DharmaUpgradeBeaconControllerManager,
+    'armAdharmaContingency',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, true]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner can arm Adharma Contingency on key ring`,
+    DharmaUpgradeBeaconControllerManager,
+    'armAdharmaContingency',
+    'send',
+    [constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS, constants.KEY_RING_UPGRADE_BEACON_ADDRESS, true]
   )
 
   await runTest(
@@ -6015,11 +6221,11 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency on unowned smart-wallet`,
+    `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency on unowned key ring controller`,
     DharmaUpgradeBeaconControllerManager,
     'activateAdharmaContingency',
     'send',
-    [address, '0x000000000026750c571ce882B17016557279ADaa'],
+    [constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS, constants.KEY_RING_UPGRADE_BEACON_ADDRESS],
     false
   )
 
@@ -6039,6 +6245,109 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [address, address, address],
     false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can activate fake Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManager,
+    'activateAdharmaContingency',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner can arm fake Adharma Contingency again`,
+    DharmaUpgradeBeaconControllerManager,
+    'armAdharmaContingency',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, true]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot activate Contingency when activated`,
+    DharmaUpgradeBeaconControllerManager,
+    'activateAdharmaContingency',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner can disarm Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManager,
+    'armAdharmaContingency',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, false]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot exit Contingency before 48 hours`,
+    DharmaUpgradeBeaconControllerManager,
+    'exitAdharmaContingency',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, DharmaSmartWalletImplementationV3.options.address],
+    false
+  )
+
+  // advance time by 2 days
+  await advanceTime((60 * 60 * 24 * 2) + 5)
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot exit Contingency to null address`,
+    DharmaUpgradeBeaconControllerManager,
+    'exitAdharmaContingency',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot exit Contingency to non-contract address`,
+    DharmaUpgradeBeaconControllerManager,
+    'exitAdharmaContingency',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, address],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can exit Contingency after 48 hours`,
+    DharmaUpgradeBeaconControllerManager,
+    'exitAdharmaContingency',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, DharmaSmartWalletImplementationV3.options.address]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner can arm fake Adharma Contingency again`,
+    DharmaUpgradeBeaconControllerManager,
+    'armAdharmaContingency',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, true]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can activate fake Adharma Contingency again`,
+    DharmaUpgradeBeaconControllerManager,
+    'activateAdharmaContingency',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can roll back from fake Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManager,
+    'rollback',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can "roll forward" after roll back`,
+    DharmaUpgradeBeaconControllerManager,
+    'rollback',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS]
   )
 
   await runTest(
@@ -6072,11 +6381,37 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot create timelock with excessive duration`,
+    DharmaUpgradeBeaconControllerManager,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xe950c085', constants.FULL_APPROVAL, 0],
+    false // TODO: move this outside of Controller manager
+  )
+
+  await runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockInterval to set a timelock`,
     DharmaUpgradeBeaconControllerManager,
     'initiateModifyTimelockInterval',
     'send',
-    ['0xe950c085', 10000, 0]
+    ['0xe950c085', 10000, 5]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot shorten existing initiateModifyTimelockInterval timelock`,
+    DharmaUpgradeBeaconControllerManager,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xe950c085', 10000, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockInterval to change a duration`,
+    DharmaUpgradeBeaconControllerManager,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xe950c085', 10001, 5]
   )
 
   await runTest(
@@ -6106,46 +6441,46 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager cannot call initiateTimelockExpiration with no selector`,
+    `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockExpiration with no selector`,
     DharmaUpgradeBeaconControllerManager,
-    'initiateTimelockExpiration',
+    'initiateModifyTimelockExpiration',
     'send',
     ['0x00000000', 0, 0],
     false
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager cannot call initiateTimelockExpiration to with expiration over one month`,
+    `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockExpiration to with expiration over one month`,
     DharmaUpgradeBeaconControllerManager,
-    'initiateTimelockExpiration',
+    'initiateModifyTimelockExpiration',
     'send',
     ['0xe950c085', 5443200, 0],
     false
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager cannot call initiateTimelockExpiration to modify expiration under one minute`,
+    `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockExpiration to modify expiration under one minute`,
     DharmaUpgradeBeaconControllerManager,
-    'initiateTimelockExpiration',
+    'initiateModifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 30, 0],
     false
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager can call initiateTimelockExpiration to set a timelock`,
+    `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockExpiration to set a timelock`,
     DharmaUpgradeBeaconControllerManager,
-    'initiateTimelockExpiration',
+    'initiateModifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 300000, 0],
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager can call initiateTimelockExpiration to set a timelock on another function`,
+    `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockExpiration to set a timelock on another function`,
     DharmaUpgradeBeaconControllerManager,
-    'initiateTimelockExpiration',
+    'initiateModifyTimelockExpiration',
     'send',
-    ['0xaaaaaaaa', 300000, 0]
+    ['0xe950c085', 30, 0]
   )
 
   await runTest(
@@ -6165,6 +6500,34 @@ module.exports = {test: async function (provider, testingContext) {
     ['0xd7ce3c6f', 300],
     false
   )
+
+  // advance time by 4 weeks
+  await advanceTime((60 * 60 * 24 * 7 * 4) + 5)
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can call modifyTimelockInterval`,
+    DharmaUpgradeBeaconControllerManager,
+    'modifyTimelockInterval',
+    'send',
+    ['0xaaaaaaaa', 10000]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can call modifyTimelockExpiration`,
+    DharmaUpgradeBeaconControllerManager,
+    'modifyTimelockExpiration',
+    'send',
+    ['0xd7ce3c6f', 300000],
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockExpiration if expiration is too short`,
+    DharmaUpgradeBeaconControllerManager,
+    'modifyTimelockExpiration',
+    'send',
+    ['0xe950c085', 30],
+    false
+  )  
 
   await runTest(
     'Dharma Upgrade Beacon Controller can upgrade to AdharmaSmartWalletImplementation',

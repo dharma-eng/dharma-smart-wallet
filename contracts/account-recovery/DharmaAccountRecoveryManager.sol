@@ -4,6 +4,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../helpers/Timelocker.sol";
 import "../helpers/TwoStepOwnable.sol";
 import "../../interfaces/DharmaAccountRecoveryManagerInterface.sol";
+import "../../interfaces/TimelockerModifiersInterface.sol";
 
 interface DharmaSmartWalletRecovery {
   function recover(address newUserSigningKey) external;
@@ -38,6 +39,7 @@ interface DharmaSmartWalletRecovery {
  */
 contract DharmaAccountRecoveryManager is
   DharmaAccountRecoveryManagerInterface,
+  TimelockerModifiersInterface,
   TwoStepOwnable,
   Timelocker {
   using SafeMath for uint256;
@@ -90,27 +92,6 @@ contract DharmaAccountRecoveryManager is
   }
 
   /**
-   * @notice Initiates a timelocked account recovery disablement process for a
-   * smart wallet. Only the owner may call this function. Once the timelock
-   * period is complete (and before it has expired) the owner may call
-   * `disableAccountRecovery` to complete the process and opt a smart wallet out
-   * of account recovery. Once account recovery has been disabled, it cannot be
-   * reenabled - the process is irreversible.
-   * @param smartWallet the smart wallet address.
-   * @param extraTime Additional time in seconds to add to the timelock.
-   */
-  function initiateAccountRecoveryDisablement(
-    address smartWallet, uint256 extraTime
-  ) external onlyOwner {
-    require(smartWallet != address(0), "No smart wallet address provided.");
-
-    // Set the timelock and emit a `TimelockInitiated` event.
-    _setTimelock(
-      this.disableAccountRecovery.selector, abi.encode(smartWallet), extraTime
-    );
-  }
-
-  /**
    * @notice Timelocked function to set a new user signing key on a smart
    * wallet. Only the owner may call this function.
    * @param smartWallet Address of the smart wallet to recover a key on.
@@ -132,9 +113,7 @@ contract DharmaAccountRecoveryManager is
     );
 
     // Ensure that the timelock has been set and is completed.
-    _enforceTimelock(
-      this.recover.selector, abi.encode(smartWallet, newUserSigningKey)
-    );
+    _enforceTimelock(abi.encode(smartWallet, newUserSigningKey));
 
     // Declare the proper interface for the smart wallet in question.
     DharmaSmartWalletRecovery walletToRecover = DharmaSmartWalletRecovery(
@@ -158,6 +137,27 @@ contract DharmaAccountRecoveryManager is
   }
 
   /**
+   * @notice Initiates a timelocked account recovery disablement process for a
+   * smart wallet. Only the owner may call this function. Once the timelock
+   * period is complete (and before it has expired) the owner may call
+   * `disableAccountRecovery` to complete the process and opt a smart wallet out
+   * of account recovery. Once account recovery has been disabled, it cannot be
+   * reenabled - the process is irreversible.
+   * @param smartWallet the smart wallet address.
+   * @param extraTime Additional time in seconds to add to the timelock.
+   */
+  function initiateAccountRecoveryDisablement(
+    address smartWallet, uint256 extraTime
+  ) external onlyOwner {
+    require(smartWallet != address(0), "No smart wallet address provided.");
+
+    // Set the timelock and emit a `TimelockInitiated` event.
+    _setTimelock(
+      this.disableAccountRecovery.selector, abi.encode(smartWallet), extraTime
+    );
+  }
+
+  /**
    * @notice Timelocked function to opt a given wallet out of account recovery.
    * This action cannot be undone - any future account recovery would require an
    * upgrade to the smart wallet implementation itself and is not likely to be
@@ -169,9 +169,7 @@ contract DharmaAccountRecoveryManager is
     require(smartWallet != address(0), "No smart wallet address provided.");
 
     // Ensure that the timelock has been set and is completed.
-    _enforceTimelock(
-      this.disableAccountRecovery.selector, abi.encode(smartWallet)
-    );
+    _enforceTimelock(abi.encode(smartWallet));
 
     // Register the specified wallet as having opted out of account recovery.
     _accountRecoveryDisabled[smartWallet] = true;
@@ -260,7 +258,7 @@ contract DharmaAccountRecoveryManager is
    * given function selector.
    * @param extraTime Additional time in seconds to add to the timelock.
    */
-  function initiateTimelockExpiration(
+  function initiateModifyTimelockExpiration(
     bytes4 functionSelector, uint256 newTimelockExpiration, uint256 extraTime
   ) external onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
