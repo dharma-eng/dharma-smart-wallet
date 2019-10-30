@@ -2,18 +2,11 @@ pragma solidity 0.5.11;
 
 
 /**
- * @title DharmaUpgradeMultisig
+ * @title DharmaTestingMultisig
  * @author 0age (derived from Christian Lundkvist's Simple Multisig)
- * @notice This contract is a multisig that will control upgrades to the Dharma
- * Smart Wallet and the Dharma Key Ring via the Dharma Upgrade Beacon Controller
- * Manager. it is based on Christian Lundkvist's Simple Multisig (found at
- * https://github.com/christianlundkvist/simple-multisig). The address of the
- * Dharma Upgrade Beacon Controller Manager is hard-coded as the only allowable
- * call destination, and any changes in ownership or signature threshold will
- * require deploying a new multisig and transferring ownership of the upgrade
- * beacon controller manager.
+ * @notice This contract is a multisig that will be used for testing.
  */
-contract DharmaUpgradeMultisig {
+contract DharmaTestingMultisig {
   // The nonce is the only mutable state, and is incremented on every call.
   uint256 private _nonce;
 
@@ -23,7 +16,7 @@ contract DharmaUpgradeMultisig {
 
   // This multisig can only call the Upgrade Beacon Controller Manager contract.
   address private constant _DESTINATION = address(
-    0x000000000000D64cC9d4c7D2A573D7205926677A
+    0x8F00000099B16D0D724400a8012C0000A651bd34
   );
 
   // The threshold is an exact number of valid signatures that must be supplied.

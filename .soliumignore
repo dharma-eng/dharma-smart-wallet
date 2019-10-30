@@ -6,6 +6,7 @@ interfaces/RelayContractInterface.sol
 
 # disagree with indentation error
 contracts/helpers/FactoryFactFinder.sol
+contracts/helpers/SmartWalletFactoryV1UserSigningKeyUpdater.sol
 contracts/upgradeability/DharmaUpgradeBeaconController.sol
 
 # parsing error due to dynamic abi.decode - try again in later version

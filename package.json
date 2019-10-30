@@ -5,7 +5,6 @@
   "author": "Dharma Labs",
   "license": "MIT",
   "dependencies": {
-    "@gnosis.pm/safe-contracts": "1.0.0",
     "@openzeppelin/contracts": "2.3.0",
     "ethereumjs-util": "^6.1.0",
     "ethlint": "^1.2.5",

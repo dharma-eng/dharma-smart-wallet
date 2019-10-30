@@ -2007,6 +2007,7 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
+  /*
   const DharmaUpgradeMultisig = await runTest(
     `DharmaUpgradeMultisig contract deployment`,
     DharmaUpgradeMultisigDeployer,
@@ -2030,6 +2031,7 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy',
     [[address], 1]
   )
+  */
 
   const IndestructibleRegistry = await runTest(
     `IndestructibleRegistry contract deployment`,
