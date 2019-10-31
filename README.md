@@ -134,5 +134,5 @@ Notable Transactions:
 - <a href="https://etherscan.io/tx/0xcdf785050d7cd41a30eee0666aca312fd6254189d981a55fa3a18cab2fb3f624#eventlog" target="_blank">V0 implementation set on Key Ring Upgrade Beacon</a>
 - <a href="https://etherscan.io/tx/0xbe6a44535505b0409820fe4e2c1cec4adc6a9abde8ea0287960c899e5b149105#eventlog" target="_blank">V1 implementation set on Key Ring Upgrade Beacon</a>
 
-# Additional Information
+## Additional Information
 Have any questions or feedback? Join the conversation in the <a href="https://discordapp.com/invite/qvKTDgR" target="_blank">Dharma_HQ Discord server</a>.
