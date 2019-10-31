@@ -2945,23 +2945,6 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  await runTest(
-    'V3 UserSmartWallet can get next custom action ID to set a user signing key',
-    UserSmartWalletV3,
-    'getNextCustomActionID',
-    'call',
-    [
-      1, // SetUserSigningKey,
-      constants.FULL_APPROVAL, // This value shouldn't matter
-      addressTwo,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
   let currentNonce
   await runTest(
     'UserSmartWallet can get the nonce',

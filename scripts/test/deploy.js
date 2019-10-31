@@ -2007,13 +2007,112 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
-  /*
+  await runTest(
+    `DharmaUpgradeMultisig contract deployment fails if threshold is not met`,
+    DharmaUpgradeMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000001'
+    ]],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig contract deployment fails if sigs are out of order`,
+    DharmaUpgradeMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000005',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000001'
+    ]],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig contract deployment fails with too many owners`,
+    DharmaUpgradeMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000005',
+      '0x0000000000000000000000000000000000000006',
+      '0x0000000000000000000000000000000000000007',
+      '0x0000000000000000000000000000000000000008',
+      '0x0000000000000000000000000000000000000009',
+      '0x000000000000000000000000000000000000000a',
+      '0x000000000000000000000000000000000000000b'
+    ]],
+    false
+  )
+
   const DharmaUpgradeMultisig = await runTest(
     `DharmaUpgradeMultisig contract deployment`,
     DharmaUpgradeMultisigDeployer,
     '',
     'deploy',
-    [[address], 1]
+    [[
+      '0x0000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000005'
+    ]]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig contract deployment fails if threshold is not met`,
+    DharmaAccountRecoveryMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000001'
+    ]],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig contract deployment fails if sigs are out of order`,
+    DharmaAccountRecoveryMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000005',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000001'
+    ]],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig contract deployment fails with too many owners`,
+    DharmaAccountRecoveryMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000005',
+      '0x0000000000000000000000000000000000000006',
+      '0x0000000000000000000000000000000000000007',
+      '0x0000000000000000000000000000000000000008',
+      '0x0000000000000000000000000000000000000009',
+      '0x000000000000000000000000000000000000000a',
+      '0x000000000000000000000000000000000000000b'
+    ]],
+    false
   )
 
   const DharmaAccountRecoveryMultisig = await runTest(
@@ -2021,7 +2120,60 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaAccountRecoveryMultisigDeployer,
     '',
     'deploy',
-    [[address], 1]
+    [[
+      '0x0000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000005'
+    ]]
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig contract deployment fails if threshold is not met`,
+    DharmaKeyRegistryMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000001'
+    ]],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig contract deployment fails if sigs are out of order`,
+    DharmaKeyRegistryMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000005',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000001'
+    ]],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig contract deployment fails with too many owners`,
+    DharmaKeyRegistryMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000005',
+      '0x0000000000000000000000000000000000000006',
+      '0x0000000000000000000000000000000000000007',
+      '0x0000000000000000000000000000000000000008',
+      '0x0000000000000000000000000000000000000009',
+      '0x000000000000000000000000000000000000000a',
+      '0x000000000000000000000000000000000000000b'
+    ]],
+    false
   )
 
   const DharmaKeyRegistryMultisig = await runTest(
@@ -2029,9 +2181,14 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaKeyRegistryMultisigDeployer,
     '',
     'deploy',
-    [[address], 1]
+    [[
+      '0x0000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000005'
+    ]]
   )
-  */
 
   const IndestructibleRegistry = await runTest(
     `IndestructibleRegistry contract deployment`,

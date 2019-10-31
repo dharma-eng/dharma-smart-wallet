@@ -21,7 +21,7 @@ contract DharmaKeyRegistryMultisig {
 
   // V2 of the Dharma Key Registry is the only account the multisig can call.
   address private constant _DESTINATION = address(
-    0x00000000EA4044b4b60091836A6D47554F43a100
+    0x000000000D38df53b45C5733c7b34000dE0BDF52
   );
 
   // The threshold is an exact number of valid signatures that must be supplied.

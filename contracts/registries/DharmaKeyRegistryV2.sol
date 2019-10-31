@@ -29,11 +29,8 @@ contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
   // Specific keys may also be set on a per-caller basis.
   mapping (address => address) private _specificKeys;
 
-  // Maintain a mapping of all used global keys (to prevent reuse).
-  mapping (address => bool) private _usedGlobalKeys;
-
-  // Maintain a mapping of all used specific keys per user (to prevent reuse).
-  mapping (address => mapping(address => bool)) private _usedSpecificKeys;
+  // Maintain a mapping of all used keys (to prevent reuse).
+  mapping (address => bool) private _usedKeys;
 
   /**
    * @notice In the constructor, set the initial global key and the initial
@@ -90,11 +87,8 @@ contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
   function setSpecificKey(
     address account, address specificKey
   ) external onlyOwner {
-    // Ensure that the specific key has not been used previously.
-    require(
-      !_usedSpecificKeys[account][specificKey],
-      "Key has been used previously for this specific account."
-    );
+    // Ensure that the key has not been used previously.
+    require(!_usedKeys[specificKey], "Key has been used previously.");
 
     // Emit an event signifying that the specific key has been modified.
     emit NewSpecificKey(account, _specificKeys[account], specificKey);
@@ -102,8 +96,8 @@ contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
     // Update specific key for provided account to the provided specific key.
     _specificKeys[account] = specificKey;
 
-    // Mark the specific key as having been used previously.
-    _usedSpecificKeys[account][specificKey] = true;
+    // Mark the key as having been used previously.
+    _usedKeys[specificKey] = true;
   }
 
   /**
@@ -175,8 +169,8 @@ contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
    * @param globalKey address The new global public key.
    */
   function _registerGlobalKey(address globalKey) internal {
-    // Ensure that the global key has not been used previously.
-    require(!_usedGlobalKeys[globalKey], "Key has been used previously.");
+    // Ensure that the key has not been used previously.
+    require(!_usedKeys[globalKey], "Key has been used previously.");
 
     // Emit an event signifying that the global key has been modified.
     emit NewGlobalKey(_globalKey, globalKey);
@@ -185,6 +179,6 @@ contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
     _globalKey = globalKey;
 
     // Mark the key as having been used previously.
-    _usedGlobalKeys[globalKey] = true;
+    _usedKeys[globalKey] = true;
   }
 }
