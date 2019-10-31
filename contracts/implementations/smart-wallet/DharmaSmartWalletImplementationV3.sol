@@ -656,13 +656,12 @@ contract DharmaSmartWalletImplementationV3 is
    * action. The current nonce will be used, which means that it will only be
    * valid for the next action taken.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2),
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
-   * ETHWithdrawal (6).
-   * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
-   * for other action types.
-   * @param recipient address The account to transfer withdrawn funds to, the
-   * new user signing key, or the null address for cancelling.
+   * custom actions in V3 include Cancel (0), SetUserSigningKey (1),
+   * DAIWithdrawal (4), USDCWithdrawal (5), and ETHWithdrawal (6).
+   * @param amount uint256 The amount to withdraw for Withdrawal actions. This
+   * value is ignored for Cancel and SetUserSigningKey action types.
+   * @param recipient address The account to transfer withdrawn funds to or the
+   * new user signing key. This value is ignored for Cancel action types.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
@@ -679,7 +678,7 @@ contract DharmaSmartWalletImplementationV3 is
     // Determine the actionID - this serves as a signature hash for an action.
     actionID = _getActionID(
       action,
-      abi.encode(amount, recipient),
+      _validateCustomActionTypeAndGetArguments(action, amount, recipient),
       _nonce,
       minimumActionGas,
       _userSigningKey,
@@ -695,13 +694,12 @@ contract DharmaSmartWalletImplementationV3 is
    * action. Any nonce value may be supplied, which enables constructing valid
    * message hashes for multiple future actions ahead of time.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V3 include Cancel (0), SetUserSigningKey (1), Generic (2),
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5), and
-   * ETHWithdrawal (6).
-   * @param amount uint256 The amount to withdraw for Withdrawal actions, or 0
-   * for other action types.
-   * @param recipient address The account to transfer withdrawn funds to, the
-   * new user signing key, or the null address for cancelling.
+   * custom actions in V3 include Cancel (0), SetUserSigningKey (1),
+   * DAIWithdrawal (4), USDCWithdrawal (5), and ETHWithdrawal (6).
+   * @param amount uint256 The amount to withdraw for Withdrawal actions. This
+   * value is ignored for Cancel and SetUserSigningKey action types.
+   * @param recipient address The account to transfer withdrawn funds to or the
+   * new user signing key. This value is ignored for Cancel action types.
    * @param nonce uint256 The nonce to use.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
    * provided to this call - be aware that additional gas must still be included
@@ -720,7 +718,7 @@ contract DharmaSmartWalletImplementationV3 is
     // Determine the actionID - this serves as a signature hash for an action.
     actionID = _getActionID(
       action,
-      abi.encode(amount, recipient),
+      _validateCustomActionTypeAndGetArguments(action, amount, recipient),
       nonce,
       minimumActionGas,
       _userSigningKey,
@@ -1389,34 +1387,19 @@ contract DharmaSmartWalletImplementationV3 is
     address userSigningKey,
     address dharmaSigningKey
   ) internal view returns (bytes32 actionID) {
-    if (action == ActionType.Cancel) {
-      // actionID is constructed according to EIP-191-0x45 to prevent replays.
-      actionID = keccak256(
-        abi.encodePacked(
-          address(this),
-          _DHARMA_SMART_WALLET_VERSION,
-          userSigningKey,
-          dharmaSigningKey,
-          nonce,
-          minimumActionGas,
-          action
-        )
-      );
-    } else {
-      // actionID is constructed according to EIP-191-0x45 to prevent replays.
-      actionID = keccak256(
-        abi.encodePacked(
-          address(this),
-          _DHARMA_SMART_WALLET_VERSION,
-          userSigningKey,
-          dharmaSigningKey,
-          nonce,
-          minimumActionGas,
-          action,
-          arguments
-        )
-      );
-    }
+    // actionID is constructed according to EIP-191-0x45 to prevent replays.
+    actionID = keccak256(
+      abi.encodePacked(
+        address(this),
+        _DHARMA_SMART_WALLET_VERSION,
+        userSigningKey,
+        dharmaSigningKey,
+        nonce,
+        minimumActionGas,
+        action,
+        arguments
+      )
+    );
   }
 
   /**
@@ -1456,7 +1439,7 @@ contract DharmaSmartWalletImplementationV3 is
   }
 
   /**
-   * @notice Internal pure function to ensure that a given `to` address provided
+   * @notice Internal view function to ensure that a given `to` address provided
    * as part of a generic action is valid. Calls cannot be performed to accounts
    * without code or back into the smart wallet itself.
    */
@@ -1470,6 +1453,46 @@ contract DharmaSmartWalletImplementationV3 is
       to != address(this),
       "Invalid `to` parameter - cannot supply the address of this contract."
     );
+  }
+
+  /**
+   * @notice Internal pure function to ensure that a given action type is a
+   * "custom" action type (i.e. is not a generic action type) and to construct
+   * the "arguments" input to an actionID based on that action type.
+   * @param action uint8 The type of action, designated by it's index. Valid
+   * custom actions in V3 include Cancel (0), SetUserSigningKey (1),
+   * DAIWithdrawal (4), USDCWithdrawal (5), and ETHWithdrawal (6).
+   * @param amount uint256 The amount to withdraw for Withdrawal actions. This
+   * value is ignored for Cancel and SetUserSigningKey action types.
+   * @param recipient address The account to transfer withdrawn funds to or the
+   * new user signing key. This value is ignored for Cancel action types.
+   * @return A bytes array containing the arguments that will be provided as
+   * a component of the inputs when constructing a custom action ID.
+   */
+  function _validateCustomActionTypeAndGetArguments(
+    ActionType action, uint256 amount, address recipient
+  ) internal pure returns (bytes memory arguments) {
+    // Ensure that the action type is a valid custom action type.
+    require(
+      action == ActionType.Cancel ||
+      action == ActionType.SetUserSigningKey ||
+      action == ActionType.DAIWithdrawal ||
+      action == ActionType.USDCWithdrawal ||
+      action == ActionType.ETHWithdrawal,
+      "Invalid custom action type."
+    );
+
+    // Use action type to determine parameters to include in returned arguments.
+    if (action == ActionType.Cancel) {
+      // Ignore all parameters if custom action type is Cancel.
+      arguments = abi.encode();
+    } else if (action == ActionType.SetUserSigningKey) {
+      // Ignore `amount` parameter if custom action type is SetUserSigningKey.
+      arguments = abi.encode(recipient);
+    } else {
+      // Use both `amount` and `recipient` parameters for withdrawals.
+      arguments = abi.encode(amount, recipient);
+    }
   }
 
   /**

@@ -2466,7 +2466,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 user smart wallet can be called and still has original dharma key set',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'getUserSigningKey',
     'call',
     [],
@@ -2478,7 +2478,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet can get the new version (3)',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'getVersion',
     'call',
     [],
@@ -2490,7 +2490,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet nonce is still set to value from before upgrade',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'getNonce',
     'call',
     [],
@@ -2502,7 +2502,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet can get balances',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'getBalances',
     'call',
     [],
@@ -2514,7 +2514,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet secondary can call to cancel',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'cancel',
     'send',
     [
@@ -2525,7 +2525,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet nonce is now set to original + 1',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'getNonce',
     'call',
     [],
@@ -2537,7 +2537,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet can get next custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'getNextCustomActionID',
     'call',
     [
@@ -2554,7 +2554,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet can get custom action ID and it matches next action ID',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'getCustomActionID',
     'call',
     [
@@ -2658,7 +2658,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 user smart wallet can trigger repayAndDeposit to deposit all new funds',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'repayAndDeposit',
     'send',
     [],
@@ -2847,7 +2847,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 user smart wallet repayAndDeposit can deposit with approval added back',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'repayAndDeposit',
     'send',
     [],
@@ -2875,7 +2875,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 user smart wallet can trigger repayAndDeposit even with no funds',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'repayAndDeposit',
     'send',
     [],
@@ -2903,7 +2903,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet secondary cannot set an empty user userSigningKey',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'setUserSigningKey',
     'send',
     [
@@ -2917,7 +2917,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet secondary can set a custom user userSigningKey',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'setUserSigningKey',
     'send',
     [
@@ -2929,8 +2929,177 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'V3 UserSmartWallet can get next custom action ID to set a user signing key',
+    UserSmartWalletV3,
+    'getNextCustomActionID',
+    'call',
+    [
+      1, // SetUserSigningKey,
+      constants.FULL_APPROVAL, // This value shouldn't matter
+      addressTwo,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  await runTest(
+    'V3 UserSmartWallet can get next custom action ID to set a user signing key',
+    UserSmartWalletV3,
+    'getNextCustomActionID',
+    'call',
+    [
+      1, // SetUserSigningKey,
+      constants.FULL_APPROVAL, // This value shouldn't matter
+      addressTwo,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  let currentNonce
+  await runTest(
+    'UserSmartWallet can get the nonce',
+    UserSmartWalletV3,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      currentNonce = value
+    }
+  )
+
+  await runTest(
+    'V3 UserSmartWallet can get custom action ID and it matches next action ID',
+    UserSmartWalletV3,
+    'getCustomActionID',
+    'call',
+    [
+      1, // SetUserSigningKey,
+      0, // Note that this value differs from above
+      addressTwo,
+      currentNonce,
+      0
+    ],
+    true,
+    value => {
+      assert.strictEqual(value, customActionId)
+    }
+  )
+
+  let setUserSigningKeyUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  let setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  await runTest(
+    'V3 UserSmartWallet can set a new user signing key with signatures',
+    UserSmartWalletV3,
+    'setUserSigningKey',
+    'send',
+    [
+      addressTwo,
+      0,
+      setUserSigningKeyUserSignature,
+      setUserSigningKeyDharmaSignature
+    ],
+    true,
+    receipt => {},
+    originalAddress
+  )
+
+  await runTest(
+    'V3 UserSmartWallet can get next custom action ID to cancel',
+    UserSmartWalletV3,
+    'getNextCustomActionID',
+    'call',
+    [
+      0, // Cancel
+      constants.FULL_APPROVAL, // This value shouldn't matter
+      originalAddress,  // This value shouldn't matter either
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  await runTest(
+    'UserSmartWallet can get the nonce',
+    UserSmartWalletV3,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      currentNonce = value
+    }
+  )
+
+  await runTest(
+    'V3 UserSmartWallet can get custom action ID and it matches next action ID',
+    UserSmartWalletV3,
+    'getCustomActionID',
+    'call',
+    [
+      0, // Cancel
+      0, // Note that this value differs from above
+      addressTwo, // This one too
+      currentNonce,
+      0
+    ],
+    true,
+    value => {
+      assert.strictEqual(value, customActionId)
+    }
+  )
+
+  let cancelUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V3 UserSmartWallet secondary can cancel using a signature',
+    UserSmartWalletV3,
+    'cancel',
+    'send',
+    [
+      0,
+      cancelUserSignature
+    ],
+    true,
+    receipt => {},
+    originalAddress
+  )
+
+  await runTest(
+    'UserSmartWallet nonce is incremented after cancelling',
+    UserSmartWalletV3,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(parseInt(value), parseInt(currentNonce) + 1)
+    }
+  )
+
+  await runTest(
     'V3 UserSmartWallet secondary cannot call to withdraw dai without primary',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'withdrawDai',
     'send',
     [
@@ -2945,7 +3114,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet secondary cannot call to withdraw usdc without primary',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'withdrawUSDC',
     'send',
     [
@@ -2960,7 +3129,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet secondary can no longer call to set userSigningKey without primary',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'setUserSigningKey',
     'send',
     [
@@ -2974,7 +3143,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'getNextCustomActionID',
     'call',
     [
@@ -3001,7 +3170,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet relay can call with two signatures to withdraw USDC',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'withdrawUSDC',
     'send',
     [
@@ -3021,7 +3190,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'getNextCustomActionID',
     'call',
     [
@@ -3048,7 +3217,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet relay cannot call with bad signature to withdraw USDC',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'withdrawUSDC',
     'send',
     [
@@ -3068,7 +3237,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet cannot call with bad user signature to withdraw USDC',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'withdrawUSDC',
     'send',
     [
@@ -3088,7 +3257,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet relay can call with two signatures to withdraw USDC',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'withdrawUSDC',
     'send',
     [
@@ -3127,7 +3296,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'getNextCustomActionID',
     'call',
     [
@@ -3154,7 +3323,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet relay cannot withdraw too little dai',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'withdrawDai',
     'send',
     [
@@ -3171,7 +3340,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'getNextCustomActionID',
     'call',
     [
@@ -3198,7 +3367,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet relay can call with signature to withdraw dai',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'withdrawDai',
     'send',
     [
@@ -3218,7 +3387,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'getNextCustomActionID',
     'call',
     [
@@ -3245,7 +3414,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet relay cannot call with bad signature to withdraw dai',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'withdrawDai',
     'send',
     [
@@ -3265,7 +3434,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet relay cannot call with bad user signature to withdraw dai',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'withdrawDai',
     'send',
     [
@@ -3285,7 +3454,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet relay can call with signature to withdraw dai',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'withdrawDai',
     'send',
     [
@@ -3390,7 +3559,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet cancel reverts with bad signature',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'cancel',
     'send',
     [
@@ -3404,7 +3573,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet calls revert if insufficient action gas is supplied',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'cancel',
     'send',
     [
@@ -3416,7 +3585,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet calls succeed if sufficient non-zero action gas supplied',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'cancel',
     'send',
     [
@@ -3446,7 +3615,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet can cancel using a signature',
-    UserSmartWallet,
+    UserSmartWalletV3,
     'cancel',
     'send',
     [
@@ -3460,7 +3629,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V3 UserSmartWallet calls to atomic methods revert',
-    UserSmartWallet,
+    UserSmartWalletV3,
     '_withdrawDaiAtomic',
     'send',
     [
@@ -3598,7 +3767,6 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  let currentNonce
   await runTest(
     'UserSmartWallet can get the nonce',
     UserSmartWalletV3,
@@ -4419,8 +4587,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'new user smart wallet can trigger repayAndDeposit to deposit all new funds',
-    UserSmartWallet,
+    'V3 UserSmartWallet can trigger repayAndDeposit to deposit all new funds',
+    UserSmartWalletV3,
     'repayAndDeposit'
   )
 
