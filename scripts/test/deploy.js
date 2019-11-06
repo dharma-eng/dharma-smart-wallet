@@ -20,6 +20,8 @@ let DharmaKeyRingFactoryV2Artifact;
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
 const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaKeyRegistryMultisig.json')
+const DharmaTestingMultisigArtifact = require('../../build/contracts/DharmaTestingMultisig.json')
+
 
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
@@ -211,6 +213,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   DharmaKeyRegistryMultisigDeployer.options.data = (
     DharmaKeyRegistryMultisigArtifact.bytecode
+  )
+
+  const DharmaTestingMultisigDeployer = new web3.eth.Contract(
+    DharmaTestingMultisigArtifact.abi
+  )
+  DharmaTestingMultisigDeployer.options.data = (
+    DharmaTestingMultisigArtifact.bytecode
   )
 
   const DharmaUpgradeBeaconControllerDeployer = new web3.eth.Contract(

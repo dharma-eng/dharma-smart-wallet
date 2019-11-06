@@ -17,8 +17,8 @@ import "../../interfaces/DharmaKeyRegistryInterface.sol";
  * Otherwise, it will return the specific signing key. Additional view functions
  * are also provided for retrieving public keys directly. Only the owner may
  * update these keys. Also, note that the V2 key registry includes an additional
- * mapping to track all global keys that have been used, and only allows a given
- * global key to be set one time.
+ * mapping to track all keys that have been used, and only allows a given key to
+ * be set one time.
  */
 contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
   using ECDSA for bytes32;
