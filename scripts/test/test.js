@@ -31,6 +31,10 @@ const DharmaKeyRingFactoryV3Artifact = require('../../build/contracts/DharmaKeyR
 const UpgradeBeaconProxyV1Artifact = require('../../build/contracts/UpgradeBeaconProxyV1.json')
 const KeyRingUpgradeBeaconProxyV1Artifact = require('../../build/contracts/KeyRingUpgradeBeaconProxyV1.json')
 
+const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
+const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
+const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaKeyRegistryMultisig.json')
+
 const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
 const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
 const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
@@ -317,6 +321,27 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaAccountRecoveryManagerArtifact.bytecode
   )
 
+  const DharmaUpgradeMultisigDeployer = new web3.eth.Contract(
+    DharmaUpgradeMultisigArtifact.abi
+  )
+  DharmaUpgradeMultisigDeployer.options.data = (
+    DharmaUpgradeMultisigArtifact.bytecode
+  )
+
+  const DharmaAccountRecoveryMultisigDeployer = new web3.eth.Contract(
+    DharmaAccountRecoveryMultisigArtifact.abi
+  )
+  DharmaAccountRecoveryMultisigDeployer.options.data = (
+    DharmaAccountRecoveryMultisigArtifact.bytecode
+  )
+
+  const DharmaKeyRegistryMultisigDeployer = new web3.eth.Contract(
+    DharmaKeyRegistryMultisigArtifact.abi
+  )
+  DharmaKeyRegistryMultisigDeployer.options.data = (
+    DharmaKeyRegistryMultisigArtifact.bytecode
+  )
+
   // get available addresses and assign them to various roles
   const addresses = await web3.eth.getAccounts()
   if (addresses.length < 1) {
@@ -338,6 +363,22 @@ module.exports = {test: async function (provider, testingContext) {
 
   let initialControllerOwner = await setupNewDefaultAddress(
     '0x58e0348ce225c18ece7f2d6a069afa340365019481903b221481706d291a66bf'
+  )
+
+  const ownerOne = await setupNewDefaultAddress(
+    constants.MOCK_OWNER_PRIVATE_KEYS[0]
+  )
+  const ownerTwo = await setupNewDefaultAddress(
+    constants.MOCK_OWNER_PRIVATE_KEYS[1]
+  )
+  const ownerThree = await setupNewDefaultAddress(
+    constants.MOCK_OWNER_PRIVATE_KEYS[2]
+  )
+  const ownerFour = await setupNewDefaultAddress(
+    constants.MOCK_OWNER_PRIVATE_KEYS[3]
+  )
+  const ownerFive = await setupNewDefaultAddress(
+    constants.MOCK_OWNER_PRIVATE_KEYS[4]
   )
 
   const gasLimit = latestBlock.gasLimit
@@ -6783,6 +6824,621 @@ module.exports = {test: async function (provider, testingContext) {
     'takeAction',
     'send',
     [address, 0, '0x', '0x']
+  )
+
+  const DharmaUpgradeMultisig = await runTest(
+    `DharmaUpgradeMultisig contract deployment`,
+    DharmaUpgradeMultisigDeployer,
+    '',
+    'deploy',
+    [[ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]]
+  )
+
+  const DharmaAccountRecoveryMultisig = await runTest(
+    `DharmaAccountRecoveryMultisig contract deployment`,
+    DharmaAccountRecoveryMultisigDeployer,
+    '',
+    'deploy',
+    [[ownerOne, ownerTwo, ownerThree, ownerFour]]
+  )
+
+  const DharmaKeyRegistryMultisig = await runTest(
+    `DharmaKeyRegistryMultisig contract deployment`,
+    DharmaKeyRegistryMultisigDeployer,
+    '',
+    'deploy',
+    [[ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]]
+  )
+
+  let rawData = '0x'
+  let executorGasLimit = 100000000000
+  let hashInputs
+  let hash
+  let ownerOneSig
+  let ownerTwoSig
+  let ownerThreeSig
+  let ownerSigs
+  let ownerSigsOutOfOrder
+  let unownedSig
+  let unownedSigs
+
+  const bizarreSigs = (
+    '0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0' +
+    '7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A11b' +
+    '7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0' +
+    '7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A01a'   
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig can get the initial nonce`,
+    DharmaUpgradeMultisig,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig can get the owners`,
+    DharmaUpgradeMultisig,
+    'getOwners',
+    'call',
+    [],
+    true,
+    value => {
+      assert.deepEqual(
+        value, [ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]
+      )
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig can get an owner`,
+    DharmaUpgradeMultisig,
+    'isOwner',
+    'call',
+    [ownerOne],
+    true,
+    value => {
+      assert.ok(value)
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig returns false for a non-owner`,
+    DharmaUpgradeMultisig,
+    'isOwner',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(!value)
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig can get the threshold`,
+    DharmaUpgradeMultisig,
+    'getThreshold',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '3')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig can get the destination`,
+    DharmaUpgradeMultisig,
+    'getDestination',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS)
+    }
+  )
+
+  // Generate the messsage hash based on the supplied parameters.
+  hashInputs = (
+    DharmaUpgradeMultisig.options.address +
+    '0'.padStart(64, '0') +
+    address.slice(2) +
+    executorGasLimit.toString(16).padStart(64, '0') +
+    rawData.slice(2)
+  )
+
+  hash = util.bufferToHex(util.keccak256(hashInputs))
+
+  await runTest(
+    `DharmaUpgradeMultisig can get a hash`,
+    DharmaUpgradeMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      assert.strictEqual(value, hash)
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig can get a hash with a specific nonce`,
+    DharmaUpgradeMultisig,
+    'getHash',
+    'call',
+    [rawData, address, executorGasLimit, 0],
+    true,
+    value => {
+      assert.strictEqual(value, hash)
+    }
+  )
+
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
+  ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2) + ownerThreeSig.slice(2)
+  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSigs = unownedSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
+
+  await runTest(
+    `DharmaUpgradeMultisig cannot call execute from non-executor`,
+    DharmaUpgradeMultisig,
+    'execute',
+    'send',
+    [rawData, addressTwo, executorGasLimit, ownerSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig cannot call execute with oddly-sized signatures`,
+    DharmaUpgradeMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs + '1234'],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig cannot call execute with non-compliant signatures`,
+    DharmaUpgradeMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, bizarreSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig cannot call execute without enough signatures`,
+    DharmaUpgradeMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs.slice(0, -130)],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig cannot call execute without owner signatures`,
+    DharmaUpgradeMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, unownedSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig cannot call execute with out-of-order signatures`,
+    DharmaUpgradeMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigsOutOfOrder],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig can call execute`,
+    DharmaUpgradeMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig nonce is incremented`,
+    DharmaUpgradeMultisig,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '1')
+    }
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig can get the initial nonce`,
+    DharmaKeyRegistryMultisig,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig can get the owners`,
+    DharmaKeyRegistryMultisig,
+    'getOwners',
+    'call',
+    [],
+    true,
+    value => {
+      assert.deepEqual(
+        value, [ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]
+      )
+    }
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig can get an owner`,
+    DharmaKeyRegistryMultisig,
+    'isOwner',
+    'call',
+    [ownerOne],
+    true,
+    value => {
+      assert.ok(value)
+    }
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig returns false for a non-owner`,
+    DharmaKeyRegistryMultisig,
+    'isOwner',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(!value)
+    }
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig can get the threshold`,
+    DharmaKeyRegistryMultisig,
+    'getThreshold',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '3')
+    }
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig can get the destination`,
+    DharmaKeyRegistryMultisig,
+    'getDestination',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, constants.KEY_REGISTRY_V2_ADDRESS)
+    }
+  )
+
+  // Generate the messsage hash based on the supplied parameters.
+  hashInputs = (
+    DharmaKeyRegistryMultisig.options.address +
+    '0'.padStart(64, '0') +
+    address.slice(2) +
+    executorGasLimit.toString(16).padStart(64, '0') +
+    rawData.slice(2)
+  )
+
+  hash = util.bufferToHex(util.keccak256(hashInputs))
+
+  await runTest(
+    `DharmaKeyRegistryMultisig can get a hash`,
+    DharmaKeyRegistryMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      assert.strictEqual(value, hash)
+    }
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig can get a hash with a specific nonce`,
+    DharmaKeyRegistryMultisig,
+    'getHash',
+    'call',
+    [rawData, address, executorGasLimit, 0],
+    true,
+    value => {
+      assert.strictEqual(value, hash)
+    }
+  )
+
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
+  ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2) + ownerThreeSig.slice(2)
+  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSigs = unownedSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
+
+  await runTest(
+    `DharmaKeyRegistryMultisig cannot call execute from non-executor`,
+    DharmaKeyRegistryMultisig,
+    'execute',
+    'send',
+    [rawData, addressTwo, executorGasLimit, ownerSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig cannot call execute with oddly-sized signatures`,
+    DharmaKeyRegistryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs + '1234'],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig cannot call execute with non-compliant signatures`,
+    DharmaKeyRegistryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, bizarreSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig cannot call execute without enough signatures`,
+    DharmaKeyRegistryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs.slice(0, -130)],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig cannot call execute without owner signatures`,
+    DharmaKeyRegistryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, unownedSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig cannot call execute with out-of-order signatures`,
+    DharmaKeyRegistryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigsOutOfOrder],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig can call execute`,
+    DharmaKeyRegistryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaKeyRegistryMultisig nonce is incremented`,
+    DharmaKeyRegistryMultisig,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '1')
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig can get the initial nonce`,
+    DharmaAccountRecoveryMultisig,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig can get the owners`,
+    DharmaAccountRecoveryMultisig,
+    'getOwners',
+    'call',
+    [],
+    true,
+    value => {
+      assert.deepEqual(
+        value, [ownerOne, ownerTwo, ownerThree, ownerFour]
+      )
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig can get an owner`,
+    DharmaAccountRecoveryMultisig,
+    'isOwner',
+    'call',
+    [ownerOne],
+    true,
+    value => {
+      assert.ok(value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig returns false for a non-owner`,
+    DharmaAccountRecoveryMultisig,
+    'isOwner',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(!value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig can get the threshold`,
+    DharmaAccountRecoveryMultisig,
+    'getThreshold',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '2')
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig can get the destination`,
+    DharmaAccountRecoveryMultisig,
+    'getDestination',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, constants.ACCOUNT_RECOVERY_MANAGER_ADDRESS)
+    }
+  )
+
+  // Generate the messsage hash based on the supplied parameters.
+  hashInputs = (
+    DharmaAccountRecoveryMultisig.options.address +
+    '0'.padStart(64, '0') +
+    address.slice(2) +
+    executorGasLimit.toString(16).padStart(64, '0') +
+    rawData.slice(2)
+  )
+
+  hash = util.bufferToHex(util.keccak256(hashInputs))
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig can get a hash`,
+    DharmaAccountRecoveryMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      assert.strictEqual(value, hash)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig can get a hash with a specific nonce`,
+    DharmaAccountRecoveryMultisig,
+    'getHash',
+    'call',
+    [rawData, address, executorGasLimit, 0],
+    true,
+    value => {
+      assert.strictEqual(value, hash)
+    }
+  )
+
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
+  ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2)
+  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSigs = unownedSig + ownerTwoSig.slice(2)
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig cannot call execute from non-executor`,
+    DharmaAccountRecoveryMultisig,
+    'execute',
+    'send',
+    [rawData, addressTwo, executorGasLimit, ownerSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig cannot call execute with oddly-sized signatures`,
+    DharmaAccountRecoveryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs + '1234'],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig cannot call execute with non-compliant signatures`,
+    DharmaAccountRecoveryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, bizarreSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig cannot call execute without enough signatures`,
+    DharmaAccountRecoveryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerOneSig],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig cannot call execute without owner signatures`,
+    DharmaAccountRecoveryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, unownedSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig cannot call execute with out-of-order signatures`,
+    DharmaAccountRecoveryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigsOutOfOrder],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig can call execute`,
+    DharmaAccountRecoveryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig nonce is incremented`,
+    DharmaAccountRecoveryMultisig,
+    'getNonce',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '1')
+    }
   )
 
   console.log(

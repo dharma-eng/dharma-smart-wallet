@@ -275,6 +275,9 @@ module.exports = Object.freeze({
   DHARMA_SMART_WALLET_IMPLEMENTATION_V1_METADATA: (
     ['446861726d61536d61727457616c6c6574496d706c656d656e746174696f6e31']
   ),
+  DHARMA_SMART_WALLET_IMPLEMENTATION_V3_METADATA: (
+    ['446861726d61536d61727457616c6c6574496d706c656d656e746174696f6e33']
+  ),
   ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS: (
     '0x0000000053d300f11703dcDD1e90921Db83F0048'
   ),
@@ -457,4 +460,11 @@ module.exports = Object.freeze({
     }
   },
   METADATA_IDENTIFIER: '627a7a72315820',
+  MOCK_OWNER_PRIVATE_KEYS: [
+    '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+    '0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+    '0xdddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+    '0xcccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc'
+  ]
 })

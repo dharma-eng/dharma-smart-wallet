@@ -22,7 +22,6 @@ const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/Dha
 const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaKeyRegistryMultisig.json')
 const DharmaTestingMultisigArtifact = require('../../build/contracts/DharmaTestingMultisig.json')
 
-
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
 const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV2.json')
@@ -468,8 +467,20 @@ module.exports = {test: async function (provider, testingContext) {
     '0xf00df00df00df00df00df00df00df00df00df00df00df00df00df00df00df00d'
   )
 
-  let initialControllerOwner = await setupNewDefaultAddress(
-    '0x58e0348ce225c18ece7f2d6a069afa340365019481903b221481706d291a66bf'
+  const ownerOne = await setupNewDefaultAddress(
+    constants.MOCK_OWNER_PRIVATE_KEYS[0]
+  )
+  const ownerTwo = await setupNewDefaultAddress(
+    constants.MOCK_OWNER_PRIVATE_KEYS[1]
+  )
+  const ownerThree = await setupNewDefaultAddress(
+    constants.MOCK_OWNER_PRIVATE_KEYS[2]
+  )
+  const ownerFour = await setupNewDefaultAddress(
+    constants.MOCK_OWNER_PRIVATE_KEYS[3]
+  )
+  const ownerFive = await setupNewDefaultAddress(
+    constants.MOCK_OWNER_PRIVATE_KEYS[4]
   )
 
   const gasLimit = latestBlock.gasLimit
@@ -479,15 +490,6 @@ module.exports = {test: async function (provider, testingContext) {
     from: originalAddress,
     to: constants.KEYLESS_CREATE2_DEPLOYER_ADDRESS,
     value: web3.utils.toWei('0.01', 'ether'),
-    gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
-    gasPrice: 1
-  })
-
-  console.log('funding initial controller owner address...')
-  await web3.eth.sendTransaction({
-    from: originalAddress,
-    to: initialControllerOwner,
-    value: web3.utils.toWei('0.001', 'ether'),
     gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
     gasPrice: 1
   })
@@ -2068,13 +2070,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeMultisigDeployer,
     '',
     'deploy',
-    [[
-      '0x0000000000000000000000000000000000000001',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004',
-      '0x0000000000000000000000000000000000000005'
-    ]]
+    [[ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]]
   )
 
   await runTest(
@@ -2129,13 +2125,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaAccountRecoveryMultisigDeployer,
     '',
     'deploy',
-    [[
-      '0x0000000000000000000000000000000000000001',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004',
-      '0x0000000000000000000000000000000000000005'
-    ]]
+    [[ownerOne, ownerTwo, ownerThree, ownerFour]]
   )
 
   await runTest(
@@ -2190,13 +2180,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaKeyRegistryMultisigDeployer,
     '',
     'deploy',
-    [[
-      '0x0000000000000000000000000000000000000001',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004',
-      '0x0000000000000000000000000000000000000005'
-    ]]
+    [[ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]]
   )
 
   const IndestructibleRegistry = await runTest(

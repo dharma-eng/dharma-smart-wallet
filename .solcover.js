@@ -14,6 +14,7 @@ module.exports = {
     'helpers/ImmutableCreate2Factory.sol',
     'helpers/IndestructibleRegistry.sol',
     'helpers/RelayMigrator.sol',
+    'helpers/SmartWalletFactoryV1UserSigningKeyUpdater.sol',
     'implementations/key-ring/DharmaKeyRingImplementationV0.sol',
     'implementations/key-ring/DharmaKeyRingImplementationV2.sol',
     'implementations/smart-wallet/DharmaSmartWalletImplementationV0.sol',
