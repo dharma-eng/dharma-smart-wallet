@@ -39,6 +39,7 @@ const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/
 const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
 const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
 const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
+const MockAdharmaKeyRingFactoryArtifact = require('../../build/contracts/MockAdharmaKeyRingFactory.json')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
 const ComptrollerArtifact = require('../../build/contracts/ComptrollerInterface.json')
 
@@ -312,6 +313,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   DharmaKeyRingFactoryV3Deployer.options.data = (
     DharmaKeyRingFactoryV3Artifact.bytecode
+  )
+
+  const MockAdharmaKeyRingFactoryDeployer = new web3.eth.Contract(
+    MockAdharmaKeyRingFactoryArtifact.abi
+  )
+  MockAdharmaKeyRingFactoryDeployer.options.data = (
+    MockAdharmaKeyRingFactoryArtifact.bytecode
   )
 
   const DharmaAccountRecoveryManagerDeployer = new web3.eth.Contract(
@@ -6824,6 +6832,85 @@ module.exports = {test: async function (provider, testingContext) {
     'takeAction',
     'send',
     [address, 0, '0x', '0x']
+  )
+
+  const MockAdharmaKeyRingFactory = await runTest(
+    `MockAdharmaKeyRingFactory contract deployment`,
+    MockAdharmaKeyRingFactoryDeployer,
+    '',
+    'deploy',
+    []
+  )
+
+  await runTest(
+    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with no keys`,
+    MockAdharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [0, 0, [], []],
+    false
+  )
+
+  await runTest(
+    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with admin threshold of 0`,
+    MockAdharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [0, 1, [address], [3]],
+    false
+  )
+
+  await runTest(
+    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with executor threshold of 0`,
+    MockAdharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [1, 0, [address], [3]],
+    false
+  )
+
+  await runTest(
+    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring where length of keys and types are not equal`,
+    MockAdharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [1, 1, [address, addressTwo], [3]],
+    false
+  )
+
+  await runTest(
+    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with duplicate keys`,
+    MockAdharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [1, 1, [address, address], [3, 3]],
+    false
+  )
+
+  await runTest(
+    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with no admin key`,
+    MockAdharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [1, 1, [address], [1]],
+    false
+  )
+
+  await runTest(
+    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with no standard key`,
+    MockAdharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [1, 1, [address], [2]],
+    false
+  )
+
+  await runTest(
+    `MockAdharmaKeyRingFactory can deploy an Adharma key ring with multiple keys`,
+    MockAdharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [2, 2, [address, addressTwo], [3, 3]]
   )
 
   const DharmaUpgradeMultisig = await runTest(

@@ -37,6 +37,7 @@ module.exports = {
     'test/BadBeacon.sol',
     'test/BadBeaconTwo.sol',
     'test/DharmaTestingMultisig.sol',
+    'test/MockAdharmaKeyRingFactory.sol',
     'test/TimelockTwoStepOwnableTestContract.sol',
     'test/UpgradeBeaconImplementationCheck.sol'
   ]
