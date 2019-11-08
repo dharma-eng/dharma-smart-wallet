@@ -52,6 +52,10 @@ interface DharmaUpgradeBeaconControllerManagerInterface {
 
   function rollback(address controller, address beacon, uint256 index) external;
 
+  function blockRollback(
+    address controller, address beacon, uint256 index
+  ) external;
+
   function exitAdharmaContingency(
     address smartWalletImplementation, address keyRingImpmementation
   ) external;
