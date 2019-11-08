@@ -6448,7 +6448,7 @@ module.exports = {test: async function (provider, testingContext) {
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot agree to accept ownership of null controller`,
     DharmaUpgradeBeaconControllerManager,
-    'agreeToAcceptOwnership',
+    'agreeToAcceptControllerOwnership',
     'send',
     [constants.NULL_ADDRESS, true],
     false
@@ -6457,7 +6457,7 @@ module.exports = {test: async function (provider, testingContext) {
   await runTest(
     `DharmaUpgradeBeaconControllerManager can agree to accept ownership`,
     DharmaUpgradeBeaconControllerManager,
-    'agreeToAcceptOwnership',
+    'agreeToAcceptControllerOwnership',
     'send',
     [address, true]
   )
@@ -6553,29 +6553,11 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager cannot arm Adharma Contingency with null controller`,
-    DharmaUpgradeBeaconControllerManager,
-    'armAdharmaContingency',
-    'send',
-    [constants.NULL_ADDRESS, address, true],
-    false
-  )
-
-  await runTest(
-    `DharmaUpgradeBeaconControllerManager cannot arm Adharma Contingency with null beacon`,
-    DharmaUpgradeBeaconControllerManager,
-    'armAdharmaContingency',
-    'send',
-    [address, constants.NULL_ADDRESS, true],
-    false
-  )
-
-  await runTest(
     `DharmaUpgradeBeaconControllerManager cannot arm Adharma Contingency from non-owner when not expired`,
     DharmaUpgradeBeaconControllerManager,
     'armAdharmaContingency',
     'send',
-    [address, address, true],
+    [true],
     false,
     receipt => {},
     originalAddress
@@ -6586,7 +6568,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerManager,
     'activateAdharmaContingency',
     'send',
-    [address, address],
+    [],
     false
   )
 
@@ -6595,23 +6577,23 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerManager,
     'armAdharmaContingency',
     'send',
-    [address, address, true]
+    [true]
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager owner can arm fake Adharma Contingency on smart wallet`,
+    `DharmaUpgradeBeaconControllerManager owner can disarm Adharma Contingency`,
     DharmaUpgradeBeaconControllerManager,
     'armAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, true]
+    [false]
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager owner can arm Adharma Contingency on key ring`,
+    `DharmaUpgradeBeaconControllerManager owner can re-arm Adharma Contingency`,
     DharmaUpgradeBeaconControllerManager,
     'armAdharmaContingency',
     'send',
-    [constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS, constants.KEY_RING_UPGRADE_BEACON_ADDRESS, true]
+    [true]
   )
 
   await runTest(
@@ -6619,27 +6601,18 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerManager,
     'activateAdharmaContingency',
     'send',
-    [address, address],
+    [],
     false,
     receipt => {},
     originalAddress
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency on non-smart-wallet / key-ring`,
+    `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when it doesn't own controllers`,
     DharmaUpgradeBeaconControllerManager,
     'activateAdharmaContingency',
     'send',
-    [address, address],
-    false
-  )
-
-  await runTest(
-    `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency on unowned key ring controller`,
-    DharmaUpgradeBeaconControllerManager,
-    'activateAdharmaContingency',
-    'send',
-    [constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS, constants.KEY_RING_UPGRADE_BEACON_ADDRESS],
+    [],
     false
   )
 
@@ -6648,33 +6621,34 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerManager,
     'rollback',
     'send',
+    [address, address, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot exit Adharma Contingency when not active`,
+    DharmaUpgradeBeaconControllerManager,
+    'exitAdharmaContingency',
+    'send',
     [address, address],
     false
   )
 
+  /*
   await runTest(
-    `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when not active`,
-    DharmaUpgradeBeaconControllerManager,
-    'exitAdharmaContingency',
-    'send',
-    [address, address, address],
-    false
-  )
-
-  await runTest(
-    `DharmaUpgradeBeaconControllerManager can activate fake Adharma Contingency`,
+    `DharmaUpgradeBeaconControllerManager can activate Adharma Contingency`,
     DharmaUpgradeBeaconControllerManager,
     'activateAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS]
+    []
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager owner can arm fake Adharma Contingency again`,
+    `DharmaUpgradeBeaconControllerManager owner cannot arm Adharma Contingency while active`,
     DharmaUpgradeBeaconControllerManager,
     'armAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, true]
+    [true]
   )
 
   await runTest(
@@ -6682,7 +6656,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerManager,
     'activateAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS],
+    [],
     false
   )
 
@@ -6691,7 +6665,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerManager,
     'armAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, false]
+    [false]
   )
 
   await runTest(
@@ -6699,7 +6673,10 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerManager,
     'exitAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, DharmaSmartWalletImplementationV3.options.address],
+    [
+      DharmaSmartWalletImplementationV3.options.address,
+      DharmaKeyRingImplementationV1.options.address
+    ],
     false
   )
 
@@ -6711,7 +6688,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerManager,
     'exitAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, constants.NULL_ADDRESS],
+    [constants.NULL_ADDRESS, DharmaKeyRingImplementationV1.options.address],
     false
   )
 
@@ -6720,7 +6697,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerManager,
     'exitAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, address],
+    [address, address],
     false
   )
 
@@ -6729,15 +6706,18 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerManager,
     'exitAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, DharmaSmartWalletImplementationV3.options.address]
+    [
+      DharmaSmartWalletImplementationV3.options.address,
+      DharmaKeyRingImplementationV1.options.address
+    ]
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager owner can arm fake Adharma Contingency again`,
+    `DharmaUpgradeBeaconControllerManager owner can arm Adharma Contingency again`,
     DharmaUpgradeBeaconControllerManager,
     'armAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, true]
+    [true]
   )
 
   await runTest(
@@ -6745,7 +6725,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerManager,
     'activateAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS]
+    []
   )
 
   await runTest(
@@ -6753,7 +6733,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerManager,
     'rollback',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS]
+    [constants.UPGRADE_BEACON_CONTROLLER_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, 0]
   )
 
   await runTest(
@@ -6763,6 +6743,7 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS]
   )
+  */
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can get heartbeat status`,
@@ -7111,20 +7092,19 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with no standard key`,
-    MockAdharmaKeyRingFactory,
-    'newKeyRing',
-    'send',
-    [1, 1, [address], [2]],
-    false
-  )
-
-  await runTest(
     `MockAdharmaKeyRingFactory can deploy an Adharma key ring with multiple keys`,
     MockAdharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [2, 2, [address, addressTwo], [3, 3]]
+  )
+
+  await runTest(
+    `MockAdharmaKeyRingFactory can deploy an Adharma key ring with no standard key`,
+    MockAdharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [1, 1, [address], [2]]
   )
 
   const DharmaUpgradeMultisig = await runTest(

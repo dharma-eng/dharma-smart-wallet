@@ -3,15 +3,20 @@ pragma solidity 0.5.11;
 
 interface DharmaUpgradeBeaconControllerManagerInterface {
   // Fire an event whenever the Adharma Contingency is activated or exited.
-  event AdharmaContingencyActivated(address controller, address beacon);
-  event AdharmaContingencyExited(address controller, address beacon);
+  event AdharmaContingencyActivated();
+  event AdharmaContingencyExited();
 
   // Store timestamp and last implementation in case of Adharma Contingency.
-  // Note that this is specific to a particular controller and beacon.
   struct AdharmaContingency {
     bool armed;
     bool activated;
     uint256 activationTime;
+  }
+
+  // Store all prior implementations and allow for blocking rollbacks to them.
+  struct PriorImplementation {
+    address implementation;
+    bool rollbackBlocked;
   }
 
   function initiateUpgrade(
@@ -25,7 +30,7 @@ interface DharmaUpgradeBeaconControllerManagerInterface {
     address controller, address beacon, address implementation
   ) external;
 
-  function agreeToAcceptOwnership(
+  function agreeToAcceptControllerOwnership(
     address controller, bool willAcceptOwnership
   ) external;
 
@@ -41,19 +46,23 @@ interface DharmaUpgradeBeaconControllerManagerInterface {
 
   function newHeartbeater(address heartbeater) external;
 
-  function armAdharmaContingency(
-    address controller, address beacon, bool armed
-  ) external;
+  function armAdharmaContingency(bool armed) external;
 
-  function activateAdharmaContingency(
-    address controller, address beacon
-  ) external;
+  function activateAdharmaContingency() external;
 
-  function rollback(address controller, address beacon) external;
+  function rollback(address controller, address beacon, uint256 index) external;
 
   function exitAdharmaContingency(
-    address controller, address beacon, address implementation
+    address smartWalletImplementation, address keyRingImpmementation
   ) external;
+
+  function getTotalPriorImplementations(
+    address controller, address beacon
+  ) external view returns (uint256 totalPriorImplementations);
+
+  function getPriorImplementation(
+    address controller, address beacon, uint256 index
+  ) external view returns (address priorImplementation, bool rollbackAllowed);
 
   function heartbeatStatus() external view returns (
     bool expired, uint256 expirationTime
