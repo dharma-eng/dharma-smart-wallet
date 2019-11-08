@@ -3180,7 +3180,7 @@ module.exports = {test: async function (provider, testingContext) {
     'call',
     [
       5, // USDCWithdrawal,
-      '100000',
+      '1', // dust
       address,
       0
     ],
@@ -3196,6 +3196,100 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   let usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V3 UserSmartWallet relay cannot withdraw "dust" USDC',
+    UserSmartWalletV3,
+    'withdrawUSDC',
+    'send',
+    [
+      '1',
+      address,
+      0,
+      usdcUserWithdrawalSignature,
+      usdcWithdrawalSignature
+    ],
+    false,
+    receipt => {
+      // TODO: verify logs
+      //console.log(receipt)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V3 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWalletV3,
+    'getNextCustomActionID',
+    'call',
+    [
+      5, // USDCWithdrawal,
+      '100000',
+      constants.NULL_ADDRESS, // bad recipient
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  usdcWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V3 UserSmartWallet relay cannot withdraw USDC to null address',
+    UserSmartWalletV3,
+    'withdrawUSDC',
+    'send',
+    [
+      '100000',
+      constants.NULL_ADDRESS,
+      0,
+      usdcUserWithdrawalSignature,
+      usdcWithdrawalSignature
+    ],
+    false,
+    receipt => {
+      // TODO: verify logs
+      //console.log(receipt)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V3 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWalletV3,
+    'getNextCustomActionID',
+    'call',
+    [
+      5, // USDCWithdrawal,
+      '100000',
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  usdcWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     addressTwo
   )
@@ -3288,7 +3382,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay can call with two signatures to withdraw USDC',
+    'V3 UserSmartWallet relay can call with two signatures to withdraw max USDC',
     UserSmartWalletV3,
     'withdrawUSDC',
     'send',
@@ -3354,13 +3448,57 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay cannot withdraw too little dai',
+    'V3 UserSmartWallet relay cannot withdraw "dust" dai',
     UserSmartWalletV3,
     'withdrawDai',
     'send',
     [
       '1',
       address,
+      0,
+      daiUserWithdrawalSignature,
+      daiWithdrawalSignature
+    ],
+    false,
+    receipt => {},
+    originalAddress
+  )
+
+  await runTest(
+    'V3 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWalletV3,
+    'getNextCustomActionID',
+    'call',
+    [
+      4, // DaiWithdrawal,
+      '1000000000000000',
+      constants.NULL_ADDRESS,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  daiWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V3 UserSmartWallet relay cannot withdraw dai to null address',
+    UserSmartWalletV3,
+    'withdrawDai',
+    'send',
+    [
+      '1000000000000000',
+      constants.NULL_ADDRESS,
       0,
       daiUserWithdrawalSignature,
       daiWithdrawalSignature
@@ -3415,6 +3553,35 @@ module.exports = {test: async function (provider, testingContext) {
       //console.log(receipt.events)
     },
     originalAddress
+  )
+
+  await runTest(
+    'V3 UserSmartWallet cannot get a non-custom "custom" next action ID',
+    UserSmartWalletV3,
+    'getNextCustomActionID',
+    'call',
+    [
+      2, // Generic,
+      constants.FULL_APPROVAL,
+      address,
+      0
+    ],
+    false
+  )
+
+  await runTest(
+    'V3 UserSmartWallet cannot get a non-custom "custom" action ID',
+    UserSmartWalletV3,
+    'getCustomActionID',
+    'call',
+    [
+      2, // Generic,
+      constants.FULL_APPROVAL,
+      address,
+      0,
+      0
+    ],
+    false
   )
 
   await runTest(
@@ -4092,6 +4259,53 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     receipt => {},
     pauser
+  )
+
+  await runTest(
+    'V3 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWalletV3,
+    'getNextCustomActionID',
+    'call',
+    [
+      5, // USDCWithdrawal,
+      constants.FULL_APPROVAL,
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  usdcWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V3 UserSmartWallet attempt to withdraw max USDC when paused causes ExternalError',
+    UserSmartWalletV3,
+    'withdrawUSDC',
+    'send',
+    [
+      constants.FULL_APPROVAL,
+      address,
+      0,
+      usdcUserWithdrawalSignature,
+      usdcWithdrawalSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+      //console.log(receipt)
+    },
+    originalAddress
   )
 
   await runTest(
