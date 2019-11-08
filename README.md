@@ -5,8 +5,8 @@
 > An upgradeable, meta-transaction-enabled smart wallet for earning interest on stablecoins while retaining custody of funds, with an added security backstop provided by Dharma Labs.
 
 ![GitHub](https://img.shields.io/github/license/dharma-eng/dharma-smart-wallet.svg)
-[![Build Status](https://img.shields.io/travis/dharma-eng/dharma-smart-wallet)](https://img.shields.io/travis/dharma-eng/dharma-smart-wallet)
-[![Coverage](https://img.shields.io/coveralls/github/dharma-eng/dharma-smart-wallet)](https://img.shields.io/coveralls/github/dharma-eng/dharma-smart-wallet)
+[![Build Status](https://img.shields.io/travis/dharma-eng/dharma-smart-wallet)](https://travis-ci.org/dharma-eng/dharma-smart-wallet)
+[![Coverage](https://img.shields.io/coveralls/github/dharma-eng/dharma-smart-wallet)](https://coveralls.io/github/dharma-eng/dharma-smart-wallet)
 [![Audit](https://img.shields.io/badge/audited%20by-Trail%20of%20Bits-red)](https://github.com/trailofbits/publications/blob/master/reviews/dharma-smartwallet.pdf)
 [![Community](https://img.shields.io/badge/community-Discord-blueviolet)](https://discordapp.com/invite/qvKTDgR)
 
