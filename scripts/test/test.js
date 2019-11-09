@@ -35,11 +35,13 @@ const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgra
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
 const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaKeyRegistryMultisig.json')
 
+const DharmaEscapeHatchRegistryArtifact = require('../../build/contracts/DharmaEscapeHatchRegistry.json')
+
 const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
 const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
 const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
 const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
-const MockAdharmaKeyRingFactoryArtifact = require('../../build/contracts/MockAdharmaKeyRingFactory.json')
+const MockDharmaKeyRingFactoryArtifact = require('../../build/contracts/MockDharmaKeyRingFactory.json')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
 const ComptrollerArtifact = require('../../build/contracts/ComptrollerInterface.json')
 
@@ -48,31 +50,6 @@ const contractNames = Object.assign({}, constants.CONTRACT_NAMES)
 // used to wait for more confirmations
 function longer() {
   return new Promise(resolve => {setTimeout(() => {resolve()}, 500)})
-}
-
-function swapMetadataHash(bytecode, newMetadataHashes) {
-  const totalBzzrs = bytecode.split(constants.METADATA_IDENTIFIER).length - 1
-
-  if (totalBzzrs !== newMetadataHashes.length) {
-    throw("number of metadata hashes to replace must match provided number.")
-  }
-
-  let startingPoint = bytecode.length - 1;
-
-  for (i = 0; i < totalBzzrs; i++) {
-    let replacement = constants.METADATA_IDENTIFIER + newMetadataHashes.slice(i)[0]
-    let lastIndex = bytecode.lastIndexOf(
-      constants.METADATA_IDENTIFIER, startingPoint
-    )
-    bytecode = (
-      bytecode.slice(0, lastIndex) + replacement + bytecode.slice(
-        lastIndex + replacement.length, bytecode.length
-      )
-    )
-    startingPoint = lastIndex - 1;
-  }
-  
-  return bytecode
 }
 
 module.exports = {test: async function (provider, testingContext) {
@@ -315,11 +292,11 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaKeyRingFactoryV3Artifact.bytecode
   )
 
-  const MockAdharmaKeyRingFactoryDeployer = new web3.eth.Contract(
-    MockAdharmaKeyRingFactoryArtifact.abi
+  const MockDharmaKeyRingFactoryDeployer = new web3.eth.Contract(
+    MockDharmaKeyRingFactoryArtifact.abi
   )
-  MockAdharmaKeyRingFactoryDeployer.options.data = (
-    MockAdharmaKeyRingFactoryArtifact.bytecode
+  MockDharmaKeyRingFactoryDeployer.options.data = (
+    MockDharmaKeyRingFactoryArtifact.bytecode
   )
 
   const DharmaAccountRecoveryManagerDeployer = new web3.eth.Contract(
@@ -348,6 +325,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   DharmaKeyRegistryMultisigDeployer.options.data = (
     DharmaKeyRegistryMultisigArtifact.bytecode
+  )
+
+  const DharmaEscapeHatchRegistryDeployer = new web3.eth.Contract(
+    DharmaEscapeHatchRegistryArtifact.abi
+  )
+  DharmaEscapeHatchRegistryDeployer.options.data = (
+    DharmaEscapeHatchRegistryArtifact.bytecode
   )
 
   // get available addresses and assign them to various roles
@@ -6924,6 +6908,59 @@ module.exports = {test: async function (provider, testingContext) {
     false
   )  
 
+  const MockDharmaKeyRingFactory = await runTest(
+    `MockDharmaKeyRingFactory contract deployment`,
+    MockDharmaKeyRingFactoryDeployer,
+    '',
+    'deploy',
+    []
+  )
+
+  await runTest(
+    `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with no keys`,
+    MockDharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [1, 1, [], []],
+    false
+  )
+
+  await runTest(
+    `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with null address as key`,
+    MockDharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [1, 1, [constants.NULL_ADDRESS], [3]],
+    false
+  )
+
+  await runTest(
+    `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with non-dual key`,
+    MockDharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [1, 1, [address], [1]],
+    false
+  )
+
+  await runTest(
+    `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with admin threshold > 1`,
+    MockDharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [2, 1, [address], [3]],
+    false
+  )
+
+  await runTest(
+    `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with executor threshold > 1`,
+    MockDharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [1, 2, [address], [3]],
+    false
+  )
+
   await runTest(
     'Dharma Upgrade Beacon Controller can upgrade to AdharmaSmartWalletImplementation',
     DharmaUpgradeBeaconController,
@@ -7029,17 +7066,9 @@ module.exports = {test: async function (provider, testingContext) {
     [address, 0, '0x', '0x']
   )
 
-  const MockAdharmaKeyRingFactory = await runTest(
-    `MockAdharmaKeyRingFactory contract deployment`,
-    MockAdharmaKeyRingFactoryDeployer,
-    '',
-    'deploy',
-    []
-  )
-
   await runTest(
-    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with no keys`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with no keys`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [0, 0, [], []],
@@ -7047,8 +7076,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with admin threshold of 0`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with admin threshold of 0`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [0, 1, [address], [3]],
@@ -7056,8 +7085,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with executor threshold of 0`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with executor threshold of 0`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [1, 0, [address], [3]],
@@ -7065,8 +7094,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring where length of keys and types are not equal`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring where length of keys and types are not equal`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [1, 1, [address, addressTwo], [3]],
@@ -7074,8 +7103,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with duplicate keys`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with duplicate keys`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [1, 1, [address, address], [3, 3]],
@@ -7083,8 +7112,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with no admin key`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with no admin key`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [1, 1, [address], [1]],
@@ -7092,16 +7121,25 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory can deploy an Adharma key ring with multiple keys`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with less admin keys than threshold`,
+    MockDharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [2, 1, [address], [3]],
+    false
+  )
+
+  await runTest(
+    `MockDharmaKeyRingFactory can deploy an Adharma key ring with multiple keys`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [2, 2, [address, addressTwo], [3, 3]]
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory can deploy an Adharma key ring with no standard key`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory can deploy an Adharma key ring with no standard key`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [1, 1, [address], [2]]
@@ -7720,6 +7758,273 @@ module.exports = {test: async function (provider, testingContext) {
     value => {
       assert.strictEqual(value, '1')
     }
+  )
+
+  const DharmaEscapeHatchRegistry = await runTest(
+    `DharmaEscapeHatchRegistry contract deployment`,
+    DharmaEscapeHatchRegistryDeployer,
+    '',
+    'deploy'
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry confirms that an escape hatch does not exist until set`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatch',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(!value.exists)
+      assert.strictEqual(value.escapeHatch, constants.NULL_ADDRESS)
+    }
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can set the null address as an escape hatch account`,
+    DharmaEscapeHatchRegistry,
+    'setEscapeHatch',
+    'send',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can set an escape hatch account`,
+    DharmaEscapeHatchRegistry,
+    'setEscapeHatch',
+    'send',
+    [addressTwo]
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can get an escape hatch account once set`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatch',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(value.exists)
+      assert.strictEqual(value.escapeHatch, addressTwo)
+    }
+  )
+
+  let fallbackEscapeHatch = await web3.eth.call({
+      to: DharmaEscapeHatchRegistry.options.address,
+      from: address,
+      data: "0x"
+  })
+  
+  console.log(
+    ' ✓ DharmaEscapeHatchRegistry can get an escape hatch account using the fallback'
+  )
+  assert.strictEqual(
+    web3.eth.abi.decodeParameter('address', fallbackEscapeHatch),
+    addressTwo
+  )
+  passed++
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can get an escape hatch for a specific smart wallet`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatchForSmartWallet',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(value.exists)
+      assert.strictEqual(value.escapeHatch, addressTwo)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry cannot get an escape hatch the null address`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatchForSmartWallet',
+    'call',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can remove an escape hatch account`,
+    DharmaEscapeHatchRegistry,
+    'removeEscapeHatch'
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry confirms that an escape hatch is successfully removed`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatch',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(!value.exists)
+      assert.strictEqual(value.escapeHatch, constants.NULL_ADDRESS)
+    }
+  )
+
+  fallbackEscapeHatch = await web3.eth.call({
+      to: DharmaEscapeHatchRegistry.options.address,
+      from: address,
+      data: "0x"
+  })
+
+  console.log(
+    ' ✓ DharmaEscapeHatchRegistry can gets null address for removed escape hatch account using the fallback'
+  )
+  assert.strictEqual(
+    web3.eth.abi.decodeParameter('address', fallbackEscapeHatch),
+    constants.NULL_ADDRESS
+  )
+  passed++
+
+  await runTest(
+    `DharmaEscapeHatchRegistry will not fire an event when removing an unset escape hatch account`,
+    DharmaEscapeHatchRegistry,
+    'removeEscapeHatch'
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry confirms that escape hatch functionality is not initially disabled`,
+    DharmaEscapeHatchRegistry,
+    'hasDisabledEscapeHatchForSmartWallet',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(!value)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry cannot get disabled status for null address`,
+    DharmaEscapeHatchRegistry,
+    'hasDisabledEscapeHatchForSmartWallet',
+    'call',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can reset an escape hatch account`,
+    DharmaEscapeHatchRegistry,
+    'setEscapeHatch',
+    'send',
+    [ownerOne]
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can get an escape hatch account once reset`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatch',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(value.exists)
+      assert.strictEqual(value.escapeHatch, ownerOne)
+    }
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry setting an existing escape hatch account is a no-op`,
+    DharmaEscapeHatchRegistry,
+    'setEscapeHatch',
+    'send',
+    [ownerOne]
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can disable the escape hatch mechanism`,
+    DharmaEscapeHatchRegistry,
+    'permanentlyDisableEscapeHatch'
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry confirms that escape hatch functionality is disabled`,
+    DharmaEscapeHatchRegistry,
+    'hasDisabledEscapeHatchForSmartWallet',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(value)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry confirms that an escape hatch is successfully removed when disabling`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatch',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(!value.exists)
+      assert.strictEqual(value.escapeHatch, constants.NULL_ADDRESS)
+    }
+  )
+
+  fallbackEscapeHatch = await web3.eth.call({
+      to: DharmaEscapeHatchRegistry.options.address,
+      from: address,
+      data: "0x"
+  })
+
+  console.log(
+    ' ✓ DharmaEscapeHatchRegistry can gets null address for removed escape hatch account after disabling using the fallback'
+  )
+  assert.strictEqual(
+    web3.eth.abi.decodeParameter('address', fallbackEscapeHatch),
+    constants.NULL_ADDRESS
+  )
+  passed++
+
+  await runTest(
+    `DharmaEscapeHatchRegistry confirms escape hatch is removed after disabling for for a specific smart wallet`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatchForSmartWallet',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(!value.exists)
+      assert.strictEqual(value.escapeHatch, constants.NULL_ADDRESS)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry cannot set an escape hatch account once disabled`,
+    DharmaEscapeHatchRegistry,
+    'setEscapeHatch',
+    'send',
+    [ownerTwo],
+    false
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry cannot remove an escape hatch account once disabled`,
+    DharmaEscapeHatchRegistry,
+    'removeEscapeHatch',
+    'send',
+    [],
+    false
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry cannot re-disable an escape hatch account once disabled`,
+    DharmaEscapeHatchRegistry,
+    'permanentlyDisableEscapeHatch',
+    'send',
+    [],
+    false
   )
 
   console.log(

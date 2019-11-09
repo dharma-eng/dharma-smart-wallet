@@ -36,6 +36,7 @@ module.exports = {
     'registries/DharmaKeyRegistryV1.sol',
     'test/BadBeacon.sol',
     'test/BadBeaconTwo.sol',
+    'test/MockDharmaKeyRingFactory.sol',
     'test/DharmaTestingMultisig.sol',
     'test/MockAdharmaKeyRingFactory.sol',
     'test/TimelockTwoStepOwnableTestContract.sol',

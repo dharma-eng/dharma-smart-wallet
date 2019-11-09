@@ -16,6 +16,7 @@ let AdharmaSmartWalletImplementationArtifact;
 let AdharmaKeyRingImplementationArtifact;
 let DharmaUpgradeBeaconControllerManagerArtifact;
 let DharmaKeyRingFactoryV2Artifact;
+let DharmaEscapeHatchRegistryArtifact;
 
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
@@ -87,6 +88,7 @@ module.exports = {test: async function (provider, testingContext) {
     AdharmaSmartWalletImplementationArtifact = require('../../../build/contracts/AdharmaSmartWalletImplementation.json')
     AdharmaKeyRingImplementationArtifact = require('../../../build/contracts/AdharmaKeyRingImplementation.json')
     DharmaUpgradeBeaconControllerManagerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
+    DharmaEscapeHatchRegistryArtifact = require('../../../build/contracts/DharmaEscapeHatchRegistry.json')
   } else {
     DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
     DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
@@ -101,6 +103,7 @@ module.exports = {test: async function (provider, testingContext) {
     AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
     AdharmaKeyRingImplementationArtifact = require('../../build/contracts/AdharmaKeyRingImplementation.json')
     DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
+    DharmaEscapeHatchRegistryArtifact = require('../../build/contracts/DharmaEscapeHatchRegistry.json')
   }
 
   var web3 = provider
@@ -109,7 +112,6 @@ module.exports = {test: async function (provider, testingContext) {
   let gasUsage = {}
   let counts = {}
 
-  
   /*
   console.log(
     swapMetadataHash(
@@ -123,7 +125,6 @@ module.exports = {test: async function (provider, testingContext) {
   )
   process.exit(0)
   */
-  
 
   const DharmaUpgradeBeaconController = new web3.eth.Contract(
     DharmaUpgradeBeaconControllerArtifact.abi,
@@ -158,6 +159,11 @@ module.exports = {test: async function (provider, testingContext) {
   const DharmaKeyRegistryV2 = new web3.eth.Contract(
     DharmaKeyRegistryV2Artifact.abi,
     constants.KEY_REGISTRY_V2_ADDRESS
+  )
+
+  const DharmaEscapeHatchRegistry = new web3.eth.Contract(
+    DharmaEscapeHatchRegistryArtifact.abi,
+    constants.ESCAPE_HATCH_REGISTRY_ADDRESS
   )
 
   const DharmaSmartWalletFactoryV1 = new web3.eth.Contract(
@@ -1516,6 +1522,73 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
+  let currentEscapeHatchRegistryCode;
+  await runTest(
+    'Checking Escape Hatch Registry runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.ESCAPE_HATCH_REGISTRY_ADDRESS],
+    true,
+    value => {
+      currentEscapeHatchRegistryCode = value;
+    }
+  )
+
+  if (
+    currentEscapeHatchRegistryCode !== swapMetadataHash(
+      DharmaEscapeHatchRegistryArtifact.deployedBytecode,
+      constants.ESCAPE_HATCH_REGISTRY_METADATA
+    )
+  ) {
+    await runTest(
+      `DharmaEscapeHatchRegistry Code contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        constants.ESCAPE_HATCH_REGISTRY_SALT,
+        swapMetadataHash(
+          DharmaEscapeHatchRegistryArtifact.bytecode,
+          constants.ESCAPE_HATCH_REGISTRY_METADATA
+        )
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, constants.ESCAPE_HATCH_REGISTRY_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaEscapeHatchRegistry contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        constants.ESCAPE_HATCH_REGISTRY_SALT,
+        swapMetadataHash(
+          DharmaEscapeHatchRegistryArtifact.bytecode,
+          constants.ESCAPE_HATCH_REGISTRY_METADATA
+        )
+      ]
+    )
+  }
+
+  await runTest(
+    'Deployed Escape Hatch Registry code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [DharmaEscapeHatchRegistry.options.address],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaEscapeHatchRegistryArtifact.deployedBytecode,
+        constants.ESCAPE_HATCH_REGISTRY_METADATA
+      ))
+    }
+  )
+
   const DharmaSmartWalletImplementationV0 = await runTest(
     `DharmaSmartWalletImplementationV0 contract deployment`,
     DharmaSmartWalletImplementationV0Deployer,
@@ -2270,6 +2343,14 @@ module.exports = {test: async function (provider, testingContext) {
     'registerAsIndestructible',
     'send',
     [constants.KEY_REGISTRY_V2_ADDRESS]
+  )
+
+  await runTest(
+    'IndestructibleRegistry can register DharmaEscapeHatchRegistry as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [constants.ESCAPE_HATCH_REGISTRY_ADDRESS]
   )
 
   await runTest(

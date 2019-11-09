@@ -80,7 +80,7 @@ contract DharmaUpgradeBeaconControllerManager is
 
   // Store the Adharma Smart Wallet Contingency implementation.
   address private constant _ADHARMA_SMART_WALLET_IMPLEMENTATION = address(
-    0x0000000053d300f11703dcDD1e90921Db83F0048
+    0x00000000009f22dA6fEB6735614563B9Af0339fB
   );
 
   // Store address of Key Ring Upgrade Beacon Controller as a constant.
@@ -131,7 +131,7 @@ contract DharmaUpgradeBeaconControllerManager is
     // Ensure Adharma Smart Wallet implementation has the correct runtime code.
     bytes32 adharmaSmartWalletHash;
     bytes32 expectedAdharmaSmartWalletHash = bytes32(
-      0x2534c2b555b9011741eabee1c96e1683bb4f58483d05d3e654f00fde85c2673c
+      0xa8d641085d608420781e0b49768aa57d6e19dfeef227f839c33e2e00e2b8d82e
     );
     address adharmaSmartWallet = _ADHARMA_SMART_WALLET_IMPLEMENTATION;
     assembly { adharmaSmartWalletHash := extcodehash(adharmaSmartWallet) }

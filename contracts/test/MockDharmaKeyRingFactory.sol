@@ -4,9 +4,9 @@ import "../proxies/key-ring/KeyRingUpgradeBeaconProxyV1.sol";
 
 
 /**
- * @title MockAdharmaKeyRingFactory
+ * @title MockDharmaKeyRingFactory
  */
-contract MockAdharmaKeyRingFactory {
+contract MockDharmaKeyRingFactory {
   // Use DharmaKeyRing initialize selector to construct initialization calldata.
   bytes4 private constant _INITIALIZE_SELECTOR = bytes4(0x30fc201f);
 
