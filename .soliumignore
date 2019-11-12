@@ -16,3 +16,4 @@ contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV1.sol
 contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV2.sol
 contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV3.sol
 contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV4.sol
+contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV5.sol

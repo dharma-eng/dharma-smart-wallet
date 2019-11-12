@@ -41,7 +41,8 @@ import "../../interfaces/TimelockerModifiersInterface.sol";
  * their signing keys, but are otherwise kept as simple as possible. After 48
  * hours in the contingency state, the owner may bypass the standard upgrade
  * timelock and trigger upgrades to the smart wallet and key ring implementation
- * contracts. (Note that triggering a rollback)
+ * contracts. Note that triggering a rollback, or performing a standard upgrade,
+ * will cause the contingency state to be exited if it is active at the time.
  *
  * This contract can transfer ownership of any upgrade beacon controller it owns
  * (subject to the timelock on `transferControllerOwnership`), in order to

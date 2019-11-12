@@ -2,19 +2,26 @@ pragma solidity 0.5.11;
 
 
 interface DharmaSmartWalletImplementationV4Interface {
-  function borrowDai(
-    uint256 amount,
-    address recipient,
-    uint256 minimumActionGas,
-    bytes calldata userSignature,
-    bytes calldata dharmaSignature
-  ) external returns (bool ok);
+  event Escaped();
 
-  function borrowUSDC(
-    uint256 amount,
-    address recipient,
+  function setEscapeHatch(
+    address account,
     uint256 minimumActionGas,
     bytes calldata userSignature,
     bytes calldata dharmaSignature
-  ) external returns (bool ok);
+  ) external;
+
+  function removeEscapeHatch(
+    uint256 minimumActionGas,
+    bytes calldata userSignature,
+    bytes calldata dharmaSignature
+  ) external;
+
+  function permanentlyDisableEscapeHatch(
+    uint256 minimumActionGas,
+    bytes calldata userSignature,
+    bytes calldata dharmaSignature
+  ) external;
+
+  function escape() external;
 }
