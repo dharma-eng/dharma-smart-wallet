@@ -102,6 +102,8 @@ contract AdharmaKeyRingImplementation {
 
     require(adminKeys > 0, "Must supply at least one admin key.");
 
+    require(executorKeys > 0, "Must supply at least one executor key.");
+
     require(
       adminKeys >= adminThreshold,
       "Admin threshold cannot be greater than the total supplied admin keys."

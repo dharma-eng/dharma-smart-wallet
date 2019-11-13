@@ -6,6 +6,7 @@ import "../helpers/Timelocker.sol";
 import "../../interfaces/UpgradeBeaconControllerInterface.sol";
 import "../../interfaces/DharmaUpgradeBeaconControllerManagerInterface.sol";
 import "../../interfaces/TimelockerModifiersInterface.sol";
+import "../../interfaces/IndestructibleRegistryCheckerInterface.sol";
 
 
 /**
@@ -96,85 +97,108 @@ contract DharmaUpgradeBeaconControllerManager is
 
   // Store the Adharma Key Ring Contingency implementation.
   address private constant _ADHARMA_KEY_RING_IMPLEMENTATION = address(
-    0x0000000055551209ABF26d0061000b3CCd81eC98
+    0x000000000053d1F0F8aA88b9001Bec1B49445B3c
   );
 
   /**
    * @notice In the constructor, set tx.origin as initial owner, the initial
    * minimum timelock interval and expiration values, and some initial variable
-   * values.
+   * values. The runtime code of the smart wallet and key ring upgrade beacons,
+   * their controllers, and their contingency implementations are also verified.
+   * Note that each contract in question has also been registered as
+   * indestructible at indestructible.eth - this makes it impossible for their
+   * runtime bytecode to be altered from the point of the deployment of this
+   * contract.
    */
   constructor() public {
-    // Ensure Smart Wallet Upgrade Beacon Controller has correct runtime code.
+    // Declare variable in order to put constants on the stack for hash checks.
+    address extcodehashTarget;
+
+    // Get Smart Wallet Upgrade Beacon Controller runtime code hash.
     bytes32 smartWalletControllerHash;
-    bytes32 expectedSmartWalletControllerHash = bytes32(
-      0x6586626c057b68d99775ec4cae9aa5ce96907fb5f8d8c8046123f49f8ad93f1e
-    );
-    address smartWalletController = _SMART_WALLET_UPGRADE_BEACON_CONTROLLER;
-    assembly { smartWalletControllerHash := extcodehash(smartWalletController) }
-    require(
-      smartWalletControllerHash == expectedSmartWalletControllerHash,
-      "Smart Wallet Upgrade Beacon Controller runtime code hash is incorrect."
-    );
+    extcodehashTarget = _SMART_WALLET_UPGRADE_BEACON_CONTROLLER;
+    assembly { smartWalletControllerHash := extcodehash(extcodehashTarget) }
 
-    // Ensure Smart Wallet Upgrade Beacon has correct runtime code.
+    // Get Smart Wallet Upgrade Beacon runtime code hash.
     bytes32 smartWalletUpgradeBeaconHash;
-    bytes32 expectedSmartWalletUpgradeBeaconHash = bytes32(
-      0xca51e36cf6ab9af9a6f019a923588cd6df58aa1e58f5ac1639da46931167e436
-    );
-    address smartWalletBeacon = _DHARMA_SMART_WALLET_UPGRADE_BEACON;
-    assembly { smartWalletUpgradeBeaconHash := extcodehash(smartWalletBeacon) }
-    require(
-      smartWalletUpgradeBeaconHash == expectedSmartWalletUpgradeBeaconHash,
-      "Smart Wallet Upgrade Beacon runtime code hash is incorrect."
-    );
+    extcodehashTarget = _DHARMA_SMART_WALLET_UPGRADE_BEACON;
+    assembly { smartWalletUpgradeBeaconHash := extcodehash(extcodehashTarget) }
 
-    // Ensure Adharma Smart Wallet implementation has the correct runtime code.
+    // Get Adharma Smart Wallet implementation runtime code hash.
     bytes32 adharmaSmartWalletHash;
-    bytes32 expectedAdharmaSmartWalletHash = bytes32(
-      0xa8d641085d608420781e0b49768aa57d6e19dfeef227f839c33e2e00e2b8d82e
-    );
-    address adharmaSmartWallet = _ADHARMA_SMART_WALLET_IMPLEMENTATION;
-    assembly { adharmaSmartWalletHash := extcodehash(adharmaSmartWallet) }
-    require(
-      adharmaSmartWalletHash == expectedAdharmaSmartWalletHash,
-      "Adharma Smart Wallet implementation runtime code hash is incorrect."
-    );
+    extcodehashTarget = _ADHARMA_SMART_WALLET_IMPLEMENTATION;
+    assembly { adharmaSmartWalletHash := extcodehash(extcodehashTarget) }
 
-    // Ensure Key Ring Upgrade Beacon Controller has correct runtime code.
+    // Get Key Ring Upgrade Beacon Controller runtime code hash.
     bytes32 keyRingControllerHash;
-    bytes32 expectedKeyRingControllerHash = bytes32(
-      0xb98d105738145a629aeea247cee5f12bb25eabc1040eb01664bbc95f0e7e8d39
-    );
-    address keyRingController = _KEY_RING_UPGRADE_BEACON_CONTROLLER;
-    assembly { keyRingControllerHash := extcodehash(keyRingController) }
-    require(
-      keyRingControllerHash == expectedKeyRingControllerHash,
-      "Key Ring Upgrade Beacon Controller runtime code hash is incorrect."
-    );
+    extcodehashTarget = _KEY_RING_UPGRADE_BEACON_CONTROLLER;
+    assembly { keyRingControllerHash := extcodehash(extcodehashTarget) }
 
-    // Ensure Key Ring Upgrade Beacon has correct runtime code.
+    // Get Key Ring Upgrade Beacon runtime code hash.
     bytes32 keyRingUpgradeBeaconHash;
-    bytes32 expectedKeyRingUpgradeBeaconHash = bytes32(
-      0xb65d03cdc199085ae86b460e897b6d53c08a6c6d436063ea29822ea80d90adc3
-    );
-    address keyRingBeacon = _DHARMA_KEY_RING_UPGRADE_BEACON;
-    assembly { keyRingUpgradeBeaconHash := extcodehash(keyRingBeacon) }
-    require(
-      keyRingUpgradeBeaconHash == expectedKeyRingUpgradeBeaconHash,
-      "Key Ring Upgrade Beacon runtime code hash is incorrect."
+    extcodehashTarget = _DHARMA_KEY_RING_UPGRADE_BEACON;
+    assembly { keyRingUpgradeBeaconHash := extcodehash(extcodehashTarget) }
+
+    // Get Adharma Key Ring implementation runtime code hash.
+    bytes32 adharmaKeyRingHash;
+    extcodehashTarget = _ADHARMA_KEY_RING_IMPLEMENTATION;
+    assembly { adharmaKeyRingHash := extcodehash(extcodehashTarget) }
+
+    // Verify the runtime hashes of smart wallet and key ring upgrade contracts.
+    bool allRuntimeCodeHashesMatchExpectations = (
+      smartWalletControllerHash == bytes32(
+        0x6586626c057b68d99775ec4cae9aa5ce96907fb5f8d8c8046123f49f8ad93f1e
+      ) &&
+      smartWalletUpgradeBeaconHash == bytes32(
+        0xca51e36cf6ab9af9a6f019a923588cd6df58aa1e58f5ac1639da46931167e436
+      ) &&
+      adharmaSmartWalletHash == bytes32(
+        0xa8d641085d608420781e0b49768aa57d6e19dfeef227f839c33e2e00e2b8d82e
+      ) &&
+      keyRingControllerHash == bytes32(
+        0xb98d105738145a629aeea247cee5f12bb25eabc1040eb01664bbc95f0e7e8d39
+      ) &&
+      keyRingUpgradeBeaconHash == bytes32(
+        0xb65d03cdc199085ae86b460e897b6d53c08a6c6d436063ea29822ea80d90adc3
+      ) &&
+      adharmaKeyRingHash == bytes32(
+        0xc5a2c3124a4bf13329ce188ce5813ad643bedd26058ae22958f6b23962070949
+      )
     );
 
-    // Ensure Adharma Key Ring implementation has the correct runtime code.
-    bytes32 adharmaKeyRingHash;
-    bytes32 expectedAdharmaKeyRingHash = bytes32(
-      0xb23aba0d8cc5eadd7cbac3b303d8e915ec35aff2a910adebe7ef05ddbaa67501
-    );
-    address adharmaKeyRing = _ADHARMA_KEY_RING_IMPLEMENTATION;
-    assembly { adharmaKeyRingHash := extcodehash(adharmaKeyRing) }
+    // Ensure that the all of the runtime code hashes match expectations.
     require(
-      adharmaKeyRingHash == expectedAdharmaKeyRingHash,
-      "Adharma Key Ring implementation runtime code hash is incorrect."
+      allRuntimeCodeHashesMatchExpectations,
+      "Runtime code hash of supplied upgradeability contracts is incorrect."
+    );
+
+    // Set up interface to check Indestructible registry for indestructibility.
+    IndestructibleRegistryCheckerInterface indestructible;
+    indestructible = IndestructibleRegistryCheckerInterface(
+      0x0000000000f55ff05D0080fE17A63b16596Fd59f
+    );
+
+    // Ensure that each specified upgradeability contract is indestructible.
+    require(
+      indestructible.isRegisteredAsIndestructible(
+        _SMART_WALLET_UPGRADE_BEACON_CONTROLLER
+      ) &&
+      indestructible.isRegisteredAsIndestructible(
+        _DHARMA_SMART_WALLET_UPGRADE_BEACON
+      ) &&
+      indestructible.isRegisteredAsIndestructible(
+        _ADHARMA_SMART_WALLET_IMPLEMENTATION
+      ) &&
+      indestructible.isRegisteredAsIndestructible(
+        _KEY_RING_UPGRADE_BEACON_CONTROLLER
+      ) &&
+      indestructible.isRegisteredAsIndestructible(
+        _DHARMA_KEY_RING_UPGRADE_BEACON
+      ) &&
+      indestructible.isRegisteredAsIndestructible(
+        _ADHARMA_KEY_RING_IMPLEMENTATION
+      ),
+      "Supplied upgradeability contracts are not registered as indestructible."
     );
 
     // Set initial minimum timelock interval values.
@@ -358,7 +382,11 @@ contract DharmaUpgradeBeaconControllerManager is
 
   /**
    * @notice Arm the Adharma Contingency upgrade. This is required as an extra
-   * safeguard against accidentally triggering the Adharma Contingency.
+   * safeguard against accidentally triggering the Adharma Contingency. Note
+   * that there is a possibility for griefing in the event that 90 days have
+   * passed since the last heartbeat - this can be circumvented if necessary by
+   * calling both `armAdharmaContingency` and `activateAdharmaContingency` as
+   * part of the same transaction.
    * @param armed Boolean that signifies the desired armed status.
    */
   function armAdharmaContingency(bool armed) external {
@@ -498,10 +526,10 @@ contract DharmaUpgradeBeaconControllerManager is
    * activated. Only the owner may call this function.
    * @param smartWalletImplementation Address of the new smart wallet
    * implementation.
-   * @param keyRingImpmementation Address of the new key ring implementation.
+   * @param keyRingImplementation Address of the new key ring implementation.
    */
   function exitAdharmaContingency(
-    address smartWalletImplementation, address keyRingImpmementation
+    address smartWalletImplementation, address keyRingImplementation
   ) external onlyOwner {
     // Ensure that the Adharma Contingency is currently active.
     require(
@@ -529,7 +557,7 @@ contract DharmaUpgradeBeaconControllerManager is
     _upgrade(
       _KEY_RING_UPGRADE_BEACON_CONTROLLER,
       _DHARMA_KEY_RING_UPGRADE_BEACON,
-      keyRingImpmementation
+      keyRingImplementation
     );
   }
 
@@ -789,11 +817,15 @@ contract DharmaUpgradeBeaconControllerManager is
    * active and triggers a heartbeat.
    */
   function _exitAdharmaContingencyIfActiveAndTriggerHeartbeat() private {
-    // Exit the contingency state if there is currently one active.
-    if (_adharma.activated) {
-      delete _adharma;
+    // Exit the contingency state if there is currently one active or armed.
+    if (_adharma.activated || _adharma.armed) {
 
-      emit AdharmaContingencyExited();
+      // Only emit an `AdharmaContingencyExited` if it is actually activated.
+      if (_adharma.activated) {
+        emit AdharmaContingencyExited();
+      }
+
+      delete _adharma;
     }
 
     // Reset the heartbeat to the current time.

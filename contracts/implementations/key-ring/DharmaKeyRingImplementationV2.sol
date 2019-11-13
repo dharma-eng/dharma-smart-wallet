@@ -168,14 +168,14 @@ contract DharmaKeyRingImplementationV2 is
 
       if (isStandard) {
         require(
-          _additionalThresholds.standard > _additionalKeyCounts.standard,
+          _additionalThresholds.standard <= _additionalKeyCounts.standard,
           "Cannot reduce number of standard keys below required threshold."
         );
       }
 
       if (isAdmin) {
         require(
-          _additionalThresholds.admin > _additionalKeyCounts.admin,
+          _additionalThresholds.admin <= _additionalKeyCounts.admin,
           "Cannot reduce number of admin keys below required threshold."
         );
       }

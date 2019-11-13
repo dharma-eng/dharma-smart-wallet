@@ -39,6 +39,9 @@ const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
 const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
 
+const DharmaUpgradeBeaconControllerCoverageArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
+const DharmaUpgradeBeaconControllerManagerCoverageArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
+
 const ImmutableCreate2FactoryArtifact = require('../../build/contracts/ImmutableCreate2Factory.json')
 const IndestructibleRegistryArtifact = require('../../build/contracts/IndestructibleRegistry.json')
 const CodeHashCacheArtifact = require('../../build/contracts/CodeHashCache.json')
@@ -125,6 +128,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
   process.exit(0)
   */
+  
 
   const DharmaUpgradeBeaconController = new web3.eth.Contract(
     DharmaUpgradeBeaconControllerArtifact.abi,
@@ -176,10 +180,10 @@ module.exports = {test: async function (provider, testingContext) {
     constants.KEY_RING_FACTORY_V2_ADDRESS
   )
 
-  const DharmaUpgradeBeaconControllerManager = new web3.eth.Contract(
-    DharmaAccountRecoveryManagerArtifact.abi,
-    constants.ACCOUNT_RECOVERY_MANAGER_ADDRESS
-  ) 
+  const ActualIndestructibleRegistry = new web3.eth.Contract(
+    IndestructibleRegistryArtifact.abi,
+    constants.INDESTRUCTIBLE_REGISTRY_ADDRESS
+  )
 
   const IndestructibleRegistryDeployer = new web3.eth.Contract(
     IndestructibleRegistryArtifact.abi
@@ -236,6 +240,27 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerArtifact.bytecode
   )
 
+  const DharmaUpgradeBeaconControllerCoverageDeployer = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerCoverageArtifact.abi
+  )
+  DharmaUpgradeBeaconControllerCoverageDeployer.options.data = (
+    DharmaUpgradeBeaconControllerCoverageArtifact.bytecode
+  )
+
+  const DharmaUpgradeBeaconControllerManagerDeployer = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerManagerArtifact.abi
+  )
+  DharmaUpgradeBeaconControllerManagerDeployer.options.data = (
+    DharmaUpgradeBeaconControllerManagerArtifact.bytecode
+  )
+
+  const DharmaUpgradeBeaconControllerManagerCoverageDeployer = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerManagerCoverageArtifact.abi
+  )
+  DharmaUpgradeBeaconControllerManagerCoverageDeployer.options.data = (
+    DharmaUpgradeBeaconControllerManagerCoverageArtifact.bytecode
+  )
+
   const DharmaUpgradeBeaconDeployer = new web3.eth.Contract(
     DharmaUpgradeBeaconArtifact.abi
   )
@@ -255,13 +280,6 @@ module.exports = {test: async function (provider, testingContext) {
 
   const BadBeaconTwoDeployer = new web3.eth.Contract(BadBeaconTwoArtifact.abi)
   BadBeaconTwoDeployer.options.data = BadBeaconTwoArtifact.bytecode
-
-  const DharmaUpgradeBeaconControllerManagerDeployer = new web3.eth.Contract(
-    DharmaUpgradeBeaconControllerManagerArtifact.abi
-  )
-  DharmaUpgradeBeaconControllerManagerDeployer.options.data = (
-    DharmaUpgradeBeaconControllerManagerArtifact.bytecode
-  )
 
   const UpgradeBeaconProxyV1Deployer = new web3.eth.Contract(
     UpgradeBeaconProxyV1Artifact.abi
@@ -1033,7 +1051,54 @@ module.exports = {test: async function (provider, testingContext) {
     console.log(' ✓ immutable create2 factory contract already deployed, skipping...')
   }
 
+  let currentIndestructibleRegistryRuntimeHash;
+  await runTest(
+    'Current runtime hash at address of indestructible registry can be retrieved',
+    MockCodeCheck,
+    'hash',
+    'call',
+    [constants.INDESTRUCTIBLE_REGISTRY_ADDRESS],
+    true,
+    value => {
+      currentIndestructibleRegistryRuntimeHash = value
+    }
+  )
+
+  // submit the indestructible registry deployment transaction if needed
+  if (currentIndestructibleRegistryRuntimeHash !== constants.INDESTRUCTIBLE_REGISTRY_RUNTIME_HASH) {
+    console.log(` ✓ submitting indestructible registry deployment through immutable create2 contract...`)
+    await web3.eth.sendTransaction({
+      from: originalAddress,
+      to: constants.IMMUTABLE_CREATE2_FACTORY_ADDRESS,
+      value: '0',
+      gas: (testingContext !== 'coverage') ? '3000000' : gasLimit - 1,
+      gasPrice: 1,
+      data: constants.INDESTRUCTIBLE_REGISTRY_CREATION_TX
+    });
+    passed++    
+  } else {
+    console.log(' ✓ indestructible registry contract already deployed, skipping...')
+  }
+
   // BEGIN ACTUAL DEPLOYMENT TESTS
+
+  await runTest(
+    `DharmaUpgradeBeaconController contract deployment fails before other deployments`,
+    DharmaUpgradeBeaconControllerCoverageDeployer,
+    '',
+    'deploy',
+    [],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager contract deployment fails before other deployments`,
+    DharmaUpgradeBeaconControllerManagerCoverageDeployer,
+    '',
+    'deploy',
+    [],
+    false
+  )
 
   let currentUpgradeBeaconEnvoyCode;
   await runTest(
@@ -2019,135 +2084,6 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
-  let currentUpgradeBeaconControllerManagerCode;
-  await runTest(
-    'Checking Upgrade Beacon Controller Manager runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS],
-    true,
-    value => {
-      currentUpgradeBeaconControllerManagerCode = value;
-    }
-  )
-
-  if (
-    currentUpgradeBeaconControllerManagerCode !== swapMetadataHash(
-      DharmaUpgradeBeaconControllerManagerArtifact.deployedBytecode,
-      constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
-    )
-  ) {
-    await runTest(
-      `DharmaUpgradeBeaconControllerManager contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.UPGRADE_BEACON_CONTROLLER_MANAGER_SALT,
-        swapMetadataHash(
-          DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
-          constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS)
-      }
-    )
-
-    await runTest(
-      `DharmaUpgradeBeaconControllerManager contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.UPGRADE_BEACON_CONTROLLER_MANAGER_SALT,
-        swapMetadataHash(
-          DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
-          constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
-        )
-      ]
-    )
-  }
-
-  await runTest(
-    'Deployed DharmaUpgradeBeaconControllerManager code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaUpgradeBeaconControllerManagerArtifact.deployedBytecode,
-        constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
-      ))
-    }
-  )
-
-  await runTest(
-    `DharmaUpgradeBeaconControllerManager contract deployment`,
-    DharmaUpgradeBeaconControllerManagerDeployer,
-    '',
-    'deploy'
-  )
-
-  await runTest(
-    `DharmaUpgradeMultisig contract deployment fails if threshold is not met`,
-    DharmaUpgradeMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000001'
-    ]],
-    false
-  )
-
-  await runTest(
-    `DharmaUpgradeMultisig contract deployment fails if sigs are out of order`,
-    DharmaUpgradeMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000005',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004',
-      '0x0000000000000000000000000000000000000001'
-    ]],
-    false
-  )
-
-  await runTest(
-    `DharmaUpgradeMultisig contract deployment fails with too many owners`,
-    DharmaUpgradeMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000001',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004',
-      '0x0000000000000000000000000000000000000005',
-      '0x0000000000000000000000000000000000000006',
-      '0x0000000000000000000000000000000000000007',
-      '0x0000000000000000000000000000000000000008',
-      '0x0000000000000000000000000000000000000009',
-      '0x000000000000000000000000000000000000000a',
-      '0x000000000000000000000000000000000000000b'
-    ]],
-    false
-  )
-
-  const DharmaUpgradeMultisig = await runTest(
-    `DharmaUpgradeMultisig contract deployment`,
-    DharmaUpgradeMultisigDeployer,
-    '',
-    'deploy',
-    [[ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]]
-  )
-
   await runTest(
     `DharmaAccountRecoveryMultisig contract deployment fails if threshold is not met`,
     DharmaAccountRecoveryMultisigDeployer,
@@ -2258,6 +2194,15 @@ module.exports = {test: async function (provider, testingContext) {
     [[ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]]
   )
 
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager contract deployment fails before indestructible registration`,
+    DharmaUpgradeBeaconControllerManagerCoverageDeployer,
+    '',
+    'deploy',
+    [],
+    false
+  )
+
   const IndestructibleRegistry = await runTest(
     `IndestructibleRegistry contract deployment`,
     IndestructibleRegistryDeployer,
@@ -2312,14 +2257,6 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [constants.UPGRADE_BEACON_ENVOY_ADDRESS]
   )  
-
-  await runTest(
-    'IndestructibleRegistry can register the upgrade beacon controller manager as indestructible',
-    IndestructibleRegistry,
-    'registerAsIndestructible',
-    'send',
-    [constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS]
-  )
 
   await runTest(
     'IndestructibleRegistry can register the account recovery manager as indestructible',
@@ -2446,6 +2383,54 @@ module.exports = {test: async function (provider, testingContext) {
   )
   */
 
+  await runTest(
+    '"actual" IndestructibleRegistry can register the upgrade beacon as indestructible',
+    ActualIndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [constants.UPGRADE_BEACON_ADDRESS]
+  )  
+
+  await runTest(
+    '"actual" IndestructibleRegistry can register the upgrade beacon controller as indestructible',
+    ActualIndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [constants.UPGRADE_BEACON_CONTROLLER_ADDRESS]
+  )
+
+  await runTest(
+    '"actual" IndestructibleRegistry can register the key ring upgrade beacon as indestructible',
+    ActualIndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [constants.KEY_RING_UPGRADE_BEACON_ADDRESS]
+  )  
+
+  await runTest(
+    '"actual" IndestructibleRegistry can register the key ring upgrade beacon controller as indestructible',
+    ActualIndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS]
+  )
+
+  await runTest(
+    '"actual" IndestructibleRegistry can register the Adharma smart wallet implementation as indestructible',
+    ActualIndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS]
+  )
+
+  await runTest(
+    '"actual" IndestructibleRegistry can register the Adharma key ring implementation as indestructible',
+    ActualIndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [constants.ADHARMA_KEY_RING_IMPLEMENTATION_ADDRESS]
+  )
+
   const CodeHashCache = await runTest(
     `CodeHashCache contract deployment`,
     CodeHashCacheDeployer,
@@ -2467,6 +2452,150 @@ module.exports = {test: async function (provider, testingContext) {
     'registerCodeHash',
     'send',
     [constants.FACTORY_ADDRESS]
+  )
+
+  let currentUpgradeBeaconControllerManagerCode;
+  await runTest(
+    'Checking Upgrade Beacon Controller Manager runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS],
+    true,
+    value => {
+      currentUpgradeBeaconControllerManagerCode = value;
+    }
+  )
+
+  if (
+    currentUpgradeBeaconControllerManagerCode !== swapMetadataHash(
+      DharmaUpgradeBeaconControllerManagerArtifact.deployedBytecode,
+      constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+    )
+  ) {
+    await runTest(
+      `DharmaUpgradeBeaconControllerManager contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        constants.UPGRADE_BEACON_CONTROLLER_MANAGER_SALT,
+        swapMetadataHash(
+          DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
+          constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+        )
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaUpgradeBeaconControllerManager contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        constants.UPGRADE_BEACON_CONTROLLER_MANAGER_SALT,
+        swapMetadataHash(
+          DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
+          constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+        )
+      ]
+    )
+  }
+
+  await runTest(
+    'Deployed DharmaUpgradeBeaconControllerManager code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaUpgradeBeaconControllerManagerArtifact.deployedBytecode,
+        constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+      ))
+    }
+  )
+
+  await runTest(
+    'IndestructibleRegistry can register the upgrade beacon controller manager as indestructible',
+    IndestructibleRegistry,
+    'registerAsIndestructible',
+    'send',
+    [constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS]
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig contract deployment fails if threshold is not met`,
+    DharmaUpgradeMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000001'
+    ]],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig contract deployment fails if sigs are out of order`,
+    DharmaUpgradeMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000005',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000001'
+    ]],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeMultisig contract deployment fails with too many owners`,
+    DharmaUpgradeMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000005',
+      '0x0000000000000000000000000000000000000006',
+      '0x0000000000000000000000000000000000000007',
+      '0x0000000000000000000000000000000000000008',
+      '0x0000000000000000000000000000000000000009',
+      '0x000000000000000000000000000000000000000a',
+      '0x000000000000000000000000000000000000000b'
+    ]],
+    false
+  )
+
+  const DharmaUpgradeMultisig = await runTest(
+    `DharmaUpgradeMultisig contract deployment`,
+    DharmaUpgradeMultisigDeployer,
+    '',
+    'deploy',
+    [[ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager contract deployment`,
+    DharmaUpgradeBeaconControllerManagerDeployer,
+    '',
+    'deploy'
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager contract coverage deployment`,
+    DharmaUpgradeBeaconControllerManagerCoverageDeployer,
+    '',
+    'deploy'
   )
 
   let currentDaiCode;

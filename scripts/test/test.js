@@ -94,6 +94,11 @@ module.exports = {test: async function (provider, testingContext) {
     constants.KEY_REGISTRY_V2_ADDRESS
   )
 
+  const DharmaUpgradeBeaconControllerManager = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerManagerArtifact.abi,
+    constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS
+  )
+
   const DharmaSmartWalletFactoryV1OnChain = new web3.eth.Contract(
     DharmaSmartWalletFactoryV1Artifact.abi,
     constants.FACTORY_ADDRESS
@@ -5429,7 +5434,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   // COVERAGE TESTING - deployments
-  const DharmaUpgradeBeaconControllerManager = await runTest(
+  const DharmaUpgradeBeaconControllerManagerCoverage = await runTest(
     `DharmaUpgradeBeaconControllerManager contract deployment`,
     DharmaUpgradeBeaconControllerManagerDeployer,
     '',
@@ -6761,7 +6766,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer ownership from a non-owner`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'transferOwnership',
     'send',
     [addressTwo],
@@ -6772,7 +6777,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with null controller`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
     [constants.NULL_ADDRESS, address, addressTwo, 0],
@@ -6781,7 +6786,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with null beacon`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
     [address, constants.NULL_ADDRESS, addressTwo, 0],
@@ -6790,7 +6795,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with null implementation`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
     [address, addressTwo, constants.NULL_ADDRESS, 0],
@@ -6799,7 +6804,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with non-contract implementation`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
     [address, addressTwo, address, 0],
@@ -6808,7 +6813,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with massive extraTime`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
     [address, addressTwo, DharmaUpgradeBeaconControllerManager.options.address, constants.FULL_APPROVAL],
@@ -6817,7 +6822,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can initiate upgrade timelock`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
     [address, addressTwo, DharmaUpgradeBeaconControllerManager.options.address, 0]
@@ -6825,7 +6830,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can get an empty timelock`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'getTimelock',
     'call',
     ['0x01020304', '0x'],
@@ -6841,7 +6846,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can get an empty default timelock interval`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'getDefaultTimelockInterval',
     'call',
     ['0x01020304'],
@@ -6853,7 +6858,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can get an empty default timelock expiration`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'getDefaultTimelockExpiration',
     'call',
     ['0x01020304'],
@@ -6865,7 +6870,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot upgrade before timelock is complete`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'upgrade',
     'send',
     [address, addressTwo, DharmaUpgradeBeaconControllerManager.options.address],
@@ -6877,7 +6882,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot upgrade an unowned controller`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'upgrade',
     'send',
     [address, addressTwo, DharmaUpgradeBeaconControllerManager.options.address],
@@ -6886,7 +6891,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer controller ownership before accepting ownership`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'transferControllerOwnership',
     'send',
     [address, address],
@@ -6895,7 +6900,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot agree to accept ownership of null controller`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'agreeToAcceptControllerOwnership',
     'send',
     [constants.NULL_ADDRESS, true],
@@ -6904,7 +6909,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can agree to accept ownership`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'agreeToAcceptControllerOwnership',
     'send',
     [address, true]
@@ -6912,7 +6917,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate controller ownership transfer with null controller`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateTransferControllerOwnership',
     'send',
     [constants.NULL_ADDRESS, addressTwo, 0],
@@ -6921,7 +6926,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate controller ownership transfer with null new owner`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateTransferControllerOwnership',
     'send',
     [address, constants.NULL_ADDRESS, 0],
@@ -6930,7 +6935,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate controller ownership transfer if new owner has not accepted`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateTransferControllerOwnership',
     'send',
     [address, addressTwo, 0],
@@ -6939,7 +6944,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can initiate controller ownership transfer if new owner has accepted`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateTransferControllerOwnership',
     'send',
     [address, address, 0]
@@ -6947,7 +6952,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer controller ownership prior to timelock completion`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'transferControllerOwnership',
     'send',
     [address, address],
@@ -6959,7 +6964,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer unowned controller ownership`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'transferControllerOwnership',
     'send',
     [address, address],
@@ -6968,7 +6973,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot heartbeat from non-heartbeater`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'heartbeat',
     'send',
     [],
@@ -6979,13 +6984,13 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can heartbeat`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'heartbeat'
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot set new heartbeater to null address`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'newHeartbeater',
     'send',
     [constants.NULL_ADDRESS],
@@ -6994,7 +6999,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager owner can set new heartbeater`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'newHeartbeater',
     'send',
     [address]
@@ -7002,7 +7007,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot arm Adharma Contingency from non-owner when not expired`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
     'send',
     [true],
@@ -7013,7 +7018,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when not armed`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
     'send',
     [],
@@ -7022,7 +7027,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager owner can arm an Adharma Contingency`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
     'send',
     [true]
@@ -7030,7 +7035,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager owner can disarm Adharma Contingency`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
     'send',
     [false]
@@ -7038,7 +7043,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager owner can re-arm Adharma Contingency`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
     'send',
     [true]
@@ -7046,7 +7051,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency from non-owner when not expired`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
     'send',
     [],
@@ -7057,7 +7062,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when it doesn't own controllers`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
     'send',
     [],
@@ -7066,7 +7071,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot roll back prior to first upgrade`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'rollback',
     'send',
     [address, address, 0],
@@ -7075,7 +7080,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot exit Adharma Contingency when not active`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
     'send',
     [address, address],
@@ -7085,7 +7090,7 @@ module.exports = {test: async function (provider, testingContext) {
   /*
   await runTest(
     `DharmaUpgradeBeaconControllerManager can activate Adharma Contingency`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
     'send',
     []
@@ -7093,7 +7098,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager owner cannot arm Adharma Contingency while active`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
     'send',
     [true]
@@ -7101,7 +7106,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot activate Contingency when activated`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
     'send',
     [],
@@ -7110,7 +7115,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager owner can disarm Adharma Contingency`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
     'send',
     [false]
@@ -7118,7 +7123,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot exit Contingency before 48 hours`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
     'send',
     [
@@ -7133,7 +7138,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot exit Contingency to null address`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
     'send',
     [constants.NULL_ADDRESS, DharmaKeyRingImplementationV1.options.address],
@@ -7142,7 +7147,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot exit Contingency to non-contract address`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
     'send',
     [address, address],
@@ -7151,7 +7156,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can exit Contingency after 48 hours`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
     'send',
     [
@@ -7162,7 +7167,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager owner can arm Adharma Contingency again`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
     'send',
     [true]
@@ -7170,7 +7175,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can activate fake Adharma Contingency again`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
     'send',
     []
@@ -7178,7 +7183,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can roll back from fake Adharma Contingency`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'rollback',
     'send',
     [constants.UPGRADE_BEACON_CONTROLLER_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, 0]
@@ -7186,7 +7191,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can "roll forward" after roll back`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'rollback',
     'send',
     [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS]
@@ -7195,7 +7200,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can get heartbeat status`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'heartbeatStatus',
     'call',
     [],
@@ -7206,8 +7211,61 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    `DharmaUpgradeBeaconControllerManager get contingency status when armed but not activated`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'contingencyStatus',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(value.armed)
+      assert.ok(!value.activated)
+      assert.strictEqual(value.activationTime, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager gets 0 for non-existent total implementations`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'getTotalPriorImplementations',
+    'call',
+    [address, address],
+    true,
+    value => {
+      assert.strictEqual(value, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot get a prior implementation with no index`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'getPriorImplementation',
+    'call',
+    [address, address, 100],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot rollback to implementation with no index`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'rollback',
+    'send',
+    [address, address, 100],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot block rollback to implementation with no index`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'blockRollback',
+    'send',
+    [address, address, 100],
+    false
+  )
+
+  await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockInterval with no selector`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0x00000000', 0, 0],
@@ -7216,7 +7274,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockInterval to modify interval over 8 weeks`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xe950c085', 5443200, 0],
@@ -7225,7 +7283,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot create timelock with excessive duration`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xe950c085', constants.FULL_APPROVAL, 0],
@@ -7234,7 +7292,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockInterval to set a timelock`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xe950c085', 10000, 5]
@@ -7242,7 +7300,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot shorten existing initiateModifyTimelockInterval timelock`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xe950c085', 10000, 0],
@@ -7251,7 +7309,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockInterval to change a duration`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xe950c085', 10001, 5]
@@ -7259,7 +7317,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockInterval to set a timelock on another function`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xaaaaaaaa', 10000, 0]
@@ -7267,7 +7325,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockInterval with no selector`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockInterval',
     'send',
     ['0x00000000', 0],
@@ -7276,7 +7334,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockInterval before timelock completion`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockInterval',
     'send',
     ['0xe950c085', 1000],
@@ -7285,7 +7343,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockExpiration with no selector`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0x00000000', 0, 0],
@@ -7294,7 +7352,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockExpiration to with expiration over one month`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0xe950c085', 5443200, 0],
@@ -7303,7 +7361,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockExpiration to modify expiration under one minute`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 30, 0],
@@ -7312,7 +7370,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockExpiration to set a timelock`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 300000, 0],
@@ -7320,7 +7378,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockExpiration to set a timelock on another function`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0xe950c085', 30, 0]
@@ -7328,7 +7386,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockExpiration with no selector`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockExpiration',
     'send',
     ['0x00000000', 0],
@@ -7337,7 +7395,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockExpiration before timelock completion`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 300],
@@ -7349,7 +7407,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can call modifyTimelockInterval`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockInterval',
     'send',
     ['0xaaaaaaaa', 10000]
@@ -7357,7 +7415,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can call modifyTimelockExpiration`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 300000],
@@ -7365,12 +7423,12 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockExpiration if expiration is too short`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockExpiration',
     'send',
     ['0xe950c085', 30],
     false
-  )  
+  )
 
   const MockDharmaKeyRingFactory = await runTest(
     `MockDharmaKeyRingFactory contract deployment`,
@@ -7602,11 +7660,12 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockDharmaKeyRingFactory can deploy an Adharma key ring with no standard key`,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with no standard key`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
-    [1, 1, [address], [2]]
+    [1, 1, [address], [2]],
+    false
   )
 
   const DharmaUpgradeMultisig = await runTest(
@@ -8490,6 +8549,595 @@ module.exports = {test: async function (provider, testingContext) {
     [],
     false
   )
+
+  await runTest(
+    `DharmaAccountRecoveryManager owner can start ownership transfer to multisig`,
+    DharmaAccountRecoveryManager,
+    'transferOwnership',
+    'send',
+    [DharmaAccountRecoveryMultisig.options.address]
+  )
+
+  rawData = DharmaAccountRecoveryManager.methods.acceptOwnership().encodeABI()
+  await runTest(
+    `DharmaAccountRecoveryMultisig can get a hash`,
+    DharmaAccountRecoveryMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      hash = value
+    }
+  )
+
+  // accept ownership
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig can call execute to accept ownership`,
+    DharmaAccountRecoveryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager owner is now set to multisig`,
+    DharmaAccountRecoveryManager,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaAccountRecoveryMultisig.options.address)
+    }
+  )
+
+  // TODO: test account recovery using the multisig?
+
+  // transfer ownership back
+  rawData = DharmaAccountRecoveryManager.methods.transferOwnership(address).encodeABI()
+  await runTest(
+    `DharmaAccountRecoveryMultisig can get a hash`,
+    DharmaAccountRecoveryMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      hash = value
+    }
+  )
+
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig can call execute to transfer ownership back`,
+    DharmaAccountRecoveryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager EOA can accept ownership transfer from multisig`,
+    DharmaAccountRecoveryManager,
+    'acceptOwnership'
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager owner is now set to EOA`,
+    DharmaAccountRecoveryManager,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  await runTest(
+    `DharmaKeyRegistryV2 owner can start ownership transfer to multisig`,
+    DharmaKeyRegistryV2,
+    'transferOwnership',
+    'send',
+    [DharmaKeyRegistryMultisig.options.address]
+  )
+
+  rawData = DharmaKeyRegistryV2.methods.acceptOwnership().encodeABI()
+  await runTest(
+    `DharmaKeyRegistryMultisig can get a hash`,
+    DharmaKeyRegistryMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      hash = value
+    }
+  )
+
+  // accept ownership
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
+
+  await runTest(
+    `DharmaKeyRegistryMultisig can call execute to accept ownership`,
+    DharmaKeyRegistryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaKeyRegistryV2 owner is now set to multisig`,
+    DharmaKeyRegistryV2,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaKeyRegistryMultisig.options.address)
+    }
+  )
+
+  // TODO: test setting a new key using the multisig?
+
+  // transfer ownership back
+  rawData = DharmaKeyRegistryV2.methods.transferOwnership(address).encodeABI()
+  await runTest(
+    `DharmaKeyRegistryMultisig can get a hash`,
+    DharmaKeyRegistryMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      hash = value
+    }
+  )
+
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
+
+  await runTest(
+    `DharmaKeyRegistryMultisig can call execute to transfer ownership back`,
+    DharmaKeyRegistryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaKeyRegistryV2 EOA can accept ownership transfer from multisig`,
+    DharmaKeyRegistryV2,
+    'acceptOwnership'
+  )
+
+  await runTest(
+    `DharmaKeyRegistryV2 owner is now set to EOA`,
+    DharmaKeyRegistryV2,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner is initially set to an EOA`,
+    DharmaUpgradeBeaconControllerManager,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner can start ownership transfer to multisig`,
+    DharmaUpgradeBeaconControllerManager,
+    'transferOwnership',
+    'send',
+    [DharmaUpgradeMultisig.options.address]
+  )
+
+  rawData = DharmaUpgradeBeaconControllerManager.methods.acceptOwnership().encodeABI()
+  await runTest(
+    `DharmaUpgradeMultisig can get a hash`,
+    DharmaUpgradeMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      hash = value
+    }
+  )
+
+  // accept ownership
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
+
+  await runTest(
+    `DharmaUpgradeMultisig can call execute to accept ownership`,
+    DharmaUpgradeMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner is now set to multisig`,
+    DharmaUpgradeBeaconControllerManager,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaUpgradeMultisig.options.address)
+    }
+  )
+
+  // TODO: test an upgrade, rollback, etc with the multisig?
+
+  // transfer ownership back
+  rawData = DharmaUpgradeBeaconControllerManager.methods.transferOwnership(address).encodeABI()
+  await runTest(
+    `DharmaUpgradeMultisig can get a hash`,
+    DharmaUpgradeMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      hash = value
+    }
+  )
+
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
+
+  await runTest(
+    `DharmaUpgradeMultisig can call execute to transfer ownership back`,
+    DharmaUpgradeMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager EOA can accept ownership transfer from multisig`,
+    DharmaUpgradeBeaconControllerManager,
+    'acceptOwnership'
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner is now set to EOA`,
+    DharmaUpgradeBeaconControllerManager,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  // Transfer smart wallet controller ownership to coverage manager
+  await runTest(
+    `DharmaUpgradeBeaconController can transfer ownership to manager`,
+    DharmaUpgradeBeaconController,
+    'transferOwnership',
+    'send',
+    [DharmaUpgradeBeaconControllerManagerCoverage.options.address]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when it doesn't own keyring controller`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'activateAdharmaContingency',
+    'send',
+    [],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRingUpgradeBeaconController can transfer ownership to manager`,
+    DharmaKeyRingUpgradeBeaconController,
+    'transferOwnership',
+    'send',
+    [DharmaUpgradeBeaconControllerManagerCoverage.options.address]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can activate Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'activateAdharmaContingency'
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can get contingency status when activated`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'contingencyStatus',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(!value.armed)
+      assert.ok(value.activated)
+      //assert.strictEqual(value.activationTime, '?')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner can re-arm an active Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'armAdharmaContingency',
+    'send',
+    [true]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when already active`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'activateAdharmaContingency',
+    'send',
+    [],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager now gets a prior implementation count`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'getTotalPriorImplementations',
+    'call',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      DharmaUpgradeBeacon.options.address
+    ],
+    true,
+    value => {
+      assert.strictEqual(value, '1')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can get the initial prior implementation`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'getPriorImplementation',
+    'call',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      DharmaUpgradeBeacon.options.address,
+      0
+    ],
+    true,
+    value => {
+      assert.strictEqual(
+        value.priorImplementation,
+        AdharmaSmartWalletImplementation.options.address
+      )
+      assert.ok(value.rollbackAllowed)
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot call "exitAdharmaContingency" before 48 hours has elapsed`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'exitAdharmaContingency',
+    'send',
+    [
+      address,
+      address
+    ],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can rollback to initial prior implementation`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'rollback',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      DharmaUpgradeBeacon.options.address,
+      0
+    ]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager contingency status is exited after rollback`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'contingencyStatus',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(!value.armed)
+      assert.ok(!value.activated)
+      assert.strictEqual(value.activationTime, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot rollback to implementation with no index`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'rollback',
+    'send',
+    [address, address, 100],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner can re-arm an Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'armAdharmaContingency',
+    'send',
+    [true]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager contingency status shows armed`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'contingencyStatus',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(value.armed)
+      assert.ok(!value.activated)
+      assert.strictEqual(value.activationTime, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can rollback to initial prior implementation`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'rollback',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      DharmaUpgradeBeacon.options.address,
+      0
+    ]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager contingency status shows no longer armed`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'contingencyStatus',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(!value.armed)
+      assert.ok(!value.activated)
+      assert.strictEqual(value.activationTime, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can block rollback to prior implementation`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'blockRollback',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      DharmaUpgradeBeacon.options.address,
+      0
+    ]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot block a blocked rollback`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'blockRollback',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      DharmaUpgradeBeacon.options.address,
+      0
+    ],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot rollback to a blocked rollback`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'rollback',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      DharmaUpgradeBeacon.options.address,
+      0
+    ],
+    false
+  )
+
+  // advance time by 90 days
+  await advanceTime((60 * 60 * 24 * 90) + 5)
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager deadman switch can arm an Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'armAdharmaContingency',
+    'send',
+    [true],
+    true,
+    receipt => {},
+    originalAddress
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager deadman switch can activate an Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'activateAdharmaContingency',
+    'send',
+    [],
+    true,
+    receipt => {},
+    originalAddress
+  )
+
+  // advance time by 2 days
+  await advanceTime((60 * 60 * 24 * 2) + 5)
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot call exitAdharmaContingency with null implementation`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'exitAdharmaContingency',
+    'send',
+    [
+      constants.NULL_ADDRESS,
+      address
+    ],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot call exitAdharmaContingency with non-contract implementation`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'exitAdharmaContingency',
+    'send',
+    [
+      address,
+      address
+    ],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can call exitAdharmaContingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'exitAdharmaContingency',
+    'send',
+    [
+      DharmaSmartWalletImplementationV4.options.address,
+      DharmaKeyRingImplementationV1.options.address
+    ]
+  )
+
+
+
 
   console.log(
     `completed ${passed + failed} test${passed + failed === 1 ? '' : 's'} ` +

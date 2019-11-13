@@ -23,7 +23,7 @@ contract DharmaUpgradeMultisig {
 
   // This multisig can only call the Upgrade Beacon Controller Manager contract.
   address private constant _DESTINATION = address(
-    0x0000000000415B1381260aE0F9f78d8207452815
+    0x00000000008A10a98969A000D1C0AbA90F858D6a
   );
 
   // The threshold is an exact number of valid signatures that must be supplied.
