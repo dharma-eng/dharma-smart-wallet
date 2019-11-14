@@ -8,6 +8,7 @@ interfaces/RelayContractInterface.sol
 contracts/helpers/FactoryFactFinder.sol
 contracts/helpers/SmartWalletFactoryV1UserSigningKeyUpdater.sol
 contracts/upgradeability/DharmaUpgradeBeaconController.sol
+contracts/implementations/smart-wallet/AdharmaSmartWalletImplementation.sol
 
 # parsing error due to dynamic abi.decode - try again in later version
 contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV0.sol
@@ -15,3 +16,4 @@ contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV1.sol
 contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV2.sol
 contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV3.sol
 contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV4.sol
+contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV5.sol

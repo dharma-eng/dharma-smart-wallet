@@ -9,6 +9,7 @@ module.exports = {
     'helpers/CodeHashCache.sol',
     'helpers/DharmaKeyRegistryV1Mimic.sol',
     'helpers/DharmaLocksmith.sol',
+    'helpers/DharmaUpgradeBeaconControllerManagerCreationVerifier.sol',
     'helpers/ECDSAGroup.sol',
     'helpers/FactoryFactFinder.sol',
     'helpers/ImmutableCreate2Factory.sol',
@@ -20,7 +21,8 @@ module.exports = {
     'implementations/smart-wallet/DharmaSmartWalletImplementationV0.sol',
     'implementations/smart-wallet/DharmaSmartWalletImplementationV1.sol',
     'implementations/smart-wallet/DharmaSmartWalletImplementationV2.sol',
-    'implementations/smart-wallet/DharmaSmartWalletImplementationV4.sol',
+    'implementations/smart-wallet/DharmaSmartWalletImplementationV3.sol',
+    'implementations/smart-wallet/DharmaSmartWalletImplementationV5.sol',
     'mock/MockCodeCheck.sol',
     'mock/RelayContract.sol',
     'mock/RelayContractV2.sol',
@@ -36,8 +38,10 @@ module.exports = {
     'registries/DharmaKeyRegistryV1.sol',
     'test/BadBeacon.sol',
     'test/BadBeaconTwo.sol',
+    'test/MockDharmaKeyRingFactory.sol',
     'test/DharmaTestingMultisig.sol',
     'test/MockAdharmaKeyRingFactory.sol',
+    'test/TimelockEdgecaseTester.sol',
     'test/TimelockTwoStepOwnableTestContract.sol',
     'test/UpgradeBeaconImplementationCheck.sol'
   ]

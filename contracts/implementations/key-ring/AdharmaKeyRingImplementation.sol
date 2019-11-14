@@ -105,13 +105,8 @@ contract AdharmaKeyRingImplementation {
     require(executorKeys > 0, "Must supply at least one executor key.");
 
     require(
-      adminThreshold >= adminKeys,
-      "Admin threshold cannot be less than the total supplied admin keys."
-    );
-
-    require(
-      executorThreshold >= executorKeys,
-      "Executor threshold cannot be less than the total supplied executor keys."
+      adminKeys >= adminThreshold,
+      "Admin threshold cannot be greater than the total supplied admin keys."
     );
 
     if (adminKeys > 1 || executorKeys > 1) {

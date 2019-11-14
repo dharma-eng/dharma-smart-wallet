@@ -21,7 +21,7 @@ const DharmaSmartWalletFactoryV2Artifact = require('../../build/contracts/Dharma
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
 const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV2.json')
-const DharmaSmartWalletImplementationV3Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV3.json')
+const DharmaSmartWalletImplementationV4Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV4.json')
 
 const DharmaKeyRingImplementationV1Artifact = require('../../build/contracts/DharmaKeyRingImplementationV1.json')
 const DharmaKeyRingFactoryV1Artifact = require('../../build/contracts/DharmaKeyRingFactoryV1.json')
@@ -35,11 +35,15 @@ const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgra
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
 const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaKeyRegistryMultisig.json')
 
+const DharmaEscapeHatchRegistryArtifact = require('../../build/contracts/DharmaEscapeHatchRegistry.json')
+
 const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
 const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
 const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
+const TimelockEdgecaseTesterArtifact = require('../../build/contracts/TimelockEdgecaseTester.json')
+
 const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
-const MockAdharmaKeyRingFactoryArtifact = require('../../build/contracts/MockAdharmaKeyRingFactory.json')
+const MockDharmaKeyRingFactoryArtifact = require('../../build/contracts/MockDharmaKeyRingFactory.json')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
 const ComptrollerArtifact = require('../../build/contracts/ComptrollerInterface.json')
 
@@ -48,31 +52,6 @@ const contractNames = Object.assign({}, constants.CONTRACT_NAMES)
 // used to wait for more confirmations
 function longer() {
   return new Promise(resolve => {setTimeout(() => {resolve()}, 500)})
-}
-
-function swapMetadataHash(bytecode, newMetadataHashes) {
-  const totalBzzrs = bytecode.split(constants.METADATA_IDENTIFIER).length - 1
-
-  if (totalBzzrs !== newMetadataHashes.length) {
-    throw("number of metadata hashes to replace must match provided number.")
-  }
-
-  let startingPoint = bytecode.length - 1;
-
-  for (i = 0; i < totalBzzrs; i++) {
-    let replacement = constants.METADATA_IDENTIFIER + newMetadataHashes.slice(i)[0]
-    let lastIndex = bytecode.lastIndexOf(
-      constants.METADATA_IDENTIFIER, startingPoint
-    )
-    bytecode = (
-      bytecode.slice(0, lastIndex) + replacement + bytecode.slice(
-        lastIndex + replacement.length, bytecode.length
-      )
-    )
-    startingPoint = lastIndex - 1;
-  }
-  
-  return bytecode
 }
 
 module.exports = {test: async function (provider, testingContext) {
@@ -115,6 +94,11 @@ module.exports = {test: async function (provider, testingContext) {
   const DharmaKeyRegistryV2 = new web3.eth.Contract(
     DharmaKeyRegistryV2Artifact.abi,
     constants.KEY_REGISTRY_V2_ADDRESS
+  )
+
+  const DharmaUpgradeBeaconControllerManager = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerManagerArtifact.abi,
+    constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS
   )
 
   const DharmaSmartWalletFactoryV1OnChain = new web3.eth.Contract(
@@ -191,11 +175,11 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaSmartWalletImplementationV2Artifact.bytecode
   )
 
-  const DharmaSmartWalletImplementationV3Deployer = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV3Artifact.abi
+  const DharmaSmartWalletImplementationV4Deployer = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV4Artifact.abi
   )
-  DharmaSmartWalletImplementationV3Deployer.options.data = (
-    DharmaSmartWalletImplementationV3Artifact.bytecode
+  DharmaSmartWalletImplementationV4Deployer.options.data = (
+    DharmaSmartWalletImplementationV4Artifact.bytecode
   )
 
   const AdharmaKeyRingImplementationDeployer = new web3.eth.Contract(
@@ -217,6 +201,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   UpgradeBeaconImplementationCheckDeployer.options.data = (
     UpgradeBeaconImplementationCheckArtifact.bytecode
+  )
+
+  const TimelockEdgecaseTesterDeployer = new web3.eth.Contract(
+    TimelockEdgecaseTesterArtifact.abi
+  )
+  TimelockEdgecaseTesterDeployer.options.data = (
+    TimelockEdgecaseTesterArtifact.bytecode
   )
 
   const MockCodeCheckDeployer = new web3.eth.Contract(
@@ -315,11 +306,11 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaKeyRingFactoryV3Artifact.bytecode
   )
 
-  const MockAdharmaKeyRingFactoryDeployer = new web3.eth.Contract(
-    MockAdharmaKeyRingFactoryArtifact.abi
+  const MockDharmaKeyRingFactoryDeployer = new web3.eth.Contract(
+    MockDharmaKeyRingFactoryArtifact.abi
   )
-  MockAdharmaKeyRingFactoryDeployer.options.data = (
-    MockAdharmaKeyRingFactoryArtifact.bytecode
+  MockDharmaKeyRingFactoryDeployer.options.data = (
+    MockDharmaKeyRingFactoryArtifact.bytecode
   )
 
   const DharmaAccountRecoveryManagerDeployer = new web3.eth.Contract(
@@ -348,6 +339,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   DharmaKeyRegistryMultisigDeployer.options.data = (
     DharmaKeyRegistryMultisigArtifact.bytecode
+  )
+
+  const DharmaEscapeHatchRegistryDeployer = new web3.eth.Contract(
+    DharmaEscapeHatchRegistryArtifact.abi
+  )
+  DharmaEscapeHatchRegistryDeployer.options.data = (
+    DharmaEscapeHatchRegistryArtifact.bytecode
   )
 
   // get available addresses and assign them to various roles
@@ -1068,9 +1066,9 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
-  const DharmaSmartWalletImplementationV3 = await runTest(
-    `DharmaSmartWalletImplementationV3 contract deployment`,
-    DharmaSmartWalletImplementationV3Deployer,
+  const DharmaSmartWalletImplementationV4 = await runTest(
+    `DharmaSmartWalletImplementationV4 contract deployment`,
+    DharmaSmartWalletImplementationV4Deployer,
     '',
     'deploy'
   )
@@ -1633,8 +1631,8 @@ module.exports = {test: async function (provider, testingContext) {
     targetWalletAddress
   )
 
-  const UserSmartWalletV3 = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV3Artifact.abi,
+  const UserSmartWalletV4 = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV4Artifact.abi,
     targetWalletAddress
   )
 
@@ -2451,13 +2449,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'Dharma Upgrade Beacon Controller can upgrade to V3 implementation',
+    'Dharma Upgrade Beacon Controller can upgrade to V4 implementation',
     DharmaUpgradeBeaconController,
     'upgrade',
     'send',
     [
       DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV3.options.address
+      DharmaSmartWalletImplementationV4.options.address
     ],
     true,
     receipt => {
@@ -2478,7 +2476,7 @@ module.exports = {test: async function (provider, testingContext) {
         */
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.newImplementation,
-          DharmaSmartWalletImplementationV3.options.address
+          DharmaSmartWalletImplementationV4.options.address
         )
         /* TODO
         assert.strictEqual(
@@ -2498,24 +2496,24 @@ module.exports = {test: async function (provider, testingContext) {
     [DharmaUpgradeBeacon.options.address],
     true,
     value => {
-      assert.strictEqual(value, DharmaSmartWalletImplementationV3.options.address)
+      assert.strictEqual(value, DharmaSmartWalletImplementationV4.options.address)
     }
   )
 
-  const UpgradeBeaconImplementationCheckV3 = await runTest(
+  const UpgradeBeaconImplementationCheckV4 = await runTest(
     `UpgradeBeaconImplementationCheck deployment`,
     UpgradeBeaconImplementationCheckDeployer,
     '',
     'deploy',
     [
       DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV3.options.address
+      DharmaSmartWalletImplementationV4.options.address
     ]
   )
 
   await runTest(
-    'V3 user smart wallet can be called and still has original dharma key set',
-    UserSmartWalletV3,
+    'V4 user smart wallet can be called and still has original dharma key set',
+    UserSmartWalletV4,
     'getUserSigningKey',
     'call',
     [],
@@ -2526,20 +2524,20 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get the new version (3)',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get the new version (4)',
+    UserSmartWalletV4,
     'getVersion',
     'call',
     [],
     true,
     value => {
-      assert.strictEqual(value, '3')
+      assert.strictEqual(value, '4')
     }
   )
 
   await runTest(
-    'V3 UserSmartWallet nonce is still set to value from before upgrade',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet nonce is still set to value from before upgrade',
+    UserSmartWalletV4,
     'getNonce',
     'call',
     [],
@@ -2550,8 +2548,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get balances',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get balances',
+    UserSmartWalletV4,
     'getBalances',
     'call',
     [],
@@ -2562,8 +2560,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet secondary can call to cancel',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet secondary can call to cancel',
+    UserSmartWalletV4,
     'cancel',
     'send',
     [
@@ -2573,8 +2571,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet nonce is now set to original + 1',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet nonce is now set to original + 1',
+    UserSmartWalletV4,
     'getNonce',
     'call',
     [],
@@ -2585,8 +2583,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get next custom action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get next custom action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -2602,8 +2600,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get custom action ID and it matches next action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get custom action ID and it matches next action ID',
+    UserSmartWalletV4,
     'getCustomActionID',
     'call',
     [
@@ -2621,8 +2619,8 @@ module.exports = {test: async function (provider, testingContext) {
 
   let genericActionID
   await runTest(
-    'V3 UserSmartWallet can get next generic action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get next generic action ID',
+    UserSmartWalletV4,
     'getNextGenericActionID',
     'call',
     [
@@ -2637,8 +2635,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get generic action ID and it matches next action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get generic action ID and it matches next action ID',
+    UserSmartWalletV4,
     'getGenericActionID',
     'call',
     [
@@ -2654,7 +2652,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'Dai Whale can deposit dai into the V3 smart wallet',
+    'Dai Whale can deposit dai into the V4 smart wallet',
     DAI,
     'transfer',
     'send',
@@ -2680,7 +2678,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'USDC Whale can deposit usdc into the V3 smart wallet',
+    'USDC Whale can deposit usdc into the V4 smart wallet',
     USDC,
     'transfer',
     'send',
@@ -2706,8 +2704,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 user smart wallet can trigger repayAndDeposit to deposit all new funds',
-    UserSmartWalletV3,
+    'V4 user smart wallet can trigger repayAndDeposit to deposit all new funds',
+    UserSmartWalletV4,
     'repayAndDeposit',
     'send',
     [],
@@ -2761,7 +2759,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'Dai Whale can deposit dai into the V3 smart wallet again',
+    'Dai Whale can deposit dai into the V4 smart wallet again',
     DAI,
     'transfer',
     'send',
@@ -2787,13 +2785,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV4,
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      constants.ESCAPE_HATCH_REGISTRY_ADDRESS,
+      '0x',
       0
     ],
     true,
@@ -2813,8 +2811,49 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can call executeAction',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet cannot call executeAction and target Escape Hatch Registry',
+    UserSmartWalletV4,
+    'executeAction',
+    'send',
+    [
+      constants.ESCAPE_HATCH_REGISTRY_ADDRESS,
+      '0x',
+      0,
+      executeActionUserSignature,
+      executeActionSignature
+    ],
+    false
+  )
+
+  await runTest(
+    'V4 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV4,
+    'getNextGenericActionID',
+    'call',
+    [
+      DAI.options.address,
+      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  executeActionSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  executeActionUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V4 UserSmartWallet can call executeAction',
+    UserSmartWalletV4,
     'executeAction',
     'send',
     [
@@ -2827,8 +2866,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 user smart wallet repayAndDeposit cannot deposit without approval',
-    UserSmartWalletV3,
+    'V4 user smart wallet repayAndDeposit cannot deposit without approval',
+    UserSmartWalletV4,
     'repayAndDeposit',
     'send',
     [],
@@ -2855,8 +2894,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV4,
     'getNextGenericActionID',
     'call',
     [
@@ -2881,8 +2920,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can call executeAction',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can call executeAction',
+    UserSmartWalletV4,
     'executeAction',
     'send',
     [
@@ -2895,8 +2934,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 user smart wallet repayAndDeposit can deposit with approval added back',
-    UserSmartWalletV3,
+    'V4 user smart wallet repayAndDeposit can deposit with approval added back',
+    UserSmartWalletV4,
     'repayAndDeposit',
     'send',
     [],
@@ -2923,8 +2962,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 user smart wallet can trigger repayAndDeposit even with no funds',
-    UserSmartWalletV3,
+    'V4 user smart wallet can trigger repayAndDeposit even with no funds',
+    UserSmartWalletV4,
     'repayAndDeposit',
     'send',
     [],
@@ -2951,8 +2990,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet secondary cannot set an empty user userSigningKey',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet secondary cannot set an empty user userSigningKey',
+    UserSmartWalletV4,
     'setUserSigningKey',
     'send',
     [
@@ -2965,8 +3004,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet secondary can set a custom user userSigningKey',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet secondary can set a custom user userSigningKey',
+    UserSmartWalletV4,
     'setUserSigningKey',
     'send',
     [
@@ -2978,8 +3017,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get next custom action ID to set a user signing key',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get next custom action ID to set a user signing key',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -2997,7 +3036,7 @@ module.exports = {test: async function (provider, testingContext) {
   let currentNonce
   await runTest(
     'UserSmartWallet can get the nonce',
-    UserSmartWalletV3,
+    UserSmartWalletV4,
     'getNonce',
     'call',
     [],
@@ -3008,8 +3047,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get custom action ID and it matches next action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get custom action ID and it matches next action ID',
+    UserSmartWalletV4,
     'getCustomActionID',
     'call',
     [
@@ -3036,8 +3075,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can set a new user signing key with signatures',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can set a new user signing key with signatures',
+    UserSmartWalletV4,
     'setUserSigningKey',
     'send',
     [
@@ -3052,8 +3091,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get next custom action ID to cancel',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get next custom action ID to cancel',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -3070,7 +3109,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'UserSmartWallet can get the nonce',
-    UserSmartWalletV3,
+    UserSmartWalletV4,
     'getNonce',
     'call',
     [],
@@ -3081,8 +3120,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get custom action ID and it matches next action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get custom action ID and it matches next action ID',
+    UserSmartWalletV4,
     'getCustomActionID',
     'call',
     [
@@ -3104,8 +3143,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet secondary can cancel using a signature',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet secondary can cancel using a signature',
+    UserSmartWalletV4,
     'cancel',
     'send',
     [
@@ -3119,7 +3158,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'UserSmartWallet nonce is incremented after cancelling',
-    UserSmartWalletV3,
+    UserSmartWalletV4,
     'getNonce',
     'call',
     [],
@@ -3130,8 +3169,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet secondary cannot call to withdraw dai without primary',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet secondary cannot call to withdraw dai without primary',
+    UserSmartWalletV4,
     'withdrawDai',
     'send',
     [
@@ -3145,8 +3184,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet secondary cannot call to withdraw usdc without primary',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet secondary cannot call to withdraw usdc without primary',
+    UserSmartWalletV4,
     'withdrawUSDC',
     'send',
     [
@@ -3160,8 +3199,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet secondary can no longer call to set userSigningKey without primary',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet secondary can no longer call to set userSigningKey without primary',
+    UserSmartWalletV4,
     'setUserSigningKey',
     'send',
     [
@@ -3174,8 +3213,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -3201,8 +3240,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay cannot withdraw "dust" USDC',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay cannot withdraw "dust" USDC',
+    UserSmartWalletV4,
     'withdrawUSDC',
     'send',
     [
@@ -3221,8 +3260,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -3248,8 +3287,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay cannot withdraw USDC to null address',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay cannot withdraw USDC to null address',
+    UserSmartWalletV4,
     'withdrawUSDC',
     'send',
     [
@@ -3268,8 +3307,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -3295,8 +3334,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay can call with two signatures to withdraw USDC',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay can call with two signatures to withdraw USDC',
+    UserSmartWalletV4,
     'withdrawUSDC',
     'send',
     [
@@ -3315,8 +3354,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -3342,8 +3381,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay cannot call with bad signature to withdraw USDC',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay cannot call with bad signature to withdraw USDC',
+    UserSmartWalletV4,
     'withdrawUSDC',
     'send',
     [
@@ -3362,8 +3401,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet cannot call with bad user signature to withdraw USDC',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet cannot call with bad user signature to withdraw USDC',
+    UserSmartWalletV4,
     'withdrawUSDC',
     'send',
     [
@@ -3382,8 +3421,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay can call with two signatures to withdraw max USDC',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay can call with two signatures to withdraw max USDC',
+    UserSmartWalletV4,
     'withdrawUSDC',
     'send',
     [
@@ -3421,8 +3460,8 @@ module.exports = {test: async function (provider, testingContext) {
   */
 
   await runTest(
-    'V3 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -3448,8 +3487,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay cannot withdraw "dust" dai',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay cannot withdraw "dust" dai',
+    UserSmartWalletV4,
     'withdrawDai',
     'send',
     [
@@ -3465,8 +3504,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -3492,8 +3531,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay cannot withdraw dai to null address',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay cannot withdraw dai to null address',
+    UserSmartWalletV4,
     'withdrawDai',
     'send',
     [
@@ -3509,8 +3548,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -3536,8 +3575,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay can call with signature to withdraw dai',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay can call with signature to withdraw dai',
+    UserSmartWalletV4,
     'withdrawDai',
     'send',
     [
@@ -3556,8 +3595,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet cannot get a non-custom "custom" next action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet cannot get a non-custom "custom" next action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -3570,8 +3609,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet cannot get a non-custom "custom" action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet cannot get a non-custom "custom" action ID',
+    UserSmartWalletV4,
     'getCustomActionID',
     'call',
     [
@@ -3585,8 +3624,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -3612,8 +3651,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay cannot call with bad signature to withdraw dai',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay cannot call with bad signature to withdraw dai',
+    UserSmartWalletV4,
     'withdrawDai',
     'send',
     [
@@ -3632,8 +3671,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay cannot call with bad user signature to withdraw dai',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay cannot call with bad user signature to withdraw dai',
+    UserSmartWalletV4,
     'withdrawDai',
     'send',
     [
@@ -3652,8 +3691,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay can call with signature to withdraw dai',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay can call with signature to withdraw dai',
+    UserSmartWalletV4,
     'withdrawDai',
     'send',
     [
@@ -3671,13 +3710,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a Ether withdrawal custom action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a Ether withdrawal custom action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
       6, // ETHWithdrawal,
-      '1',
+      '0', // no amount
       address,
       0
     ],
@@ -3698,8 +3737,100 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay cannot call with bad signature to withdraw eth',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay cannot to withdraw ether with no amount',
+    UserSmartWalletV4,
+    'withdrawEther',
+    'send',
+    [
+      '0',
+      address,
+      0,
+      ethUserWithdrawalSignature,
+      ethWithdrawalSignature
+    ],
+    false,
+    receipt => {
+      // TODO: verify logs
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V4 UserSmartWallet can get a Ether withdrawal custom action ID',
+    UserSmartWalletV4,
+    'getNextCustomActionID',
+    'call',
+    [
+      6, // ETHWithdrawal,
+      '1',
+      constants.NULL_ADDRESS, // no recipient
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  ethWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V4 UserSmartWallet relay cannot to withdraw ether with no recipient',
+    UserSmartWalletV4,
+    'withdrawEther',
+    'send',
+    [
+      '1',
+      constants.NULL_ADDRESS,
+      0,
+      ethUserWithdrawalSignature,
+      ethWithdrawalSignature
+    ],
+    false,
+    receipt => {
+      // TODO: verify logs
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V4 UserSmartWallet can get a Ether withdrawal custom action ID',
+    UserSmartWalletV4,
+    'getNextCustomActionID',
+    'call',
+    [
+      6, // ETHWithdrawal,
+      '1',
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  ethWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V4 UserSmartWallet relay cannot call with bad signature to withdraw eth',
+    UserSmartWalletV4,
     'withdrawEther',
     'send',
     [
@@ -3718,8 +3849,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
+    UserSmartWalletV4,
     'withdrawEther',
     'send',
     [
@@ -3738,8 +3869,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay can call with signature to withdraw ether',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay can call with signature to withdraw ether',
+    UserSmartWalletV4,
     'withdrawEther',
     'send',
     [
@@ -3757,8 +3888,94 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet cancel reverts with bad signature',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a Ether withdrawal custom action ID',
+    UserSmartWalletV4,
+    'getNextCustomActionID',
+    'call',
+    [
+      6, // ETHWithdrawal,
+      '1',
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  ethWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V4 UserSmartWallet relay cannot call with bad signature to withdraw eth',
+    UserSmartWalletV4,
+    'withdrawEther',
+    'send',
+    [
+      '1',
+      address,
+      0,
+      ethUserWithdrawalSignature,
+      '0xffffffff' + ethWithdrawalSignature.slice(10)
+    ],
+    false,
+    receipt => {
+      // TODO: verify logs
+      //console.log(receipt)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V4 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
+    UserSmartWalletV4,
+    'withdrawEther',
+    'send',
+    [
+      '1',
+      address,
+      0,
+      '0xffffffff' + ethUserWithdrawalSignature.slice(10),
+      ethWithdrawalSignature
+    ],
+    false,
+    receipt => {
+      // TODO: verify logs
+      //console.log(receipt)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V4 UserSmartWallet relay can call with signature to withdraw ether',
+    UserSmartWalletV4,
+    'withdrawEther',
+    'send',
+    [
+      '1',
+      address,
+      0,
+      ethUserWithdrawalSignature,
+      ethWithdrawalSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V4 UserSmartWallet cancel reverts with bad signature',
+    UserSmartWalletV4,
     'cancel',
     'send',
     [
@@ -3771,8 +3988,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet calls revert if insufficient action gas is supplied',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet calls revert if insufficient action gas is supplied',
+    UserSmartWalletV4,
     'cancel',
     'send',
     [
@@ -3783,8 +4000,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet calls succeed if sufficient non-zero action gas supplied',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet calls succeed if sufficient non-zero action gas supplied',
+    UserSmartWalletV4,
     'cancel',
     'send',
     [
@@ -3794,8 +4011,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a cancel custom action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a cancel custom action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -3813,8 +4030,8 @@ module.exports = {test: async function (provider, testingContext) {
   let cancelSignature = signHashedPrefixedHexString(customActionId, addressTwo)
 
   await runTest(
-    'V3 UserSmartWallet can cancel using a signature',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can cancel using a signature',
+    UserSmartWalletV4,
     'cancel',
     'send',
     [
@@ -3827,8 +4044,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet calls to atomic methods revert',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet calls to atomic methods revert',
+    UserSmartWalletV4,
     '_withdrawDaiAtomic',
     'send',
     [
@@ -3839,8 +4056,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet calls to recover from random address revert',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet calls to recover from random address revert',
+    UserSmartWalletV4,
     'recover',
     'send',
     [
@@ -3850,7 +4067,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'DharmaSmartWalletFactoryV1 can deploy a V3 smart wallet using a Dharma Key',
+    'DharmaSmartWalletFactoryV1 can deploy a V4 smart wallet using a Dharma Key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
     'send',
@@ -3882,8 +4099,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV4,
     'getNextGenericActionID',
     'call',
     [
@@ -3908,8 +4125,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet cannot call executeAction and target a non-contract',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet cannot call executeAction and target a non-contract',
+    UserSmartWalletV4,
     'executeAction',
     'send',
     [
@@ -3923,12 +4140,12 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet cannot call executeAction and target itself',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet cannot call executeAction and target itself',
+    UserSmartWalletV4,
     'executeAction',
     'send',
     [
-      UserSmartWalletV3.options.address,
+      UserSmartWalletV4.options.address,
       USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
@@ -3938,8 +4155,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can call executeAction',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can call executeAction',
+    UserSmartWalletV4,
     'executeAction',
     'send',
     [
@@ -3952,8 +4169,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get the next generic batch action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get the next generic batch action ID',
+    UserSmartWalletV4,
     'getNextGenericAtomicBatchActionID',
     'call',
     [
@@ -3968,7 +4185,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'UserSmartWallet can get the nonce',
-    UserSmartWalletV3,
+    UserSmartWalletV4,
     'getNonce',
     'call',
     [],
@@ -3979,8 +4196,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet generic batch action ID with nonce matches next ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet generic batch action ID with nonce matches next ID',
+    UserSmartWalletV4,
     'getGenericAtomicBatchActionID',
     'call',
     [
@@ -4005,8 +4222,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can call executeActionWithAtomicBatchCalls',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can call executeActionWithAtomicBatchCalls',
+    UserSmartWalletV4,
     'executeActionWithAtomicBatchCalls',
     'send',
     [
@@ -4045,7 +4262,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'new user smart wallet can trigger repayAndDeposit to deposit all new funds',
-    UserSmartWalletV3,
+    UserSmartWalletV4,
     'repayAndDeposit',
     'send',
     [],
@@ -4171,8 +4388,8 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  const BlacklistedUserSmartWalletV3 = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV3Artifact.abi,
+  const BlacklistedUserSmartWalletV4 = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV4Artifact.abi,
     targetBlacklistAddress
   )
 
@@ -4228,7 +4445,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'blacklisted smart wallet will not approve USDC during repayAndDeposit',
-    BlacklistedUserSmartWalletV3,
+    BlacklistedUserSmartWalletV4,
     'repayAndDeposit',
     'send',
     [],
@@ -4262,8 +4479,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -4289,8 +4506,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet attempt to withdraw max USDC when paused causes ExternalError',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet attempt to withdraw max USDC when paused causes ExternalError',
+    UserSmartWalletV4,
     'withdrawUSDC',
     'send',
     [
@@ -4310,7 +4527,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'smart wallet will not approve USDC when paused during repayAndDeposit',
-    BlacklistedUserSmartWalletV3,
+    BlacklistedUserSmartWalletV4,
     'repayAndDeposit',
     'send',
     [],
@@ -4334,7 +4551,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'unblacklisted, unpaused smart wallet approves USDC during repayAndDeposit',
-    BlacklistedUserSmartWalletV3,
+    BlacklistedUserSmartWalletV4,
     'repayAndDeposit',
     'send',
     [],
@@ -4346,7 +4563,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
+    'V4 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -4373,7 +4590,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay call to withdraw USDC to blacklisted address',
+    'V4 UserSmartWallet relay call to withdraw USDC to blacklisted address',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -4394,7 +4611,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a USDC withdrawal custom action ID',
+    'V4 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -4421,7 +4638,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay call to withdraw USDC to itself',
+    'V4 UserSmartWallet relay call to withdraw USDC to itself',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -4440,7 +4657,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
+    'V4 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -4467,7 +4684,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay call to withdraw USDC to blacklisted address',
+    'V4 UserSmartWallet relay call to withdraw USDC to blacklisted address',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -4488,8 +4705,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a Ether withdrawal custom action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a Ether withdrawal custom action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -4515,8 +4732,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay cannot withdraw eth to a non-payable account',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay cannot withdraw eth to a non-payable account',
+    UserSmartWalletV4,
     'withdrawEther',
     'send',
     [
@@ -4549,21 +4766,21 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'DharmaSmartWalletFactoryV1 can deploy a V3 smart wallet using a contract key',
+    'DharmaSmartWalletFactoryV1 can deploy a V4 smart wallet using a contract key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
     'send',
     [targetWalletAddress]
   )
 
-  const UserSmartWalletV3Two = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV3Artifact.abi,
+  const UserSmartWalletV4Two = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV4Artifact.abi,
     targetWalletAddressTwo
   )
 
   await runTest(
-    'V3 UserSmartWallet cancel reverts with bad contract signature',
-    UserSmartWalletV3Two,
+    'V4 UserSmartWallet cancel reverts with bad contract signature',
+    UserSmartWalletV4Two,
     'cancel',
     'send',
     [
@@ -4576,8 +4793,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV4,
     'getNextGenericActionID',
     'call',
     [
@@ -4602,8 +4819,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can call executeAction',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can call executeAction',
+    UserSmartWalletV4,
     'executeAction',
     'send',
     [
@@ -4616,7 +4833,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a Dai withdrawal custom action ID',
+    'V4 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -4643,7 +4860,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay cannot withdraw too much dai',
+    'V4 UserSmartWallet relay cannot withdraw too much dai',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -4663,7 +4880,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a USDC withdrawal custom action ID',
+    'V4 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -4691,7 +4908,7 @@ module.exports = {test: async function (provider, testingContext) {
 
 
   await runTest(
-    'V3 UserSmartWallet relay can call with two signatures to withdraw USDC',
+    'V4 UserSmartWallet relay can call with two signatures to withdraw USDC',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -4711,8 +4928,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get next generic batch action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get next generic batch action ID',
+    UserSmartWalletV4,
     'getNextGenericAtomicBatchActionID',
     'call',
     [
@@ -4741,8 +4958,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet bad executeActionWithAtomicBatchCalls emits CallFailure',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet bad executeActionWithAtomicBatchCalls emits CallFailure',
+    UserSmartWalletV4,
     'executeActionWithAtomicBatchCalls',
     'send',
     [
@@ -4763,8 +4980,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV4,
     'getNextGenericActionID',
     'call',
     [
@@ -4791,8 +5008,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can call executeAction to enter dai market',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can call executeAction to enter dai market',
+    UserSmartWalletV4,
     'executeAction',
     'send',
     [
@@ -4833,14 +5050,14 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can trigger repayAndDeposit to deposit all new funds',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can trigger repayAndDeposit to deposit all new funds',
+    UserSmartWalletV4,
     'repayAndDeposit'
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV4,
     'getNextGenericActionID',
     'call',
     [
@@ -4865,8 +5082,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can call executeAction to perform a borrow',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can call executeAction to perform a borrow',
+    UserSmartWalletV4,
     'executeAction',
     'send',
     [
@@ -4884,8 +5101,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWalletV4,
     'getNextCustomActionID',
     'call',
     [
@@ -4911,8 +5128,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V3 UserSmartWallet relay cannot withdraw max dai with an outstanding borrow',
-    UserSmartWalletV3,
+    'V4 UserSmartWallet relay cannot withdraw max dai with an outstanding borrow',
+    UserSmartWalletV4,
     'withdrawDai',
     'send',
     [
@@ -4930,6 +5147,292 @@ module.exports = {test: async function (provider, testingContext) {
     originalAddress
   )
 
+  await runTest(
+    'V4 UserSmartWallet can get an escape hatch action ID',
+    UserSmartWalletV4,
+    'getNextCustomActionID',
+    'call',
+    [
+      7, // SetEscapeHatch,
+      0,
+      constants.NULL_ADDRESS, // no recipient
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  let escapeHatchSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  let escapeHatchUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V4 UserSmartWallet relay cannot set an escape hatch with no account',
+    UserSmartWalletV4,
+    'setEscapeHatch',
+    'send',
+    [
+      constants.NULL_ADDRESS,
+      0,
+      escapeHatchUserSignature,
+      escapeHatchSignature
+    ],
+    false,
+    receipt => {
+      // TODO: verify logs
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V4 UserSmartWallet can get an escape hatch action ID',
+    UserSmartWalletV4,
+    'getNextCustomActionID',
+    'call',
+    [
+      7, // SetEscapeHatch,
+      0,
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  escapeHatchSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  escapeHatchUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V4 UserSmartWallet cannot call escape before escape hatch is set',
+    UserSmartWalletV4,
+    'escape',
+    'send',
+    [],
+    false,
+    receipt => {
+      // TODO: verify logs
+    }
+  )
+
+  await runTest(
+    'V4 UserSmartWallet relay can set an escape hatch',
+    UserSmartWalletV4,
+    'setEscapeHatch',
+    'send',
+    [
+      address,
+      0,
+      escapeHatchUserSignature,
+      escapeHatchSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V4 UserSmartWallet non-escape hatch account cannot call escape',
+    UserSmartWalletV4,
+    'escape',
+    'send',
+    [],
+    false,
+    receipt => {
+      // TODO: verify logs
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V4 UserSmartWallet escape hatch account can call escape',
+    UserSmartWalletV4,
+    'escape',
+    'send',
+    [],
+    true,
+    receipt => {
+      // TODO: verify logs
+    },
+    address
+  )
+
+  await runTest(
+    'V4 UserSmartWallet escape hatch account can call escape again',
+    UserSmartWalletV4,
+    'escape',
+    'send',
+    [],
+    true,
+    receipt => {
+      // TODO: verify logs
+    },
+    address
+  )
+
+  await runTest(
+    'V4 UserSmartWallet can get an escape hatch action ID',
+    UserSmartWalletV4,
+    'getNextCustomActionID',
+    'call',
+    [
+      8, // RemoveEscapeHatch,
+      0,
+      constants.NULL_ADDRESS,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  escapeHatchSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  escapeHatchUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V4 UserSmartWallet relay can remove an escape hatch',
+    UserSmartWalletV4,
+    'removeEscapeHatch',
+    'send',
+    [
+      0,
+      escapeHatchUserSignature,
+      escapeHatchSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V4 UserSmartWallet cannot call escape once escape hatch is removed',
+    UserSmartWalletV4,
+    'escape',
+    'send',
+    [],
+    false,
+    receipt => {
+      // TODO: verify logs
+    }
+  )
+
+  await runTest(
+    'V4 UserSmartWallet can get an escape hatch action ID',
+    UserSmartWalletV4,
+    'getNextCustomActionID',
+    'call',
+    [
+      9, // DisableEscapeHatch,
+      0,
+      constants.NULL_ADDRESS,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  escapeHatchSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  escapeHatchUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V4 UserSmartWallet relay can disable the escape hatch',
+    UserSmartWalletV4,
+    'permanentlyDisableEscapeHatch',
+    'send',
+    [
+      0,
+      escapeHatchUserSignature,
+      escapeHatchSignature
+    ],
+    true,
+    receipt => {
+      // TODO: verify logs
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V4 UserSmartWallet can get an escape hatch action ID',
+    UserSmartWalletV4,
+    'getNextCustomActionID',
+    'call',
+    [
+      7, // SetEscapeHatch,
+      0,
+      address,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  escapeHatchSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  escapeHatchUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V4 UserSmartWallet relay cannot set an escape hatch once disabled',
+    UserSmartWalletV4,
+    'setEscapeHatch',
+    'send',
+    [
+      address,
+      0,
+      escapeHatchUserSignature,
+      escapeHatchSignature
+    ],
+    false,
+    receipt => {
+      // TODO: verify logs
+    },
+    originalAddress
+  )
+
   // Initiate account recovery
   await runTest(
     'smart wallet account recovery can be initiated',
@@ -4937,7 +5440,7 @@ module.exports = {test: async function (provider, testingContext) {
     'initiateAccountRecovery',
     'send',
     [
-      UserSmartWalletV3.options.address,
+      UserSmartWalletV4.options.address,
       originalAddress,
       0 // extraTime in seconds
     ],
@@ -4954,7 +5457,7 @@ module.exports = {test: async function (provider, testingContext) {
     'recover',
     'send',
     [
-      UserSmartWalletV3.options.address,
+      UserSmartWalletV4.options.address,
       originalAddress
     ],
     false
@@ -4970,7 +5473,7 @@ module.exports = {test: async function (provider, testingContext) {
     'recover',
     'send',
     [
-      UserSmartWalletV3.options.address,
+      UserSmartWalletV4.options.address,
       originalAddress
     ],
     true,
@@ -4981,7 +5484,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   // COVERAGE TESTING - deployments
-  const DharmaUpgradeBeaconControllerManager = await runTest(
+  const DharmaUpgradeBeaconControllerManagerCoverage = await runTest(
     `DharmaUpgradeBeaconControllerManager contract deployment`,
     DharmaUpgradeBeaconControllerManagerDeployer,
     '',
@@ -5327,6 +5830,23 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    `DharmaKeyRingFactoryV2 can call getFirstKeyRingAdminActionID`,
+    DharmaKeyRingFactoryV2,
+    'getFirstKeyRingAdminActionID',
+    'call',
+    [address, address]
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV2 reverts when no new key ring supplied`,
+    DharmaKeyRingFactoryV2,
+    'getNextKeyRing',
+    'call',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
     `DharmaKeyRingFactoryV2 gets new key ring after a deploy with same input`,
     DharmaKeyRingFactoryV2,
     'getNextKeyRing',
@@ -5336,6 +5856,24 @@ module.exports = {test: async function (provider, testingContext) {
     value => {
       assert.ok(nextKeyRing !== value)
     }
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV2 can call newKeyRingAndDaiWithdrawal`,
+    DharmaKeyRingFactoryV2,
+    'newKeyRingAndDaiWithdrawal',
+    'send',
+    [address, address, address, 0, address, 0, '0x', '0x'],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV2 can call newKeyRingAndUSDCWithdrawal`,
+    DharmaKeyRingFactoryV2,
+    'newKeyRingAndUSDCWithdrawal',
+    'send',
+    [address, address, address, 0, address, 0, '0x', '0x'],
+    false
   )
 
   await runTest(
@@ -5408,7 +5946,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   const UpgradeBeaconProxyV1Implementation = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV3Artifact.abi,
+    DharmaSmartWalletImplementationV4Artifact.abi,
     UpgradeBeaconProxyV1.options.address
   )
 
@@ -6026,7 +6564,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaAccountRecoveryManagerCoverage,
     'initiateAccountRecovery',
     'send',
-    [UserSmartWalletV3.options.address, addressTwo, 0]
+    [UserSmartWalletV4.options.address, addressTwo, 0]
   )
 
   await runTest(
@@ -6118,7 +6656,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaAccountRecoveryManagerCoverage,
     'recover',
     'send',
-    [UserSmartWalletV3.options.address, addressTwo],
+    [UserSmartWalletV4.options.address, addressTwo],
     false
   )
 
@@ -6313,7 +6851,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer ownership from a non-owner`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'transferOwnership',
     'send',
     [addressTwo],
@@ -6324,7 +6862,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with null controller`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
     [constants.NULL_ADDRESS, address, addressTwo, 0],
@@ -6333,7 +6871,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with null beacon`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
     [address, constants.NULL_ADDRESS, addressTwo, 0],
@@ -6342,7 +6880,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with null implementation`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
     [address, addressTwo, constants.NULL_ADDRESS, 0],
@@ -6351,7 +6889,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with non-contract implementation`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
     [address, addressTwo, address, 0],
@@ -6360,7 +6898,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with massive extraTime`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
     [address, addressTwo, DharmaUpgradeBeaconControllerManager.options.address, constants.FULL_APPROVAL],
@@ -6369,7 +6907,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can initiate upgrade timelock`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
     [address, addressTwo, DharmaUpgradeBeaconControllerManager.options.address, 0]
@@ -6377,7 +6915,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can get an empty timelock`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'getTimelock',
     'call',
     ['0x01020304', '0x'],
@@ -6393,7 +6931,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can get an empty default timelock interval`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'getDefaultTimelockInterval',
     'call',
     ['0x01020304'],
@@ -6405,7 +6943,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can get an empty default timelock expiration`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'getDefaultTimelockExpiration',
     'call',
     ['0x01020304'],
@@ -6417,7 +6955,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot upgrade before timelock is complete`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'upgrade',
     'send',
     [address, addressTwo, DharmaUpgradeBeaconControllerManager.options.address],
@@ -6429,7 +6967,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot upgrade an unowned controller`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'upgrade',
     'send',
     [address, addressTwo, DharmaUpgradeBeaconControllerManager.options.address],
@@ -6438,7 +6976,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer controller ownership before accepting ownership`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'transferControllerOwnership',
     'send',
     [address, address],
@@ -6447,8 +6985,8 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot agree to accept ownership of null controller`,
-    DharmaUpgradeBeaconControllerManager,
-    'agreeToAcceptOwnership',
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'agreeToAcceptControllerOwnership',
     'send',
     [constants.NULL_ADDRESS, true],
     false
@@ -6456,15 +6994,15 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can agree to accept ownership`,
-    DharmaUpgradeBeaconControllerManager,
-    'agreeToAcceptOwnership',
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'agreeToAcceptControllerOwnership',
     'send',
     [address, true]
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate controller ownership transfer with null controller`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateTransferControllerOwnership',
     'send',
     [constants.NULL_ADDRESS, addressTwo, 0],
@@ -6473,7 +7011,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate controller ownership transfer with null new owner`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateTransferControllerOwnership',
     'send',
     [address, constants.NULL_ADDRESS, 0],
@@ -6482,7 +7020,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate controller ownership transfer if new owner has not accepted`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateTransferControllerOwnership',
     'send',
     [address, addressTwo, 0],
@@ -6491,7 +7029,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can initiate controller ownership transfer if new owner has accepted`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateTransferControllerOwnership',
     'send',
     [address, address, 0]
@@ -6499,7 +7037,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer controller ownership prior to timelock completion`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'transferControllerOwnership',
     'send',
     [address, address],
@@ -6511,7 +7049,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer unowned controller ownership`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'transferControllerOwnership',
     'send',
     [address, address],
@@ -6520,7 +7058,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot heartbeat from non-heartbeater`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'heartbeat',
     'send',
     [],
@@ -6531,13 +7069,13 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can heartbeat`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'heartbeat'
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot set new heartbeater to null address`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'newHeartbeater',
     'send',
     [constants.NULL_ADDRESS],
@@ -6546,36 +7084,18 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager owner can set new heartbeater`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'newHeartbeater',
     'send',
     [address]
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager cannot arm Adharma Contingency with null controller`,
-    DharmaUpgradeBeaconControllerManager,
-    'armAdharmaContingency',
-    'send',
-    [constants.NULL_ADDRESS, address, true],
-    false
-  )
-
-  await runTest(
-    `DharmaUpgradeBeaconControllerManager cannot arm Adharma Contingency with null beacon`,
-    DharmaUpgradeBeaconControllerManager,
-    'armAdharmaContingency',
-    'send',
-    [address, constants.NULL_ADDRESS, true],
-    false
-  )
-
-  await runTest(
     `DharmaUpgradeBeaconControllerManager cannot arm Adharma Contingency from non-owner when not expired`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
     'send',
-    [address, address, true],
+    [true],
     false,
     receipt => {},
     originalAddress
@@ -6583,123 +7103,118 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when not armed`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
     'send',
-    [address, address],
+    [],
     false
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager owner can arm an Adharma Contingency`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
     'send',
-    [address, address, true]
+    [true]
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager owner can arm fake Adharma Contingency on smart wallet`,
-    DharmaUpgradeBeaconControllerManager,
+    `DharmaUpgradeBeaconControllerManager owner can disarm Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, true]
+    [false]
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager owner can arm Adharma Contingency on key ring`,
-    DharmaUpgradeBeaconControllerManager,
+    `DharmaUpgradeBeaconControllerManager owner can re-arm Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
     'send',
-    [constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS, constants.KEY_RING_UPGRADE_BEACON_ADDRESS, true]
+    [true]
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency from non-owner when not expired`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
     'send',
-    [address, address],
+    [],
     false,
     receipt => {},
     originalAddress
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency on non-smart-wallet / key-ring`,
-    DharmaUpgradeBeaconControllerManager,
+    `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when it doesn't own controllers`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
     'send',
-    [address, address],
-    false
-  )
-
-  await runTest(
-    `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency on unowned key ring controller`,
-    DharmaUpgradeBeaconControllerManager,
-    'activateAdharmaContingency',
-    'send',
-    [constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS, constants.KEY_RING_UPGRADE_BEACON_ADDRESS],
+    [],
     false
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot roll back prior to first upgrade`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'rollback',
+    'send',
+    [address, address, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot exit Adharma Contingency when not active`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'exitAdharmaContingency',
     'send',
     [address, address],
     false
   )
 
+  /*
   await runTest(
-    `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when not active`,
-    DharmaUpgradeBeaconControllerManager,
-    'exitAdharmaContingency',
-    'send',
-    [address, address, address],
-    false
-  )
-
-  await runTest(
-    `DharmaUpgradeBeaconControllerManager can activate fake Adharma Contingency`,
-    DharmaUpgradeBeaconControllerManager,
+    `DharmaUpgradeBeaconControllerManager can activate Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS]
+    []
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager owner can arm fake Adharma Contingency again`,
-    DharmaUpgradeBeaconControllerManager,
+    `DharmaUpgradeBeaconControllerManager owner cannot arm Adharma Contingency while active`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, true]
+    [true]
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot activate Contingency when activated`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS],
+    [],
     false
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager owner can disarm Adharma Contingency`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, false]
+    [false]
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot exit Contingency before 48 hours`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, DharmaSmartWalletImplementationV3.options.address],
+    [
+      DharmaSmartWalletImplementationV4.options.address,
+      DharmaKeyRingImplementationV1.options.address
+    ],
     false
   )
 
@@ -6708,65 +7223,69 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot exit Contingency to null address`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, constants.NULL_ADDRESS],
+    [constants.NULL_ADDRESS, DharmaKeyRingImplementationV1.options.address],
     false
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot exit Contingency to non-contract address`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, address],
+    [address, address],
     false
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can exit Contingency after 48 hours`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, DharmaSmartWalletImplementationV3.options.address]
+    [
+      DharmaSmartWalletImplementationV4.options.address,
+      DharmaKeyRingImplementationV1.options.address
+    ]
   )
 
   await runTest(
-    `DharmaUpgradeBeaconControllerManager owner can arm fake Adharma Contingency again`,
-    DharmaUpgradeBeaconControllerManager,
+    `DharmaUpgradeBeaconControllerManager owner can arm Adharma Contingency again`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, true]
+    [true]
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can activate fake Adharma Contingency again`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS]
+    []
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can roll back from fake Adharma Contingency`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'rollback',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS]
+    [constants.UPGRADE_BEACON_CONTROLLER_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, 0]
   )
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can "roll forward" after roll back`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'rollback',
     'send',
     [constants.UPGRADE_BEACON_ADDRESS, constants.UPGRADE_BEACON_ADDRESS]
   )
+  */
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can get heartbeat status`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'heartbeatStatus',
     'call',
     [],
@@ -6777,8 +7296,61 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    `DharmaUpgradeBeaconControllerManager get contingency status when armed but not activated`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'contingencyStatus',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(value.armed)
+      assert.ok(!value.activated)
+      assert.strictEqual(value.activationTime, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager gets 0 for non-existent total implementations`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'getTotalPriorImplementations',
+    'call',
+    [address, address],
+    true,
+    value => {
+      assert.strictEqual(value, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot get a prior implementation with no index`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'getPriorImplementation',
+    'call',
+    [address, address, 100],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot rollback to implementation with no index`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'rollback',
+    'send',
+    [address, address, 100],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot block rollback to implementation with no index`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'blockRollback',
+    'send',
+    [address, address, 100],
+    false
+  )
+
+  await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockInterval with no selector`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0x00000000', 0, 0],
@@ -6787,7 +7359,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockInterval to modify interval over 8 weeks`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xe950c085', 5443200, 0],
@@ -6796,7 +7368,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot create timelock with excessive duration`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xe950c085', constants.FULL_APPROVAL, 0],
@@ -6805,7 +7377,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockInterval to set a timelock`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xe950c085', 10000, 5]
@@ -6813,7 +7385,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot shorten existing initiateModifyTimelockInterval timelock`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xe950c085', 10000, 0],
@@ -6822,7 +7394,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockInterval to change a duration`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xe950c085', 10001, 5]
@@ -6830,7 +7402,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockInterval to set a timelock on another function`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xaaaaaaaa', 10000, 0]
@@ -6838,7 +7410,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockInterval with no selector`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockInterval',
     'send',
     ['0x00000000', 0],
@@ -6847,7 +7419,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockInterval before timelock completion`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockInterval',
     'send',
     ['0xe950c085', 1000],
@@ -6856,7 +7428,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockExpiration with no selector`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0x00000000', 0, 0],
@@ -6865,7 +7437,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockExpiration to with expiration over one month`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0xe950c085', 5443200, 0],
@@ -6874,7 +7446,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockExpiration to modify expiration under one minute`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 30, 0],
@@ -6883,7 +7455,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockExpiration to set a timelock`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 300000, 0],
@@ -6891,7 +7463,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockExpiration to set a timelock on another function`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0xe950c085', 30, 0]
@@ -6899,7 +7471,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockExpiration with no selector`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockExpiration',
     'send',
     ['0x00000000', 0],
@@ -6908,7 +7480,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockExpiration before timelock completion`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 300],
@@ -6920,7 +7492,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can call modifyTimelockInterval`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockInterval',
     'send',
     ['0xaaaaaaaa', 10000]
@@ -6928,7 +7500,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager can call modifyTimelockExpiration`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 300000],
@@ -6936,12 +7508,65 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockExpiration if expiration is too short`,
-    DharmaUpgradeBeaconControllerManager,
+    DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockExpiration',
     'send',
     ['0xe950c085', 30],
     false
-  )  
+  )
+
+  const MockDharmaKeyRingFactory = await runTest(
+    `MockDharmaKeyRingFactory contract deployment`,
+    MockDharmaKeyRingFactoryDeployer,
+    '',
+    'deploy',
+    []
+  )
+
+  await runTest(
+    `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with no keys`,
+    MockDharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [1, 1, [], []],
+    false
+  )
+
+  await runTest(
+    `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with null address as key`,
+    MockDharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [1, 1, [constants.NULL_ADDRESS], [3]],
+    false
+  )
+
+  await runTest(
+    `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with non-dual key`,
+    MockDharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [1, 1, [address], [1]],
+    false
+  )
+
+  await runTest(
+    `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with admin threshold > 1`,
+    MockDharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [2, 1, [address], [3]],
+    false
+  )
+
+  await runTest(
+    `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with executor threshold > 1`,
+    MockDharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [1, 2, [address], [3]],
+    false
+  )
 
   await runTest(
     'Dharma Upgrade Beacon Controller can upgrade to AdharmaSmartWalletImplementation',
@@ -7001,6 +7626,33 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    `DharmaKeyRingFactoryV1 reverts when no new key ring supplied`,
+    DharmaKeyRingFactoryV1,
+    'getNextKeyRing',
+    'call',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV1 can call newKeyRingAndDaiWithdrawal`,
+    DharmaKeyRingFactoryV1,
+    'newKeyRingAndDaiWithdrawal',
+    'send',
+    [address, address, 0, address, 0, '0x', '0x'],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV1 can call newKeyRingAndUSDCWithdrawal`,
+    DharmaKeyRingFactoryV1,
+    'newKeyRingAndUSDCWithdrawal',
+    'send',
+    [address, address, 0, address, 0, '0x', '0x'],
+    false
+  )
+
+  await runTest(
     `DharmaKeyRingFactoryV1 can create an Adharma key ring`,
     DharmaKeyRingFactoryV1,
     'newKeyRing',
@@ -7010,7 +7662,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   const UserSmartWalletAdharma = new web3.eth.Contract(
     AdharmaSmartWalletImplementationArtifact.abi,
-    UserSmartWalletV3.options.address
+    UserSmartWalletV4.options.address
   )
 
   await runTest(
@@ -7048,17 +7700,9 @@ module.exports = {test: async function (provider, testingContext) {
     [address, 0, '0x', '0x']
   )
 
-  const MockAdharmaKeyRingFactory = await runTest(
-    `MockAdharmaKeyRingFactory contract deployment`,
-    MockAdharmaKeyRingFactoryDeployer,
-    '',
-    'deploy',
-    []
-  )
-
   await runTest(
-    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with no keys`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with no keys`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [0, 0, [], []],
@@ -7066,8 +7710,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with admin threshold of 0`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with admin threshold of 0`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [0, 1, [address], [3]],
@@ -7075,8 +7719,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with executor threshold of 0`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with executor threshold of 0`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [1, 0, [address], [3]],
@@ -7084,8 +7728,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring where length of keys and types are not equal`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring where length of keys and types are not equal`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [1, 1, [address, addressTwo], [3]],
@@ -7093,8 +7737,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with duplicate keys`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with duplicate keys`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [1, 1, [address, address], [3, 3]],
@@ -7102,8 +7746,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with no admin key`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with no admin key`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [1, 1, [address], [1]],
@@ -7111,8 +7755,25 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory cannot deploy an Adharma key ring with no standard key`,
-    MockAdharmaKeyRingFactory,
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with less admin keys than threshold`,
+    MockDharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [2, 1, [address], [3]],
+    false
+  )
+
+  await runTest(
+    `MockDharmaKeyRingFactory can deploy an Adharma key ring with multiple keys`,
+    MockDharmaKeyRingFactory,
+    'newKeyRing',
+    'send',
+    [2, 2, [address, addressTwo], [3, 3]]
+  )
+
+  await runTest(
+    `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with no standard key`,
+    MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
     [1, 1, [address], [2]],
@@ -7120,11 +7781,30 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `MockAdharmaKeyRingFactory can deploy an Adharma key ring with multiple keys`,
-    MockAdharmaKeyRingFactory,
-    'newKeyRing',
-    'send',
-    [2, 2, [address, addressTwo], [3, 3]]
+    `TimelockEdgecaseTester contract deployment edge case 1`,
+    TimelockEdgecaseTesterDeployer,
+    '',
+    'deploy',
+    [0],
+    false
+  )
+
+  await runTest(
+    `TimelockEdgecaseTester contract deployment edge case 2`,
+    TimelockEdgecaseTesterDeployer,
+    '',
+    'deploy',
+    [1],
+    false
+  )
+
+  await runTest(
+    `TimelockEdgecaseTester contract deployment edge case 3`,
+    TimelockEdgecaseTesterDeployer,
+    '',
+    'deploy',
+    [2],
+    false
   )
 
   const DharmaUpgradeMultisig = await runTest(
@@ -7739,6 +8419,908 @@ module.exports = {test: async function (provider, testingContext) {
     true,
     value => {
       assert.strictEqual(value, '1')
+    }
+  )
+
+  const DharmaEscapeHatchRegistry = await runTest(
+    `DharmaEscapeHatchRegistry contract deployment`,
+    DharmaEscapeHatchRegistryDeployer,
+    '',
+    'deploy'
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry confirms that an escape hatch does not exist until set`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatch',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(!value.exists)
+      assert.strictEqual(value.escapeHatch, constants.NULL_ADDRESS)
+    }
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can set the null address as an escape hatch account`,
+    DharmaEscapeHatchRegistry,
+    'setEscapeHatch',
+    'send',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can set an escape hatch account`,
+    DharmaEscapeHatchRegistry,
+    'setEscapeHatch',
+    'send',
+    [addressTwo]
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can get an escape hatch account once set`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatch',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(value.exists)
+      assert.strictEqual(value.escapeHatch, addressTwo)
+    }
+  )
+
+  let fallbackEscapeHatch = await web3.eth.call({
+      to: DharmaEscapeHatchRegistry.options.address,
+      from: address,
+      data: "0x"
+  })
+  
+  console.log(
+    ' ✓ DharmaEscapeHatchRegistry can get an escape hatch account using the fallback'
+  )
+  assert.strictEqual(
+    web3.eth.abi.decodeParameter('address', fallbackEscapeHatch),
+    addressTwo
+  )
+  passed++
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can get an escape hatch for a specific smart wallet`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatchForSmartWallet',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(value.exists)
+      assert.strictEqual(value.escapeHatch, addressTwo)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry cannot get an escape hatch the null address`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatchForSmartWallet',
+    'call',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can remove an escape hatch account`,
+    DharmaEscapeHatchRegistry,
+    'removeEscapeHatch'
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry confirms that an escape hatch is successfully removed`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatch',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(!value.exists)
+      assert.strictEqual(value.escapeHatch, constants.NULL_ADDRESS)
+    }
+  )
+
+  fallbackEscapeHatch = await web3.eth.call({
+      to: DharmaEscapeHatchRegistry.options.address,
+      from: address,
+      data: "0x"
+  })
+
+  console.log(
+    ' ✓ DharmaEscapeHatchRegistry can gets null address for removed escape hatch account using the fallback'
+  )
+  assert.strictEqual(
+    web3.eth.abi.decodeParameter('address', fallbackEscapeHatch),
+    constants.NULL_ADDRESS
+  )
+  passed++
+
+  await runTest(
+    `DharmaEscapeHatchRegistry will not fire an event when removing an unset escape hatch account`,
+    DharmaEscapeHatchRegistry,
+    'removeEscapeHatch'
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry confirms that escape hatch functionality is not initially disabled`,
+    DharmaEscapeHatchRegistry,
+    'hasDisabledEscapeHatchForSmartWallet',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(!value)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry cannot get disabled status for null address`,
+    DharmaEscapeHatchRegistry,
+    'hasDisabledEscapeHatchForSmartWallet',
+    'call',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can reset an escape hatch account`,
+    DharmaEscapeHatchRegistry,
+    'setEscapeHatch',
+    'send',
+    [ownerOne]
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can get an escape hatch account once reset`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatch',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(value.exists)
+      assert.strictEqual(value.escapeHatch, ownerOne)
+    }
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry setting an existing escape hatch account is a no-op`,
+    DharmaEscapeHatchRegistry,
+    'setEscapeHatch',
+    'send',
+    [ownerOne]
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry can disable the escape hatch mechanism`,
+    DharmaEscapeHatchRegistry,
+    'permanentlyDisableEscapeHatch'
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry confirms that escape hatch functionality is disabled`,
+    DharmaEscapeHatchRegistry,
+    'hasDisabledEscapeHatchForSmartWallet',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(value)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry confirms that an escape hatch is successfully removed when disabling`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatch',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(!value.exists)
+      assert.strictEqual(value.escapeHatch, constants.NULL_ADDRESS)
+    }
+  )
+
+  fallbackEscapeHatch = await web3.eth.call({
+      to: DharmaEscapeHatchRegistry.options.address,
+      from: address,
+      data: "0x"
+  })
+
+  console.log(
+    ' ✓ DharmaEscapeHatchRegistry can gets null address for removed escape hatch account after disabling using the fallback'
+  )
+  assert.strictEqual(
+    web3.eth.abi.decodeParameter('address', fallbackEscapeHatch),
+    constants.NULL_ADDRESS
+  )
+  passed++
+
+  await runTest(
+    `DharmaEscapeHatchRegistry confirms escape hatch is removed after disabling for for a specific smart wallet`,
+    DharmaEscapeHatchRegistry,
+    'getEscapeHatchForSmartWallet',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(!value.exists)
+      assert.strictEqual(value.escapeHatch, constants.NULL_ADDRESS)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry cannot set an escape hatch account once disabled`,
+    DharmaEscapeHatchRegistry,
+    'setEscapeHatch',
+    'send',
+    [ownerTwo],
+    false
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry cannot remove an escape hatch account once disabled`,
+    DharmaEscapeHatchRegistry,
+    'removeEscapeHatch',
+    'send',
+    [],
+    false
+  )
+
+  await runTest(
+    `DharmaEscapeHatchRegistry cannot re-disable an escape hatch account once disabled`,
+    DharmaEscapeHatchRegistry,
+    'permanentlyDisableEscapeHatch',
+    'send',
+    [],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager owner can start ownership transfer to multisig`,
+    DharmaAccountRecoveryManager,
+    'transferOwnership',
+    'send',
+    [DharmaAccountRecoveryMultisig.options.address]
+  )
+
+  rawData = DharmaAccountRecoveryManager.methods.acceptOwnership().encodeABI()
+  await runTest(
+    `DharmaAccountRecoveryMultisig can get a hash`,
+    DharmaAccountRecoveryMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      hash = value
+    }
+  )
+
+  // accept ownership
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig can call execute to accept ownership`,
+    DharmaAccountRecoveryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager owner is now set to multisig`,
+    DharmaAccountRecoveryManager,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaAccountRecoveryMultisig.options.address)
+    }
+  )
+
+  // TODO: test account recovery using the multisig?
+
+  // transfer ownership back
+  rawData = DharmaAccountRecoveryManager.methods.transferOwnership(address).encodeABI()
+  await runTest(
+    `DharmaAccountRecoveryMultisig can get a hash`,
+    DharmaAccountRecoveryMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      hash = value
+    }
+  )
+
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
+
+  await runTest(
+    `DharmaAccountRecoveryMultisig can call execute to transfer ownership back`,
+    DharmaAccountRecoveryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager EOA can accept ownership transfer from multisig`,
+    DharmaAccountRecoveryManager,
+    'acceptOwnership'
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManager owner is now set to EOA`,
+    DharmaAccountRecoveryManager,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  await runTest(
+    `DharmaKeyRegistryV2 owner can start ownership transfer to multisig`,
+    DharmaKeyRegistryV2,
+    'transferOwnership',
+    'send',
+    [DharmaKeyRegistryMultisig.options.address]
+  )
+
+  rawData = DharmaKeyRegistryV2.methods.acceptOwnership().encodeABI()
+  await runTest(
+    `DharmaKeyRegistryMultisig can get a hash`,
+    DharmaKeyRegistryMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      hash = value
+    }
+  )
+
+  // accept ownership
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
+
+  await runTest(
+    `DharmaKeyRegistryMultisig can call execute to accept ownership`,
+    DharmaKeyRegistryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaKeyRegistryV2 owner is now set to multisig`,
+    DharmaKeyRegistryV2,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaKeyRegistryMultisig.options.address)
+    }
+  )
+
+  // TODO: test setting a new key using the multisig?
+
+  // transfer ownership back
+  rawData = DharmaKeyRegistryV2.methods.transferOwnership(address).encodeABI()
+  await runTest(
+    `DharmaKeyRegistryMultisig can get a hash`,
+    DharmaKeyRegistryMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      hash = value
+    }
+  )
+
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
+
+  await runTest(
+    `DharmaKeyRegistryMultisig can call execute to transfer ownership back`,
+    DharmaKeyRegistryMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaKeyRegistryV2 EOA can accept ownership transfer from multisig`,
+    DharmaKeyRegistryV2,
+    'acceptOwnership'
+  )
+
+  await runTest(
+    `DharmaKeyRegistryV2 owner is now set to EOA`,
+    DharmaKeyRegistryV2,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner is initially set to an EOA`,
+    DharmaUpgradeBeaconControllerManager,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner can start ownership transfer to multisig`,
+    DharmaUpgradeBeaconControllerManager,
+    'transferOwnership',
+    'send',
+    [DharmaUpgradeMultisig.options.address]
+  )
+
+  rawData = DharmaUpgradeBeaconControllerManager.methods.acceptOwnership().encodeABI()
+  await runTest(
+    `DharmaUpgradeMultisig can get a hash`,
+    DharmaUpgradeMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      hash = value
+    }
+  )
+
+  // accept ownership
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
+
+  await runTest(
+    `DharmaUpgradeMultisig can call execute to accept ownership`,
+    DharmaUpgradeMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner is now set to multisig`,
+    DharmaUpgradeBeaconControllerManager,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, DharmaUpgradeMultisig.options.address)
+    }
+  )
+
+  // TODO: test an upgrade, rollback, etc with the multisig?
+
+  // transfer ownership back
+  rawData = DharmaUpgradeBeaconControllerManager.methods.transferOwnership(address).encodeABI()
+  await runTest(
+    `DharmaUpgradeMultisig can get a hash`,
+    DharmaUpgradeMultisig,
+    'getNextHash',
+    'call',
+    [rawData, address, executorGasLimit],
+    true,
+    value => {
+      hash = value
+    }
+  )
+
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
+
+  await runTest(
+    `DharmaUpgradeMultisig can call execute to transfer ownership back`,
+    DharmaUpgradeMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager EOA can accept ownership transfer from multisig`,
+    DharmaUpgradeBeaconControllerManager,
+    'acceptOwnership'
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner is now set to EOA`,
+    DharmaUpgradeBeaconControllerManager,
+    'owner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  // Transfer smart wallet controller ownership to coverage manager
+  await runTest(
+    `DharmaUpgradeBeaconController can transfer ownership to manager`,
+    DharmaUpgradeBeaconController,
+    'transferOwnership',
+    'send',
+    [DharmaUpgradeBeaconControllerManagerCoverage.options.address]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when it doesn't own keyring controller`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'activateAdharmaContingency',
+    'send',
+    [],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRingUpgradeBeaconController can transfer ownership to manager`,
+    DharmaKeyRingUpgradeBeaconController,
+    'transferOwnership',
+    'send',
+    [DharmaUpgradeBeaconControllerManagerCoverage.options.address]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can activate Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'activateAdharmaContingency'
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can get contingency status when activated`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'contingencyStatus',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(!value.armed)
+      assert.ok(value.activated)
+      //assert.strictEqual(value.activationTime, '?')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner can re-arm an active Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'armAdharmaContingency',
+    'send',
+    [true]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when already active`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'activateAdharmaContingency',
+    'send',
+    [],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager now gets a prior implementation count`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'getTotalPriorImplementations',
+    'call',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      DharmaUpgradeBeacon.options.address
+    ],
+    true,
+    value => {
+      assert.strictEqual(value, '1')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can get the initial prior implementation`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'getPriorImplementation',
+    'call',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      DharmaUpgradeBeacon.options.address,
+      0
+    ],
+    true,
+    value => {
+      assert.strictEqual(
+        value.priorImplementation,
+        AdharmaSmartWalletImplementation.options.address
+      )
+      assert.ok(value.rollbackAllowed)
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot call "exitAdharmaContingency" before 48 hours has elapsed`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'exitAdharmaContingency',
+    'send',
+    [
+      address,
+      address
+    ],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can rollback to initial prior implementation`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'rollback',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      DharmaUpgradeBeacon.options.address,
+      0
+    ]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager contingency status is exited after rollback`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'contingencyStatus',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(!value.armed)
+      assert.ok(!value.activated)
+      assert.strictEqual(value.activationTime, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot rollback to implementation with no index`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'rollback',
+    'send',
+    [address, address, 100],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager owner can re-arm an Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'armAdharmaContingency',
+    'send',
+    [true]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager contingency status shows armed`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'contingencyStatus',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(value.armed)
+      assert.ok(!value.activated)
+      assert.strictEqual(value.activationTime, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can rollback to initial prior implementation`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'rollback',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      DharmaUpgradeBeacon.options.address,
+      0
+    ]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager contingency status shows no longer armed`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'contingencyStatus',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(!value.armed)
+      assert.ok(!value.activated)
+      assert.strictEqual(value.activationTime, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can block rollback to prior implementation`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'blockRollback',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      DharmaUpgradeBeacon.options.address,
+      0
+    ]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot block a blocked rollback`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'blockRollback',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      DharmaUpgradeBeacon.options.address,
+      0
+    ],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot rollback to a blocked rollback`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'rollback',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      DharmaUpgradeBeacon.options.address,
+      0
+    ],
+    false
+  )
+
+  // advance time by 90 days
+  await advanceTime((60 * 60 * 24 * 90) + 5)
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager deadman switch can arm an Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'armAdharmaContingency',
+    'send',
+    [true],
+    true,
+    receipt => {},
+    originalAddress
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager deadman switch can activate an Adharma Contingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'activateAdharmaContingency',
+    'send',
+    [],
+    true,
+    receipt => {},
+    originalAddress
+  )
+
+  // advance time by 2 days
+  await advanceTime((60 * 60 * 24 * 2) + 5)
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot call exitAdharmaContingency with null implementation`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'exitAdharmaContingency',
+    'send',
+    [
+      constants.NULL_ADDRESS,
+      address
+    ],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager cannot call exitAdharmaContingency with non-contract implementation`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'exitAdharmaContingency',
+    'send',
+    [
+      address,
+      address
+    ],
+    false
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can call exitAdharmaContingency`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'exitAdharmaContingency',
+    'send',
+    [
+      DharmaSmartWalletImplementationV4.options.address,
+      DharmaKeyRingImplementationV1.options.address
+    ]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can have an EOA accept controller ownership`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'agreeToAcceptControllerOwnership',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      true
+    ]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can initiate timelock for transferring controller ownership`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'initiateTransferControllerOwnership',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      address,
+      0
+    ]
+  )
+
+  // advance time by 4 weeks
+  await advanceTime((60 * 60 * 24 * 7 * 4) + 5)
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can transfer controller ownership`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'transferControllerOwnership',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      address
+    ]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController can get new owner`,
+    DharmaUpgradeBeaconController,
+    'isOwner',
+    'call',
+    [],
+    true,
+    value => {
+      assert.ok(value)
     }
   )
 
