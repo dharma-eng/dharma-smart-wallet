@@ -128,7 +128,6 @@ module.exports = {test: async function (provider, testingContext) {
   )
   process.exit(0)
   */
-  
 
   const DharmaUpgradeBeaconController = new web3.eth.Contract(
     DharmaUpgradeBeaconControllerArtifact.abi,

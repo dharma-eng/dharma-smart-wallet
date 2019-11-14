@@ -57,7 +57,7 @@ interface DharmaUpgradeBeaconControllerManagerInterface {
   ) external;
 
   function exitAdharmaContingency(
-    address smartWalletImplementation, address keyRingImpmementation
+    address smartWalletImplementation, address keyRingImplementation
   ) external;
 
   function getTotalPriorImplementations(
@@ -67,6 +67,10 @@ interface DharmaUpgradeBeaconControllerManagerInterface {
   function getPriorImplementation(
     address controller, address beacon, uint256 index
   ) external view returns (address priorImplementation, bool rollbackAllowed);
+
+  function contingencyStatus() external view returns (
+    bool armed, bool activated, uint256 activationTime
+  );
 
   function heartbeatStatus() external view returns (
     bool expired, uint256 expirationTime

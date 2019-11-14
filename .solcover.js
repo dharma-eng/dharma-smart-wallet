@@ -9,6 +9,7 @@ module.exports = {
     'helpers/CodeHashCache.sol',
     'helpers/DharmaKeyRegistryV1Mimic.sol',
     'helpers/DharmaLocksmith.sol',
+    'helpers/DharmaUpgradeBeaconControllerManagerCreationVerifier.sol',
     'helpers/ECDSAGroup.sol',
     'helpers/FactoryFactFinder.sol',
     'helpers/ImmutableCreate2Factory.sol',
