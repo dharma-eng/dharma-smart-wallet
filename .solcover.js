@@ -41,6 +41,7 @@ module.exports = {
     'test/MockDharmaKeyRingFactory.sol',
     'test/DharmaTestingMultisig.sol',
     'test/MockAdharmaKeyRingFactory.sol',
+    'test/TimelockEdgecaseTester.sol',
     'test/TimelockTwoStepOwnableTestContract.sol',
     'test/UpgradeBeaconImplementationCheck.sol'
   ]

@@ -40,6 +40,8 @@ const DharmaEscapeHatchRegistryArtifact = require('../../build/contracts/DharmaE
 const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
 const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
 const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
+const TimelockEdgecaseTesterArtifact = require('../../build/contracts/TimelockEdgecaseTester.json')
+
 const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
 const MockDharmaKeyRingFactoryArtifact = require('../../build/contracts/MockDharmaKeyRingFactory.json')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
@@ -199,6 +201,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   UpgradeBeaconImplementationCheckDeployer.options.data = (
     UpgradeBeaconImplementationCheckArtifact.bytecode
+  )
+
+  const TimelockEdgecaseTesterDeployer = new web3.eth.Contract(
+    TimelockEdgecaseTesterArtifact.abi
+  )
+  TimelockEdgecaseTesterDeployer.options.data = (
+    TimelockEdgecaseTesterArtifact.bytecode
   )
 
   const MockCodeCheckDeployer = new web3.eth.Contract(
@@ -5780,6 +5789,23 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    `DharmaKeyRingFactoryV2 can call getFirstKeyRingAdminActionID`,
+    DharmaKeyRingFactoryV2,
+    'getFirstKeyRingAdminActionID',
+    'call',
+    [address, address]
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV2 reverts when no new key ring supplied`,
+    DharmaKeyRingFactoryV2,
+    'getNextKeyRing',
+    'call',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
     `DharmaKeyRingFactoryV2 gets new key ring after a deploy with same input`,
     DharmaKeyRingFactoryV2,
     'getNextKeyRing',
@@ -5789,6 +5815,24 @@ module.exports = {test: async function (provider, testingContext) {
     value => {
       assert.ok(nextKeyRing !== value)
     }
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV2 can call newKeyRingAndDaiWithdrawal`,
+    DharmaKeyRingFactoryV2,
+    'newKeyRingAndDaiWithdrawal',
+    'send',
+    [address, address, address, 0, address, 0, '0x', '0x'],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV2 can call newKeyRingAndUSDCWithdrawal`,
+    DharmaKeyRingFactoryV2,
+    'newKeyRingAndUSDCWithdrawal',
+    'send',
+    [address, address, address, 0, address, 0, '0x', '0x'],
+    false
   )
 
   await runTest(
@@ -7541,6 +7585,33 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    `DharmaKeyRingFactoryV1 reverts when no new key ring supplied`,
+    DharmaKeyRingFactoryV1,
+    'getNextKeyRing',
+    'call',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV1 can call newKeyRingAndDaiWithdrawal`,
+    DharmaKeyRingFactoryV1,
+    'newKeyRingAndDaiWithdrawal',
+    'send',
+    [address, address, 0, address, 0, '0x', '0x'],
+    false
+  )
+
+  await runTest(
+    `DharmaKeyRingFactoryV1 can call newKeyRingAndUSDCWithdrawal`,
+    DharmaKeyRingFactoryV1,
+    'newKeyRingAndUSDCWithdrawal',
+    'send',
+    [address, address, 0, address, 0, '0x', '0x'],
+    false
+  )
+
+  await runTest(
     `DharmaKeyRingFactoryV1 can create an Adharma key ring`,
     DharmaKeyRingFactoryV1,
     'newKeyRing',
@@ -7665,6 +7736,33 @@ module.exports = {test: async function (provider, testingContext) {
     'newKeyRing',
     'send',
     [1, 1, [address], [2]],
+    false
+  )
+
+  await runTest(
+    `TimelockEdgecaseTester contract deployment edge case 1`,
+    TimelockEdgecaseTesterDeployer,
+    '',
+    'deploy',
+    [0],
+    false
+  )
+
+  await runTest(
+    `TimelockEdgecaseTester contract deployment edge case 2`,
+    TimelockEdgecaseTesterDeployer,
+    '',
+    'deploy',
+    [1],
+    false
+  )
+
+  await runTest(
+    `TimelockEdgecaseTester contract deployment edge case 3`,
+    TimelockEdgecaseTesterDeployer,
+    '',
+    'deploy',
+    [2],
     false
   )
 
@@ -9136,8 +9234,53 @@ module.exports = {test: async function (provider, testingContext) {
     ]
   )
 
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can have an EOA accept controller ownership`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'agreeToAcceptControllerOwnership',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      true
+    ]
+  )
 
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can initiate timelock for transferring controller ownership`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'initiateTransferControllerOwnership',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      address,
+      0
+    ]
+  )
 
+  // advance time by 4 weeks
+  await advanceTime((60 * 60 * 24 * 7 * 4) + 5)
+
+  await runTest(
+    `DharmaUpgradeBeaconControllerManager can transfer controller ownership`,
+    DharmaUpgradeBeaconControllerManagerCoverage,
+    'transferControllerOwnership',
+    'send',
+    [
+      DharmaUpgradeBeaconController.options.address,
+      address
+    ]
+  )
+
+  await runTest(
+    `DharmaUpgradeBeaconController can get new owner`,
+    DharmaUpgradeBeaconController,
+    'isOwner',
+    'call',
+    [],
+    value => {
+      assert.ok(value)
+    }
+  )
 
   console.log(
     `completed ${passed + failed} test${passed + failed === 1 ? '' : 's'} ` +
