@@ -2790,8 +2790,8 @@ module.exports = {test: async function (provider, testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      constants.ESCAPE_HATCH_REGISTRY_ADDRESS,
+      '0x',
       0
     ],
     true,
@@ -2806,6 +2806,47 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   let executeActionUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V4 UserSmartWallet cannot call executeAction and target Escape Hatch Registry',
+    UserSmartWalletV4,
+    'executeAction',
+    'send',
+    [
+      constants.ESCAPE_HATCH_REGISTRY_ADDRESS,
+      '0x',
+      0,
+      executeActionUserSignature,
+      executeActionSignature
+    ],
+    false
+  )
+
+  await runTest(
+    'V4 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV4,
+    'getNextGenericActionID',
+    'call',
+    [
+      DAI.options.address,
+      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  executeActionSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
     addressTwo
   )
@@ -3931,19 +3972,6 @@ module.exports = {test: async function (provider, testingContext) {
     },
     originalAddress
   )
-
-
-
-
-
-
-
-
-
-
-
-
-
 
   await runTest(
     'V4 UserSmartWallet cancel reverts with bad signature',
@@ -5236,6 +5264,19 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'V4 UserSmartWallet escape hatch account can call escape',
+    UserSmartWalletV4,
+    'escape',
+    'send',
+    [],
+    true,
+    receipt => {
+      // TODO: verify logs
+    },
+    address
+  )
+
+  await runTest(
+    'V4 UserSmartWallet escape hatch account can call escape again',
     UserSmartWalletV4,
     'escape',
     'send',
@@ -9277,6 +9318,7 @@ module.exports = {test: async function (provider, testingContext) {
     'isOwner',
     'call',
     [],
+    true,
     value => {
       assert.ok(value)
     }

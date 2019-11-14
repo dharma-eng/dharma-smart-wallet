@@ -14,7 +14,7 @@ contract TimelockEdgecaseTester is Timelocker {
   bytes4 private constant _MODIFY_TIMELOCK_INTERVAL_SELECTOR = bytes4(
     0xe950c085
   );
- 
+
   // Store modifyTimelockExpiration function selector as a constant.
   bytes4 private constant _MODIFY_TIMELOCK_EXPIRATION_SELECTOR = bytes4(
     0xd7ce3c6f
