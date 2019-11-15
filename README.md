@@ -29,25 +29,27 @@ The **Dharma Key Ring** is an N/M "multisig" smart contract, controlled and conf
 These contracts have been audited by Trail of Bits - <a href="https://github.com/trailofbits/publications/blob/master/reviews/dharma-smartwallet.pdf" target="_blank">see their security assessment</a> for more information.
 
 ## Table of Contents
-- [Contract Deployment Addresses & Verified Source Code](#contract-deployment-addresses-&-verified-source-code)
+- [Contract Deployment Addresses and Verified Source Code](#contract-deployment-addresses-and-verified-source-code)
 - [Overview](#overview)
 - [Install](#install)
 - [Usage](#usage)
 - [Example Contracts and Notable Transactions](#example-contracts-and-notable-transactions)
 - [Additional Information](#additional-information)
 
-## Contract Deployment Addresses & Verified Source Code
-| Core Contracts                                                                                                                                  | Implementations                                                                                                                              | Factories                                                                                                                             |
-|-------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
-| <a href="https://etherscan.io/address/0x00000000008a10a98969a000d1c0aba90f858d6a#code" target="_blank">DharmaUpgradeBeaconControllerManager</a> |                                                             Dharma Smart Wallet                                                              |                                                         Dharma Smart Wallet                                                           |
-| <a href="https://etherscan.io/address/0x00000000002226c940b74d674b85e4be05539663#code" target="_blank">DharmaUpgradeBeaconController</a>        | <a href="https://etherscan.io/address/0x00000000009f22da6feb6735614563b9af0339fb#code" target="_blank">AdharmaSmartWalletImplementation</a>  | <a href="https://etherscan.io/address/0xfc00c80b0000007f73004edb00094cad80626d8d#code" target="_blank">DharmaSmartWalletFactoryV1</a> |
-| <a href="https://etherscan.io/address/0x000000000026750c571ce882b17016557279adaa#code" target="_blank">DharmaUpgradeBeacon</a>                  | <a href="https://etherscan.io/address/0x0000000010a653849f221a573e00f3a37c8c4082#code" target="_blank">DharmaSmartWalletImplementationV1</a> | DharmaSmartWalletFactoryV2                                                                                                            |
-| <a href="https://etherscan.io/address/0x00000000011df015e8ad00d7b2486a88c2eb8210#code" target="_blank">DharmaKeyRingUpgradeBeaconController</a> | <a href="https://etherscan.io/address/0x000000000088387c42fe85a60df4dce8e34eea4e#code" target="_blank">DharmaSmartWalletImplementationV2</a> |                                                                                                                                       |
-| <a href="https://etherscan.io/address/0x0000000000bda2152794ac8c76b2dc86cba57cad#code" target="_blank">DharmaKeyRingUpgradeBeacon</a>           | <a href="https://etherscan.io/address/0x0000000000861ff98a332571edd7e6ef73ab2b2b#code" target="_blank">DharmaSmartWalletImplementationV3</a> |                                                           Dharma Key Ring                                                             |
-| <a href="https://etherscan.io/address/0x000000000067503c398f4c9652530dbc4ea95c02#code" target="_blank">DharmaUpgradeBeaconEnvoy</a>             |                                                                                                                                              | <a href="https://etherscan.io/address/0x00dd005247b300f700cfdff89c00e2acc94c7b00#code" target="_blank">DharmaKeyRingFactoryV1</a>     |
-| <a href="https://etherscan.io/address/0x000000005d7065eb9716a410070ee62d51092c98#code" target="_blank">DharmaKeyRegistryV1</a>                  |                                                               Dharma Key Ring                                                                | <a href="https://etherscan.io/address/0x2484000059004afb720000dc738434fa6200f49d#code" target="_blank">DharmaKeyRingFactoryV2</a>     |
-| <a href="https://etherscan.io/address/0x000000000d38df53b45c5733c7b34000de0bdf52#code" target="_blank">DharmaKeyRegistryV2</a>                  | <a href="https://etherscan.io/address/0x000000000053d1F0F8aA88b9001Bec1B49445B3c#code" target="_blank">AdharmaKeyRingImplementation</a>      | DharmaKeyRingFactoryV3                                                                                                                |
-| <a href="https://etherscan.io/address/0x00000000004cda75701eea02d1f2f9bdce54c10d#code" target="_blank">DharmaAccountRecoveryManager</a>         | <a href="https://etherscan.io/address/0x00000000ea0007cdab60e07437e59e9cc41c2e49#code" target="_blank">DharmaKeyRingImplementationV1</a>     |                                                                                                                                       |
+## Contract Deployment Addresses and Verified Source Code
+
+| Core Contracts                                                                                                                                  | Implementations                                                                                                                              | Factories                                                                                                                                                   |
+|-------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| <a href="https://etherscan.io/address/0x00000000008a10a98969a000d1c0aba90f858d6a#code" target="_blank">DharmaUpgradeBeaconControllerManager</a> |                                                             Dharma Smart Wallet                                                              |                                                                    Dharma Smart Wallet                                                                      |
+| <a href="https://etherscan.io/address/0x00000000002226c940b74d674b85e4be05539663#code" target="_blank">DharmaUpgradeBeaconController</a>        | <a href="https://etherscan.io/address/0x00000000009f22da6feb6735614563b9af0339fb#code" target="_blank">AdharmaSmartWalletImplementation</a>  | <a href="https://etherscan.io/address/0xfc00c80b0000007f73004edb00094cad80626d8d#code" target="_blank">DharmaSmartWalletFactoryV1</a>                       |
+| <a href="https://etherscan.io/address/0x000000000026750c571ce882b17016557279adaa#code" target="_blank">DharmaUpgradeBeacon</a>                  | <a href="https://etherscan.io/address/0x0000000010a653849f221a573e00f3a37c8c4082#code" target="_blank">DharmaSmartWalletImplementationV1</a> | [DharmaSmartWalletFactoryV2](https://github.com/dharma-eng/dharma-smart-wallet/blob/master/contracts/factories/smart-wallet/DharmaSmartWalletFactoryV2.sol) |
+| <a href="https://etherscan.io/address/0x00000000011df015e8ad00d7b2486a88c2eb8210#code" target="_blank">DharmaKeyRingUpgradeBeaconController</a> | <a href="https://etherscan.io/address/0x000000000088387c42fe85a60df4dce8e34eea4e#code" target="_blank">DharmaSmartWalletImplementationV2</a> |                                                                                                                                                             |
+| <a href="https://etherscan.io/address/0x0000000000bda2152794ac8c76b2dc86cba57cad#code" target="_blank">DharmaKeyRingUpgradeBeacon</a>           | <a href="https://etherscan.io/address/0x0000000000861ff98a332571edd7e6ef73ab2b2b#code" target="_blank">DharmaSmartWalletImplementationV3</a> |                                                                      Dharma Key Ring                                                                        |
+| <a href="https://etherscan.io/address/0x000000000067503c398f4c9652530dbc4ea95c02#code" target="_blank">DharmaUpgradeBeaconEnvoy</a>             | <a href="https://etherscan.io/address/0x00000000004f319450e1e1ce5e40813e7e1fe0b4#code" target="_blank">DharmaSmartWalletImplementationV4</a> | <a href="https://etherscan.io/address/0x00dd005247b300f700cfdff89c00e2acc94c7b00#code" target="_blank">DharmaKeyRingFactoryV1</a>                           |
+| <a href="https://etherscan.io/address/0x000000005d7065eb9716a410070ee62d51092c98#code" target="_blank">DharmaKeyRegistryV1</a>                  |                                                                                                                                              | <a href="https://etherscan.io/address/0x2484000059004afb720000dc738434fa6200f49d#code" target="_blank">DharmaKeyRingFactoryV2</a>                           |
+| <a href="https://etherscan.io/address/0x000000000d38df53b45c5733c7b34000de0bdf52#code" target="_blank">DharmaKeyRegistryV2</a>                  |                                                               Dharma Key Ring                                                                | [DharmaKeyRingFactoryV3](https://github.com/dharma-eng/dharma-smart-wallet/blob/master/contracts/factories/key-ring/DharmaKeyRingFactoryV3.sol)             |
+| <a href="https://etherscan.io/address/0x00000000004cda75701eea02d1f2f9bdce54c10d#code" target="_blank">DharmaAccountRecoveryManager</a>         | <a href="https://etherscan.io/address/0x000000000053d1F0F8aA88b9001Bec1B49445B3c#code" target="_blank">AdharmaKeyRingImplementation</a>      |                                                                                                                                                             |
+| <a href="https://etherscan.io/address/0x00000000005280b515004b998a944630b6c663f8#code" target="_blank">DharmaEscapeHatchRegistry</a>            | <a href="https://etherscan.io/address/0x00000000ea0007cdab60e07437e59e9cc41c2e49#code" target="_blank">DharmaKeyRingImplementationV1</a>     |                                                                                                                                                             |
 
 ## Overview
 The Dharma Smart Wallet and Dharma Key Ring are designed with the following assumptions in mind:
@@ -83,13 +85,13 @@ Both the Dharma Smart Wallet and the Dharma Key Ring are upgradeable:
 - Each [Upgrade Beacon Controller](https://github.com/dharma-eng/dharma-smart-wallet/blob/master/contracts/upgradeability/DharmaUpgradeBeaconController.sol) is an ownable contract that emits events related to each upgrade, enforces some conditions as to what upgrades are allowable, and enables the current owner of the controller to transfer ownership to a new owner.
 - The [Dharma Upgrade Beacon Controller Manager](https://github.com/dharma-eng/dharma-smart-wallet/blob/master/contracts/upgradeability/DharmaUpgradeBeaconControllerManager.sol) will own each Upgrade Beacon Controller, and can also support other, future upgrade beacon controllers. It enforces configurable time-locks for each protected function - these include functions for making upgrades, for transferring ownership of controllers, and for modifying the default timelock intervals and other parameters.
 - While all new upgrades have a seven-day timelock, there are two notable exceptions:
-  - If a bug is introduced in a new upgrade, the Dharma Upgrade Beacon Controller Manager can immediately "downgrade" and roll back to the last implementation.
-  - If a critical vulnerability is discovered, or if 90 days go by without a "heartbeat" being triggered on the Dharma Upgrade Beacon Controller Manager, an "[Adharma Contingency](https://github.com/dharma-eng/dharma-smart-wallet/blob/master/contracts/implementations/smart-wallet/AdharmaSmartWalletImplementation.sol)" upgrade can be executed on the smart wallet or the key ring. These implementations strip out all but the most basic functionality and give the user direct, singular control over their smart wallet and key ring contracts - basically, it ensures that users can recover their funds, no matter what. A new upgrade can be performed by the Dharma Upgrade Beacon Controller Manager after 48 hours in the contingency state.
+  - If a bug is introduced in a new upgrade, the Dharma Upgrade Beacon Controller Manager can immediately "downgrade" and roll back to a prior implementation (with the exception of implementations that have been explicitly blocked due to discovered vulnerabilities or other undesired features).
+  - If a critical vulnerability is discovered, or if 90 days go by without a "heartbeat" being triggered on the Dharma Upgrade Beacon Controller Manager, an "[Adharma Contingency](https://github.com/dharma-eng/dharma-smart-wallet/blob/master/contracts/implementations/smart-wallet/AdharmaSmartWalletImplementation.sol)" upgrade can be executed on both the smart wallet and the key ring simultaneously. These implementations strip out all but the most basic functionality and give the user direct, singular control over their smart wallet and key ring contracts - basically, it ensures that users can recover their funds, no matter what. A new upgrade can be performed by the Dharma Upgrade Beacon Controller Manager after 48 hours in the contingency state.
 - Prior to each upgrade, a prospective implementation needs to first be deployed and registered as a potential upgrade candidate. This gives the community a chance to review the implementation, and to raise any potential concerns or opt-out of the upgrade by withdrawing their funds.
-- Once the top-level upgradeability management contract suite has been more thoroughly tested, ownership of each controller will be transferred to the Dharma Upgrade Beacon Controller Manager - **note that upgradeability is currently managed directly via a secure private key, but that a switch to a multisig-owned Upgrade Beacon Controller Manager is planned in the coming weeks.**
+- The Dharma Escape Hatch is an opt-in feature that enables a smart wallet to call into the [Dharma Escape Hatch Registry](https://github.com/dharma-eng/dharma-smart-wallet/blob/master/contracts/registries/DharmaEscapeHatchRegistry.sol) and designate an "escape hatch" account that can sweep the entire balance from the wallet by [calling into the `escape()` function](https://github.com/dharma-eng/dharma-smart-wallet/blob/master/contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV4.sol#L728) directly. This gives users with an existing, secure key the option to exit the system at any point without needing to first secure Dharma's approval.
 
 ## Install
-To install locally, you'll need Node.js 10+ and Yarn *(or npm)*. To get everything set up:
+To install locally, you'll need Node.js 10 through 12 and Yarn *(or npm)*. To get everything set up:
 ```sh
 $ git clone https://github.com/dharma-eng/dharma-smart-wallet.git
 $ cd dharma-smart-wallet
@@ -108,10 +110,11 @@ $ yarn stop
 
 You can also run code coverage if you like:
 ```sh
+$ yarn build
 $ yarn coverage
 ```
 
-There is also an option to run tests against a fork of mainnet - be warned that these tests take a long time.
+There is also an option to run tests against a fork of mainnet - be warned that these tests take a _very long_ time.
 ```sh
 $ yarn forkStart
 $ yarn test
@@ -120,6 +123,7 @@ $ yarn stop
 
 Finally, there is an option to run code coverage against a mainnet fork (same caveat as above):
 ```sh
+$ yarn build
 $ yarn forkCoverage
 ```
 
@@ -136,6 +140,8 @@ Notable Transactions:
 - <a href="https://etherscan.io/tx/0xcdf785050d7cd41a30eee0666aca312fd6254189d981a55fa3a18cab2fb3f624#eventlog" target="_blank">V0 implementation set on Key Ring Upgrade Beacon</a>
 - <a href="https://etherscan.io/tx/0xbe6a44535505b0409820fe4e2c1cec4adc6a9abde8ea0287960c899e5b149105#eventlog" target="_blank">V1 implementation set on Key Ring Upgrade Beacon</a>
 - <a href="https://etherscan.io/tx/0x7d7a5595d1e005ddf5ec26e495be3a134f0f308985319d406c0f3097dadce2ba#eventlog" target="_blank">V3 implementation set on Smart Wallet Upgrade Beacon</a>
+- <a href="https://etherscan.io/tx/0xd18047f130ceea515897eab2442fce1244f7154aeed76cb4983ab6fa23591cbf#eventlog" target="_blank">Dharma Account Recovery Manager ownership transferred to multisig</a>
+- <a href="https://etherscan.io/tx/0x6c55fee5a433fb883a7963537ae6c3d3ff252e85c835c214f06ae7284cac68ff#eventlog" target="_blank">Dharma Key Registry V2 ownership transferred to multisig</a>
 
 ## Additional Information
-Have any questions or feedback? Join the conversation in the <a href="https://discordapp.com/invite/qvKTDgR" target="_blank">Dharma_HQ Discord server</a>.
+Have any questions or feedback? Join the conversation in the <a href="https://discordapp.com/invite/qvKTDgR" target="_blank">Dharma_HQ Discord server</a>. Also, see the "<a href="https://blog.dharma.io/why-smart-wallets-should-catch-your-interest-c85e4401b89a" target="_blank">Why Smart Wallets Should Catch Your Interest</a>" article for a more informal discussion around some of the motivations, features, and design decisions of the Dharma Smart Wallet.
