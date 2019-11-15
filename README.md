@@ -6,7 +6,7 @@
 
 [![Smart Wallet Version](https://img.shields.io/endpoint?url=https%3A%2F%2Fdharma-version-api.netlify.com%2F.netlify%2Ffunctions%2Fserver%3Ftarget%3Dsmartwallet)](https://etherscan.io/address/0x0000000000861ff98a332571edd7e6ef73ab2b2b#code)
 [![Key Ring Version](https://img.shields.io/endpoint?url=https%3A%2F%2Fdharma-version-api.netlify.com%2F.netlify%2Ffunctions%2Fserver%3Ftarget%3Dkeyring)](https://etherscan.io/address/0x00000000ea0007cdab60e07437e59e9cc41c2e49#code)
-![GitHub](https://img.shields.io/github/license/dharma-eng/dharma-smart-wallet.svg)
+[![License](https://img.shields.io/github/license/dharma-eng/dharma-smart-wallet.svg)](https://github.com/dharma-eng/dharma-smart-wallet/blob/master/LICENSE.md)
 [![Build Status](https://img.shields.io/travis/dharma-eng/dharma-smart-wallet)](https://travis-ci.org/dharma-eng/dharma-smart-wallet)
 [![Coverage](https://img.shields.io/coveralls/github/dharma-eng/dharma-smart-wallet)](https://coveralls.io/github/dharma-eng/dharma-smart-wallet)
 [![Audit](https://img.shields.io/badge/audited%20by-Trail%20of%20Bits-red)](https://github.com/trailofbits/publications/blob/master/reviews/dharma-smartwallet.pdf)
