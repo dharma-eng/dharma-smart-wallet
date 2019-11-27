@@ -141,7 +141,7 @@ Notable Transactions:
 - <a href="https://etherscan.io/tx/0xbe6a44535505b0409820fe4e2c1cec4adc6a9abde8ea0287960c899e5b149105#eventlog" target="_blank">V1 implementation set on Key Ring Upgrade Beacon</a>
 - <a href="https://etherscan.io/tx/0x7d7a5595d1e005ddf5ec26e495be3a134f0f308985319d406c0f3097dadce2ba#eventlog" target="_blank">V3 implementation set on Smart Wallet Upgrade Beacon</a>
 - <a href="https://etherscan.io/tx/0xd18047f130ceea515897eab2442fce1244f7154aeed76cb4983ab6fa23591cbf#eventlog" target="_blank">Dharma Account Recovery Manager ownership transferred to multisig</a>
-- <a href="https://etherscan.io/tx/0x6c55fee5a433fb883a7963537ae6c3d3ff252e85c835c214f06ae7284cac68ff#eventlog" target="_blank">Dharma Key Registry V2 ownership transferred to multisig</a>]
+- <a href="https://etherscan.io/tx/0x6c55fee5a433fb883a7963537ae6c3d3ff252e85c835c214f06ae7284cac68ff#eventlog" target="_blank">Dharma Key Registry V2 ownership transferred to multisig</a>
 - <a href="https://etherscan.io/tx/0x2b910669067659870ad4ab623e77527ee50c67ffe1200dffe8b2e768c9053f96#eventlog" target="_blank">V4 implementation set on Smart Wallet Upgrade Beacon</a>
 - <a href="https://etherscan.io/tx/0xdb36f04570088e41633e41e0102a15f4172d9c72155720b921a9a7642288219c#eventlog" target="_blank">Key Ring Upgrade Beacon Controller ownership transferred to Upgrade Beacon Controller Manager</a>
 - <a href="https://etherscan.io/tx/0x84493c801433d32831e45aa114fec5027dfd9519a3b6e66950e66ae3f6d248c1#eventlog" target="_blank">Smart Wallet Upgrade Beacon Controller ownership transferred to Upgrade Beacon Controller Manager</a>
