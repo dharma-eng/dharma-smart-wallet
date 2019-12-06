@@ -23,6 +23,7 @@ module.exports = {
     'implementations/smart-wallet/DharmaSmartWalletImplementationV2.sol',
     'implementations/smart-wallet/DharmaSmartWalletImplementationV3.sol',
     'implementations/smart-wallet/DharmaSmartWalletImplementationV5.sol',
+    'implementations/smart-wallet/DharmaSmartWalletImplementationVX.sol',
     'mock/MockCodeCheck.sol',
     'mock/RelayContract.sol',
     'mock/RelayContractV2.sol',

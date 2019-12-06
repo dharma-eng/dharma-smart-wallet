@@ -8,11 +8,12 @@ interface DharmaSmartWalletImplementationV0Interface {
   // Fires when an error occurs as part of an attempted action.
   event ExternalError(address indexed source, string revertReason);
 
-  // DAI + USDC are the only assets initially supported (include ETH for later).
+  // The smart wallet recognizes DAI, USDC, ETH, and SAI as supported assets.
   enum AssetType {
     DAI,
     USDC,
-    ETH
+    ETH,
+    SAI
   }
 
   // Actions, or protected methods (i.e. not deposits) each have an action type.

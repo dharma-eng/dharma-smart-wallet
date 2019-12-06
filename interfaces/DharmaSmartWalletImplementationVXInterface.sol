@@ -1,7 +1,7 @@
 pragma solidity 0.5.11;
 
 
-interface DharmaSmartWalletImplementationV5Interface {
+interface DharmaSmartWalletImplementationVXInterface {
   function borrowDai(
     uint256 amount,
     address recipient,
