@@ -13,7 +13,7 @@
     "js-sha256": "^0.9.0",
     "solhint": "^2.3.0",
     "solidity-coverage": "0.6.0-beta.5",
-    "truffle": "^5.0.22",
+    "truffle": "^5.1.3",
     "web3": "1.2.1"
   },
   "scripts": {

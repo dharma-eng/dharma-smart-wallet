@@ -4,6 +4,7 @@ module.exports = {
   compileCommand: 'node --max-old-space-size=4096 ../node_modules/.bin/truffle compile',
   copyPackages: ['web3'],
   skipFiles: [
+    'account-recovery/DharmaAccountRecoveryManager.sol',
     'account-recovery/DharmaAccountRecoveryManagerV2.sol',
     'factories/key-ring/DharmaKeyRingFactoryV3.sol',
     'factories/smart-wallet/DharmaSmartWalletFactoryV2.sol',
@@ -17,6 +18,7 @@ module.exports = {
     'helpers/IndestructibleRegistry.sol',
     'helpers/RelayMigrator.sol',
     'helpers/SmartWalletFactoryV1UserSigningKeyUpdater.sol',
+    'helpers/Timelocker.sol',
     'helpers/TimelockerV2.sol',
     'implementations/key-ring/DharmaKeyRingImplementationV0.sol',
     'implementations/key-ring/DharmaKeyRingImplementationV2.sol',
