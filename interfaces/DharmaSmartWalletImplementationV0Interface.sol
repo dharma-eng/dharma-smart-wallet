@@ -22,12 +22,13 @@ interface DharmaSmartWalletImplementationV0Interface {
     SetUserSigningKey,
     Generic,
     GenericAtomicBatch,
-    DAIWithdrawal,
+    SAIWithdrawal,
     USDCWithdrawal,
     ETHWithdrawal,
     SetEscapeHatch,
     RemoveEscapeHatch,
     DisableEscapeHatch,
+    DAIWithdrawal,
     DAIBorrow,
     USDCBorrow
   }
@@ -64,13 +65,12 @@ interface DharmaSmartWalletImplementationV0Interface {
     bytes calldata dharmaSignature
   ) external;
 
-  // Note: function selector same as V0/V1 but returns two additional arguments.
   function getBalances() external returns (
-    uint256 daiBalance,
+    uint256 saiBalance,
     uint256 usdcBalance,
     uint256 etherBalance,
-    uint256 cDaiUnderlyingDaiBalance,
-    uint256 cUsdcUnderlyingUsdcBalance,
+    uint256 cSAIUnderlyingSaiBalance,
+    uint256 cUSDCUnderlyingUSDCBalance,
     uint256 cEtherUnderlyingEtherBalance
   );
 

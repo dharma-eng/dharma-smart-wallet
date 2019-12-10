@@ -21,7 +21,7 @@ contract DharmaAccountRecoveryMultisig {
 
   // The Account Recovery Manager is the only account the multisig can call.
   address private constant _DESTINATION = address(
-    0x00000000004cDa75701EeA02D1F2F9BDcE54C10D
+    0x0000000000DfEd903aD76996FC07BF89C0127B1E
   );
 
   // The threshold is an exact number of valid signatures that must be supplied.

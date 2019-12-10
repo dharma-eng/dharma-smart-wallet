@@ -10,39 +10,36 @@ import "../../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
 import "../../../interfaces/DharmaSmartWalletImplementationV1Interface.sol";
 import "../../../interfaces/DharmaSmartWalletImplementationV3Interface.sol";
 import "../../../interfaces/DharmaSmartWalletImplementationV4Interface.sol";
-import "../../../interfaces/DharmaSmartWalletImplementationV5Interface.sol";
 import "../../../interfaces/CTokenInterface.sol";
 import "../../../interfaces/USDCV1Interface.sol";
 import "../../../interfaces/ComptrollerInterface.sol";
 import "../../../interfaces/DharmaKeyRegistryInterface.sol";
 import "../../../interfaces/DharmaEscapeHatchRegistryInterface.sol";
 import "../../../interfaces/ERC1271.sol";
+import "../../../interfaces/SaiToDaiMigrator.sol";
 
 
 /**
- * @title DharmaSmartWalletImplementationV5
+ * @title DharmaSmartWalletImplementationV6
  * @author 0age
- * @notice The V5 implementation for the Dharma smart wallet is a non-custodial,
+ * @notice The V6 implementation for the Dharma smart wallet is a non-custodial,
  * meta-transaction-enabled wallet with helper functions to facilitate lending
  * funds using CompoundV2, and with a security backstop provided by Dharma Labs
- * prior to making withdrawals. It makes a few minor fixes and changes to the V4
- * implementation, including renaming Dai-related variables to Sai (NOTE: THE
- * INTERFACE STILL ALLOWS FOR SAI WITHDRAWALS VIA EITHER OF `withdrawSai` OR
- * `withdrawDai`) and using version 2 of the Account Recovery Manager (which
- * separates various roles into dedicated role bearer accounts). It contains
- * methods to support account recovery and generic actions, including in an
- * atomic batch. The smart wallet instances utilizing this implementation are
- * deployed through the Dharma Smart Wallet Factory via `CREATE2`, which allows
- * for their address to be known ahead of time, and any Sai or USDC that has
- * already been sent into that address will automatically be deposited into
- * Compound upon deployment of the new smart wallet instance.
+ * prior to making withdrawals. It adds support for Multi-collateral Dai, moving
+ * all Sai (both on the wallet and in Compound) into the new cDai contract. It
+ * contains methods to support account recovery, escape hatch functionality, and
+ * generic actions, including in an atomic batch. The smart wallet instances
+ * utilizing this implementation are deployed through the Dharma Smart Wallet
+ * Factory via `CREATE2`, which allows for their address to be known ahead of
+ * time, and any Dai or USDC that has already been sent into that address will
+ * automatically be deposited into Compound upon deployment of the new smart
+ * wallet instance.
  */
-contract DharmaSmartWalletImplementationV5 is
+contract DharmaSmartWalletImplementationV6 is
   DharmaSmartWalletImplementationV0Interface,
   DharmaSmartWalletImplementationV1Interface,
   DharmaSmartWalletImplementationV3Interface,
-  DharmaSmartWalletImplementationV4Interface,
-  DharmaSmartWalletImplementationV5Interface {
+  DharmaSmartWalletImplementationV4Interface {
   using Address for address;
   using ECDSA for bytes32;
   // WARNING: DO NOT REMOVE OR REORDER STORAGE WHEN WRITING NEW IMPLEMENTATIONS!
@@ -66,7 +63,7 @@ contract DharmaSmartWalletImplementationV5 is
   // END STORAGE DECLARATIONS - DO NOT REMOVE OR REORDER STORAGE ABOVE HERE!
 
   // The smart wallet version will be used when constructing valid signatures.
-  uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 5;
+  uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 6;
 
   // DharmaKeyRegistryV2 holds a public key for verifying meta-transactions.
   DharmaKeyRegistryInterface internal constant _DHARMA_KEY_REGISTRY = (
@@ -85,9 +82,13 @@ contract DharmaSmartWalletImplementationV5 is
     DharmaEscapeHatchRegistryInterface(0x00000000005280B515004B998a944630B6C663f8)
   );
 
-  // This contract interfaces with Sai, USDC, and related CompoundV2 contracts.
+  // Interface with Sai, Dai, USDC, related CompoundV2 contracts, and migrator.
   CTokenInterface internal constant _CSAI = CTokenInterface(
     0xF5DCe57282A584D2746FaF1593d3121Fcac444dC // mainnet
+  );
+
+  CTokenInterface internal constant _CDAI = CTokenInterface(
+    0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643 // mainnet
   );
 
   CTokenInterface internal constant _CUSDC = CTokenInterface(
@@ -98,12 +99,24 @@ contract DharmaSmartWalletImplementationV5 is
     0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359 // mainnet
   );
 
+  IERC20 internal constant _DAI = IERC20(
+    0x6B175474E89094C44Da98b954EedeAC495271d0F // mainnet
+  );
+
   IERC20 internal constant _USDC = IERC20(
     0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 // mainnet
   );
 
+  SaiToDaiMigrator _MIGRATOR = SaiToDaiMigrator(
+    0xc73e0383F3Aff3215E6f04B0331D58CeCf0Ab849 // mainnet
+  );
+
   USDCV1Interface internal constant _USDC_NAUGHTY = USDCV1Interface(
     0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 // mainnet
+  );
+
+  ComptrollerInterface internal constant _COMPTROLLER = ComptrollerInterface(
+    0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B // mainnet
   );
 
   // Compound returns a value of 0 to indicate success, or lack of an error.
@@ -113,7 +126,7 @@ contract DharmaSmartWalletImplementationV5 is
   bytes4 internal constant _ERC_1271_MAGIC_VALUE = bytes4(0x20c13b0b);
 
   // Minimum supported deposit & non-maximum withdrawal size is .001 underlying.
-  uint256 private constant _JUST_UNDER_ONE_1000th_SAI = 999999999999999;
+  uint256 private constant _JUST_UNDER_ONE_1000th_DAI = 999999999999999;
   uint256 private constant _JUST_UNDER_ONE_1000th_USDC = 999;
 
   // Specify the amount of gas to supply when making Ether transfers.
@@ -121,10 +134,10 @@ contract DharmaSmartWalletImplementationV5 is
 
   /**
    * @notice In the initializer, set up the initial user signing key, set
-   * approval on the cSAI and cUSDC contracts, and deposit any Sai or USDC
-   * already at this address to Compound. Note that this initializer is only
-   * callable while the smart wallet instance is still in the contract creation
-   * phase.
+   * approval on the cDAI and cUSDC contracts, and deposit any cSAI, Sai, Dai,
+   * or USDC already at this address to Compound. Note that this initializer is
+   * only callable while the smart wallet instance is still in the contract
+   * creation phase.
    * @param userSigningKey address The initial user signing key for the smart
    * wallet.
    */
@@ -135,13 +148,16 @@ contract DharmaSmartWalletImplementationV5 is
     // Set up the user's signing key and emit a corresponding event.
     _setUserSigningKey(userSigningKey);
 
-    // Approve the cSAI contract to transfer Sai on behalf of this contract.
-    if (_setFullApproval(AssetType.SAI)) {
-      // Get the current Sai balance on this contract.
-      uint256 saiBalance = _SAI.balanceOf(address(this));
+    // Attempt to redeem any cSAI for Sai, then to convert any Sai into Dai.
+    _migrateSaiToDai();
 
-      // Try to deposit the full Sai balance on Compound.
-      _depositOnCompound(AssetType.SAI, saiBalance);
+    // Approve the cDAI contract to transfer Dai on behalf of this contract.
+    if (_setFullApproval(AssetType.DAI)) {
+      // Get the current Dai balance on this contract.
+      uint256 daiBalance = _DAI.balanceOf(address(this));
+
+      // Try to deposit the full Dai balance on Compound.
+      _depositOnCompound(AssetType.DAI, daiBalance);
     }
 
     // Approve the cUSDC contract to transfer USDC on behalf of this contract.
@@ -155,19 +171,23 @@ contract DharmaSmartWalletImplementationV5 is
   }
 
   /**
-   * @notice Deposit all Sai and USDC currently residing at this address to
-   * Compound. Note that "repay" is not currently implemented, but the function
-   * is still named "repayAndDeposit" so that infrastructure around calling this
-   * function will not need to be altered for a future smart wallet version. If
-   * some step of this function fails, the function itself will still succeed,
-   * but an `ExternalError` with information on what went wrong will be emitted.
+   * @notice Redeem any cSAI for Sai, convert any Sai to Dai, and deposit all
+   * Dai and USDC currently residing at this address to Compound. Note that
+   * "repay" is not currently implemented, but the function is still named
+   * `repayAndDeposit` so that infrastructure around calling this function will
+   * not need to be altered for a future smart wallet version. If some step of
+   * this function fails, the function itself will still succeed, but an
+   * `ExternalError` with information on what went wrong will be emitted.
    */
   function repayAndDeposit() external {
-    // Get the current Sai balance on this contract.
-    uint256 saiBalance = _SAI.balanceOf(address(this));
+    // Attempt to redeem any cSAI for Sai, then to convert any Sai into Dai.
+    _migrateSaiToDai();
 
-    // Deposit the full available Sai balance on Compound.
-    _depositOnCompound(AssetType.SAI, saiBalance);
+    // Get the current Dai balance on this contract.
+    uint256 daiBalance = _DAI.balanceOf(address(this));
+
+    // Deposit the full available Dai balance on Compound.
+    _depositOnCompound(AssetType.DAI, daiBalance);
 
     // Get the current USDC balance on this contract.
     uint256 usdcBalance = _USDC.balanceOf(address(this));
@@ -190,9 +210,9 @@ contract DharmaSmartWalletImplementationV5 is
   }
 
   /**
-   * @notice Withdraw Sai to a provided recipient address by redeeming the
-   * underlying Sai from the cSAI contract and transferring it to the recipient.
-   * All Sai in Compound and in the smart wallet itself can be withdrawn by
+   * @notice Withdraw Dai to a provided recipient address by redeeming the
+   * underlying Dai from the cDAI contract and transferring it to the recipient.
+   * All Dai in Compound and in the smart wallet itself can be withdrawn by
    * providing an amount of uint256(-1) or 0xfff...fff. This function can be
    * called directly by the account set as the global key on the Dharma Key
    * Registry, or by any relayer that provides a signed message from the same
@@ -202,44 +222,11 @@ contract DharmaSmartWalletImplementationV5 is
    * reached - usually somewhere around 25,000 gas. If the withdrawal fails, an
    * `ExternalError` with additional details on what went wrong will be emitted.
    * Note that some dust may still be left over, even in the event of a max
-   * withdrawal, due to the fact that Sai has a higher precision than cSAI. Also
+   * withdrawal, due to the fact that Dai has a higher precision than cDAI. Also
    * note that the withdrawal will fail in the event that Compound does not have
-   * sufficient Sai available to withdraw.
-   * @param amount uint256 The amount of Sai to withdraw.
-   * @param recipient address The account to transfer the withdrawn Sai to.
-   * @param minimumActionGas uint256 The minimum amount of gas that must be
-   * provided to this call - be aware that additional gas must still be included
-   * to account for the cost of overhead incurred up until the start of this
-   * function call.
-   * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. If the user
-   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
-   * will be used. A unique hash returned from `getCustomActionID` is prefixed
-   * and hashed to create the message hash for the signature.
-   * @param dharmaSignature bytes A signature that resolves to the public key
-   * returned for this account from the Dharma Key Registry. A unique hash
-   * returned from `getCustomActionID` is prefixed and hashed to create the
-   * signed message.
-   * @return True if the withdrawal succeeded, otherwise false.
-   */
-  function withdrawSai(
-    uint256 amount,
-    address recipient,
-    uint256 minimumActionGas,
-    bytes calldata userSignature,
-    bytes calldata dharmaSignature
-  ) external returns (bool ok) {
-    // Validate the parameters and attempt to perform the Sai withdrawal.
-    ok = _withdrawSai(
-      amount, recipient, minimumActionGas, userSignature, dharmaSignature
-    );
-  }
-
-  /**
-   * @notice THIS FUNCTION WITHDRAWS SAI, NOT DAI - it is equivalent to the
-   * `withdrawSai` function and is included for backwards compatibility for now.
-   * @param amount uint256 The amount of Sai to withdraw.
-   * @param recipient address The account to transfer the withdrawn Sai to.
+   * sufficient Dai available to withdraw.
+   * @param amount uint256 The amount of Dai to withdraw.
+   * @param recipient address The account to transfer the withdrawn Dai to.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
@@ -262,46 +249,77 @@ contract DharmaSmartWalletImplementationV5 is
     bytes calldata userSignature,
     bytes calldata dharmaSignature
   ) external returns (bool ok) {
-    // Validate the parameters and attempt to perform the Sai withdrawal.
-    ok = _withdrawSai(
-      amount, recipient, minimumActionGas, userSignature, dharmaSignature
+    // Ensure caller and/or supplied signatures are valid and increment nonce.
+    _validateActionAndIncrementNonce(
+      ActionType.DAIWithdrawal,
+      abi.encode(amount, recipient),
+      minimumActionGas,
+      userSignature,
+      dharmaSignature
     );
+
+    // Ensure that an amount of at least 0.001 Dai has been supplied.
+    require(amount > _JUST_UNDER_ONE_1000th_DAI, "Insufficient Dai supplied.");
+
+    // Ensure that a non-zero recipient has been supplied.
+    require(recipient != address(0), "No recipient supplied.");
+
+    // Set the self-call context in order to call _withdrawDaiAtomic.
+    _selfCallContext = this.withdrawDai.selector;
+
+    // Make the atomic self-call - if redeemUnderlying fails on cDAI, it will
+    // succeed but nothing will happen except firing an ExternalError event. If
+    // the second part of the self-call (the Dai transfer) fails, it will revert
+    // and roll back the first part of the call as well as fire an ExternalError
+    // event after returning from the failed call.
+    bytes memory returnData;
+    (ok, returnData) = address(this).call(abi.encodeWithSelector(
+      this._withdrawDaiAtomic.selector, amount, recipient
+    ));
+
+    // If the atomic call failed, emit an event signifying a transfer failure.
+    if (!ok) {
+      emit ExternalError(address(_DAI), "Could not transfer Dai.");
+    } else {
+      // Set ok to false if the call succeeded but the withdrawal failed.
+      ok = abi.decode(returnData, (bool));
+    }
   }
 
   /**
-   * @notice Protected function that can only be called from `withdrawSai` on
-   * this contract. It will attempt to withdraw the supplied amount of Sai, or
+   * @notice Protected function that can only be called from `withdrawDai` on
+   * this contract. It will attempt to withdraw the supplied amount of Dai, or
    * the maximum amount if specified using `uint256(-1)`, to the supplied
-   * recipient address by redeeming the underlying Sai from the cSAI contract
+   * recipient address by redeeming the underlying Dai from the cDAI contract
    * and transferring it to the recipient. An ExternalError will be emitted and
    * the transfer will be skipped if the call to `redeem` or `redeemUnderlying`
-   * fails, and any revert will be caught by `withdrawSai` and diagnosed in
+   * fails, and any revert will be caught by `withdrawDai` and diagnosed in
    * order to emit an appropriate `ExternalError` as well.
-   * @param amount uint256 The amount of Sai to withdraw.
-   * @param recipient address The account to transfer the withdrawn Sai to.
+   * @param amount uint256 The amount of Dai to withdraw.
+   * @param recipient address The account to transfer the withdrawn Dai to.
    * @return True if the withdrawal succeeded, otherwise false.
    */
-  function _withdrawSaiAtomic(
+  function _withdrawDaiAtomic(
     uint256 amount,
     address recipient
   ) external returns (bool success) {
     // Ensure caller is this contract and self-call context is correctly set.
-    _enforceSelfCallFrom(this.withdrawSai.selector);
+    _enforceSelfCallFrom(this.withdrawDai.selector);
 
     // If amount = 0xfff...fff, withdraw the maximum amount possible.
     bool maxWithdraw = (amount == uint256(-1));
     if (maxWithdraw) {
-      // First attempt to redeem all cSAI from Compound if there is a balance.
-      _withdrawMaxFromCompound(AssetType.SAI);
+      // First attempt to redeem all cDai from Compound if there is a balance.
+      _withdrawMaxFromCompound(AssetType.DAI);
 
-      // Then transfer all Sai to recipient if there is a balance.
-      require(_transferMax(_SAI, recipient, false));
+      // Then transfer all Dai to recipient if there is a balance.
+      require(_transferMax(_DAI, recipient, false));
       success = true;
     } else {
-      // Attempt to withdraw specified Sai from Compound before proceeding.
-      if (_withdrawFromCompound(AssetType.SAI, amount)) {
-        // At this point Sai transfer should never fail - wrap it just in case.
-        require(_SAI.transfer(recipient, amount));
+      // Attempt to withdraw specified Dai from Compound before proceeding.
+      if (_withdrawFromCompound(AssetType.DAI, amount)) {
+        // At this point Dai transfer should never fail - wrap it just in case.
+        require(_DAI.transfer(recipient, amount));
         success = true;
       }
     }
@@ -424,7 +442,7 @@ contract DharmaSmartWalletImplementationV5 is
 
   /**
    * @notice Withdraw Ether to a provided recipient address by transferring it
-   * to a recipient. This is only intended to be utilized on V5 as a mechanism
+   * to a recipient. This is only intended to be utilized on V6 as a mechanism
    * for recovering Ether from this contract.
    * @param amount uint256 The amount of Ether to withdraw.
    * @param recipient address The account to transfer the Ether to.
@@ -611,7 +629,7 @@ contract DharmaSmartWalletImplementationV5 is
   /**
    * @notice Set a dedicated address as the "escape hatch" account. This account
    * will then be able to call `escape()` at any point to "sweep" the entire
-   * Sai, USDC, residual cSAI & cUSDC, and Ether balance from the smart wallet.
+   * Dai, USDC, residual cDAI & cUSDC, and Ether balance from the smart wallet.
    * This function call will revert if the smart wallet has previously called
    * `permanentlyDisableEscapeHatch` at any point and disabled the escape hatch.
    * No value is returned from this function - it will either succeed or revert.
@@ -728,15 +746,16 @@ contract DharmaSmartWalletImplementationV5 is
 
   /**
    * @notice Allow the designated escape hatch account to  "sweep" the entire
-   * Sai, USDC, residual cSAI & cUSDC, and Ether balance from the smart wallet.
-   * The call will revert for any other caller, or if there is no escape hatch
-   * account currently set for this smart wallet. First, an attempt will be made
-   * to redeem any cSAI or cUSDC that is currently deposited in Compound. Then,
-   * attempts will be made to transfer all Sai, USDC, residual cSAI & cUSDC, and
-   * Ether to the escape hatch account. If any portion of this operation does
-   * not succeed, it will simply be skipped, allowing the rest of the operation
-   * to proceed. Finally, an `Escaped` event will be emitted. No value is
-   * returned from this function - it will either succeed or revert.
+   * Sai, Dai, USDC, residual cSai, cDAI & cUSDC, and Ether balance from the
+   * smart wallet. The call will revert for any other caller, or if there is no
+   * escape hatch account currently set for this smart wallet. First, an attempt
+   * will be made to redeem any cSAI, cDAI, or cUSDC that is currently deposited
+   * in Compound. Then, attempts will be made to transfer all Sai, Dai, USDC,
+   * residual cSAI, cDAI & cUSDC, and Ether to the escape hatch account. If any
+   * portion of this operation does not succeed, it will simply be skipped,
+   * allowing the rest of the operation to proceed. Finally, an `Escaped` event
+   * will be emitted. No value is returned from this function - it will either
+   * succeed or revert.
    */
   function escape() external {
     // Get the escape hatch account, if one exists, for this account.
@@ -751,20 +770,29 @@ contract DharmaSmartWalletImplementationV5 is
       "Only the escape hatch account may call this function."
     );
 
-    // Attempt to redeem all cSAI for SAI on Compound.
+    // Attempt to redeem all cSAI for Sai on Compound.
     _withdrawMaxFromCompound(AssetType.SAI);
+
+    // Attempt to redeem all cDAI for Dai on Compound.
+    _withdrawMaxFromCompound(AssetType.DAI);
 
     // Attempt to redeem all cUSDC for USDC on Compound.
     _withdrawMaxFromCompound(AssetType.USDC);
 
-    // Attempt to transfer the total SAI balance to the caller.
+    // Attempt to transfer the total Sai balance to the caller.
     _transferMax(_SAI, msg.sender, true);
+
+    // Attempt to transfer the total Dai balance to the caller.
+    _transferMax(_DAI, msg.sender, true);
 
     // Attempt to transfer the total USDC balance to the caller.
     _transferMax(_USDC, msg.sender, true);
 
     // Attempt to transfer any residual cSAI to the caller.
     _transferMax(IERC20(address(_CSAI)), msg.sender, true);
+
+    // Attempt to transfer any residual cDAI to the caller.
+    _transferMax(IERC20(address(_CDAI)), msg.sender, true);
 
     // Attempt to transfer any residual cUSDC to the caller.
     _transferMax(IERC20(address(_CUSDC)), msg.sender, true);
@@ -803,26 +831,26 @@ contract DharmaSmartWalletImplementationV5 is
   }
 
   /**
-   * @notice Retrieve the Sai and USDC balances held by the smart wallet, both
+   * @notice Retrieve the Dai and USDC balances held by the smart wallet, both
    * directly and held in Compound. This is not a view function since Compound
    * will calculate accrued interest as part of the underlying balance checks,
    * but can still be called from an off-chain source as though it were a view
    * function.
-   * @return The Sai balance, the USDC balance, the underlying Sai balance of
-   * the cSAI balance, and the underlying USDC balance of the cUSDC balance.
+   * @return The Dai balance, the USDC balance, the underlying Dai balance of
+   * the cDAI balance, and the underlying USDC balance of the cUSDC balance.
    */
   function getBalances() external returns (
-    uint256 saiBalance,
+    uint256 daiBalance,
     uint256 usdcBalance,
     uint256 etherBalance, // always returns 0
-    uint256 cSAIUnderlyingSaiBalance,
-    uint256 cUSDCUnderlyingUSDCBalance,
+    uint256 cDaiUnderlyingDaiBalance,
+    uint256 cUsdcUnderlyingUsdcBalance,
     uint256 cEtherUnderlyingEtherBalance // always returns 0
   ) {
-    saiBalance = _SAI.balanceOf(address(this));
+    daiBalance = _DAI.balanceOf(address(this));
     usdcBalance = _USDC.balanceOf(address(this));
-    cSAIUnderlyingSaiBalance = _CSAI.balanceOfUnderlying(address(this));
-    cUSDCUnderlyingUSDCBalance = _CUSDC.balanceOfUnderlying(address(this));
+    cDaiUnderlyingDaiBalance = _CDAI.balanceOfUnderlying(address(this));
+    cUsdcUnderlyingUsdcBalance = _CUSDC.balanceOfUnderlying(address(this));
   }
 
   /**
@@ -853,8 +881,8 @@ contract DharmaSmartWalletImplementationV5 is
    * may be supplied, which enables constructing valid message hashes for
    * multiple future actions ahead of time.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * custom actions in V5 include Cancel (0), SetUserSigningKey (1),
-   * SAIWithdrawal (4), USDCWithdrawal (5), ETHWithdrawal (6),
+   * custom actions in V6 include Cancel (0), SetUserSigningKey (1),
+   * DAIWithdrawal (4), USDCWithdrawal (5), ETHWithdrawal (6),
    * SetEscapeHatch (7), RemoveEscapeHatch (8), and DisableEscapeHatch (9).
    * @param amount uint256 The amount to withdraw for Withdrawal actions. This
    * value is ignored for non-withdrawal action types.
@@ -894,8 +922,8 @@ contract DharmaSmartWalletImplementationV5 is
    * will be used, which means that it will only be valid for the next action
    * taken.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * custom actions in V5 include Cancel (0), SetUserSigningKey (1),
-   * SAIWithdrawal (4), USDCWithdrawal (5), ETHWithdrawal (6),
+   * custom actions in V6 include Cancel (0), SetUserSigningKey (1),
+   * DAIWithdrawal (4), USDCWithdrawal (5), ETHWithdrawal (6),
    * SetEscapeHatch (7), RemoveEscapeHatch (8), and DisableEscapeHatch (9).
    * @param amount uint256 The amount to withdraw for Withdrawal actions. This
    * value is ignored for non-withdrawal action types.
@@ -1234,83 +1262,6 @@ contract DharmaSmartWalletImplementationV5 is
   }
 
   /**
-   * @notice Internal function to withdraw Sai to a recipient by redeeming the
-   * underlying Sai from the cSAI contract and transferring it to the recipient.
-   * All Sai in Compound and in the smart wallet itself can be withdrawn by
-   * providing an amount of uint256(-1) or 0xfff...fff. This function can be
-   * called directly by the account set as the global key on the Dharma Key
-   * Registry, or by any relayer that provides a signed message from the same
-   * keyholder. The nonce used for the signature must match the current nonce on
-   * the smart wallet, and gas supplied to the call must exceed the specified
-   * minimum action gas, plus the gas that will be spent before the gas check is
-   * reached - usually somewhere around 25,000 gas. If the withdrawal fails, an
-   * `ExternalError` with additional details on what went wrong will be emitted.
-   * Note that some dust may still be left over, even in the event of a max
-   * withdrawal, due to the fact that Sai has a higher precision than cSAI. Also
-   * note that the withdrawal will fail in the event that Compound does not have
-   * sufficient Sai available to withdraw.
-   * @param amount uint256 The amount of Sai to withdraw.
-   * @param recipient address The account to transfer the withdrawn Sai to.
-   * @param minimumActionGas uint256 The minimum amount of gas that must be
-   * provided to this call - be aware that additional gas must still be included
-   * to account for the cost of overhead incurred up until the start of this
-   * function call.
-   * @param userSignature bytes A signature that resolves to the public key
-   * set for this account in storage slot zero, `_userSigningKey`. If the user
-   * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
-   * will be used. A unique hash returned from `getCustomActionID` is prefixed
-   * and hashed to create the message hash for the signature.
-   * @param dharmaSignature bytes A signature that resolves to the public key
-   * returned for this account from the Dharma Key Registry. A unique hash
-   * returned from `getCustomActionID` is prefixed and hashed to create the
-   * signed message.
-   * @return True if the withdrawal succeeded, otherwise false.
-   */
-  function _withdrawSai(
-    uint256 amount,
-    address recipient,
-    uint256 minimumActionGas,
-    bytes memory userSignature,
-    bytes memory dharmaSignature
-  ) internal returns (bool ok) {
-    // Ensure caller and/or supplied signatures are valid and increment nonce.
-    _validateActionAndIncrementNonce(
-      ActionType.SAIWithdrawal,
-      abi.encode(amount, recipient),
-      minimumActionGas,
-      userSignature,
-      dharmaSignature
-    );
-
-    // Ensure that an amount of at least 0.001 Sai has been supplied.
-    require(amount > _JUST_UNDER_ONE_1000th_SAI, "Insufficient Sai supplied.");
-
-    // Ensure that a non-zero recipient has been supplied.
-    require(recipient != address(0), "No recipient supplied.");
-
-    // Set the self-call context in order to call _withdrawSaiAtomic.
-    _selfCallContext = this.withdrawSai.selector;
-
-    // Make the atomic self-call - if redeemUnderlying fails on cSAI, it will
-    // succeed but nothing will happen except firing an ExternalError event. If
-    // the second part of the self-call (the Sai transfer) fails, it will revert
-    // and roll back the first part of the call as well as fire an ExternalError
-    // event after returning from the failed call.
-    bytes memory returnData;
-    (ok, returnData) = address(this).call(abi.encodeWithSelector(
-      this._withdrawSaiAtomic.selector, amount, recipient
-    ));
-
-    // If the atomic call failed, emit an event signifying a transfer failure.
-    if (!ok) {
-      emit ExternalError(address(_SAI), "Could not transfer Sai.");
-    } else {
-      // Set ok to false if the call succeeded but the withdrawal failed.
-      ok = abi.decode(returnData, (bool));
-    }
-  }
-
-  /**
    * @notice Internal function for setting a new user signing key. Called by the
    * initializer, by the `setUserSigningKey` function, and by the `recover`
    * function. A `NewUserSigningKey` event will also be emitted.
@@ -1326,19 +1277,59 @@ contract DharmaSmartWalletImplementationV5 is
   }
 
   /**
+   * @notice Internal function for attempting to redeem all available cSAI for
+   * Sai followed by an attempt to convert all available Sai for Dai.
+   */
+  function _migrateSaiToDai() internal {
+    // Attempt to redeem all cSAI for Sai on Compound.
+    _withdrawMaxFromCompound(AssetType.SAI);
+
+    // Get the current Sai balance on this contract.
+    uint256 saiBalance = _SAI.balanceOf(address(this));
+
+    // If there is any Sai balance, check if migrator has adequate approval.
+    if (saiBalance > 0) {
+      uint256 saiAllowance = _SAI.allowance(address(this), address(_MIGRATOR));
+      // Ensure that allowance is sufficient before calling the migrator.
+      bool allowanceSufficient = saiAllowance >= saiBalance;
+      if (!allowanceSufficient) {
+        // Approve migrator contract to transfer Sai on behalf of this wallet.
+        (allowanceSufficient, ) = address(_SAI).call(abi.encodeWithSelector(
+          _SAI.approve.selector, address(_MIGRATOR), uint256(-1)
+        ));
+      }
+
+      if (allowanceSufficient) {
+        // Call migrator contract to swap the total Sai balance for Dai.
+        (bool ok, ) = address(_MIGRATOR).call(abi.encodeWithSelector(
+          _MIGRATOR.swapSaiToDai.selector, saiBalance
+        ));
+
+        if (!ok) {
+          // Emit a corresponding event if the swap failed.
+          emit ExternalError(address(_MIGRATOR), "SAI-to-DAI swap failed.");          
+        }
+      } else {
+        // Emit a corresponding event if the approval failed.
+        emit ExternalError(address(_SAI), "SAI contract reverted on approval.");
+      }
+    }
+  }
+
+  /**
    * @notice Internal function for setting the allowance of a given ERC20 asset
    * to the maximum value. This enables the corresponding cToken for the asset
    * to pull in tokens in order to make deposits.
-   * @param asset uint256 The ID of the asset, either Sai (3) or USDC (1).
+   * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
    * @return True if the approval succeeded, otherwise false.
    */
   function _setFullApproval(AssetType asset) internal returns (bool ok) {
     // Get asset's underlying token address and corresponding cToken address.
     address token;
     address cToken;
-    if (asset == AssetType.SAI) {
-      token = address(_SAI);
-      cToken = address(_CSAI);
+    if (asset == AssetType.DAI) {
+      token = address(_DAI);
+      cToken = address(_CDAI);
     } else {
       token = address(_USDC);
       cToken = address(_CUSDC);
@@ -1346,14 +1337,14 @@ contract DharmaSmartWalletImplementationV5 is
 
     // Approve cToken contract to transfer underlying on behalf of this wallet.
     (ok, ) = address(token).call(abi.encodeWithSelector(
-      // Note: since both cTokens have the same interface, just use SAI's.
-      _SAI.approve.selector, cToken, uint256(-1)
+      // Note: since both cTokens have the same interface, just use cDAI's.
+      _DAI.approve.selector, cToken, uint256(-1)
     ));
 
     // Emit a corresponding event if the approval failed.
     if (!ok) {
-      if (asset == AssetType.SAI) {
-        emit ExternalError(address(_SAI), "SAI contract reverted on approval.");
+      if (asset == AssetType.DAI) {
+        emit ExternalError(address(_DAI), "DAI contract reverted on approval.");
       } else {
         // Find out why USDC transfer reverted (it doesn't give revert reasons).
         _diagnoseAndEmitUSDCSpecificError(_USDC.approve.selector);
@@ -1365,30 +1356,30 @@ contract DharmaSmartWalletImplementationV5 is
    * @notice Internal function for depositing a given ERC20 asset and balance on
    * the corresponding cToken. No value is returned, as no additional steps need
    * to be conditionally performed after the deposit.
-   * @param asset uint256 The ID of the asset, either Sai (3) or USDC (1).
+   * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
    * @param balance uint256 The amount of the asset to deposit. Note that an
    * attempt to deposit "dust" (i.e. very small amounts) may result in 0 cTokens
    * being minted, or in fewer cTokens being minted than is implied by the
    * current exchange rate (due to lack of sufficient precision on the tokens).
    */
   function _depositOnCompound(AssetType asset, uint256 balance) internal {
-    // Only perform a deposit if the balance is at least .001 Sai or USDC.
+    // Only perform a deposit if the balance is at least .001 Dai or USDC.
     if (
-      asset == AssetType.SAI && balance > _JUST_UNDER_ONE_1000th_SAI ||
+      asset == AssetType.DAI && balance > _JUST_UNDER_ONE_1000th_DAI ||
       asset == AssetType.USDC && balance > _JUST_UNDER_ONE_1000th_USDC
     ) {
       // Get cToken address for the asset type.
-      address cToken = asset == AssetType.SAI ? address(_CSAI) : address(_CUSDC);
+      address cToken = asset == AssetType.DAI ? address(_CDAI) : address(_CUSDC);
 
       // Attempt to mint the balance on the cToken contract.
       (bool ok, bytes memory data) = cToken.call(abi.encodeWithSelector(
-        // Note: since both cTokens have the same interface, just use cSAI's.
-        _CSAI.mint.selector, balance
+        // Note: since both cTokens have the same interface, just use cDAI's.
+        _CDAI.mint.selector, balance
       ));
 
       // Log an external error if something went wrong with the attempt.
       _checkCompoundInteractionAndLogAnyErrors(
-        asset, _CSAI.mint.selector, ok, data
+        asset, _CDAI.mint.selector, ok, data
       );
     }
   }
@@ -1397,7 +1388,7 @@ contract DharmaSmartWalletImplementationV5 is
    * @notice Internal function for withdrawing a given underlying asset balance
    * from the corresponding cToken. Note that the requested balance may not be
    * currently available on Compound, which will cause the withdrawal to fail.
-   * @param asset uint256 The asset's ID, either Sai (3) or USDC (1).
+   * @param asset uint256 The asset's ID, either Dai (0) or USDC (1).
    * @param balance uint256 The amount of the asset to withdraw, denominated in
    * the underlying token. Note that an attempt to withdraw "dust" (i.e. very
    * small amounts) may result in 0 underlying tokens being redeemed, or in
@@ -1410,17 +1401,17 @@ contract DharmaSmartWalletImplementationV5 is
     uint256 balance
   ) internal returns (bool success) {
     // Get cToken address for the asset type. (No custom ETH withdrawal action.)
-    address cToken = asset == AssetType.SAI ? address(_CSAI) : address(_CUSDC);
+    address cToken = asset == AssetType.DAI ? address(_CDAI) : address(_CUSDC);
 
     // Attempt to redeem the underlying balance from the cToken contract.
     (bool ok, bytes memory data) = cToken.call(abi.encodeWithSelector(
-      // Note: function selector is the same for each cToken so just use cSAI's.
-      _CSAI.redeemUnderlying.selector, balance
+      // Note: function selector is the same for each cToken so just use cDAI's.
+      _CDAI.redeemUnderlying.selector, balance
     ));
 
     // Log an external error if something went wrong with the attempt.
     success = _checkCompoundInteractionAndLogAnyErrors(
-      asset, _CSAI.redeemUnderlying.selector, ok, data
+      asset, _CDAI.redeemUnderlying.selector, ok, data
     );
   }
 
@@ -1429,11 +1420,15 @@ contract DharmaSmartWalletImplementationV5 is
    * balance from the corresponding cToken. Note that the requested balance may
    * not be currently available on Compound, which will cause the withdrawal to
    * fail.
-   * @param asset uint256 The asset's ID, either Sai (3) or USDC (1).
+   * @param asset uint256 The asset's ID, either Dai (0), USDC (1), or Sai (3).
    */
   function _withdrawMaxFromCompound(AssetType asset) internal {
     // Get cToken address for the asset type. (No custom ETH withdrawal action.)
-    address cToken = asset == AssetType.SAI ? address(_CSAI) : address(_CUSDC);
+    address cToken = (
+      asset == AssetType.DAI ? address(_CDAI) : (
+        asset == AssetType.USDC ? address(_CUSDC) : address(_CSAI)
+      )
+    );
 
     // Get the current cToken balance for this account.
     uint256 redeemAmount = IERC20(cToken).balanceOf(address(this));
@@ -1442,13 +1437,13 @@ contract DharmaSmartWalletImplementationV5 is
     if (redeemAmount > 0) {
       // Attempt to redeem the underlying balance from the cToken contract.
       (bool ok, bytes memory data) = cToken.call(abi.encodeWithSelector(
-        // Function selector is the same for both cTokens, so just use cSAI's.
-        _CSAI.redeem.selector, redeemAmount
+        // Function selector is the same for all cTokens, so just use cDAI's.
+        _CDAI.redeem.selector, redeemAmount
       ));
 
       // Log an external error if something went wrong with the attempt.
       _checkCompoundInteractionAndLogAnyErrors(
-        asset, _CSAI.redeem.selector, ok, data
+        asset, _CDAI.redeem.selector, ok, data
       );
     }
   }
@@ -1523,8 +1518,8 @@ contract DharmaSmartWalletImplementationV5 is
    * errors, which can be guarded against by supplying a minimum action gas
    * requirement).
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V5 include Cancel (0), SetUserSigningKey (1), Generic (2),
-   * GenericAtomicBatch (3), SAIWithdrawal (4), USDCWithdrawal (5),
+   * actions in V6 include Cancel (0), SetUserSigningKey (1), Generic (2),
+   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5),
    * ETHWithdrawal (6), SetEscapeHatch (7), RemoveEscapeHatch (8), and
    * DisableEscapeHatch (9).
    * @param arguments bytes ABI-encoded arguments for the action.
@@ -1626,7 +1621,7 @@ contract DharmaSmartWalletImplementationV5 is
    * succeeded, and to emit a relevant ExternalError event if it failed. The
    * failure can be caused by a call that reverts, or by a call that does not
    * revert but returns a non-zero error code.
-   * @param asset uint256 The ID of the asset, either Sai (3) or USDC (1).
+   * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
    * @param functionSelector bytes4 The function selector that was called on the
    * corresponding cToken of the asset type.
    * @param ok bool A boolean representing whether the call returned or
@@ -1774,8 +1769,8 @@ contract DharmaSmartWalletImplementationV5 is
    * is derived by prefixing (according to EIP-191 0x45) and hashing an actionID
    * returned from `getCustomActionID`.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V5 include Cancel (0), SetUserSigningKey (1), Generic (2),
-   * GenericAtomicBatch (3), SAIWithdrawal (4), USDCWithdrawal (5),
+   * actions in V6 include Cancel (0), SetUserSigningKey (1), Generic (2),
+   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5),
    * ETHWithdrawal (6), SetEscapeHatch (7), RemoveEscapeHatch (8), and
    * DisableEscapeHatch (9).
    * @param arguments bytes ABI-encoded arguments for the action.
@@ -1826,8 +1821,8 @@ contract DharmaSmartWalletImplementationV5 is
    * when reconstructing an action ID during protected function execution based
    * on the supplied parameters.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V5 include Cancel (0), SetUserSigningKey (1), Generic (2),
-   * GenericAtomicBatch (3), SAIWithdrawal (4), USDCWithdrawal (5),
+   * actions in V6 include Cancel (0), SetUserSigningKey (1), Generic (2),
+   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5),
    * ETHWithdrawal (6), SetEscapeHatch (7), RemoveEscapeHatch (8), and
    * DisableEscapeHatch (9).
    * @param arguments bytes ABI-encoded arguments for the action.
@@ -1868,7 +1863,7 @@ contract DharmaSmartWalletImplementationV5 is
    * @notice Internal pure function to get the cToken address, it's name, and
    * the name of the called function, based on a supplied asset type and
    * function selector. It is used to help construct ExternalError events.
-   * @param asset uint256 The ID of the asset, either Sai (3) or USDC (1).
+   * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
    * @param functionSelector bytes4 The function selector that was called on the
    * corresponding cToken of the asset type.
    * @return The cToken address, it's name, and the name of the called function.
@@ -1881,21 +1876,21 @@ contract DharmaSmartWalletImplementationV5 is
     string memory name,
     string memory functionName
   ) {
-    if (asset == AssetType.SAI) {
-      account = address(_CSAI);
-      name = "cSAI";
+    if (asset == AssetType.DAI) {
+      account = address(_CDAI);
+      name = "cDAI";
     } else {
       account = address(_CUSDC);
       name = "cUSDC";
     }
 
-    // Note: since both cTokens have the same interface, just use cSAI's.
-    if (functionSelector == _CSAI.mint.selector) {
+    // Note: since both cTokens have the same interface, just use cDAI's.
+    if (functionSelector == _CDAI.mint.selector) {
       functionName = "mint";
     } else {
       functionName = string(abi.encodePacked(
         "redeem",
-        functionSelector == _CSAI.redeemUnderlying.selector ? "Underlying" : ""
+        functionSelector == _CDAI.redeemUnderlying.selector ? "Underlying" : ""
       ));
     }
   }
@@ -1930,8 +1925,8 @@ contract DharmaSmartWalletImplementationV5 is
    * "custom" action type (i.e. is not a generic action type) and to construct
    * the "arguments" input to an actionID based on that action type.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * custom actions in V5 include Cancel (0), SetUserSigningKey (1),
-   * SAIWithdrawal (4), USDCWithdrawal (5), ETHWithdrawal (6),
+   * custom actions in V6 include Cancel (0), SetUserSigningKey (1),
+   * DAIWithdrawal (4), USDCWithdrawal (5), ETHWithdrawal (6),
    * SetEscapeHatch (7), RemoveEscapeHatch (8), and DisableEscapeHatch (9).
    * @param amount uint256 The amount to withdraw for Withdrawal actions. This
    * value is ignored for all non-withdrawal action types.
@@ -1948,7 +1943,7 @@ contract DharmaSmartWalletImplementationV5 is
     require(
       action == ActionType.Cancel ||
       action == ActionType.SetUserSigningKey ||
-      action == ActionType.SAIWithdrawal ||
+      action == ActionType.DAIWithdrawal ||
       action == ActionType.USDCWithdrawal ||
       action == ActionType.ETHWithdrawal ||
       action == ActionType.SetEscapeHatch ||
