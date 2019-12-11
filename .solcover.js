@@ -35,6 +35,7 @@ module.exports = {
     'mock/RelayContractV2.sol',
     'multisigs/DharmaUpgradeMultisig.sol',
     'multisigs/DharmaKeyRegistryMultisig.sol',
+    'multisigs/DharmaAccountRecoveryOperatorMultisig.sol',
     'openzeppelin-upgradeability/cryptography/ECDSA.sol',
     'openzeppelin-upgradeability/ownership/Ownable.sol',
     'openzeppelin-upgradeability/upgradeability/AdminUpgradeabilityProxy.sol',

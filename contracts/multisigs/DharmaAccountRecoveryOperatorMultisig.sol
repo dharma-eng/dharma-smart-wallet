@@ -2,18 +2,19 @@ pragma solidity 0.5.11;
 
 
 /**
- * @title DharmaAccountRecoveryMultisig
+ * @title DharmaAccountRecoveryOperatorMultisig
  * @author 0age (derived from Christian Lundkvist's Simple Multisig)
- * @notice This contract is a multisig that will control account recovery on the
- * Dharma Smart Wallet, based on Christian Lundkvist's Simple Multisig (found at
- * https://github.com/christianlundkvist/simple-multisig). The Account Recovery
- * Manager is hard-coded as the only allowable call destination, and any changes
- * in ownership or signature threshold will require deploying a new multisig and
- * transferring ownership of the account recovery manager.
+ * @notice This contract is a multisig that will initiate timelocks for account
+ * recovery on the Dharma Smart Wallet, based on Christian Lundkvist's Simple
+ * Multisig (found at https://github.com/christianlundkvist/simple-multisig).
+ * The Account Recovery Manager is hard-coded as the only allowable call
+ * destination, and any changes in ownership or signature threshold will require
+ * deploying a new multisig and setting it as the new operator on the account
+ * recovery manager.
  */
-contract DharmaAccountRecoveryMultisig {
-  // The nonce is the only mutable state, and is incremented on every call.
-  uint256 private _nonce;
+contract DharmaAccountRecoveryOperatorMultisig {
+  // Maintain a mapping of used hashes to prevent replays.
+  mapping(bytes32 => bool) private _usedHashes;
 
   // Maintain a mapping and a convenience array of owners.
   mapping(address => bool) private _isOwner;
@@ -25,7 +26,7 @@ contract DharmaAccountRecoveryMultisig {
   );
 
   // The threshold is an exact number of valid signatures that must be supplied.
-  uint256 private constant _THRESHOLD = 3;
+  uint256 private constant _THRESHOLD = 2;
 
   // Note: Owners must be strictly increasing in order to prevent duplicates.
   constructor(address[] memory owners) public {
@@ -43,25 +44,13 @@ contract DharmaAccountRecoveryMultisig {
     _owners = owners;
   }
 
-  function getNextHash(
-    bytes calldata data,
-    address executor,
-    uint256 gasLimit
-  ) external view returns (bytes32 hash) {
-    hash = _getHash(data, executor, gasLimit, _nonce);
-  }
-
   function getHash(
     bytes calldata data,
     address executor,
     uint256 gasLimit,
-    uint256 nonce
-  ) external view returns (bytes32 hash) {
-    hash = _getHash(data, executor, gasLimit, nonce);
-  }
-
-  function getNonce() external view returns (uint256 nonce) {
-    nonce = _nonce;
+    bytes32 salt
+  ) external view returns (bytes32 hash, bool usable) {
+    (hash, usable) = _getHash(data, executor, gasLimit, salt);
   }
 
   function getOwners() external view returns (address[] memory owners) {
@@ -85,6 +74,7 @@ contract DharmaAccountRecoveryMultisig {
     bytes calldata data,
     address executor,
     uint256 gasLimit,
+    bytes32 salt,
     bytes calldata signatures
   ) external returns (bool success, bytes memory returnData) {
     require(
@@ -92,12 +82,14 @@ contract DharmaAccountRecoveryMultisig {
       "Must call from the executor account if one is specified."
     );
 
-    // Derive the message hash and wrap in the eth signed messsage hash.
-    bytes32 hash = _toEthSignedMessageHash(
-      _getHash(data, executor, gasLimit, _nonce)
-    );
+    // Derive the message hash and ensure that it has not been used before.
+    (bytes32 rawHash, bool usable) = _getHash(data, executor, gasLimit, salt);
+    require(usable, "Hash in question has already been used previously.");
 
-    // Recover each signer from the provided signatures.
+    // wrap the derived message hash as an eth signed messsage hash.
+    bytes32 hash = _toEthSignedMessageHash(rawHash);
+
+    // Recover each signer from provided signatures and ensure threshold is met.
     address[] memory signers = _recoverGroup(hash, signatures);
 
     require(signers.length == _THRESHOLD, "Total signers must equal threshold.");
@@ -114,8 +106,8 @@ contract DharmaAccountRecoveryMultisig {
       lastAddress = signers[i];
     }
 
-    // Increment the nonce and execute the transaction.
-    _nonce++;
+    // Add the hash to the mapping of used hashes and execute the transaction.
+    _usedHashes[rawHash] == true;
     (success, returnData) = _DESTINATION.call.gas(gasLimit)(data);
   }
 
@@ -123,12 +115,14 @@ contract DharmaAccountRecoveryMultisig {
     bytes memory data,
     address executor,
     uint256 gasLimit,
-    uint256 nonce
-  ) internal view returns (bytes32 hash) {
+    bytes32 salt
+  ) internal view returns (bytes32 hash, bool usable) {
     // Note: this is the data used to create a personal signed message hash.
     hash = keccak256(
-      abi.encodePacked(address(this), nonce, executor, gasLimit, data)
+      abi.encodePacked(address(this), salt, executor, gasLimit, data)
     );
+
+    usable = !_usedHashes[hash];
   }
 
   /**

@@ -8290,7 +8290,7 @@ module.exports = {test: async function (provider, testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, '2')
+      assert.strictEqual(value, '3')
     }
   )
 
@@ -8343,10 +8343,19 @@ module.exports = {test: async function (provider, testingContext) {
 
   ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
   ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+
+  /*
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
   ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2)
   unownedSig = signHashedPrefixedHexString(hash, address)
   unownedSigs = unownedSig + ownerTwoSig.slice(2)
+  */
+
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
+  ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2) + ownerThreeSig.slice(2)
+  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSigs = unownedSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await runTest(
     `DharmaAccountRecoveryMultisig cannot call execute from non-executor`,
@@ -8713,7 +8722,8 @@ module.exports = {test: async function (provider, testingContext) {
   // accept ownership
   ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
   ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
-  ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await runTest(
     `DharmaAccountRecoveryMultisig can call execute to accept ownership`,
@@ -8753,7 +8763,8 @@ module.exports = {test: async function (provider, testingContext) {
 
   ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
   ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
-  ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await runTest(
     `DharmaAccountRecoveryMultisig can call execute to transfer ownership back`,
