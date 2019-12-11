@@ -3,7 +3,7 @@ pragma solidity 0.5.11; // optimization runs: 65536, version: petersburg
 
 /**
  * @title IndestructibleRegistry
- * @author 0age + flex
+ * @author 0age + flex + smarx
  * @notice This contract determines if other contracts are incapable of being
  * destroyed by confirming that they do not contain any SELFDESTRUCT, CALLCODE,
  * or DELEGATECALL opcodes. Just because a contract is determined to potentially
@@ -108,6 +108,14 @@ contract IndestructibleRegistry {
       // Get the opcode in question.
       assembly { op := shr(0xf8, mload(i)) }
 
+      // If the opcode is a PUSH, skip over the push data.
+      // Credit to @smarx for discovering an exploit in a prior version of this
+      // contract where this check only occurred as part of "reachable" blocks.
+      if (op > 95 && op < 128) { // pushN
+        i += (op - 95);
+        continue;
+      }
+
       // Check the opcode if it is reachable (i.e. not a constant or metadata).
       if (reachable) {
         // If execution is halted, mark opcodes that follow as unreachable.
@@ -119,12 +127,6 @@ contract IndestructibleRegistry {
           op == 0      // stop
         ) {
           reachable = false;
-          continue;
-        }
-
-        // If the opcode is a PUSH, skip over the push data.
-        if (op > 95 && op < 128) { // pushN
-          i += (op - 95);
           continue;
         }
 

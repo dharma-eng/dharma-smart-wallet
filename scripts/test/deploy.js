@@ -28,6 +28,7 @@ const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts
 const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV2.json')
 const DharmaSmartWalletImplementationV3Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV3.json')
 const DharmaSmartWalletImplementationV4Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV4.json')
+const DharmaSmartWalletImplementationV5Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV5.json')
 
 const DharmaKeyRingImplementationV0Artifact = require('../../build/contracts/DharmaKeyRingImplementationV0.json')
 const DharmaKeyRingImplementationV1Artifact = require('../../build/contracts/DharmaKeyRingImplementationV1.json')
@@ -118,12 +119,12 @@ module.exports = {test: async function (provider, testingContext) {
   /*
   console.log(
     swapMetadataHash(
-      DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
-      constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+      DharmaSmartWalletImplementationV5Artifact.bytecode,
+      constants.DHARMA_SMART_WALLET_IMPLEMENTATION_V5_METADATA
     ),
     web3.utils.keccak256(swapMetadataHash(
-      DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
-      constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+      DharmaSmartWalletImplementationV5Artifact.bytecode,
+      constants.DHARMA_SMART_WALLET_IMPLEMENTATION_V5_METADATA
     ), {encoding: 'hex'})
   )
   process.exit(0)
