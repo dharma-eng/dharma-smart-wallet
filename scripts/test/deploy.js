@@ -26,13 +26,13 @@ const DharmaTestingMultisigArtifact = require('../../build/contracts/DharmaTesti
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
 const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV2.json')
-const DharmaSmartWalletImplementationV3Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV3.json')
-const DharmaSmartWalletImplementationV4Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV4.json')
+//const DharmaSmartWalletImplementationV3Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV3.json')
+//const DharmaSmartWalletImplementationV4Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV4.json')
 const DharmaSmartWalletImplementationV5Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV5.json')
 
-const DharmaKeyRingImplementationV0Artifact = require('../../build/contracts/DharmaKeyRingImplementationV0.json')
+//const DharmaKeyRingImplementationV0Artifact = require('../../build/contracts/DharmaKeyRingImplementationV0.json')
 const DharmaKeyRingImplementationV1Artifact = require('../../build/contracts/DharmaKeyRingImplementationV1.json')
-const DharmaKeyRingImplementationV2Artifact = require('../../build/contracts/DharmaKeyRingImplementationV2.json')
+//const DharmaKeyRingImplementationV2Artifact = require('../../build/contracts/DharmaKeyRingImplementationV2.json')
 
 const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
 const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
@@ -376,6 +376,7 @@ module.exports = {test: async function (provider, testingContext) {
     )
   )
 
+  /*
   const DharmaSmartWalletImplementationV3Deployer = new web3.eth.Contract(
     DharmaSmartWalletImplementationV3Artifact.abi
   )
@@ -395,7 +396,19 @@ module.exports = {test: async function (provider, testingContext) {
       ['0000000000000000000000000000000000000000000000000000000000000000']
     )
   )
+  */
 
+  const DharmaSmartWalletImplementationV5Deployer = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV5Artifact.abi
+  )
+  DharmaSmartWalletImplementationV5Deployer.options.data = (
+    swapMetadataHash(
+      DharmaSmartWalletImplementationV5Artifact.bytecode,
+      ['0000000000000000000000000000000000000000000000000000000000000000']
+    )
+  )
+
+  /*
   const DharmaKeyRingImplementationV0Deployer = new web3.eth.Contract(
     DharmaKeyRingImplementationV0Artifact.abi
   )
@@ -405,6 +418,7 @@ module.exports = {test: async function (provider, testingContext) {
       ['0000000000000000000000000000000000000000000000000000000000000000']
     )
   )
+  */
 
   const DharmaKeyRingImplementationV1Deployer = new web3.eth.Contract(
     DharmaKeyRingImplementationV1Artifact.abi
@@ -1675,6 +1689,7 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
+  /*
   const DharmaSmartWalletImplementationV3 = await runTest(
     `DharmaSmartWalletImplementationV3 contract deployment`,
     DharmaSmartWalletImplementationV3Deployer,
@@ -1688,13 +1703,23 @@ module.exports = {test: async function (provider, testingContext) {
     '',
     'deploy'
   )
+  */
 
+  const DharmaSmartWalletImplementationV5 = await runTest(
+    `DharmaSmartWalletImplementationV5 contract deployment`,
+    DharmaSmartWalletImplementationV5Deployer,
+    '',
+    'deploy'
+  )
+
+  /*
   const DharmaKeyRingImplementationV0 = await runTest(
     `DharmaKeyRingImplementationV0 contract deployment`,
     DharmaKeyRingImplementationV0Deployer,
     '',
     'deploy'
   )
+  */
 
   const DharmaKeyRingImplementationV1 = await runTest(
     `DharmaKeyRingImplementationV1 contract deployment`,
@@ -2323,6 +2348,7 @@ module.exports = {test: async function (provider, testingContext) {
     [DharmaSmartWalletImplementationV0.options.address]
   )
 
+  /*
   await runTest(
     'IndestructibleRegistry can register V0 key ring implementation as indestructible',
     IndestructibleRegistry,
@@ -2330,6 +2356,7 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [DharmaKeyRingImplementationV0.options.address]
   )
+  */
 
   await runTest(
     'IndestructibleRegistry can register V1 implementation as indestructible',
@@ -2348,6 +2375,7 @@ module.exports = {test: async function (provider, testingContext) {
       [DharmaSmartWalletImplementationV2.options.address]
     )
 
+    /*
     await runTest(
       'IndestructibleRegistry can register V3 implementation as indestructible',
       IndestructibleRegistry,
@@ -2362,6 +2390,15 @@ module.exports = {test: async function (provider, testingContext) {
       'registerAsIndestructible',
       'send',
       [DharmaSmartWalletImplementationV4.options.address]
+    )
+    */
+
+    await runTest(
+      'IndestructibleRegistry can register V5 implementation as indestructible',
+      IndestructibleRegistry,
+      'registerAsIndestructible',
+      'send',
+      [DharmaSmartWalletImplementationV5.options.address]
     )
 
     await runTest(
