@@ -33,6 +33,7 @@ const KeyRingUpgradeBeaconProxyV1Artifact = require('../../build/contracts/KeyRi
 
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
+const DharmaAccountRecoveryOperatorMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryOperatorMultisig.json')
 const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaKeyRegistryMultisig.json')
 
 const DharmaEscapeHatchRegistryArtifact = require('../../build/contracts/DharmaEscapeHatchRegistry.json')
@@ -332,6 +333,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   DharmaAccountRecoveryMultisigDeployer.options.data = (
     DharmaAccountRecoveryMultisigArtifact.bytecode
+  )
+
+  const DharmaAccountRecoveryOperatorMultisigDeployer = new web3.eth.Contract(
+    DharmaAccountRecoveryOperatorMultisigArtifact.abi
+  )
+  DharmaAccountRecoveryOperatorMultisigDeployer.options.data = (
+    DharmaAccountRecoveryOperatorMultisigArtifact.bytecode
   )
 
   const DharmaKeyRegistryMultisigDeployer = new web3.eth.Contract(
@@ -2652,6 +2660,18 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'UserSmartWallet calls to atomic methods revert',
+    UserSmartWalletV5,
+    '_withdrawSaiAtomic',
+    'send',
+    [
+      '1',
+     address
+    ],
+    false
+  )
+
+  await runTest(
     'Dai Whale can deposit dai into the V5 smart wallet',
     DAI,
     'transfer',
@@ -3171,7 +3191,7 @@ module.exports = {test: async function (provider, testingContext) {
   await runTest(
     'V5 UserSmartWallet secondary cannot call to withdraw dai without primary',
     UserSmartWalletV5,
-    'withdrawDai',
+    'withdrawSai',
     'send',
     [
       '1000000000000000000',
@@ -6576,6 +6596,88 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'smart wallet account recovery cannot be cancelled with no smart wallet',
+    DharmaAccountRecoveryManagerV2Coverage,
+    'cancelAccountRecovery',
+    'send',
+    [
+      constants.NULL_ADDRESS,
+      addressTwo
+    ],
+    false
+  )
+
+  await runTest(
+    'smart wallet account recovery cannot be cancelled with no user signing key',
+    DharmaAccountRecoveryManagerV2Coverage,
+    'cancelAccountRecovery',
+    'send',
+    [
+      address,
+      constants.NULL_ADDRESS
+    ],
+    false
+  )
+
+  await runTest(
+    'smart wallet account recovery can be cancelled',
+    DharmaAccountRecoveryManagerV2Coverage,
+    'cancelAccountRecovery',
+    'send',
+    [
+      address,
+      addressTwo
+    ],
+    true,
+    receipt => {    
+      // TODO: verify
+      //console.log(receipt.events)
+    }
+  )
+
+  await runTest(
+    'smart wallet account recovery cannot be cancelled if it is already cancelled',
+    DharmaAccountRecoveryManagerV2Coverage,
+    'cancelAccountRecovery',
+    'send',
+    [
+      address,
+      addressTwo
+    ],
+    false
+  )
+
+  await runTest(
+    'smart wallet account recovery cannot be cancelled if no timelock exists',
+    DharmaAccountRecoveryManagerV2Coverage,
+    'cancelAccountRecovery',
+    'send',
+    [
+      addressTwo,
+      addressTwo
+    ],
+    false
+  )
+
+
+  await runTest(
+    'smart wallet account recovery can be reinitiated',
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateAccountRecovery',
+    'send',
+    [
+      address,
+      addressTwo,
+      1 // extraTime in seconds - add one to ensure that timelock is extended
+    ],
+    true,
+    receipt => {    
+      // TODO: verify
+      //console.log(receipt.events)
+    }
+  )
+
+  await runTest(
     `DharmaAccountRecoveryManagerV2 cannot initiate recovery disablement with null smart wallet`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecoveryDisablement',
@@ -6837,6 +6939,49 @@ module.exports = {test: async function (provider, testingContext) {
     [addressTwo, 0]
   )
 
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot cancel disablement with null address`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'cancelAccountRecoveryDisablement',
+    'send',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can cancel recovery disablement timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'cancelAccountRecoveryDisablement',
+    'send',
+    [addressTwo]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can re-initiate recovery disablement timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateAccountRecoveryDisablement',
+    'send',
+    [addressTwo, 1]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot shorten a timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateAccountRecoveryDisablement',
+    'send',
+    [addressTwo, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot initiate recovery with massive extraTime`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateAccountRecovery',
+    'send',
+    [address, addressTwo, constants.FULL_APPROVAL],
+    false
+  )
+
   // advance time by 2 weeks
   await advanceTime((60 * 60 * 24 * 7 * 2) + 5)
 
@@ -6846,6 +6991,431 @@ module.exports = {test: async function (provider, testingContext) {
     'disableAccountRecovery',
     'send',
     [addressTwo],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot set a role to the null address`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'setRole',
+    'send',
+    [0, constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can set a role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'setRole',
+    'send',
+    [0, address]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can set a role that is already set`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'setRole',
+    'send',
+    [0, address]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check if the caller has a role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'isRole',
+    'call',
+    [0],
+    true,
+    value => {
+      assert.ok(value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check for an operator role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getOperator',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check for a recoverer role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getRecoverer',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, constants.NULL_ADDRESS)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check for a canceller role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getCanceller',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, constants.NULL_ADDRESS)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check for a disabler role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getDisabler',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, constants.NULL_ADDRESS)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check for a pauser role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getPauser',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, constants.NULL_ADDRESS)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can remove a role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'removeRole',
+    'send',
+    [0]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check if the caller has a role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'isRole',
+    'call',
+    [0],
+    true,
+    value => {
+      assert.ok(!value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check if a role is paused`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'isPaused',
+    'call',
+    [0],
+    true,
+    value => {
+      assert.ok(!value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot pause a role if not owner or pauser`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'pause',
+    'send',
+    [0],
+    false,
+    receipt => {},
+    addressTwo
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can set a role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'setRole',
+    'send',
+    [4, addressTwo]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot unpause an unpaused role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'unpause',
+    'send',
+    [0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can pause an unpaused role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'pause',
+    'send',
+    [0],
+    true,
+    receipt => {},
+    addressTwo
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot pause a paused role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'pause',
+    'send',
+    [0],
+    false,
+    receipt => {},
+    addressTwo
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can pause the pauser role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'pause',
+    'send',
+    [4]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 pauser cannot call a paused role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'pause',
+    'send',
+    [4],
+    false,
+    receipt => {},
+    addressTwo
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check if a role is paused`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'isPaused',
+    'call',
+    [0],
+    true,
+    value => {
+      assert.ok(value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can unpause a paused role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'unpause',
+    'send',
+    [0]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can get an empty timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getTimelock',
+    'call',
+    ['0x01020304', '0x'],
+    true,
+    value => {
+      assert.ok(!value.exists)
+      assert.ok(!value.completed)
+      assert.ok(!value.expired)
+      assert.strictEqual(value.completionTime, '0')
+      assert.strictEqual(value.expirationTime, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can get an empty default timelock interval`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getDefaultTimelockInterval',
+    'call',
+    ['0x01020304'],
+    true,
+    value => {
+      assert.strictEqual(value, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can get an empty default timelock expiration`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getDefaultTimelockExpiration',
+    'call',
+    ['0x01020304'],
+    true,
+    value => {
+      assert.strictEqual(value, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockInterval with no selector`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0x00000000', 0, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockInterval to modify interval over 8 weeks`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xe950c085', 5443200, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot create timelock with excessive duration`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xe950c085', constants.FULL_APPROVAL, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockInterval to set a timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xe950c085', 10000, 5]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot shorten existing initiateModifyTimelockInterval timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xe950c085', 10000, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockInterval to change a duration`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xe950c085', 10001, 5]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockInterval to set a timelock on another function`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xaaaaaaaa', 10000, 0]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockInterval with no selector`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'modifyTimelockInterval',
+    'send',
+    ['0x00000000', 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockInterval before timelock completion`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'modifyTimelockInterval',
+    'send',
+    ['0xe950c085', 1000],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration with no selector`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockExpiration',
+    'send',
+    ['0x00000000', 0, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration to with expiration over one month`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockExpiration',
+    'send',
+    ['0xe950c085', 5443200, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration to modify expiration under one minute`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockExpiration',
+    'send',
+    ['0xd7ce3c6f', 30, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockExpiration to set a timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockExpiration',
+    'send',
+    ['0xd7ce3c6f', 300000, 0],
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockExpiration to set a timelock on another function`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockExpiration',
+    'send',
+    ['0xe950c085', 30, 0]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockExpiration with no selector`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'modifyTimelockExpiration',
+    'send',
+    ['0x00000000', 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockExpiration before timelock completion`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'modifyTimelockExpiration',
+    'send',
+    ['0xd7ce3c6f', 300],
+    false
+  )
+
+  // advance time by 2 weeks
+  await advanceTime((60 * 60 * 24 * 7 * 2) + 5)
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can call modifyTimelockInterval`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'modifyTimelockInterval',
+    'send',
+    ['0xaaaaaaaa', 10000]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can call modifyTimelockExpiration`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'modifyTimelockExpiration',
+    'send',
+    ['0xd7ce3c6f', 300000],
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockExpiration if expiration is too short`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'modifyTimelockExpiration',
+    'send',
+    ['0xe950c085', 30],
     false
   )
 
@@ -7823,6 +8393,14 @@ module.exports = {test: async function (provider, testingContext) {
     [[ownerOne, ownerTwo, ownerThree, ownerFour]]
   )
 
+  const DharmaAccountRecoveryOperatorMultisig = await runTest(
+    `DharmaAccountRecoveryOperatorMultisig contract deployment`,
+    DharmaAccountRecoveryOperatorMultisigDeployer,
+    '',
+    'deploy',
+    [[ownerOne, ownerTwo, ownerThree, ownerFour]]
+  )
+
   const DharmaKeyRegistryMultisig = await runTest(
     `DharmaKeyRegistryMultisig contract deployment`,
     DharmaKeyRegistryMultisigDeployer,
@@ -8429,6 +9007,177 @@ module.exports = {test: async function (provider, testingContext) {
     value => {
       assert.strictEqual(value, '1')
     }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig can get the owners`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'getOwners',
+    'call',
+    [],
+    true,
+    value => {
+      assert.deepEqual(
+        value, [ownerOne, ownerTwo, ownerThree, ownerFour]
+      )
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig can get an owner`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'isOwner',
+    'call',
+    [ownerOne],
+    true,
+    value => {
+      assert.ok(value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig returns false for a non-owner`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'isOwner',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(!value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig can get the threshold`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'getThreshold',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '2')
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig can get the destination`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'getDestination',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS)
+    }
+  )
+
+  // Generate the messsage hash based on the supplied parameters.
+  hashInputs = (
+    DharmaAccountRecoveryOperatorMultisig.options.address +
+    '0'.padStart(64, '0') +
+    address.slice(2) +
+    executorGasLimit.toString(16).padStart(64, '0') +
+    rawData.slice(2)
+  )
+
+  hash = util.bufferToHex(util.keccak256(hashInputs))
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig can get a hash`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'getHash',
+    'call',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32],
+    true,
+    values => {
+      assert.strictEqual(values.hash, hash)
+    }
+  )
+
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+
+  /*
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
+  ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2)
+  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSigs = unownedSig + ownerTwoSig.slice(2)
+  */
+
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
+  ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2)
+  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSigs = unownedSig + ownerTwoSig.slice(2)
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig cannot call execute from non-executor`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, addressTwo, executorGasLimit, constants.NULL_BYTES_32, ownerSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig cannot call execute with oddly-sized signatures`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerSigs + '1234'],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig cannot call execute with non-compliant signatures`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, bizarreSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig cannot call execute without enough signatures`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerOneSig],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig cannot call execute without owner signatures`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, unownedSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig cannot call execute with out-of-order signatures`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerSigsOutOfOrder],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig can call execute`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig cannot replay a call to execute`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerSigs],
+    false
   )
 
   const DharmaEscapeHatchRegistry = await runTest(

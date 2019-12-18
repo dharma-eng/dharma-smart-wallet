@@ -20,6 +20,7 @@ let DharmaEscapeHatchRegistryArtifact;
 
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
+const DharmaAccountRecoveryOperatorMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryOperatorMultisig.json')
 const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaKeyRegistryMultisig.json')
 const DharmaTestingMultisigArtifact = require('../../build/contracts/DharmaTestingMultisig.json')
 
@@ -217,6 +218,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   DharmaAccountRecoveryMultisigDeployer.options.data = (
     DharmaAccountRecoveryMultisigArtifact.bytecode
+  )
+
+  const DharmaAccountRecoveryOperatorMultisigDeployer = new web3.eth.Contract(
+    DharmaAccountRecoveryOperatorMultisigArtifact.abi
+  )
+  DharmaAccountRecoveryOperatorMultisigDeployer.options.data = (
+    DharmaAccountRecoveryOperatorMultisigArtifact.bytecode
   )
 
   const DharmaKeyRegistryMultisigDeployer = new web3.eth.Contract(
@@ -2138,6 +2146,53 @@ module.exports = {test: async function (provider, testingContext) {
   await runTest(
     `DharmaAccountRecoveryMultisig contract deployment fails with too many owners`,
     DharmaAccountRecoveryMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000005',
+      '0x0000000000000000000000000000000000000006',
+      '0x0000000000000000000000000000000000000007',
+      '0x0000000000000000000000000000000000000008',
+      '0x0000000000000000000000000000000000000009',
+      '0x000000000000000000000000000000000000000a',
+      '0x000000000000000000000000000000000000000b'
+    ]],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig contract deployment fails if threshold is not met`,
+    DharmaAccountRecoveryOperatorMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000001'
+    ]],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig contract deployment fails if sigs are out of order`,
+    DharmaAccountRecoveryOperatorMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000005',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000001'
+    ]],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig contract deployment fails with too many owners`,
+    DharmaAccountRecoveryOperatorMultisigDeployer,
     '',
     'deploy',
     [[
