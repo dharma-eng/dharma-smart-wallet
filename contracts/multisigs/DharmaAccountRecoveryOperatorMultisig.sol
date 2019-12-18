@@ -107,7 +107,7 @@ contract DharmaAccountRecoveryOperatorMultisig {
     }
 
     // Add the hash to the mapping of used hashes and execute the transaction.
-    _usedHashes[rawHash] == true;
+    _usedHashes[rawHash] = true;
     (success, returnData) = _DESTINATION.call.gas(gasLimit)(data);
   }
 
