@@ -12,7 +12,7 @@ const DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgrade
 const DharmaKeyRingUpgradeBeaconArtifact = require('../../build/contracts/DharmaKeyRingUpgradeBeacon.json')
 const DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
 
-const DharmaAccountRecoveryManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
+const DharmaAccountRecoveryManagerV2Artifact = require('../../build/contracts/DharmaAccountRecoveryManagerV2.json')
 const DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
 const DharmaKeyRegistryV2Artifact = require('../../build/contracts/DharmaKeyRegistryV2.json')
 const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
@@ -21,7 +21,7 @@ const DharmaSmartWalletFactoryV2Artifact = require('../../build/contracts/Dharma
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
 const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV2.json')
-const DharmaSmartWalletImplementationV4Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV4.json')
+const DharmaSmartWalletImplementationV5Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV5.json')
 
 const DharmaKeyRingImplementationV1Artifact = require('../../build/contracts/DharmaKeyRingImplementationV1.json')
 const DharmaKeyRingFactoryV1Artifact = require('../../build/contracts/DharmaKeyRingFactoryV1.json')
@@ -33,6 +33,7 @@ const KeyRingUpgradeBeaconProxyV1Artifact = require('../../build/contracts/KeyRi
 
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
+const DharmaAccountRecoveryOperatorMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryOperatorMultisig.json')
 const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaKeyRegistryMultisig.json')
 
 const DharmaEscapeHatchRegistryArtifact = require('../../build/contracts/DharmaEscapeHatchRegistry.json')
@@ -81,9 +82,9 @@ module.exports = {test: async function (provider, testingContext) {
     constants.KEY_RING_UPGRADE_BEACON_ADDRESS
   )
 
-  const DharmaAccountRecoveryManager = new web3.eth.Contract(
-    DharmaAccountRecoveryManagerArtifact.abi,
-    constants.ACCOUNT_RECOVERY_MANAGER_ADDRESS
+  const DharmaAccountRecoveryManagerV2 = new web3.eth.Contract(
+    DharmaAccountRecoveryManagerV2Artifact.abi,
+    constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS
   )
 
   const DharmaKeyRegistryV1 = new web3.eth.Contract(
@@ -175,11 +176,11 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaSmartWalletImplementationV2Artifact.bytecode
   )
 
-  const DharmaSmartWalletImplementationV4Deployer = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV4Artifact.abi
+  const DharmaSmartWalletImplementationV5Deployer = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV5Artifact.abi
   )
-  DharmaSmartWalletImplementationV4Deployer.options.data = (
-    DharmaSmartWalletImplementationV4Artifact.bytecode
+  DharmaSmartWalletImplementationV5Deployer.options.data = (
+    DharmaSmartWalletImplementationV5Artifact.bytecode
   )
 
   const AdharmaKeyRingImplementationDeployer = new web3.eth.Contract(
@@ -313,11 +314,11 @@ module.exports = {test: async function (provider, testingContext) {
     MockDharmaKeyRingFactoryArtifact.bytecode
   )
 
-  const DharmaAccountRecoveryManagerDeployer = new web3.eth.Contract(
-    DharmaAccountRecoveryManagerArtifact.abi
+  const DharmaAccountRecoveryManagerV2Deployer = new web3.eth.Contract(
+    DharmaAccountRecoveryManagerV2Artifact.abi
   )
-  DharmaAccountRecoveryManagerDeployer.options.data = (
-    DharmaAccountRecoveryManagerArtifact.bytecode
+  DharmaAccountRecoveryManagerV2Deployer.options.data = (
+    DharmaAccountRecoveryManagerV2Artifact.bytecode
   )
 
   const DharmaUpgradeMultisigDeployer = new web3.eth.Contract(
@@ -332,6 +333,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   DharmaAccountRecoveryMultisigDeployer.options.data = (
     DharmaAccountRecoveryMultisigArtifact.bytecode
+  )
+
+  const DharmaAccountRecoveryOperatorMultisigDeployer = new web3.eth.Contract(
+    DharmaAccountRecoveryOperatorMultisigArtifact.abi
+  )
+  DharmaAccountRecoveryOperatorMultisigDeployer.options.data = (
+    DharmaAccountRecoveryOperatorMultisigArtifact.bytecode
   )
 
   const DharmaKeyRegistryMultisigDeployer = new web3.eth.Contract(
@@ -1066,9 +1074,9 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
-  const DharmaSmartWalletImplementationV4 = await runTest(
-    `DharmaSmartWalletImplementationV4 contract deployment`,
-    DharmaSmartWalletImplementationV4Deployer,
+  const DharmaSmartWalletImplementationV5 = await runTest(
+    `DharmaSmartWalletImplementationV5 contract deployment`,
+    DharmaSmartWalletImplementationV5Deployer,
     '',
     'deploy'
   )
@@ -1631,8 +1639,8 @@ module.exports = {test: async function (provider, testingContext) {
     targetWalletAddress
   )
 
-  const UserSmartWalletV4 = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV4Artifact.abi,
+  const UserSmartWalletV5 = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV5Artifact.abi,
     targetWalletAddress
   )
 
@@ -2195,7 +2203,7 @@ module.exports = {test: async function (provider, testingContext) {
     'getNextCustomActionID',
     'call',
     [
-      4, // DaiWithdrawal,
+      10, // DaiWithdrawal,
       constants.FULL_APPROVAL,
       address,
       0
@@ -2449,13 +2457,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'Dharma Upgrade Beacon Controller can upgrade to V4 implementation',
+    'Dharma Upgrade Beacon Controller can upgrade to V5 implementation',
     DharmaUpgradeBeaconController,
     'upgrade',
     'send',
     [
       DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV4.options.address
+      DharmaSmartWalletImplementationV5.options.address
     ],
     true,
     receipt => {
@@ -2476,7 +2484,7 @@ module.exports = {test: async function (provider, testingContext) {
         */
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.newImplementation,
-          DharmaSmartWalletImplementationV4.options.address
+          DharmaSmartWalletImplementationV5.options.address
         )
         /* TODO
         assert.strictEqual(
@@ -2496,24 +2504,24 @@ module.exports = {test: async function (provider, testingContext) {
     [DharmaUpgradeBeacon.options.address],
     true,
     value => {
-      assert.strictEqual(value, DharmaSmartWalletImplementationV4.options.address)
+      assert.strictEqual(value, DharmaSmartWalletImplementationV5.options.address)
     }
   )
 
-  const UpgradeBeaconImplementationCheckV4 = await runTest(
+  const UpgradeBeaconImplementationCheckV5 = await runTest(
     `UpgradeBeaconImplementationCheck deployment`,
     UpgradeBeaconImplementationCheckDeployer,
     '',
     'deploy',
     [
       DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV4.options.address
+      DharmaSmartWalletImplementationV5.options.address
     ]
   )
 
   await runTest(
-    'V4 user smart wallet can be called and still has original dharma key set',
-    UserSmartWalletV4,
+    'V5 user smart wallet can be called and still has original dharma key set',
+    UserSmartWalletV5,
     'getUserSigningKey',
     'call',
     [],
@@ -2524,20 +2532,20 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get the new version (4)',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get the new version (5)',
+    UserSmartWalletV5,
     'getVersion',
     'call',
     [],
     true,
     value => {
-      assert.strictEqual(value, '4')
+      assert.strictEqual(value, '5')
     }
   )
 
   await runTest(
-    'V4 UserSmartWallet nonce is still set to value from before upgrade',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet nonce is still set to value from before upgrade',
+    UserSmartWalletV5,
     'getNonce',
     'call',
     [],
@@ -2548,8 +2556,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get balances',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get balances',
+    UserSmartWalletV5,
     'getBalances',
     'call',
     [],
@@ -2560,8 +2568,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet secondary can call to cancel',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet secondary can call to cancel',
+    UserSmartWalletV5,
     'cancel',
     'send',
     [
@@ -2571,8 +2579,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet nonce is now set to original + 1',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet nonce is now set to original + 1',
+    UserSmartWalletV5,
     'getNonce',
     'call',
     [],
@@ -2583,8 +2591,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get next custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get next custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -2600,8 +2608,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get custom action ID and it matches next action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get custom action ID and it matches next action ID',
+    UserSmartWalletV5,
     'getCustomActionID',
     'call',
     [
@@ -2619,8 +2627,8 @@ module.exports = {test: async function (provider, testingContext) {
 
   let genericActionID
   await runTest(
-    'V4 UserSmartWallet can get next generic action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get next generic action ID',
+    UserSmartWalletV5,
     'getNextGenericActionID',
     'call',
     [
@@ -2635,8 +2643,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get generic action ID and it matches next action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get generic action ID and it matches next action ID',
+    UserSmartWalletV5,
     'getGenericActionID',
     'call',
     [
@@ -2652,7 +2660,19 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'Dai Whale can deposit dai into the V4 smart wallet',
+    'UserSmartWallet calls to atomic methods revert',
+    UserSmartWalletV5,
+    '_withdrawSaiAtomic',
+    'send',
+    [
+      '1',
+     address
+    ],
+    false
+  )
+
+  await runTest(
+    'Dai Whale can deposit dai into the V5 smart wallet',
     DAI,
     'transfer',
     'send',
@@ -2678,7 +2698,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'USDC Whale can deposit usdc into the V4 smart wallet',
+    'USDC Whale can deposit usdc into the V5 smart wallet',
     USDC,
     'transfer',
     'send',
@@ -2704,8 +2724,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 user smart wallet can trigger repayAndDeposit to deposit all new funds',
-    UserSmartWalletV4,
+    'V5 user smart wallet can trigger repayAndDeposit to deposit all new funds',
+    UserSmartWalletV5,
     'repayAndDeposit',
     'send',
     [],
@@ -2759,7 +2779,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'Dai Whale can deposit dai into the V4 smart wallet again',
+    'Dai Whale can deposit dai into the V5 smart wallet again',
     DAI,
     'transfer',
     'send',
@@ -2785,8 +2805,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV5,
     'getNextGenericActionID',
     'call',
     [
@@ -2811,8 +2831,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet cannot call executeAction and target Escape Hatch Registry',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet cannot call executeAction and target Escape Hatch Registry',
+    UserSmartWalletV5,
     'executeAction',
     'send',
     [
@@ -2826,8 +2846,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV5,
     'getNextGenericActionID',
     'call',
     [
@@ -2852,8 +2872,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can call executeAction',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can call executeAction',
+    UserSmartWalletV5,
     'executeAction',
     'send',
     [
@@ -2866,8 +2886,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 user smart wallet repayAndDeposit cannot deposit without approval',
-    UserSmartWalletV4,
+    'V5 user smart wallet repayAndDeposit cannot deposit without approval',
+    UserSmartWalletV5,
     'repayAndDeposit',
     'send',
     [],
@@ -2894,8 +2914,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV5,
     'getNextGenericActionID',
     'call',
     [
@@ -2920,8 +2940,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can call executeAction',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can call executeAction',
+    UserSmartWalletV5,
     'executeAction',
     'send',
     [
@@ -2934,8 +2954,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 user smart wallet repayAndDeposit can deposit with approval added back',
-    UserSmartWalletV4,
+    'V5 user smart wallet repayAndDeposit can deposit with approval added back',
+    UserSmartWalletV5,
     'repayAndDeposit',
     'send',
     [],
@@ -2962,8 +2982,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 user smart wallet can trigger repayAndDeposit even with no funds',
-    UserSmartWalletV4,
+    'V5 user smart wallet can trigger repayAndDeposit even with no funds',
+    UserSmartWalletV5,
     'repayAndDeposit',
     'send',
     [],
@@ -2990,8 +3010,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet secondary cannot set an empty user userSigningKey',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet secondary cannot set an empty user userSigningKey',
+    UserSmartWalletV5,
     'setUserSigningKey',
     'send',
     [
@@ -3004,8 +3024,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet secondary can set a custom user userSigningKey',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet secondary can set a custom user userSigningKey',
+    UserSmartWalletV5,
     'setUserSigningKey',
     'send',
     [
@@ -3017,8 +3037,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get next custom action ID to set a user signing key',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get next custom action ID to set a user signing key',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3036,7 +3056,7 @@ module.exports = {test: async function (provider, testingContext) {
   let currentNonce
   await runTest(
     'UserSmartWallet can get the nonce',
-    UserSmartWalletV4,
+    UserSmartWalletV5,
     'getNonce',
     'call',
     [],
@@ -3047,8 +3067,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get custom action ID and it matches next action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get custom action ID and it matches next action ID',
+    UserSmartWalletV5,
     'getCustomActionID',
     'call',
     [
@@ -3075,8 +3095,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can set a new user signing key with signatures',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can set a new user signing key with signatures',
+    UserSmartWalletV5,
     'setUserSigningKey',
     'send',
     [
@@ -3091,8 +3111,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get next custom action ID to cancel',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get next custom action ID to cancel',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3109,7 +3129,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'UserSmartWallet can get the nonce',
-    UserSmartWalletV4,
+    UserSmartWalletV5,
     'getNonce',
     'call',
     [],
@@ -3120,8 +3140,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get custom action ID and it matches next action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get custom action ID and it matches next action ID',
+    UserSmartWalletV5,
     'getCustomActionID',
     'call',
     [
@@ -3143,8 +3163,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet secondary can cancel using a signature',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet secondary can cancel using a signature',
+    UserSmartWalletV5,
     'cancel',
     'send',
     [
@@ -3158,7 +3178,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'UserSmartWallet nonce is incremented after cancelling',
-    UserSmartWalletV4,
+    UserSmartWalletV5,
     'getNonce',
     'call',
     [],
@@ -3169,9 +3189,9 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet secondary cannot call to withdraw dai without primary',
-    UserSmartWalletV4,
-    'withdrawDai',
+    'V5 UserSmartWallet secondary cannot call to withdraw dai without primary',
+    UserSmartWalletV5,
+    'withdrawSai',
     'send',
     [
       '1000000000000000000',
@@ -3184,8 +3204,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet secondary cannot call to withdraw usdc without primary',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet secondary cannot call to withdraw usdc without primary',
+    UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
@@ -3199,8 +3219,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet secondary can no longer call to set userSigningKey without primary',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet secondary can no longer call to set userSigningKey without primary',
+    UserSmartWalletV5,
     'setUserSigningKey',
     'send',
     [
@@ -3213,8 +3233,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3240,8 +3260,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot withdraw "dust" USDC',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot withdraw "dust" USDC',
+    UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
@@ -3260,8 +3280,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3287,8 +3307,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot withdraw USDC to null address',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot withdraw USDC to null address',
+    UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
@@ -3307,8 +3327,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3334,8 +3354,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay can call with two signatures to withdraw USDC',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay can call with two signatures to withdraw USDC',
+    UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
@@ -3354,8 +3374,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3381,8 +3401,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot call with bad signature to withdraw USDC',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot call with bad signature to withdraw USDC',
+    UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
@@ -3401,8 +3421,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet cannot call with bad user signature to withdraw USDC',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet cannot call with bad user signature to withdraw USDC',
+    UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
@@ -3421,8 +3441,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay can call with two signatures to withdraw max USDC',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay can call with two signatures to withdraw max USDC',
+    UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
@@ -3460,8 +3480,8 @@ module.exports = {test: async function (provider, testingContext) {
   */
 
   await runTest(
-    'V4 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3487,8 +3507,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot withdraw "dust" dai',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot withdraw "dust" dai',
+    UserSmartWalletV5,
     'withdrawDai',
     'send',
     [
@@ -3504,8 +3524,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3531,8 +3551,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot withdraw dai to null address',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot withdraw dai to null address',
+    UserSmartWalletV5,
     'withdrawDai',
     'send',
     [
@@ -3548,8 +3568,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3575,8 +3595,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay can call with signature to withdraw dai',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay can call with signature to withdraw dai',
+    UserSmartWalletV5,
     'withdrawDai',
     'send',
     [
@@ -3595,8 +3615,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet cannot get a non-custom "custom" next action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet cannot get a non-custom "custom" next action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3609,8 +3629,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet cannot get a non-custom "custom" action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet cannot get a non-custom "custom" action ID',
+    UserSmartWalletV5,
     'getCustomActionID',
     'call',
     [
@@ -3624,8 +3644,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3651,8 +3671,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot call with bad signature to withdraw dai',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot call with bad signature to withdraw dai',
+    UserSmartWalletV5,
     'withdrawDai',
     'send',
     [
@@ -3671,8 +3691,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot call with bad user signature to withdraw dai',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot call with bad user signature to withdraw dai',
+    UserSmartWalletV5,
     'withdrawDai',
     'send',
     [
@@ -3691,8 +3711,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay can call with signature to withdraw dai',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay can call with signature to withdraw dai',
+    UserSmartWalletV5,
     'withdrawDai',
     'send',
     [
@@ -3710,8 +3730,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a Ether withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3737,8 +3757,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot to withdraw ether with no amount',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot to withdraw ether with no amount',
+    UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
@@ -3756,8 +3776,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a Ether withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3783,8 +3803,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot to withdraw ether with no recipient',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot to withdraw ether with no recipient',
+    UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
@@ -3802,8 +3822,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a Ether withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3829,8 +3849,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot call with bad signature to withdraw eth',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot call with bad signature to withdraw eth',
+    UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
@@ -3849,8 +3869,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
+    UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
@@ -3869,8 +3889,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay can call with signature to withdraw ether',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay can call with signature to withdraw ether',
+    UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
@@ -3888,8 +3908,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a Ether withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -3915,8 +3935,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot call with bad signature to withdraw eth',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot call with bad signature to withdraw eth',
+    UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
@@ -3935,8 +3955,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
+    UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
@@ -3955,8 +3975,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay can call with signature to withdraw ether',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay can call with signature to withdraw ether',
+    UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
@@ -3974,8 +3994,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet cancel reverts with bad signature',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet cancel reverts with bad signature',
+    UserSmartWalletV5,
     'cancel',
     'send',
     [
@@ -3988,8 +4008,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet calls revert if insufficient action gas is supplied',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet calls revert if insufficient action gas is supplied',
+    UserSmartWalletV5,
     'cancel',
     'send',
     [
@@ -4000,8 +4020,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet calls succeed if sufficient non-zero action gas supplied',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet calls succeed if sufficient non-zero action gas supplied',
+    UserSmartWalletV5,
     'cancel',
     'send',
     [
@@ -4011,8 +4031,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a cancel custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a cancel custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -4030,8 +4050,8 @@ module.exports = {test: async function (provider, testingContext) {
   let cancelSignature = signHashedPrefixedHexString(customActionId, addressTwo)
 
   await runTest(
-    'V4 UserSmartWallet can cancel using a signature',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can cancel using a signature',
+    UserSmartWalletV5,
     'cancel',
     'send',
     [
@@ -4044,9 +4064,9 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet calls to atomic methods revert',
-    UserSmartWalletV4,
-    '_withdrawDaiAtomic',
+    'V5 UserSmartWallet calls to atomic methods revert',
+    UserSmartWalletV5,
+    '_withdrawSaiAtomic',
     'send',
     [
       '1',
@@ -4056,8 +4076,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet calls to recover from random address revert',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet calls to recover from random address revert',
+    UserSmartWalletV5,
     'recover',
     'send',
     [
@@ -4067,7 +4087,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'DharmaSmartWalletFactoryV1 can deploy a V4 smart wallet using a Dharma Key',
+    'DharmaSmartWalletFactoryV1 can deploy a V5 smart wallet using a Dharma Key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
     'send',
@@ -4099,8 +4119,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV5,
     'getNextGenericActionID',
     'call',
     [
@@ -4125,8 +4145,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet cannot call executeAction and target a non-contract',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet cannot call executeAction and target a non-contract',
+    UserSmartWalletV5,
     'executeAction',
     'send',
     [
@@ -4140,12 +4160,12 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet cannot call executeAction and target itself',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet cannot call executeAction and target itself',
+    UserSmartWalletV5,
     'executeAction',
     'send',
     [
-      UserSmartWalletV4.options.address,
+      UserSmartWalletV5.options.address,
       USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
@@ -4155,8 +4175,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can call executeAction',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can call executeAction',
+    UserSmartWalletV5,
     'executeAction',
     'send',
     [
@@ -4169,8 +4189,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get the next generic batch action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get the next generic batch action ID',
+    UserSmartWalletV5,
     'getNextGenericAtomicBatchActionID',
     'call',
     [
@@ -4185,7 +4205,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'UserSmartWallet can get the nonce',
-    UserSmartWalletV4,
+    UserSmartWalletV5,
     'getNonce',
     'call',
     [],
@@ -4196,8 +4216,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet generic batch action ID with nonce matches next ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet generic batch action ID with nonce matches next ID',
+    UserSmartWalletV5,
     'getGenericAtomicBatchActionID',
     'call',
     [
@@ -4222,8 +4242,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can call executeActionWithAtomicBatchCalls',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can call executeActionWithAtomicBatchCalls',
+    UserSmartWalletV5,
     'executeActionWithAtomicBatchCalls',
     'send',
     [
@@ -4262,7 +4282,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'new user smart wallet can trigger repayAndDeposit to deposit all new funds',
-    UserSmartWalletV4,
+    UserSmartWalletV5,
     'repayAndDeposit',
     'send',
     [],
@@ -4388,8 +4408,8 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  const BlacklistedUserSmartWalletV4 = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV4Artifact.abi,
+  const BlacklistedUserSmartWalletV5 = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV5Artifact.abi,
     targetBlacklistAddress
   )
 
@@ -4445,7 +4465,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'blacklisted smart wallet will not approve USDC during repayAndDeposit',
-    BlacklistedUserSmartWalletV4,
+    BlacklistedUserSmartWalletV5,
     'repayAndDeposit',
     'send',
     [],
@@ -4479,8 +4499,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -4506,8 +4526,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet attempt to withdraw max USDC when paused causes ExternalError',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet attempt to withdraw max USDC when paused causes ExternalError',
+    UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
@@ -4527,7 +4547,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'smart wallet will not approve USDC when paused during repayAndDeposit',
-    BlacklistedUserSmartWalletV4,
+    BlacklistedUserSmartWalletV5,
     'repayAndDeposit',
     'send',
     [],
@@ -4551,7 +4571,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'unblacklisted, unpaused smart wallet approves USDC during repayAndDeposit',
-    BlacklistedUserSmartWalletV4,
+    BlacklistedUserSmartWalletV5,
     'repayAndDeposit',
     'send',
     [],
@@ -4563,7 +4583,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
+    'V5 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -4590,7 +4610,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay call to withdraw USDC to blacklisted address',
+    'V5 UserSmartWallet relay call to withdraw USDC to blacklisted address',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -4611,7 +4631,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a USDC withdrawal custom action ID',
+    'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -4638,7 +4658,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay call to withdraw USDC to itself',
+    'V5 UserSmartWallet relay call to withdraw USDC to itself',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -4657,7 +4677,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
+    'V5 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -4684,7 +4704,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay call to withdraw USDC to blacklisted address',
+    'V5 UserSmartWallet relay call to withdraw USDC to blacklisted address',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -4705,8 +4725,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a Ether withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -4732,8 +4752,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot withdraw eth to a non-payable account',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot withdraw eth to a non-payable account',
+    UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
@@ -4766,21 +4786,21 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'DharmaSmartWalletFactoryV1 can deploy a V4 smart wallet using a contract key',
+    'DharmaSmartWalletFactoryV1 can deploy a V5 smart wallet using a contract key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
     'send',
     [targetWalletAddress]
   )
 
-  const UserSmartWalletV4Two = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV4Artifact.abi,
+  const UserSmartWalletV5Two = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV5Artifact.abi,
     targetWalletAddressTwo
   )
 
   await runTest(
-    'V4 UserSmartWallet cancel reverts with bad contract signature',
-    UserSmartWalletV4Two,
+    'V5 UserSmartWallet cancel reverts with bad contract signature',
+    UserSmartWalletV5Two,
     'cancel',
     'send',
     [
@@ -4793,8 +4813,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV5,
     'getNextGenericActionID',
     'call',
     [
@@ -4819,8 +4839,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can call executeAction',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can call executeAction',
+    UserSmartWalletV5,
     'executeAction',
     'send',
     [
@@ -4833,7 +4853,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a Dai withdrawal custom action ID',
+    'V5 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -4860,7 +4880,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot withdraw too much dai',
+    'V5 UserSmartWallet relay cannot withdraw too much dai',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -4880,7 +4900,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a USDC withdrawal custom action ID',
+    'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
@@ -4908,7 +4928,7 @@ module.exports = {test: async function (provider, testingContext) {
 
 
   await runTest(
-    'V4 UserSmartWallet relay can call with two signatures to withdraw USDC',
+    'V5 UserSmartWallet relay can call with two signatures to withdraw USDC',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
@@ -4928,8 +4948,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get next generic batch action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get next generic batch action ID',
+    UserSmartWalletV5,
     'getNextGenericAtomicBatchActionID',
     'call',
     [
@@ -4958,8 +4978,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet bad executeActionWithAtomicBatchCalls emits CallFailure',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet bad executeActionWithAtomicBatchCalls emits CallFailure',
+    UserSmartWalletV5,
     'executeActionWithAtomicBatchCalls',
     'send',
     [
@@ -4980,8 +5000,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV5,
     'getNextGenericActionID',
     'call',
     [
@@ -5008,8 +5028,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can call executeAction to enter dai market',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can call executeAction to enter dai market',
+    UserSmartWalletV5,
     'executeAction',
     'send',
     [
@@ -5050,14 +5070,14 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can trigger repayAndDeposit to deposit all new funds',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can trigger repayAndDeposit to deposit all new funds',
+    UserSmartWalletV5,
     'repayAndDeposit'
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV5,
     'getNextGenericActionID',
     'call',
     [
@@ -5082,8 +5102,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can call executeAction to perform a borrow',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can call executeAction to perform a borrow',
+    UserSmartWalletV5,
     'executeAction',
     'send',
     [
@@ -5101,8 +5121,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -5128,8 +5148,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot withdraw max dai with an outstanding borrow',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot withdraw max dai with an outstanding borrow',
+    UserSmartWalletV5,
     'withdrawDai',
     'send',
     [
@@ -5148,8 +5168,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get an escape hatch action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get an escape hatch action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -5175,8 +5195,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot set an escape hatch with no account',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot set an escape hatch with no account',
+    UserSmartWalletV5,
     'setEscapeHatch',
     'send',
     [
@@ -5193,8 +5213,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get an escape hatch action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get an escape hatch action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -5220,8 +5240,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet cannot call escape before escape hatch is set',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet cannot call escape before escape hatch is set',
+    UserSmartWalletV5,
     'escape',
     'send',
     [],
@@ -5232,8 +5252,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay can set an escape hatch',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay can set an escape hatch',
+    UserSmartWalletV5,
     'setEscapeHatch',
     'send',
     [
@@ -5250,8 +5270,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet non-escape hatch account cannot call escape',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet non-escape hatch account cannot call escape',
+    UserSmartWalletV5,
     'escape',
     'send',
     [],
@@ -5263,8 +5283,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet escape hatch account can call escape',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet escape hatch account can call escape',
+    UserSmartWalletV5,
     'escape',
     'send',
     [],
@@ -5276,8 +5296,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet escape hatch account can call escape again',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet escape hatch account can call escape again',
+    UserSmartWalletV5,
     'escape',
     'send',
     [],
@@ -5289,8 +5309,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get an escape hatch action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get an escape hatch action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -5316,8 +5336,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay can remove an escape hatch',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay can remove an escape hatch',
+    UserSmartWalletV5,
     'removeEscapeHatch',
     'send',
     [
@@ -5333,8 +5353,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet cannot call escape once escape hatch is removed',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet cannot call escape once escape hatch is removed',
+    UserSmartWalletV5,
     'escape',
     'send',
     [],
@@ -5345,8 +5365,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get an escape hatch action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get an escape hatch action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -5372,8 +5392,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay can disable the escape hatch',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay can disable the escape hatch',
+    UserSmartWalletV5,
     'permanentlyDisableEscapeHatch',
     'send',
     [
@@ -5389,8 +5409,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet can get an escape hatch action ID',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet can get an escape hatch action ID',
+    UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
@@ -5416,8 +5436,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V4 UserSmartWallet relay cannot set an escape hatch once disabled',
-    UserSmartWalletV4,
+    'V5 UserSmartWallet relay cannot set an escape hatch once disabled',
+    UserSmartWalletV5,
     'setEscapeHatch',
     'send',
     [
@@ -5436,11 +5456,11 @@ module.exports = {test: async function (provider, testingContext) {
   // Initiate account recovery
   await runTest(
     'smart wallet account recovery can be initiated',
-    DharmaAccountRecoveryManager,
+    DharmaAccountRecoveryManagerV2,
     'initiateAccountRecovery',
     'send',
     [
-      UserSmartWalletV4.options.address,
+      UserSmartWalletV5.options.address,
       originalAddress,
       0 // extraTime in seconds
     ],
@@ -5453,27 +5473,27 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'smart wallet account recovery cannot be performed right away',
-    DharmaAccountRecoveryManager,
+    DharmaAccountRecoveryManagerV2,
     'recover',
     'send',
     [
-      UserSmartWalletV4.options.address,
+      UserSmartWalletV5.options.address,
       originalAddress
     ],
     false
   )
 
-  // advance time by 7 days
-  await advanceTime((60 * 60 * 24 * 7) + 5)
+  // advance time by 3 days
+  await advanceTime((60 * 60 * 24 * 3) + 5)
 
   // recover account
   await runTest(
-    'smart wallet account recovery can be performed after seven days',
-    DharmaAccountRecoveryManager,
+    'smart wallet account recovery can be performed after three days',
+    DharmaAccountRecoveryManagerV2,
     'recover',
     'send',
     [
-      UserSmartWalletV4.options.address,
+      UserSmartWalletV5.options.address,
       originalAddress
     ],
     true,
@@ -5498,9 +5518,9 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
-  const DharmaAccountRecoveryManagerCoverage = await runTest(
-    `DharmaAccountRecoveryManager contract deployment`,
-    DharmaAccountRecoveryManagerDeployer,
+  const DharmaAccountRecoveryManagerV2Coverage = await runTest(
+    `DharmaAccountRecoveryManagerV2 contract deployment`,
+    DharmaAccountRecoveryManagerV2Deployer,
     '',
     'deploy'
   )
@@ -5946,7 +5966,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   const UpgradeBeaconProxyV1Implementation = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV4Artifact.abi,
+    DharmaSmartWalletImplementationV5Artifact.abi,
     UpgradeBeaconProxyV1.options.address
   )
 
@@ -6523,8 +6543,8 @@ module.exports = {test: async function (provider, testingContext) {
 
   
   await runTest(
-    `DharmaAccountRecoveryManager cannot transfer ownership from a non-owner`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot transfer ownership from a non-owner`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'transferOwnership',
     'send',
     [addressTwo],
@@ -6534,8 +6554,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot initiate recovery with null smart wallet`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot initiate recovery with null smart wallet`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecovery',
     'send',
     [constants.NULL_ADDRESS, addressTwo, 0],
@@ -6543,8 +6563,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot initiate recovery with null new key`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot initiate recovery with null new key`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecovery',
     'send',
     [address, constants.NULL_ADDRESS, 0],
@@ -6552,32 +6572,114 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager can initiate recovery timelock`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 can initiate recovery timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecovery',
     'send',
     [constants.UPGRADE_BEACON_ADDRESS, addressTwo, 0]
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager can initiate another recovery timelock`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 can initiate another recovery timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecovery',
     'send',
-    [UserSmartWalletV4.options.address, addressTwo, 0]
+    [UserSmartWalletV5.options.address, addressTwo, 0]
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager can initiate a third recovery timelock`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 can initiate a third recovery timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecovery',
     'send',
     [address, addressTwo, 0]
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot initiate recovery disablement with null smart wallet`,
-    DharmaAccountRecoveryManagerCoverage,
+    'smart wallet account recovery cannot be cancelled with no smart wallet',
+    DharmaAccountRecoveryManagerV2Coverage,
+    'cancelAccountRecovery',
+    'send',
+    [
+      constants.NULL_ADDRESS,
+      addressTwo
+    ],
+    false
+  )
+
+  await runTest(
+    'smart wallet account recovery cannot be cancelled with no user signing key',
+    DharmaAccountRecoveryManagerV2Coverage,
+    'cancelAccountRecovery',
+    'send',
+    [
+      address,
+      constants.NULL_ADDRESS
+    ],
+    false
+  )
+
+  await runTest(
+    'smart wallet account recovery can be cancelled',
+    DharmaAccountRecoveryManagerV2Coverage,
+    'cancelAccountRecovery',
+    'send',
+    [
+      address,
+      addressTwo
+    ],
+    true,
+    receipt => {    
+      // TODO: verify
+      //console.log(receipt.events)
+    }
+  )
+
+  await runTest(
+    'smart wallet account recovery cannot be cancelled if it is already cancelled',
+    DharmaAccountRecoveryManagerV2Coverage,
+    'cancelAccountRecovery',
+    'send',
+    [
+      address,
+      addressTwo
+    ],
+    false
+  )
+
+  await runTest(
+    'smart wallet account recovery cannot be cancelled if no timelock exists',
+    DharmaAccountRecoveryManagerV2Coverage,
+    'cancelAccountRecovery',
+    'send',
+    [
+      addressTwo,
+      addressTwo
+    ],
+    false
+  )
+
+
+  await runTest(
+    'smart wallet account recovery can be reinitiated',
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateAccountRecovery',
+    'send',
+    [
+      address,
+      addressTwo,
+      1 // extraTime in seconds - add one to ensure that timelock is extended
+    ],
+    true,
+    receipt => {    
+      // TODO: verify
+      //console.log(receipt.events)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot initiate recovery disablement with null smart wallet`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecoveryDisablement',
     'send',
     [constants.NULL_ADDRESS, 0],
@@ -6585,16 +6687,16 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager can initiate recovery disablement timelock`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 can initiate recovery disablement timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecoveryDisablement',
     'send',
     [address, 0]
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call recover with null new key`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call recover with null new key`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'recover',
     'send',
     [constants.NULL_ADDRESS, addressTwo],
@@ -6602,8 +6704,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call recover with null new key`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call recover with null new key`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'recover',
     'send',
     [address, constants.NULL_ADDRESS],
@@ -6611,8 +6713,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call recover prior to timelock completion`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call recover prior to timelock completion`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'recover',
     'send',
     [constants.UPGRADE_BEACON_ADDRESS, addressTwo],
@@ -6620,8 +6722,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call disableAccountRecovery prior to timelock completion`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call disableAccountRecovery prior to timelock completion`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'disableAccountRecovery',
     'send',
     [address],
@@ -6629,8 +6731,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager can check if account recovery is disabled`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 can check if account recovery is disabled`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'accountRecoveryDisabled',
     'call',
     [address],
@@ -6640,29 +6742,29 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  // advance time by 7 days
-  await advanceTime((60 * 60 * 24 * 7) + 5)
+  // advance time by 3 days
+  await advanceTime((60 * 60 * 24 * 3) + 5)
 
   await runTest(
-    `DharmaAccountRecoveryManager can call recover after timelock completion`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 can call recover after timelock completion`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'recover',
     'send',
     [constants.UPGRADE_BEACON_ADDRESS, addressTwo]
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot recover an unowned smart wallet`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot recover an unowned smart wallet`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'recover',
     'send',
-    [UserSmartWalletV4.options.address, addressTwo],
+    [UserSmartWalletV5.options.address, addressTwo],
     false
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot recover an EOA`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot recover an EOA`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'recover',
     'send',
     [address, addressTwo],
@@ -6670,8 +6772,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call disableAccountRecovery with null smart wallet`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call disableAccountRecovery with null smart wallet`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'disableAccountRecovery',
     'send',
     [constants.NULL_ADDRESS],
@@ -6679,16 +6781,16 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager can call disableAccountRecovery after timelock completion`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 can call disableAccountRecovery after timelock completion`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'disableAccountRecovery',
     'send',
     [address]
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager can check if account recovery is disabled`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 can check if account recovery is disabled`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'accountRecoveryDisabled',
     'call',
     [address],
@@ -6699,8 +6801,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot recover an account that has disabled recovery`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot recover an account that has disabled recovery`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'recover',
     'send',
     [address, addressTwo],
@@ -6708,8 +6810,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call initiateModifyTimelockInterval with no selector`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockInterval with no selector`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0x00000000', 0, 0],
@@ -6717,8 +6819,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call initiateModifyTimelockInterval to modify interval over 8 weeks`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockInterval to modify interval over 8 weeks`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xe950c085', 5443200, 0],
@@ -6726,24 +6828,24 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager can call initiateModifyTimelockInterval to set a timelock`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockInterval to set a timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xe950c085', 10000, 0]
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager can call initiateModifyTimelockInterval to set a timelock on another function`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockInterval to set a timelock on another function`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
     'send',
     ['0xaaaaaaaa', 10000, 0]
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call modifyTimelockInterval with no selector`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockInterval with no selector`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockInterval',
     'send',
     ['0x00000000', 0],
@@ -6751,8 +6853,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call modifyTimelockInterval before timelock completion`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockInterval before timelock completion`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockInterval',
     'send',
     ['0xe950c085', 1000],
@@ -6760,8 +6862,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call initiateModifyTimelockExpiration with no selector`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration with no selector`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0x00000000', 0, 0],
@@ -6769,8 +6871,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call initiateModifyTimelockExpiration to with expiration over one month`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration to with expiration over one month`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0xe950c085', 5443200, 0],
@@ -6778,8 +6880,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call initiateModifyTimelockExpiration to modify expiration under one minute`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration to modify expiration under one minute`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 30, 0],
@@ -6787,8 +6889,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call initiateModifyTimelockExpiration to modify expiration under one hour`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration to modify expiration under one hour`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 3000, 0],
@@ -6796,24 +6898,24 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager can call initiateModifyTimelockExpiration to set a timelock`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockExpiration to set a timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 30000, 0],
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager can call initiateModifyTimelockExpiration to set a timelock on another function`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockExpiration to set a timelock on another function`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
     'send',
     ['0xaaaaaaaa', 300000, 0]
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call modifyTimelockExpiration with no selector`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockExpiration with no selector`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockExpiration',
     'send',
     ['0x00000000', 0],
@@ -6821,8 +6923,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call modifyTimelockExpiration before timelock completion`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockExpiration before timelock completion`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockExpiration',
     'send',
     ['0xd7ce3c6f', 300],
@@ -6830,22 +6932,490 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager can initiate recovery disablement timelock`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 can initiate recovery disablement timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecoveryDisablement',
     'send',
     [addressTwo, 0]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot cancel disablement with null address`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'cancelAccountRecoveryDisablement',
+    'send',
+    [constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can cancel recovery disablement timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'cancelAccountRecoveryDisablement',
+    'send',
+    [addressTwo]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can re-initiate recovery disablement timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateAccountRecoveryDisablement',
+    'send',
+    [addressTwo, 1]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot shorten a timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateAccountRecoveryDisablement',
+    'send',
+    [addressTwo, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot initiate recovery with massive extraTime`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateAccountRecovery',
+    'send',
+    [address, addressTwo, constants.FULL_APPROVAL],
+    false
   )
 
   // advance time by 2 weeks
   await advanceTime((60 * 60 * 24 * 7 * 2) + 5)
 
   await runTest(
-    `DharmaAccountRecoveryManager cannot call disableAccountRecovery after timelock expiration`,
-    DharmaAccountRecoveryManagerCoverage,
+    `DharmaAccountRecoveryManagerV2 cannot call disableAccountRecovery after timelock expiration`,
+    DharmaAccountRecoveryManagerV2Coverage,
     'disableAccountRecovery',
     'send',
     [addressTwo],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot set a role to the null address`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'setRole',
+    'send',
+    [0, constants.NULL_ADDRESS],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can set a role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'setRole',
+    'send',
+    [0, address]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can set a role that is already set`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'setRole',
+    'send',
+    [0, address]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check if the caller has a role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'isRole',
+    'call',
+    [0],
+    true,
+    value => {
+      assert.ok(value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check for an operator role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getOperator',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, address)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check for a recoverer role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getRecoverer',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, constants.NULL_ADDRESS)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check for a canceller role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getCanceller',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, constants.NULL_ADDRESS)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check for a disabler role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getDisabler',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, constants.NULL_ADDRESS)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check for a pauser role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getPauser',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, constants.NULL_ADDRESS)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can remove a role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'removeRole',
+    'send',
+    [0]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check if the caller has a role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'isRole',
+    'call',
+    [0],
+    true,
+    value => {
+      assert.ok(!value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check if a role is paused`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'isPaused',
+    'call',
+    [0],
+    true,
+    value => {
+      assert.ok(!value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot pause a role if not owner or pauser`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'pause',
+    'send',
+    [0],
+    false,
+    receipt => {},
+    addressTwo
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can set a role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'setRole',
+    'send',
+    [4, addressTwo]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot unpause an unpaused role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'unpause',
+    'send',
+    [0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can pause an unpaused role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'pause',
+    'send',
+    [0],
+    true,
+    receipt => {},
+    addressTwo
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot pause a paused role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'pause',
+    'send',
+    [0],
+    false,
+    receipt => {},
+    addressTwo
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can pause the pauser role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'pause',
+    'send',
+    [4]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 pauser cannot call a paused role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'pause',
+    'send',
+    [4],
+    false,
+    receipt => {},
+    addressTwo
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can check if a role is paused`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'isPaused',
+    'call',
+    [0],
+    true,
+    value => {
+      assert.ok(value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can unpause a paused role`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'unpause',
+    'send',
+    [0]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can get an empty timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getTimelock',
+    'call',
+    ['0x01020304', '0x'],
+    true,
+    value => {
+      assert.ok(!value.exists)
+      assert.ok(!value.completed)
+      assert.ok(!value.expired)
+      assert.strictEqual(value.completionTime, '0')
+      assert.strictEqual(value.expirationTime, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can get an empty default timelock interval`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getDefaultTimelockInterval',
+    'call',
+    ['0x01020304'],
+    true,
+    value => {
+      assert.strictEqual(value, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can get an empty default timelock expiration`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'getDefaultTimelockExpiration',
+    'call',
+    ['0x01020304'],
+    true,
+    value => {
+      assert.strictEqual(value, '0')
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockInterval with no selector`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0x00000000', 0, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockInterval to modify interval over 8 weeks`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xe950c085', 5443200, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot create timelock with excessive duration`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xe950c085', constants.FULL_APPROVAL, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockInterval to set a timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xe950c085', 10000, 5]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot shorten existing initiateModifyTimelockInterval timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xe950c085', 10000, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockInterval to change a duration`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xe950c085', 10001, 5]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockInterval to set a timelock on another function`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockInterval',
+    'send',
+    ['0xaaaaaaaa', 10000, 0]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockInterval with no selector`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'modifyTimelockInterval',
+    'send',
+    ['0x00000000', 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockInterval before timelock completion`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'modifyTimelockInterval',
+    'send',
+    ['0xe950c085', 1000],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration with no selector`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockExpiration',
+    'send',
+    ['0x00000000', 0, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration to with expiration over one month`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockExpiration',
+    'send',
+    ['0xe950c085', 5443200, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration to modify expiration under one minute`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockExpiration',
+    'send',
+    ['0xd7ce3c6f', 30, 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockExpiration to set a timelock`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockExpiration',
+    'send',
+    ['0xd7ce3c6f', 300000, 0],
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockExpiration to set a timelock on another function`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'initiateModifyTimelockExpiration',
+    'send',
+    ['0xe950c085', 30, 0]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockExpiration with no selector`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'modifyTimelockExpiration',
+    'send',
+    ['0x00000000', 0],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockExpiration before timelock completion`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'modifyTimelockExpiration',
+    'send',
+    ['0xd7ce3c6f', 300],
+    false
+  )
+
+  // advance time by 2 weeks
+  await advanceTime((60 * 60 * 24 * 7 * 2) + 5)
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can call modifyTimelockInterval`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'modifyTimelockInterval',
+    'send',
+    ['0xaaaaaaaa', 10000]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 can call modifyTimelockExpiration`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'modifyTimelockExpiration',
+    'send',
+    ['0xd7ce3c6f', 300000],
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockExpiration if expiration is too short`,
+    DharmaAccountRecoveryManagerV2Coverage,
+    'modifyTimelockExpiration',
+    'send',
+    ['0xe950c085', 30],
     false
   )
 
@@ -7212,7 +7782,7 @@ module.exports = {test: async function (provider, testingContext) {
     'exitAdharmaContingency',
     'send',
     [
-      DharmaSmartWalletImplementationV4.options.address,
+      DharmaSmartWalletImplementationV5.options.address,
       DharmaKeyRingImplementationV1.options.address
     ],
     false
@@ -7245,7 +7815,7 @@ module.exports = {test: async function (provider, testingContext) {
     'exitAdharmaContingency',
     'send',
     [
-      DharmaSmartWalletImplementationV4.options.address,
+      DharmaSmartWalletImplementationV5.options.address,
       DharmaKeyRingImplementationV1.options.address
     ]
   )
@@ -7662,7 +8232,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   const UserSmartWalletAdharma = new web3.eth.Contract(
     AdharmaSmartWalletImplementationArtifact.abi,
-    UserSmartWalletV4.options.address
+    UserSmartWalletV5.options.address
   )
 
   await runTest(
@@ -7818,6 +8388,14 @@ module.exports = {test: async function (provider, testingContext) {
   const DharmaAccountRecoveryMultisig = await runTest(
     `DharmaAccountRecoveryMultisig contract deployment`,
     DharmaAccountRecoveryMultisigDeployer,
+    '',
+    'deploy',
+    [[ownerOne, ownerTwo, ownerThree, ownerFour]]
+  )
+
+  const DharmaAccountRecoveryOperatorMultisig = await runTest(
+    `DharmaAccountRecoveryOperatorMultisig contract deployment`,
+    DharmaAccountRecoveryOperatorMultisigDeployer,
     '',
     'deploy',
     [[ownerOne, ownerTwo, ownerThree, ownerFour]]
@@ -8290,7 +8868,7 @@ module.exports = {test: async function (provider, testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, '2')
+      assert.strictEqual(value, '3')
     }
   )
 
@@ -8302,7 +8880,7 @@ module.exports = {test: async function (provider, testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, constants.ACCOUNT_RECOVERY_MANAGER_ADDRESS)
+      assert.strictEqual(value, constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS)
     }
   )
 
@@ -8343,10 +8921,19 @@ module.exports = {test: async function (provider, testingContext) {
 
   ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
   ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+
+  /*
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
   ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2)
   unownedSig = signHashedPrefixedHexString(hash, address)
   unownedSigs = unownedSig + ownerTwoSig.slice(2)
+  */
+
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
+  ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2) + ownerThreeSig.slice(2)
+  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSigs = unownedSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await runTest(
     `DharmaAccountRecoveryMultisig cannot call execute from non-executor`,
@@ -8420,6 +9007,177 @@ module.exports = {test: async function (provider, testingContext) {
     value => {
       assert.strictEqual(value, '1')
     }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig can get the owners`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'getOwners',
+    'call',
+    [],
+    true,
+    value => {
+      assert.deepEqual(
+        value, [ownerOne, ownerTwo, ownerThree, ownerFour]
+      )
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig can get an owner`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'isOwner',
+    'call',
+    [ownerOne],
+    true,
+    value => {
+      assert.ok(value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig returns false for a non-owner`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'isOwner',
+    'call',
+    [address],
+    true,
+    value => {
+      assert.ok(!value)
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig can get the threshold`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'getThreshold',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, '2')
+    }
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig can get the destination`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'getDestination',
+    'call',
+    [],
+    true,
+    value => {
+      assert.strictEqual(value, constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS)
+    }
+  )
+
+  // Generate the messsage hash based on the supplied parameters.
+  hashInputs = (
+    DharmaAccountRecoveryOperatorMultisig.options.address +
+    '0'.padStart(64, '0') +
+    address.slice(2) +
+    executorGasLimit.toString(16).padStart(64, '0') +
+    rawData.slice(2)
+  )
+
+  hash = util.bufferToHex(util.keccak256(hashInputs))
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig can get a hash`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'getHash',
+    'call',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32],
+    true,
+    values => {
+      assert.strictEqual(values.hash, hash)
+    }
+  )
+
+  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
+  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+
+  /*
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
+  ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2)
+  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSigs = unownedSig + ownerTwoSig.slice(2)
+  */
+
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
+  ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2)
+  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSigs = unownedSig + ownerTwoSig.slice(2)
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig cannot call execute from non-executor`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, addressTwo, executorGasLimit, constants.NULL_BYTES_32, ownerSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig cannot call execute with oddly-sized signatures`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerSigs + '1234'],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig cannot call execute with non-compliant signatures`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, bizarreSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig cannot call execute without enough signatures`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerOneSig],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig cannot call execute without owner signatures`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, unownedSigs],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig cannot call execute with out-of-order signatures`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerSigsOutOfOrder],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig can call execute`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerSigs]
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig cannot replay a call to execute`,
+    DharmaAccountRecoveryOperatorMultisig,
+    'execute',
+    'send',
+    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerSigs],
+    false
   )
 
   const DharmaEscapeHatchRegistry = await runTest(
@@ -8690,14 +9448,14 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager owner can start ownership transfer to multisig`,
-    DharmaAccountRecoveryManager,
+    `DharmaAccountRecoveryManagerV2 owner can start ownership transfer to multisig`,
+    DharmaAccountRecoveryManagerV2,
     'transferOwnership',
     'send',
     [DharmaAccountRecoveryMultisig.options.address]
   )
 
-  rawData = DharmaAccountRecoveryManager.methods.acceptOwnership().encodeABI()
+  rawData = DharmaAccountRecoveryManagerV2.methods.acceptOwnership().encodeABI()
   await runTest(
     `DharmaAccountRecoveryMultisig can get a hash`,
     DharmaAccountRecoveryMultisig,
@@ -8713,7 +9471,8 @@ module.exports = {test: async function (provider, testingContext) {
   // accept ownership
   ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
   ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
-  ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await runTest(
     `DharmaAccountRecoveryMultisig can call execute to accept ownership`,
@@ -8724,8 +9483,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager owner is now set to multisig`,
-    DharmaAccountRecoveryManager,
+    `DharmaAccountRecoveryManagerV2 owner is now set to multisig`,
+    DharmaAccountRecoveryManagerV2,
     'owner',
     'call',
     [],
@@ -8738,7 +9497,7 @@ module.exports = {test: async function (provider, testingContext) {
   // TODO: test account recovery using the multisig?
 
   // transfer ownership back
-  rawData = DharmaAccountRecoveryManager.methods.transferOwnership(address).encodeABI()
+  rawData = DharmaAccountRecoveryManagerV2.methods.transferOwnership(address).encodeABI()
   await runTest(
     `DharmaAccountRecoveryMultisig can get a hash`,
     DharmaAccountRecoveryMultisig,
@@ -8753,7 +9512,8 @@ module.exports = {test: async function (provider, testingContext) {
 
   ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
   ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
-  ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
+  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await runTest(
     `DharmaAccountRecoveryMultisig can call execute to transfer ownership back`,
@@ -8764,14 +9524,14 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager EOA can accept ownership transfer from multisig`,
-    DharmaAccountRecoveryManager,
+    `DharmaAccountRecoveryManagerV2 EOA can accept ownership transfer from multisig`,
+    DharmaAccountRecoveryManagerV2,
     'acceptOwnership'
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager owner is now set to EOA`,
-    DharmaAccountRecoveryManager,
+    `DharmaAccountRecoveryManagerV2 owner is now set to EOA`,
+    DharmaAccountRecoveryManagerV2,
     'owner',
     'call',
     [],
@@ -9270,7 +10030,7 @@ module.exports = {test: async function (provider, testingContext) {
     'exitAdharmaContingency',
     'send',
     [
-      DharmaSmartWalletImplementationV4.options.address,
+      DharmaSmartWalletImplementationV5.options.address,
       DharmaKeyRingImplementationV1.options.address
     ]
   )

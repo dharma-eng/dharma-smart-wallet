@@ -9,7 +9,7 @@ let DharmaUpgradeBeaconEnvoyArtifact;
 let DharmaKeyRingUpgradeBeaconArtifact;
 let DharmaKeyRegistryV1Artifact;
 let DharmaKeyRegistryV2Artifact;
-let DharmaAccountRecoveryManagerArtifact;
+let DharmaAccountRecoveryManagerV2Artifact;
 let DharmaSmartWalletFactoryV1Artifact;
 let UpgradeBeaconProxyV1Artifact;
 let AdharmaSmartWalletImplementationArtifact;
@@ -20,18 +20,20 @@ let DharmaEscapeHatchRegistryArtifact;
 
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
+const DharmaAccountRecoveryOperatorMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryOperatorMultisig.json')
 const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaKeyRegistryMultisig.json')
 const DharmaTestingMultisigArtifact = require('../../build/contracts/DharmaTestingMultisig.json')
 
 const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
 const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
 const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV2.json')
-const DharmaSmartWalletImplementationV3Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV3.json')
-const DharmaSmartWalletImplementationV4Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV4.json')
+//const DharmaSmartWalletImplementationV3Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV3.json')
+//const DharmaSmartWalletImplementationV4Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV4.json')
+const DharmaSmartWalletImplementationV5Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV5.json')
 
-const DharmaKeyRingImplementationV0Artifact = require('../../build/contracts/DharmaKeyRingImplementationV0.json')
+//const DharmaKeyRingImplementationV0Artifact = require('../../build/contracts/DharmaKeyRingImplementationV0.json')
 const DharmaKeyRingImplementationV1Artifact = require('../../build/contracts/DharmaKeyRingImplementationV1.json')
-const DharmaKeyRingImplementationV2Artifact = require('../../build/contracts/DharmaKeyRingImplementationV2.json')
+//const DharmaKeyRingImplementationV2Artifact = require('../../build/contracts/DharmaKeyRingImplementationV2.json')
 
 const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
 const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
@@ -87,7 +89,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaSmartWalletFactoryV1Artifact = require('../../../build/contracts/DharmaSmartWalletFactoryV1.json')
     DharmaKeyRingFactoryV2Artifact = require('../../../build/contracts/DharmaKeyRingFactoryV2.json')
     UpgradeBeaconProxyV1Artifact = require('../../../build/contracts/UpgradeBeaconProxyV1.json')
-    DharmaAccountRecoveryManagerArtifact = require('../../../build/contracts/DharmaAccountRecoveryManager.json')
+    DharmaAccountRecoveryManagerV2Artifact = require('../../../build/contracts/DharmaAccountRecoveryManagerV2.json')
     AdharmaSmartWalletImplementationArtifact = require('../../../build/contracts/AdharmaSmartWalletImplementation.json')
     AdharmaKeyRingImplementationArtifact = require('../../../build/contracts/AdharmaKeyRingImplementation.json')
     DharmaUpgradeBeaconControllerManagerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
@@ -102,7 +104,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
     DharmaKeyRingFactoryV2Artifact = require('../../build/contracts/DharmaKeyRingFactoryV2.json')
     UpgradeBeaconProxyV1Artifact = require('../../build/contracts/UpgradeBeaconProxyV1.json')
-    DharmaAccountRecoveryManagerArtifact = require('../../build/contracts/DharmaAccountRecoveryManager.json')
+    DharmaAccountRecoveryManagerV2Artifact = require('../../build/contracts/DharmaAccountRecoveryManagerV2.json')
     AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
     AdharmaKeyRingImplementationArtifact = require('../../build/contracts/AdharmaKeyRingImplementation.json')
     DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
@@ -118,12 +120,12 @@ module.exports = {test: async function (provider, testingContext) {
   /*
   console.log(
     swapMetadataHash(
-      DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
-      constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+      DharmaSmartWalletImplementationV5Artifact.bytecode,
+      constants.DHARMA_SMART_WALLET_IMPLEMENTATION_V5_METADATA
     ),
     web3.utils.keccak256(swapMetadataHash(
-      DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
-      constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+      DharmaSmartWalletImplementationV5Artifact.bytecode,
+      constants.DHARMA_SMART_WALLET_IMPLEMENTATION_V5_METADATA
     ), {encoding: 'hex'})
   )
   process.exit(0)
@@ -149,9 +151,9 @@ module.exports = {test: async function (provider, testingContext) {
     constants.KEY_RING_UPGRADE_BEACON_ADDRESS
   )
 
-  const DharmaAccountRecoveryManager = new web3.eth.Contract(
-    DharmaAccountRecoveryManagerArtifact.abi,
-    constants.ACCOUNT_RECOVERY_MANAGER_ADDRESS
+  const DharmaAccountRecoveryManagerV2 = new web3.eth.Contract(
+    DharmaAccountRecoveryManagerV2Artifact.abi,
+    constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS
   )
 
   const DharmaKeyRegistryV1 = new web3.eth.Contract(
@@ -216,6 +218,13 @@ module.exports = {test: async function (provider, testingContext) {
   )
   DharmaAccountRecoveryMultisigDeployer.options.data = (
     DharmaAccountRecoveryMultisigArtifact.bytecode
+  )
+
+  const DharmaAccountRecoveryOperatorMultisigDeployer = new web3.eth.Contract(
+    DharmaAccountRecoveryOperatorMultisigArtifact.abi
+  )
+  DharmaAccountRecoveryOperatorMultisigDeployer.options.data = (
+    DharmaAccountRecoveryOperatorMultisigArtifact.bytecode
   )
 
   const DharmaKeyRegistryMultisigDeployer = new web3.eth.Contract(
@@ -335,12 +344,12 @@ module.exports = {test: async function (provider, testingContext) {
     )
   )
 
-  const DharmaAccountRecoveryManagerDeployer = new web3.eth.Contract(
-    DharmaAccountRecoveryManagerArtifact.abi
+  const DharmaAccountRecoveryManagerV2Deployer = new web3.eth.Contract(
+    DharmaAccountRecoveryManagerV2Artifact.abi
   )
-  DharmaAccountRecoveryManagerDeployer.options.data = (
+  DharmaAccountRecoveryManagerV2Deployer.options.data = (
     swapMetadataHash(
-      DharmaAccountRecoveryManagerArtifact.bytecode,
+      DharmaAccountRecoveryManagerV2Artifact.bytecode,
       ['0000000000000000000000000000000000000000000000000000000000000000']
     )
   )
@@ -375,6 +384,7 @@ module.exports = {test: async function (provider, testingContext) {
     )
   )
 
+  /*
   const DharmaSmartWalletImplementationV3Deployer = new web3.eth.Contract(
     DharmaSmartWalletImplementationV3Artifact.abi
   )
@@ -394,7 +404,19 @@ module.exports = {test: async function (provider, testingContext) {
       ['0000000000000000000000000000000000000000000000000000000000000000']
     )
   )
+  */
 
+  const DharmaSmartWalletImplementationV5Deployer = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV5Artifact.abi
+  )
+  DharmaSmartWalletImplementationV5Deployer.options.data = (
+    swapMetadataHash(
+      DharmaSmartWalletImplementationV5Artifact.bytecode,
+      ['0000000000000000000000000000000000000000000000000000000000000000']
+    )
+  )
+
+  /*
   const DharmaKeyRingImplementationV0Deployer = new web3.eth.Contract(
     DharmaKeyRingImplementationV0Artifact.abi
   )
@@ -404,6 +426,7 @@ module.exports = {test: async function (provider, testingContext) {
       ['0000000000000000000000000000000000000000000000000000000000000000']
     )
   )
+  */
 
   const DharmaKeyRingImplementationV1Deployer = new web3.eth.Contract(
     DharmaKeyRingImplementationV1Artifact.abi
@@ -1674,6 +1697,7 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
+  /*
   const DharmaSmartWalletImplementationV3 = await runTest(
     `DharmaSmartWalletImplementationV3 contract deployment`,
     DharmaSmartWalletImplementationV3Deployer,
@@ -1687,13 +1711,23 @@ module.exports = {test: async function (provider, testingContext) {
     '',
     'deploy'
   )
+  */
 
+  const DharmaSmartWalletImplementationV5 = await runTest(
+    `DharmaSmartWalletImplementationV5 contract deployment`,
+    DharmaSmartWalletImplementationV5Deployer,
+    '',
+    'deploy'
+  )
+
+  /*
   const DharmaKeyRingImplementationV0 = await runTest(
     `DharmaKeyRingImplementationV0 contract deployment`,
     DharmaKeyRingImplementationV0Deployer,
     '',
     'deploy'
   )
+  */
 
   const DharmaKeyRingImplementationV1 = await runTest(
     `DharmaKeyRingImplementationV1 contract deployment`,
@@ -1717,7 +1751,7 @@ module.exports = {test: async function (provider, testingContext) {
     MockCodeCheck,
     'code',
     'call',
-    [constants.ACCOUNT_RECOVERY_MANAGER_ADDRESS],
+    [constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS],
     true,
     value => {
       currentAccountRecoveryManagerCode = value;
@@ -1726,38 +1760,38 @@ module.exports = {test: async function (provider, testingContext) {
 
   if (
     currentAccountRecoveryManagerCode !== swapMetadataHash(
-      DharmaAccountRecoveryManagerArtifact.deployedBytecode,
-      constants.ACCOUNT_RECOVERY_MANAGER_METADATA
+      DharmaAccountRecoveryManagerV2Artifact.deployedBytecode,
+      constants.ACCOUNT_RECOVERY_MANAGER_V2_METADATA
     )
   ) {
     await runTest(
-      `DharmaAccountRecoveryManager contract address check through immutable create2 factory`,
+      `DharmaAccountRecoveryManagerV2 contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
       'call',
       [
-        constants.ACCOUNT_RECOVERY_MANAGER_SALT,
+        constants.ACCOUNT_RECOVERY_MANAGER_V2_SALT,
         swapMetadataHash(
-          DharmaAccountRecoveryManagerArtifact.bytecode,
-          constants.ACCOUNT_RECOVERY_MANAGER_METADATA
+          DharmaAccountRecoveryManagerV2Artifact.bytecode,
+          constants.ACCOUNT_RECOVERY_MANAGER_V2_METADATA
         )
       ],
       true,
       value => {
-        assert.strictEqual(value, constants.ACCOUNT_RECOVERY_MANAGER_ADDRESS)
+        assert.strictEqual(value, constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS)
       }
     )
 
     await runTest(
-      `DharmaAccountRecoveryManager contract deployment through immutable create2 factory`,
+      `DharmaAccountRecoveryManagerV2 contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
       'send',
       [
-        constants.ACCOUNT_RECOVERY_MANAGER_SALT,
+        constants.ACCOUNT_RECOVERY_MANAGER_V2_SALT,
         swapMetadataHash(
-          DharmaAccountRecoveryManagerArtifact.bytecode,
-          constants.ACCOUNT_RECOVERY_MANAGER_METADATA
+          DharmaAccountRecoveryManagerV2Artifact.bytecode,
+          constants.ACCOUNT_RECOVERY_MANAGER_V2_METADATA
         )
       ]
     )
@@ -1768,19 +1802,19 @@ module.exports = {test: async function (provider, testingContext) {
     MockCodeCheck,
     'code',
     'call',
-    [DharmaAccountRecoveryManager.options.address],
+    [DharmaAccountRecoveryManagerV2.options.address],
     true,
     value => {
       assert.strictEqual(value, swapMetadataHash(
-        DharmaAccountRecoveryManagerArtifact.deployedBytecode,
-        constants.ACCOUNT_RECOVERY_MANAGER_METADATA
+        DharmaAccountRecoveryManagerV2Artifact.deployedBytecode,
+        constants.ACCOUNT_RECOVERY_MANAGER_V2_METADATA
       ))
     }
   )
 
   await runTest(
-    `DharmaAccountRecoveryManager contract deployment`,
-    DharmaAccountRecoveryManagerDeployer,
+    `DharmaAccountRecoveryManagerV2 contract deployment`,
+    DharmaAccountRecoveryManagerV2Deployer,
     '',
     'deploy'
   )
@@ -2130,6 +2164,53 @@ module.exports = {test: async function (provider, testingContext) {
     false
   )
 
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig contract deployment fails if threshold is not met`,
+    DharmaAccountRecoveryOperatorMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000001'
+    ]],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig contract deployment fails if sigs are out of order`,
+    DharmaAccountRecoveryOperatorMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000005',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000001'
+    ]],
+    false
+  )
+
+  await runTest(
+    `DharmaAccountRecoveryOperatorMultisig contract deployment fails with too many owners`,
+    DharmaAccountRecoveryOperatorMultisigDeployer,
+    '',
+    'deploy',
+    [[
+      '0x0000000000000000000000000000000000000001',
+      '0x0000000000000000000000000000000000000002',
+      '0x0000000000000000000000000000000000000003',
+      '0x0000000000000000000000000000000000000004',
+      '0x0000000000000000000000000000000000000005',
+      '0x0000000000000000000000000000000000000006',
+      '0x0000000000000000000000000000000000000007',
+      '0x0000000000000000000000000000000000000008',
+      '0x0000000000000000000000000000000000000009',
+      '0x000000000000000000000000000000000000000a',
+      '0x000000000000000000000000000000000000000b'
+    ]],
+    false
+  )
+
   const DharmaAccountRecoveryMultisig = await runTest(
     `DharmaAccountRecoveryMultisig contract deployment`,
     DharmaAccountRecoveryMultisigDeployer,
@@ -2262,7 +2343,7 @@ module.exports = {test: async function (provider, testingContext) {
     IndestructibleRegistry,
     'registerAsIndestructible',
     'send',
-    [constants.ACCOUNT_RECOVERY_MANAGER_ADDRESS]
+    [constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS]
   )
 
   await runTest(
@@ -2322,6 +2403,7 @@ module.exports = {test: async function (provider, testingContext) {
     [DharmaSmartWalletImplementationV0.options.address]
   )
 
+  /*
   await runTest(
     'IndestructibleRegistry can register V0 key ring implementation as indestructible',
     IndestructibleRegistry,
@@ -2329,6 +2411,7 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [DharmaKeyRingImplementationV0.options.address]
   )
+  */
 
   await runTest(
     'IndestructibleRegistry can register V1 implementation as indestructible',
@@ -2347,6 +2430,7 @@ module.exports = {test: async function (provider, testingContext) {
       [DharmaSmartWalletImplementationV2.options.address]
     )
 
+    /*
     await runTest(
       'IndestructibleRegistry can register V3 implementation as indestructible',
       IndestructibleRegistry,
@@ -2361,6 +2445,15 @@ module.exports = {test: async function (provider, testingContext) {
       'registerAsIndestructible',
       'send',
       [DharmaSmartWalletImplementationV4.options.address]
+    )
+    */
+
+    await runTest(
+      'IndestructibleRegistry can register V5 implementation as indestructible',
+      IndestructibleRegistry,
+      'registerAsIndestructible',
+      'send',
+      [DharmaSmartWalletImplementationV5.options.address]
     )
 
     await runTest(
