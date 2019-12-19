@@ -4,7 +4,7 @@
 
 > An upgradeable, meta-transaction-enabled smart wallet for earning interest on stablecoins while retaining custody of funds, with an added security backstop provided by Dharma Labs.
 
-[![Smart Wallet Version](https://img.shields.io/endpoint?url=https%3A%2F%2Fdharma-version-api.netlify.com%2F.netlify%2Ffunctions%2Fserver%3Ftarget%3Dsmartwallet)](https://etherscan.io/address/0x00000000004f319450e1e1ce5e40813e7e1fe0b4#code)
+[![Smart Wallet Version](https://img.shields.io/endpoint?url=https%3A%2F%2Fdharma-version-api.netlify.com%2F.netlify%2Ffunctions%2Fserver%3Ftarget%3Dsmartwallet)](https://etherscan.io/address/0x00000000001f2bec34d4a98c839cf711afc842c6#code)
 [![Key Ring Version](https://img.shields.io/endpoint?url=https%3A%2F%2Fdharma-version-api.netlify.com%2F.netlify%2Ffunctions%2Fserver%3Ftarget%3Dkeyring)](https://etherscan.io/address/0x00000000ea0007cdab60e07437e59e9cc41c2e49#code)
 [![License](https://img.shields.io/github/license/dharma-eng/dharma-smart-wallet.svg)](https://github.com/dharma-eng/dharma-smart-wallet/blob/master/LICENSE.md)
 [![Build Status](https://img.shields.io/travis/dharma-eng/dharma-smart-wallet)](https://travis-ci.org/dharma-eng/dharma-smart-wallet)
@@ -146,6 +146,8 @@ Notable Transactions:
 - <a href="https://etherscan.io/tx/0xdb36f04570088e41633e41e0102a15f4172d9c72155720b921a9a7642288219c#eventlog" target="_blank">Key Ring Upgrade Beacon Controller ownership transferred to Upgrade Beacon Controller Manager</a>
 - <a href="https://etherscan.io/tx/0x84493c801433d32831e45aa114fec5027dfd9519a3b6e66950e66ae3f6d248c1#eventlog" target="_blank">Smart Wallet Upgrade Beacon Controller ownership transferred to Upgrade Beacon Controller Manager</a>
 - <a href="https://etherscan.io/tx/0x8a9b88bfd8201c22daee8be52d93d29b0985293a31b5a9b737c780db3a00f98b#eventlog" target="_blank">Upgrade Beacon Controller Manager ownership transferred to multisig</a>
+- <a href="https://etherscan.io/tx/0x65ce24a5e41bb6d25f3eade681bc22614174c1a4c4b7ff8a89c8f54c81a1f969#eventlog" target="_blank">Dharma Account Recovery Manager V2 ownership transferred to multisig</a>
+- <a href="https://etherscan.io/tx/0xa82b6d55e552491678794e5a53032715914e131399a2dbd5634e7cbdc6ec88e4#eventlog" target="_blank">V5 implementation set on Smart Wallet Upgrade Beacon</a>
 
 ## Additional Information
 Have any questions or feedback? Join the conversation in the <a href="https://discordapp.com/invite/qvKTDgR" target="_blank">Dharma_HQ Discord server</a>. Also, see the "<a href="https://blog.dharma.io/why-smart-wallets-should-catch-your-interest-c85e4401b89a" target="_blank">Why Smart Wallets Should Catch Your Interest</a>" article for a more informal discussion around some of the motivations, features, and design decisions of the Dharma Smart Wallet.
