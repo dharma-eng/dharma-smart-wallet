@@ -934,7 +934,7 @@ contract DharmaSmartWalletImplementationV6 is
    * multiple future actions ahead of time.
    * @param action uint8 The type of action, designated by it's index. Valid
    * custom actions in V6 include Cancel (0), SetUserSigningKey (1),
-   * DAIWithdrawal (4), USDCWithdrawal (5), ETHWithdrawal (6),
+   * DAIWithdrawal (10), USDCWithdrawal (5), ETHWithdrawal (6),
    * SetEscapeHatch (7), RemoveEscapeHatch (8), and DisableEscapeHatch (9).
    * @param amount uint256 The amount to withdraw for Withdrawal actions. This
    * value is ignored for non-withdrawal action types.
@@ -975,7 +975,7 @@ contract DharmaSmartWalletImplementationV6 is
    * taken.
    * @param action uint8 The type of action, designated by it's index. Valid
    * custom actions in V6 include Cancel (0), SetUserSigningKey (1),
-   * DAIWithdrawal (4), USDCWithdrawal (5), ETHWithdrawal (6),
+   * DAIWithdrawal (10), USDCWithdrawal (5), ETHWithdrawal (6),
    * SetEscapeHatch (7), RemoveEscapeHatch (8), and DisableEscapeHatch (9).
    * @param amount uint256 The amount to withdraw for Withdrawal actions. This
    * value is ignored for non-withdrawal action types.
@@ -1568,7 +1568,7 @@ contract DharmaSmartWalletImplementationV6 is
    * requirement).
    * @param action uint8 The type of action, designated by it's index. Valid
    * actions in V6 include Cancel (0), SetUserSigningKey (1), Generic (2),
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5),
+   * GenericAtomicBatch (3), DAIWithdrawal (10), USDCWithdrawal (5),
    * ETHWithdrawal (6), SetEscapeHatch (7), RemoveEscapeHatch (8), and
    * DisableEscapeHatch (9).
    * @param arguments bytes ABI-encoded arguments for the action.
@@ -1819,7 +1819,7 @@ contract DharmaSmartWalletImplementationV6 is
    * returned from `getCustomActionID`.
    * @param action uint8 The type of action, designated by it's index. Valid
    * actions in V6 include Cancel (0), SetUserSigningKey (1), Generic (2),
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5),
+   * GenericAtomicBatch (3), DAIWithdrawal (10), USDCWithdrawal (5),
    * ETHWithdrawal (6), SetEscapeHatch (7), RemoveEscapeHatch (8), and
    * DisableEscapeHatch (9).
    * @param arguments bytes ABI-encoded arguments for the action.
@@ -1871,7 +1871,7 @@ contract DharmaSmartWalletImplementationV6 is
    * on the supplied parameters.
    * @param action uint8 The type of action, designated by it's index. Valid
    * actions in V6 include Cancel (0), SetUserSigningKey (1), Generic (2),
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5),
+   * GenericAtomicBatch (3), DAIWithdrawal (10), USDCWithdrawal (5),
    * ETHWithdrawal (6), SetEscapeHatch (7), RemoveEscapeHatch (8), and
    * DisableEscapeHatch (9).
    * @param arguments bytes ABI-encoded arguments for the action.
@@ -1975,7 +1975,7 @@ contract DharmaSmartWalletImplementationV6 is
    * the "arguments" input to an actionID based on that action type.
    * @param action uint8 The type of action, designated by it's index. Valid
    * custom actions in V6 include Cancel (0), SetUserSigningKey (1),
-   * DAIWithdrawal (4), USDCWithdrawal (5), ETHWithdrawal (6),
+   * DAIWithdrawal (10), USDCWithdrawal (5), ETHWithdrawal (6),
    * SetEscapeHatch (7), RemoveEscapeHatch (8), and DisableEscapeHatch (9).
    * @param amount uint256 The amount to withdraw for Withdrawal actions. This
    * value is ignored for all non-withdrawal action types.

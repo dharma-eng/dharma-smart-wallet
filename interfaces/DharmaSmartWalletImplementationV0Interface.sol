@@ -66,10 +66,10 @@ interface DharmaSmartWalletImplementationV0Interface {
   ) external;
 
   function getBalances() external returns (
-    uint256 saiBalance,
+    uint256 daiBalance,
     uint256 usdcBalance,
     uint256 etherBalance,
-    uint256 cSAIUnderlyingSaiBalance,
+    uint256 cDaiUnderlyingDaiBalance,
     uint256 cUSDCUnderlyingUSDCBalance,
     uint256 cEtherUnderlyingEtherBalance
   );
