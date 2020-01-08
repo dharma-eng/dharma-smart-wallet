@@ -5109,6 +5109,51 @@ module.exports = {test: async function (provider, testingContext) {
     'getNextGenericActionID',
     'call',
     [
+      CSAI.options.address,
+      CSAI.methods.transfer(address, web3.utils.toWei('1', 'mwei')).encodeABI(),
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  executeActionSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  executeActionUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V5 UserSmartWallet can call executeAction to transfer cSai',
+    UserSmartWalletV5,
+    'executeAction',
+    'send',
+    [
+      CSAI.options.address,
+      CSAI.methods.transfer(address, web3.utils.toWei('1', 'mwei')).encodeABI(),
+      0,
+      executeActionUserSignature,
+      executeActionSignature
+    ],
+    true,
+    receipt => {
+      //console.log(receipt.events)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V5 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV5,
+    'getNextGenericActionID',
+    'call',
+    [
       CSAI_BORROW.options.address,
       CSAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
       0
@@ -8204,6 +8249,66 @@ module.exports = {test: async function (provider, testingContext) {
       // TODO: verify logs
     },
     originalAddress
+  )
+
+  await runTest(
+    'V6 UserSmartWallet relay can trigger sai to dai migration as a no-op',
+    UserSmartWalletV6,
+    'migrateSaiToDai',
+    'send',
+    [],
+    true,
+    receipt => {
+      // TODO: verify logs
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V6 UserSmartWallet relay can trigger cSai to cDai migration as a no-op',
+    UserSmartWalletV6,
+    'migrateCSaiToCDai',
+    'send',
+    [],
+    true,
+    receipt => {
+      // TODO: verify logs
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'cSai can be sent to V6 UserSmartWallet',
+    CSAI,
+    'transfer',
+    'send',
+    [UserSmartWalletV6.options.address, web3.utils.toWei('1', 'mwei')]
+  )
+
+  await runTest(
+    'Sai Whale can deposit sai into the V6 user smart wallet',
+    SAI,
+    'transfer',
+    'send',
+    [UserSmartWalletV6.options.address, web3.utils.toWei('1', 'ether')],
+    true,
+    receipt => {
+      if (testingContext !== 'coverage') {
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.from,
+          constants.SAI_WHALE_ADDRESS
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.to,
+          UserSmartWalletV6.options.address
+        )
+        assert.strictEqual(
+          receipt.events.Transfer.returnValues.value,
+          web3.utils.toWei('1', 'ether')
+        )
+      }
+    },
+    constants.SAI_WHALE_ADDRESS
   )
 
   await runTest(

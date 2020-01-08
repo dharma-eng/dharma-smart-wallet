@@ -16,7 +16,7 @@ import "../../../interfaces/USDCV1Interface.sol";
 import "../../../interfaces/DharmaKeyRegistryInterface.sol";
 import "../../../interfaces/DharmaEscapeHatchRegistryInterface.sol";
 import "../../../interfaces/ERC1271.sol";
-import "../../../interfaces/SaiToDaiMigrator.sol";
+import "../../../interfaces/SaiToDaiMigratorInterface.sol";
 
 
 /**
@@ -109,7 +109,7 @@ contract DharmaSmartWalletImplementationV6 is
     0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 // mainnet
   );
 
-  SaiToDaiMigrator _MIGRATOR = SaiToDaiMigrator(
+  SaiToDaiMigratorInterface internal constant _MIGRATOR = SaiToDaiMigratorInterface(
     0xc73e0383F3Aff3215E6f04B0331D58CeCf0Ab849 // mainnet
   );
 
