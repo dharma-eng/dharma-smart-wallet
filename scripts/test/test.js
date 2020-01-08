@@ -5491,6 +5491,27 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
+    'cSai can be sent to V6 UserSmartWallet',
+    CSAI,
+    'transfer',
+    'send',
+    [UserSmartWalletV6.options.address, web3.utils.toWei('0.5', 'mwei')]
+  )
+
+  await runTest(
+    'V6 UserSmartWallet relay can trigger cSai to cDai migration before cDai approval',
+    UserSmartWalletV6,
+    'migrateCSaiToCDai',
+    'send',
+    [],
+    true,
+    receipt => {
+      // TODO: verify logs
+    },
+    originalAddress
+  )
+
+  await runTest(
     'V6 UserSmartWallet can get next custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -5629,6 +5650,46 @@ module.exports = {test: async function (provider, testingContext) {
       }
     },
     constants.USDC_WHALE_ADDRESS
+  )
+
+  await runTest(
+    'V6 UserSmartWallet can get a generic action ID',
+    UserSmartWalletV6,
+    'getNextGenericActionID',
+    'call',
+    [
+      DAI.options.address,
+      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  executeActionSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  executeActionUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V6 UserSmartWallet can call executeAction',
+    UserSmartWalletV6,
+    'executeAction',
+    'send',
+    [
+      DAI.options.address,
+      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      0,
+      executeActionUserSignature,
+      executeActionSignature
+    ]
   )
 
   await runTest(
@@ -5917,6 +5978,49 @@ module.exports = {test: async function (provider, testingContext) {
         assert.strictEqual(events.length, 0)
       }
     }
+  )
+
+  await runTest(
+    'V6 UserSmartWallet can get custom action ID and it matches next action ID',
+    UserSmartWalletV6,
+    'getNextCustomActionID',
+    'call',
+    [
+      1, // SetUserSigningKey,
+      0,
+      constants.NULL_ADDRESS,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  setUserSigningKeyUserSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  await runTest(
+    'V6 UserSmartWallet cannot set the null address as a new user signing key',
+    UserSmartWalletV6,
+    'setUserSigningKey',
+    'send',
+    [
+      constants.NULL_ADDRESS,
+      0,
+      setUserSigningKeyUserSignature,
+      setUserSigningKeyDharmaSignature
+    ],
+    false,
+    receipt => {},
+    originalAddress
   )
 
   await runTest(
@@ -7702,6 +7806,53 @@ module.exports = {test: async function (provider, testingContext) {
     'call',
     [
       10, // DaiWithdrawal
+      '1000000000000000000',
+      constants.NULL_ADDRESS,
+      0
+    ],
+    true,
+    value => {
+      customActionId = value
+    }
+  )
+
+  daiWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    address
+  )
+
+  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+    customActionId,
+    addressTwo
+  )
+
+  await runTest(
+    'V6 UserSmartWallet relay cannot withdraw to the null address',
+    UserSmartWallet,
+    'withdrawDai',
+    'send',
+    [
+      '1000000000000000000',
+      constants.NULL_ADDRESS,
+      0,
+      daiUserWithdrawalSignature,
+      daiWithdrawalSignature
+    ],
+    false,
+    receipt => {
+      // TODO: verify logs
+      //console.log(receipt.events)
+    },
+    originalAddress
+  )
+
+  await runTest(
+    'V6 UserSmartWallet can get a Dai withdrawal custom action ID',
+    UserSmartWallet,
+    'getNextCustomActionID',
+    'call',
+    [
+      10, // DaiWithdrawal
       '100000000000000000000000000000000000000', // too much
       address,
       0
@@ -8282,7 +8433,7 @@ module.exports = {test: async function (provider, testingContext) {
     CSAI,
     'transfer',
     'send',
-    [UserSmartWalletV6.options.address, web3.utils.toWei('1', 'mwei')]
+    [UserSmartWalletV6.options.address, web3.utils.toWei('0.5', 'mwei')]
   )
 
   await runTest(
