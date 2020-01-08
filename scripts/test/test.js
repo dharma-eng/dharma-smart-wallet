@@ -112,7 +112,7 @@ module.exports = {test: async function (provider, testingContext) {
     constants.COMPTROLLER_MAINNET_ADDRESS
   )
 
-  const CDAI_BORROW = new web3.eth.Contract(
+  const CSAI_BORROW = new web3.eth.Contract(
     [{
       "constant": false,
       "inputs": [{"name": "borrowAmount", "type": "uint256"}],
@@ -122,19 +122,19 @@ module.exports = {test: async function (provider, testingContext) {
       "stateMutability": "nonpayable",
       "type": "function"
     }],
-    constants.CDAI_MAINNET_ADDRESS
+    constants.CSAI_MAINNET_ADDRESS
   )
 
-  const DAI = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.DAI_MAINNET_ADDRESS
+  const SAI = new web3.eth.Contract(
+    IERC20Artifact.abi, constants.SAI_MAINNET_ADDRESS
   )
 
   const USDC = new web3.eth.Contract(
     IERC20Artifact.abi, constants.USDC_MAINNET_ADDRESS
   )
 
-  const CDAI = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.CDAI_MAINNET_ADDRESS
+  const CSAI = new web3.eth.Contract(
+    IERC20Artifact.abi, constants.CSAI_MAINNET_ADDRESS
   )
 
   const CUSDC = new web3.eth.Contract(
@@ -1355,20 +1355,20 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  let currentDaiCode;
+  let currentSaiCode;
   await runTest(
     'Checking for required external contracts...',
     MockCodeCheck,
     'code',
     'call',
-    [constants.DAI_MAINNET_ADDRESS],
+    [constants.SAI_MAINNET_ADDRESS],
     true,
     value => {
-      currentDaiCode = value;
+      currentSaiCode = value;
     }
   )
 
-  if (!currentDaiCode) {
+  if (!currentSaiCode) {
     console.log(
       `completed ${passed + failed} test${passed + failed === 1 ? '' : 's'} ` +
       `with ${failed} failure${failed === 1 ? '' : 's'}.`
@@ -1459,7 +1459,7 @@ module.exports = {test: async function (provider, testingContext) {
   contractNames[targetWalletAddress] = 'Smart Wallet'
 
   const ethWhaleBalance = await web3.eth.getBalance(constants.ETH_WHALE_ADDRESS)
-  const daiWhaleBalance = await web3.eth.getBalance(constants.DAI_WHALE_ADDRESS)
+  const saiWhaleBalance = await web3.eth.getBalance(constants.SAI_WHALE_ADDRESS)
   const usdcWhaleBalance = await web3.eth.getBalance(constants.USDC_WHALE_ADDRESS)
 
   if (ethWhaleBalance === '0') {
@@ -1473,15 +1473,15 @@ module.exports = {test: async function (provider, testingContext) {
     console.log(' ✓ Eth Whale can receive eth if needed')
   }
 
-  if (daiWhaleBalance === '0') {
+  if (saiWhaleBalance === '0') {
     await web3.eth.sendTransaction({
       from: address,
-      to: constants.DAI_WHALE_ADDRESS,
+      to: constants.SAI_WHALE_ADDRESS,
       value: web3.utils.toWei('.1', 'ether'),
       gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
       gasPrice: 1
     })
-    console.log(' ✓ Dai Whale can receive eth if needed')
+    console.log(' ✓ Sai Whale can receive eth if needed')
   }
 
   if (usdcWhaleBalance === '0') {
@@ -1505,8 +1505,8 @@ module.exports = {test: async function (provider, testingContext) {
   console.log(' ✓ Eth Whale can deposit eth into the yet-to-be-deployed smart wallet')
 
   await runTest(
-    'Dai Whale can deposit dai into the yet-to-be-deployed smart wallet',
-    DAI,
+    'Sai Whale can deposit sai into the yet-to-be-deployed smart wallet',
+    SAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -1515,7 +1515,7 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Transfer.returnValues.from,
-          constants.DAI_WHALE_ADDRESS
+          constants.SAI_WHALE_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Transfer.returnValues.to,
@@ -1527,7 +1527,7 @@ module.exports = {test: async function (provider, testingContext) {
         )
       }
     },
-    constants.DAI_WHALE_ADDRESS
+    constants.SAI_WHALE_ADDRESS
   )
 
   await runTest(
@@ -1595,22 +1595,22 @@ module.exports = {test: async function (provider, testingContext) {
         assert.strictEqual(events[0].eventName, 'NewUserSigningKey')
         assert.strictEqual(events[0].returnValues.userSigningKey, address)
 
-        assert.strictEqual(events[1].address, 'DAI')
+        assert.strictEqual(events[1].address, 'SAI')
         assert.strictEqual(events[1].eventName, 'Approval')
         assert.strictEqual(events[1].returnValues.value, constants.FULL_APPROVAL)
 
-        assert.strictEqual(events[2].address, 'CDAI')
+        assert.strictEqual(events[2].address, 'CSAI')
         assert.strictEqual(events[2].eventName, 'AccrueInterest')
 
-        assert.strictEqual(events[3].address, 'DAI')
+        assert.strictEqual(events[3].address, 'SAI')
         assert.strictEqual(events[3].eventName, 'Transfer')
         assert.strictEqual(events[3].returnValues.value, web3.utils.toWei('100', 'ether'))
 
-        assert.strictEqual(events[4].address, 'CDAI')
+        assert.strictEqual(events[4].address, 'CSAI')
         assert.strictEqual(events[4].eventName, 'Mint')
         assert.strictEqual(events[4].returnValues.mintTokens, web3.utils.toWei('100', 'ether'))  
 
-        assert.strictEqual(events[5].address, 'CDAI')
+        assert.strictEqual(events[5].address, 'CSAI')
         assert.strictEqual(events[5].eventName, 'Transfer')
 
         assert.strictEqual(events[6].address, 'USDC')
@@ -1668,8 +1668,8 @@ module.exports = {test: async function (provider, testingContext) {
   })
 
   await runTest(
-    'Dai Whale can deposit dai into the deployed smart wallet',
-    DAI,
+    'Sai Whale can deposit sai into the deployed smart wallet',
+    SAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -1678,7 +1678,7 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Transfer.returnValues.from,
-          constants.DAI_WHALE_ADDRESS
+          constants.SAI_WHALE_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Transfer.returnValues.to,
@@ -1690,7 +1690,7 @@ module.exports = {test: async function (provider, testingContext) {
         )
       }
     },
-    constants.DAI_WHALE_ADDRESS
+    constants.SAI_WHALE_ADDRESS
   )
 
   await runTest(
@@ -1742,18 +1742,18 @@ module.exports = {test: async function (provider, testingContext) {
           })
         })
      
-        assert.strictEqual(events[0].address, 'CDAI')
+        assert.strictEqual(events[0].address, 'CSAI')
         assert.strictEqual(events[0].eventName, 'AccrueInterest')
 
-        assert.strictEqual(events[1].address, 'DAI')
+        assert.strictEqual(events[1].address, 'SAI')
         assert.strictEqual(events[1].eventName, 'Transfer')
         assert.strictEqual(events[1].returnValues.value, web3.utils.toWei('100', 'ether'))
 
-        assert.strictEqual(events[2].address, 'CDAI')
+        assert.strictEqual(events[2].address, 'CSAI')
         assert.strictEqual(events[2].eventName, 'Mint')
         assert.strictEqual(events[2].returnValues.mintTokens, web3.utils.toWei('100', 'ether'))
 
-        assert.strictEqual(events[3].address, 'CDAI')
+        assert.strictEqual(events[3].address, 'CSAI')
         assert.strictEqual(events[3].eventName, 'Transfer')
 
         assert.strictEqual(events[4].address, 'CUSDC')
@@ -1872,7 +1872,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'UserSmartWallet secondary can call to withdraw dai',
+    'UserSmartWallet secondary can call to withdraw sai',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -1999,7 +1999,7 @@ module.exports = {test: async function (provider, testingContext) {
     'getNextCustomActionID',
     'call',
     [
-      4, // DAIWithdrawal,
+      4, // SAIWithdrawal,
       constants.FULL_APPROVAL,
       address,
       0
@@ -2016,7 +2016,7 @@ module.exports = {test: async function (provider, testingContext) {
     'getCustomActionID',
     'call',
     [
-      4, // DAIWithdrawal,
+      4, // SAIWithdrawal,
       constants.FULL_APPROVAL,
       address,
       4,
@@ -2103,14 +2103,14 @@ module.exports = {test: async function (provider, testingContext) {
     address.slice(2)                   // recipient
   )
 
-  const daiWithdrawalSignature = signHashedPrefixedHashedHexString(
+  const saiWithdrawalSignature = signHashedPrefixedHashedHexString(
     withdrawalMessage,
     address
   )
   */
 
   await runTest(
-    'UserSmartWallet cannot withdraw too much dai',
+    'UserSmartWallet cannot withdraw too much sai',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -2170,7 +2170,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'UserSmartWallet cannot withdraw too little dai',
+    'UserSmartWallet cannot withdraw too little sai',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -2198,12 +2198,12 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'UserSmartWallet can get a Dai withdrawal custom action ID',
+    'UserSmartWallet can get a Sai withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
     [
-      10, // DaiWithdrawal,
+      10, // SaiWithdrawal,
       constants.FULL_APPROVAL,
       address,
       0
@@ -2214,13 +2214,13 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  let daiWithdrawalSignature = signHashedPrefixedHexString(
+  let saiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     address
   )
 
   await runTest(
-    'UserSmartWallet relay cannot call with bad signature to withdraw dai',
+    'UserSmartWallet relay cannot call with bad signature to withdraw sai',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -2229,7 +2229,7 @@ module.exports = {test: async function (provider, testingContext) {
       address,
       0,
       '0x',
-      '0xffffffff' + daiWithdrawalSignature.slice(10)
+      '0xffffffff' + saiWithdrawalSignature.slice(10)
     ],
     false,
     receipt => {
@@ -2240,7 +2240,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'UserSmartWallet relay can call with signature to withdraw dai',
+    'UserSmartWallet relay can call with signature to withdraw sai',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -2249,7 +2249,7 @@ module.exports = {test: async function (provider, testingContext) {
       address,
       0,
       '0x',
-      daiWithdrawalSignature
+      saiWithdrawalSignature
     ],
     true,
     receipt => {
@@ -2596,7 +2596,7 @@ module.exports = {test: async function (provider, testingContext) {
     'getNextCustomActionID',
     'call',
     [
-      4, // DAIWithdrawal,
+      4, // SAIWithdrawal,
       constants.FULL_APPROVAL,
       address,
       0
@@ -2613,7 +2613,7 @@ module.exports = {test: async function (provider, testingContext) {
     'getCustomActionID',
     'call',
     [
-      4, // DAIWithdrawal,
+      4, // SAIWithdrawal,
       constants.FULL_APPROVAL,
       address,
       parseInt(originalNonce) + 1,
@@ -2672,8 +2672,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'Dai Whale can deposit dai into the V5 smart wallet',
-    DAI,
+    'Sai Whale can deposit sai into the V5 smart wallet',
+    SAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -2682,7 +2682,7 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Transfer.returnValues.from,
-          constants.DAI_WHALE_ADDRESS
+          constants.SAI_WHALE_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Transfer.returnValues.to,
@@ -2694,7 +2694,7 @@ module.exports = {test: async function (provider, testingContext) {
         )
       }
     },
-    constants.DAI_WHALE_ADDRESS
+    constants.SAI_WHALE_ADDRESS
   )
 
   await runTest(
@@ -2746,19 +2746,19 @@ module.exports = {test: async function (provider, testingContext) {
           })
         })
      
-        assert.strictEqual(events[0].address, 'CDAI')
+        assert.strictEqual(events[0].address, 'CSAI')
         assert.strictEqual(events[0].eventName, 'AccrueInterest')
 
-        assert.strictEqual(events[1].address, 'DAI')
+        assert.strictEqual(events[1].address, 'SAI')
         assert.strictEqual(events[1].eventName, 'Transfer')
         //assert.strictEqual(events[1].returnValues.value, web3.utils.toWei('100', 'ether'))
 
-        assert.strictEqual(events[2].address, 'CDAI')
+        assert.strictEqual(events[2].address, 'CSAI')
         assert.strictEqual(events[2].eventName, 'Mint')
         //assert.strictEqual(events[2].returnValues.mintTokens, web3.utils.toWei('100', 'ether'))
 
 
-        assert.strictEqual(events[3].address, 'CDAI')
+        assert.strictEqual(events[3].address, 'CSAI')
         assert.strictEqual(events[3].eventName, 'Transfer')
 
         assert.strictEqual(events[4].address, 'CUSDC')
@@ -2779,8 +2779,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'Dai Whale can deposit dai into the V5 smart wallet again',
-    DAI,
+    'Sai Whale can deposit sai into the V5 smart wallet again',
+    SAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -2789,7 +2789,7 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Transfer.returnValues.from,
-          constants.DAI_WHALE_ADDRESS
+          constants.SAI_WHALE_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Transfer.returnValues.to,
@@ -2801,7 +2801,7 @@ module.exports = {test: async function (provider, testingContext) {
         )
       }
     },
-    constants.DAI_WHALE_ADDRESS
+    constants.SAI_WHALE_ADDRESS
   )
 
   await runTest(
@@ -2851,8 +2851,8 @@ module.exports = {test: async function (provider, testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      SAI.options.address,
+      SAI.methods.approve(CSAI.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -2877,8 +2877,8 @@ module.exports = {test: async function (provider, testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      SAI.options.address,
+      SAI.methods.approve(CSAI.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -2919,8 +2919,8 @@ module.exports = {test: async function (provider, testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
+      SAI.options.address,
+      SAI.methods.approve(CSAI.options.address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -2945,8 +2945,8 @@ module.exports = {test: async function (provider, testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
+      SAI.options.address,
+      SAI.methods.approve(CSAI.options.address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -3189,7 +3189,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V5 UserSmartWallet secondary cannot call to withdraw dai without primary',
+    'V5 UserSmartWallet secondary cannot call to withdraw sai without primary',
     UserSmartWalletV5,
     'withdrawSai',
     'send',
@@ -3473,19 +3473,19 @@ module.exports = {test: async function (provider, testingContext) {
     address.slice(2)                   // recipient
   )
 
-  const daiWithdrawalSignature = signHashedPrefixedHashedHexString(
+  const saiWithdrawalSignature = signHashedPrefixedHashedHexString(
     withdrawalMessage,
     address
   )
   */
 
   await runTest(
-    'V5 UserSmartWallet can get a Dai withdrawal custom action ID',
+    'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
-      4, // DaiWithdrawal,
+      4, // SaiWithdrawal,
       '1',
       address,
       0
@@ -3496,18 +3496,18 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  saiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     address
   )
 
-  let daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  let saiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     addressTwo
   )
 
   await runTest(
-    'V5 UserSmartWallet relay cannot withdraw "dust" dai',
+    'V5 UserSmartWallet relay cannot withdraw "dust" sai',
     UserSmartWalletV5,
     'withdrawDai',
     'send',
@@ -3515,8 +3515,8 @@ module.exports = {test: async function (provider, testingContext) {
       '1',
       address,
       0,
-      daiUserWithdrawalSignature,
-      daiWithdrawalSignature
+      saiUserWithdrawalSignature,
+      saiWithdrawalSignature
     ],
     false,
     receipt => {},
@@ -3524,12 +3524,12 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V5 UserSmartWallet can get a Dai withdrawal custom action ID',
+    'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
-      4, // DaiWithdrawal,
+      4, // SaiWithdrawal,
       '1000000000000000',
       constants.NULL_ADDRESS,
       0
@@ -3540,18 +3540,18 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  saiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  saiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     addressTwo
   )
 
   await runTest(
-    'V5 UserSmartWallet relay cannot withdraw dai to null address',
+    'V5 UserSmartWallet relay cannot withdraw sai to null address',
     UserSmartWalletV5,
     'withdrawDai',
     'send',
@@ -3559,8 +3559,8 @@ module.exports = {test: async function (provider, testingContext) {
       '1000000000000000',
       constants.NULL_ADDRESS,
       0,
-      daiUserWithdrawalSignature,
-      daiWithdrawalSignature
+      saiUserWithdrawalSignature,
+      saiWithdrawalSignature
     ],
     false,
     receipt => {},
@@ -3568,12 +3568,12 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V5 UserSmartWallet can get a Dai withdrawal custom action ID',
+    'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
-      4, // DaiWithdrawal,
+      4, // SaiWithdrawal,
       '1000000000000000',
       address,
       0
@@ -3584,18 +3584,18 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  saiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  saiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     addressTwo
   )
 
   await runTest(
-    'V5 UserSmartWallet relay can call with signature to withdraw dai',
+    'V5 UserSmartWallet relay can call with signature to withdraw sai',
     UserSmartWalletV5,
     'withdrawDai',
     'send',
@@ -3603,8 +3603,8 @@ module.exports = {test: async function (provider, testingContext) {
       '1000000000000000',
       address,
       0,
-      daiUserWithdrawalSignature,
-      daiWithdrawalSignature
+      saiUserWithdrawalSignature,
+      saiWithdrawalSignature
     ],
     true,
     receipt => {
@@ -3644,12 +3644,12 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V5 UserSmartWallet can get a Dai withdrawal custom action ID',
+    'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
-      4, // DaiWithdrawal,
+      4, // SaiWithdrawal,
       constants.FULL_APPROVAL,
       address,
       0
@@ -3660,18 +3660,18 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  saiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  saiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     addressTwo
   )
 
   await runTest(
-    'V5 UserSmartWallet relay cannot call with bad signature to withdraw dai',
+    'V5 UserSmartWallet relay cannot call with bad signature to withdraw sai',
     UserSmartWalletV5,
     'withdrawDai',
     'send',
@@ -3679,8 +3679,8 @@ module.exports = {test: async function (provider, testingContext) {
       constants.FULL_APPROVAL,
       address,
       0,
-      daiUserWithdrawalSignature,
-      '0xffffffff' + daiWithdrawalSignature.slice(10)
+      saiUserWithdrawalSignature,
+      '0xffffffff' + saiWithdrawalSignature.slice(10)
     ],
     false,
     receipt => {
@@ -3691,7 +3691,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V5 UserSmartWallet relay cannot call with bad user signature to withdraw dai',
+    'V5 UserSmartWallet relay cannot call with bad user signature to withdraw sai',
     UserSmartWalletV5,
     'withdrawDai',
     'send',
@@ -3699,8 +3699,8 @@ module.exports = {test: async function (provider, testingContext) {
       constants.FULL_APPROVAL,
       address,
       0,
-      '0xffffffff' + daiUserWithdrawalSignature.slice(10),
-      daiWithdrawalSignature
+      '0xffffffff' + saiUserWithdrawalSignature.slice(10),
+      saiWithdrawalSignature
     ],
     false,
     receipt => {
@@ -3711,7 +3711,7 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V5 UserSmartWallet relay can call with signature to withdraw dai',
+    'V5 UserSmartWallet relay can call with signature to withdraw sai',
     UserSmartWalletV5,
     'withdrawDai',
     'send',
@@ -3719,8 +3719,8 @@ module.exports = {test: async function (provider, testingContext) {
       constants.FULL_APPROVAL,
       address,
       0,
-      daiUserWithdrawalSignature,
-      daiWithdrawalSignature
+      saiUserWithdrawalSignature,
+      saiWithdrawalSignature
     ],
     true,
     receipt => {
@@ -4194,7 +4194,7 @@ module.exports = {test: async function (provider, testingContext) {
     'getNextGenericAtomicBatchActionID',
     'call',
     [
-      [{to: DAI.options.address, data: DAI.methods.totalSupply().encodeABI()}],
+      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
       0
     ],
     true,
@@ -4221,7 +4221,7 @@ module.exports = {test: async function (provider, testingContext) {
     'getGenericAtomicBatchActionID',
     'call',
     [
-      [{to: DAI.options.address, data: DAI.methods.totalSupply().encodeABI()}],
+      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
       currentNonce,
       0
     ],
@@ -4247,7 +4247,7 @@ module.exports = {test: async function (provider, testingContext) {
     'executeActionWithAtomicBatchCalls',
     'send',
     [
-      [{to: DAI.options.address, data: DAI.methods.totalSupply().encodeABI()}],
+      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -4818,8 +4818,8 @@ module.exports = {test: async function (provider, testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.transfer(address, constants.FULL_APPROVAL).encodeABI(),
+      SAI.options.address,
+      SAI.methods.transfer(address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -4844,8 +4844,8 @@ module.exports = {test: async function (provider, testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.transfer(address, constants.FULL_APPROVAL).encodeABI(),
+      SAI.options.address,
+      SAI.methods.transfer(address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -4853,12 +4853,12 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V5 UserSmartWallet can get a Dai withdrawal custom action ID',
+    'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
     'call',
     [
-      4, // DaiWithdrawal,
+      4, // SaiWithdrawal,
       '100000000000000000000000000000000000000', // too much
       address,
       0
@@ -4869,18 +4869,18 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  saiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  saiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     addressTwo
   )
 
   await runTest(
-    'V5 UserSmartWallet relay cannot withdraw too much dai',
+    'V5 UserSmartWallet relay cannot withdraw too much sai',
     UserSmartWallet,
     'withdrawDai',
     'send',
@@ -4888,8 +4888,8 @@ module.exports = {test: async function (provider, testingContext) {
       '100000000000000000000000000000000000000', // too much
       address,
       0,
-      daiUserWithdrawalSignature,
-      daiWithdrawalSignature
+      saiUserWithdrawalSignature,
+      saiWithdrawalSignature
     ],
     true,
     receipt => {
@@ -4954,8 +4954,8 @@ module.exports = {test: async function (provider, testingContext) {
     'call',
     [
       [{
-        to: DAI.options.address,
-        data: DAI.methods.transfer(
+        to: SAI.options.address,
+        data: SAI.methods.transfer(
           address, '100000000000000000000000000000'
         ).encodeABI()
       }],
@@ -4984,8 +4984,8 @@ module.exports = {test: async function (provider, testingContext) {
     'send',
     [
       [{
-        to: DAI.options.address,
-        data: DAI.methods.transfer(
+        to: SAI.options.address,
+        data: SAI.methods.transfer(
           address, '100000000000000000000000000000'
         ).encodeABI()
       }],
@@ -5007,7 +5007,7 @@ module.exports = {test: async function (provider, testingContext) {
     [
       Comptroller.options.address,
       Comptroller.methods.enterMarkets(
-        [constants.CDAI_MAINNET_ADDRESS]
+        [constants.CSAI_MAINNET_ADDRESS]
       ).encodeABI(),
       0
     ],
@@ -5028,14 +5028,14 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V5 UserSmartWallet can call executeAction to enter dai market',
+    'V5 UserSmartWallet can call executeAction to enter sai market',
     UserSmartWalletV5,
     'executeAction',
     'send',
     [
       Comptroller.options.address,
       Comptroller.methods.enterMarkets(
-        [constants.CDAI_MAINNET_ADDRESS]
+        [constants.CSAI_MAINNET_ADDRESS]
       ).encodeABI(),
       0,
       executeActionUserSignature,
@@ -5044,8 +5044,8 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'Dai Whale can deposit dai into the smart wallet',
-    DAI,
+    'Sai Whale can deposit sai into the smart wallet',
+    SAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -5054,7 +5054,7 @@ module.exports = {test: async function (provider, testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Transfer.returnValues.from,
-          constants.DAI_WHALE_ADDRESS
+          constants.SAI_WHALE_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Transfer.returnValues.to,
@@ -5066,7 +5066,7 @@ module.exports = {test: async function (provider, testingContext) {
         )
       }
     },
-    constants.DAI_WHALE_ADDRESS
+    constants.SAI_WHALE_ADDRESS
   )
 
   await runTest(
@@ -5081,8 +5081,8 @@ module.exports = {test: async function (provider, testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      CDAI_BORROW.options.address,
-      CDAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
+      CSAI_BORROW.options.address,
+      CSAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
       0
     ],
     true,
@@ -5107,8 +5107,8 @@ module.exports = {test: async function (provider, testingContext) {
     'executeAction',
     'send',
     [
-      CDAI_BORROW.options.address,
-      CDAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
+      CSAI_BORROW.options.address,
+      CSAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -5121,12 +5121,12 @@ module.exports = {test: async function (provider, testingContext) {
   )
 
   await runTest(
-    'V5 UserSmartWallet can get a Dai withdrawal custom action ID',
+    'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
     'call',
     [
-      4, // DaiWithdrawal,
+      4, // SaiWithdrawal,
       constants.FULL_APPROVAL,
       address,
       0
@@ -5137,18 +5137,18 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  saiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  saiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
     addressTwo
   )
 
   await runTest(
-    'V5 UserSmartWallet relay cannot withdraw max dai with an outstanding borrow',
+    'V5 UserSmartWallet relay cannot withdraw max sai with an outstanding borrow',
     UserSmartWalletV5,
     'withdrawDai',
     'send',
@@ -5156,8 +5156,8 @@ module.exports = {test: async function (provider, testingContext) {
       constants.FULL_APPROVAL,
       address,
       0,
-      daiUserWithdrawalSignature,
-      daiWithdrawalSignature
+      saiUserWithdrawalSignature,
+      saiWithdrawalSignature
     ],
     true,
     receipt => {

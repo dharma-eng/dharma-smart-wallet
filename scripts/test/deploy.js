@@ -2690,20 +2690,20 @@ module.exports = {test: async function (provider, testingContext) {
     'deploy'
   )
 
-  let currentDaiCode;
+  let currentSaiCode;
   await runTest(
     'Checking for required external contracts...',
     MockCodeCheck,
     'code',
     'call',
-    [constants.DAI_MAINNET_ADDRESS],
+    [constants.SAI_MAINNET_ADDRESS],
     true,
     value => {
-      currentDaiCode = value;
+      currentSaiCode = value;
     }
   )
 
-  if (!currentDaiCode) {
+  if (!currentSaiCode) {
     console.log(
       `completed ${passed + failed} test${passed + failed === 1 ? '' : 's'} ` +
       `with ${failed} failure${failed === 1 ? '' : 's'}.`
