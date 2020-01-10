@@ -10,13 +10,13 @@ import "../../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
 import "../../../interfaces/DharmaSmartWalletImplementationV1Interface.sol";
 import "../../../interfaces/DharmaSmartWalletImplementationV3Interface.sol";
 import "../../../interfaces/DharmaSmartWalletImplementationV4Interface.sol";
+import "../../../interfaces/DharmaSmartWalletImplementationV6Interface.sol";
 import "../../../interfaces/CTokenInterface.sol";
 import "../../../interfaces/USDCV1Interface.sol";
-import "../../../interfaces/ComptrollerInterface.sol";
 import "../../../interfaces/DharmaKeyRegistryInterface.sol";
 import "../../../interfaces/DharmaEscapeHatchRegistryInterface.sol";
 import "../../../interfaces/ERC1271.sol";
-import "../../../interfaces/SaiToDaiMigrator.sol";
+import "../../../interfaces/SaiToDaiMigratorInterface.sol";
 
 
 /**
@@ -25,10 +25,11 @@ import "../../../interfaces/SaiToDaiMigrator.sol";
  * @notice The V6 implementation for the Dharma smart wallet is a non-custodial,
  * meta-transaction-enabled wallet with helper functions to facilitate lending
  * funds using CompoundV2, and with a security backstop provided by Dharma Labs
- * prior to making withdrawals. It adds support for Multi-collateral Dai, moving
- * all Sai (both on the wallet and in Compound) into the new cDai contract. It
- * contains methods to support account recovery, escape hatch functionality, and
- * generic actions, including in an atomic batch. The smart wallet instances
+ * prior to making withdrawals. It adds support for Multi-collateral Dai, with
+ * the addition of functions for migrating Sai to Dai as well as for migrating
+ * cSai to cDai while leaving any existing Sai in place to simplify accounting.
+ * It contains methods to support account recovery, escape hatch functionality,
+ * and generic actions, including in an atomic batch. The smart wallet instances
  * utilizing this implementation are deployed through the Dharma Smart Wallet
  * Factory via `CREATE2`, which allows for their address to be known ahead of
  * time, and any Dai or USDC that has already been sent into that address will
@@ -39,7 +40,8 @@ contract DharmaSmartWalletImplementationV6 is
   DharmaSmartWalletImplementationV0Interface,
   DharmaSmartWalletImplementationV1Interface,
   DharmaSmartWalletImplementationV3Interface,
-  DharmaSmartWalletImplementationV4Interface {
+  DharmaSmartWalletImplementationV4Interface,
+  DharmaSmartWalletImplementationV6Interface {
   using Address for address;
   using ECDSA for bytes32;
   // WARNING: DO NOT REMOVE OR REORDER STORAGE WHEN WRITING NEW IMPLEMENTATIONS!
@@ -107,16 +109,12 @@ contract DharmaSmartWalletImplementationV6 is
     0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 // mainnet
   );
 
-  SaiToDaiMigrator _MIGRATOR = SaiToDaiMigrator(
+  SaiToDaiMigratorInterface internal constant _MIGRATOR = SaiToDaiMigratorInterface(
     0xc73e0383F3Aff3215E6f04B0331D58CeCf0Ab849 // mainnet
   );
 
   USDCV1Interface internal constant _USDC_NAUGHTY = USDCV1Interface(
     0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 // mainnet
-  );
-
-  ComptrollerInterface internal constant _COMPTROLLER = ComptrollerInterface(
-    0x3d9819210A31b4961b30EF54bE2aeD79B9c9Cd3B // mainnet
   );
 
   // Compound returns a value of 0 to indicate success, or lack of an error.
@@ -134,10 +132,10 @@ contract DharmaSmartWalletImplementationV6 is
 
   /**
    * @notice In the initializer, set up the initial user signing key, set
-   * approval on the cDAI and cUSDC contracts, and deposit any cSAI, Sai, Dai,
-   * or USDC already at this address to Compound. Note that this initializer is
-   * only callable while the smart wallet instance is still in the contract
-   * creation phase.
+   * approval on the cDAI and cUSDC contracts, and deposit any Dai or USDC
+   * already at this address to Compound. Note that this initializer is only
+   * callable while the smart wallet instance is still in the contract creation
+   * phase.
    * @param userSigningKey address The initial user signing key for the smart
    * wallet.
    */
@@ -147,9 +145,6 @@ contract DharmaSmartWalletImplementationV6 is
 
     // Set up the user's signing key and emit a corresponding event.
     _setUserSigningKey(userSigningKey);
-
-    // Attempt to redeem any cSAI for Sai, then to convert any Sai into Dai.
-    _migrateSaiToDai();
 
     // Approve the cDAI contract to transfer Dai on behalf of this contract.
     if (_setFullApproval(AssetType.DAI)) {
@@ -171,23 +166,32 @@ contract DharmaSmartWalletImplementationV6 is
   }
 
   /**
-   * @notice Redeem any cSAI for Sai, convert any Sai to Dai, and deposit all
-   * Dai and USDC currently residing at this address to Compound. Note that
-   * "repay" is not currently implemented, but the function is still named
-   * `repayAndDeposit` so that infrastructure around calling this function will
-   * not need to be altered for a future smart wallet version. If some step of
-   * this function fails, the function itself will still succeed, but an
-   * `ExternalError` with information on what went wrong will be emitted.
+   * @notice Deposit all Dai and USDC currently residing at this address to
+   * Compound. Note that "repay" is not currently implemented, but the function
+   * is still named `repayAndDeposit` so that infrastructure around calling this
+   * function will not need to be altered for a future smart wallet version. If
+   * some step of this function fails, the function itself will still succeed,
+   * but an `ExternalError` with information on what went wrong will be emitted.
    */
   function repayAndDeposit() external {
-    // Attempt to redeem any cSAI for Sai, then to convert any Sai into Dai.
-    _migrateSaiToDai();
-
     // Get the current Dai balance on this contract.
     uint256 daiBalance = _DAI.balanceOf(address(this));
 
-    // Deposit the full available Dai balance on Compound.
-    _depositOnCompound(AssetType.DAI, daiBalance);
+    // If there is any Dai balance, check for adequate approval for cDai.
+    if (daiBalance > 0) {
+      uint256 daiAllowance = _DAI.allowance(address(this), address(_CDAI));
+      // If allowance is insufficient, try to set it before depositing.
+      if (daiAllowance < daiBalance) {
+        if (_setFullApproval(AssetType.DAI)) {
+          // Deposit the full available Dai balance on Compound.
+          _depositOnCompound(AssetType.DAI, daiBalance);
+        }
+      // Otherwise, just go ahead and try the Dai deposit.
+      } else {
+        // Deposit the full available Dai balance on Compound.
+        _depositOnCompound(AssetType.DAI, daiBalance);
+      }
+    }
 
     // Get the current USDC balance on this contract.
     uint256 usdcBalance = _USDC.balanceOf(address(this));
@@ -831,6 +835,54 @@ contract DharmaSmartWalletImplementationV6 is
   }
 
   /**
+   * @notice Convert all available Sai for Dai. If the conversion fails, or if
+   * the realized exchange rate is less than 1:1, the call will revert. Note
+   * that cSai is not included as part of this operation.
+   */
+  function migrateSaiToDai() external {
+    // Swap the current Sai balance on this contract for Dai.
+    _swapSaiForDai(_SAI.balanceOf(address(this)));
+  }
+
+  /**
+   * @notice Redeem all available cSAI for Sai, swap that Sai for Dai, and use
+   * that Dai to mint cDai. If any step in the process fails, the call will
+   * revert and prior steps will be rolled back. Also note that existing Sai and
+   * Dai are not included as part of this operation.
+   */
+  function migrateCSaiToCDai() external {
+    // Get the current cSai balance for this account.
+    uint256 redeemAmount = _CSAI.balanceOf(address(this));
+
+    // Only perform the call to redeem if there is a non-zero balance.
+    if (redeemAmount > 0) {
+      // Get the current Sai balance on this contract.
+      uint256 currentSaiBalance = _SAI.balanceOf(address(this));
+
+      // Redeem underlying balance from cSai and revert if unsuccessful.
+      require(
+        _CSAI.redeem(redeemAmount) == _COMPOUND_SUCCESS, "cSai redeem failed."
+      );
+
+      // Calculate difference between pre-redeem and post-redeem Sai balances.
+      uint256 saiBalance = _SAI.balanceOf(address(this)) - currentSaiBalance;
+
+      // Swap any Sai for Dai and get the newly-swapped Dai balance.
+      uint256 daiBalance = _swapSaiForDai(saiBalance);
+      
+      // If the cDai allowance is insufficient, set it before depositing.
+      if (_DAI.allowance(address(this), address(_CDAI)) < daiBalance) {
+        require(
+          _DAI.approve(address(_CDAI), uint256(-1)), "Dai approval failed."
+        );
+      }
+      
+      // Deposit the new Dai balance on Compound.
+      require(_CDAI.mint(daiBalance) == _COMPOUND_SUCCESS, "cDai mint failed.");
+    }
+  }
+
+  /**
    * @notice Retrieve the Dai and USDC balances held by the smart wallet, both
    * directly and held in Compound. This is not a view function since Compound
    * will calculate accrued interest as part of the underlying balance checks,
@@ -882,7 +934,7 @@ contract DharmaSmartWalletImplementationV6 is
    * multiple future actions ahead of time.
    * @param action uint8 The type of action, designated by it's index. Valid
    * custom actions in V6 include Cancel (0), SetUserSigningKey (1),
-   * DAIWithdrawal (4), USDCWithdrawal (5), ETHWithdrawal (6),
+   * DAIWithdrawal (10), USDCWithdrawal (5), ETHWithdrawal (6),
    * SetEscapeHatch (7), RemoveEscapeHatch (8), and DisableEscapeHatch (9).
    * @param amount uint256 The amount to withdraw for Withdrawal actions. This
    * value is ignored for non-withdrawal action types.
@@ -923,7 +975,7 @@ contract DharmaSmartWalletImplementationV6 is
    * taken.
    * @param action uint8 The type of action, designated by it's index. Valid
    * custom actions in V6 include Cancel (0), SetUserSigningKey (1),
-   * DAIWithdrawal (4), USDCWithdrawal (5), ETHWithdrawal (6),
+   * DAIWithdrawal (10), USDCWithdrawal (5), ETHWithdrawal (6),
    * SetEscapeHatch (7), RemoveEscapeHatch (8), and DisableEscapeHatch (9).
    * @param amount uint256 The amount to withdraw for Withdrawal actions. This
    * value is ignored for non-withdrawal action types.
@@ -1277,42 +1329,39 @@ contract DharmaSmartWalletImplementationV6 is
   }
 
   /**
-   * @notice Internal function for attempting to redeem all available cSAI for
-   * Sai followed by an attempt to convert all available Sai for Dai.
+   * @notice Internal function for converting a Sai balance to Dai. The total
+   * amount of received Dai must be greater than or equal to the total amount of
+   * swapped Sai.
+   * @param saiToSwap uint256 The amount of Sai to swap.
+   * @return The amount of Dai received as part of the swap.
    */
-  function _migrateSaiToDai() internal {
-    // Attempt to redeem all cSAI for Sai on Compound.
-    _withdrawMaxFromCompound(AssetType.SAI);
-
-    // Get the current Sai balance on this contract.
-    uint256 saiBalance = _SAI.balanceOf(address(this));
-
-    // If there is any Sai balance, check if migrator has adequate approval.
-    if (saiBalance > 0) {
-      uint256 saiAllowance = _SAI.allowance(address(this), address(_MIGRATOR));
+  function _swapSaiForDai(uint256 saiToSwap) internal returns (uint256 dai) {
+    // If the balance is non-zero, check if migrator has adequate approval.
+    if (saiToSwap > 0) {
+      uint256 allowance = _SAI.allowance(address(this), address(_MIGRATOR));
+      
       // Ensure that allowance is sufficient before calling the migrator.
-      bool allowanceSufficient = saiAllowance >= saiBalance;
-      if (!allowanceSufficient) {
+      if (saiToSwap > allowance) {
         // Approve migrator contract to transfer Sai on behalf of this wallet.
-        (allowanceSufficient, ) = address(_SAI).call(abi.encodeWithSelector(
-          _SAI.approve.selector, address(_MIGRATOR), uint256(-1)
-        ));
+        require(
+          _SAI.approve(address(_MIGRATOR), uint256(-1)), "Sai approval failed."
+        );
       }
 
-      if (allowanceSufficient) {
-        // Call migrator contract to swap the total Sai balance for Dai.
-        (bool ok, ) = address(_MIGRATOR).call(abi.encodeWithSelector(
-          _MIGRATOR.swapSaiToDai.selector, saiBalance
-        ));
+      // Get the current Dai balance on this contract.
+      uint256 currentDaiBalance = _DAI.balanceOf(address(this));
 
-        if (!ok) {
-          // Emit a corresponding event if the swap failed.
-          emit ExternalError(address(_MIGRATOR), "SAI-to-DAI swap failed.");          
-        }
-      } else {
-        // Emit a corresponding event if the approval failed.
-        emit ExternalError(address(_SAI), "SAI contract reverted on approval.");
-      }
+      // Call migrator contract to swap the supplied Sai balance for Dai.
+      _MIGRATOR.swapSaiToDai(saiToSwap);
+
+      // Return the difference between the pre-swap and post-swap Dai balances.
+      dai = _DAI.balanceOf(address(this)) - currentDaiBalance;
+
+      // Ensure that the Sai-to-Dai exchange rate was at least 1-to-1.
+      require(dai >= saiToSwap, "Exchange rate cannot be below 1:1.");
+    } else {
+      // Explicitly specify a change in balance of zero if no swap occurred.
+      dai = 0;
     }
   }
 
@@ -1519,7 +1568,7 @@ contract DharmaSmartWalletImplementationV6 is
    * requirement).
    * @param action uint8 The type of action, designated by it's index. Valid
    * actions in V6 include Cancel (0), SetUserSigningKey (1), Generic (2),
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5),
+   * GenericAtomicBatch (3), DAIWithdrawal (10), USDCWithdrawal (5),
    * ETHWithdrawal (6), SetEscapeHatch (7), RemoveEscapeHatch (8), and
    * DisableEscapeHatch (9).
    * @param arguments bytes ABI-encoded arguments for the action.
@@ -1770,7 +1819,7 @@ contract DharmaSmartWalletImplementationV6 is
    * returned from `getCustomActionID`.
    * @param action uint8 The type of action, designated by it's index. Valid
    * actions in V6 include Cancel (0), SetUserSigningKey (1), Generic (2),
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5),
+   * GenericAtomicBatch (3), DAIWithdrawal (10), USDCWithdrawal (5),
    * ETHWithdrawal (6), SetEscapeHatch (7), RemoveEscapeHatch (8), and
    * DisableEscapeHatch (9).
    * @param arguments bytes ABI-encoded arguments for the action.
@@ -1822,7 +1871,7 @@ contract DharmaSmartWalletImplementationV6 is
    * on the supplied parameters.
    * @param action uint8 The type of action, designated by it's index. Valid
    * actions in V6 include Cancel (0), SetUserSigningKey (1), Generic (2),
-   * GenericAtomicBatch (3), DAIWithdrawal (4), USDCWithdrawal (5),
+   * GenericAtomicBatch (3), DAIWithdrawal (10), USDCWithdrawal (5),
    * ETHWithdrawal (6), SetEscapeHatch (7), RemoveEscapeHatch (8), and
    * DisableEscapeHatch (9).
    * @param arguments bytes ABI-encoded arguments for the action.
@@ -1926,7 +1975,7 @@ contract DharmaSmartWalletImplementationV6 is
    * the "arguments" input to an actionID based on that action type.
    * @param action uint8 The type of action, designated by it's index. Valid
    * custom actions in V6 include Cancel (0), SetUserSigningKey (1),
-   * DAIWithdrawal (4), USDCWithdrawal (5), ETHWithdrawal (6),
+   * DAIWithdrawal (10), USDCWithdrawal (5), ETHWithdrawal (6),
    * SetEscapeHatch (7), RemoveEscapeHatch (8), and DisableEscapeHatch (9).
    * @param amount uint256 The amount to withdraw for Withdrawal actions. This
    * value is ignored for all non-withdrawal action types.

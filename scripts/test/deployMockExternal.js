@@ -4,6 +4,7 @@ var util = require('ethereumjs-util')
 const constants = require('./constants.js')
 
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
+const MockSaiToDaiMigratorArtifact = require('../../build/contracts/MockSaiToDaiMigrator.json')
 
 module.exports = {test: async function (provider, testingContext) {
   var web3 = provider
@@ -11,6 +12,10 @@ module.exports = {test: async function (provider, testingContext) {
   let failed = 0
   let gasUsage = {}
   let counts = {}
+
+  const SAI = new web3.eth.Contract(
+    IERC20Artifact.abi, constants.SAI_MAINNET_ADDRESS
+  )
 
   const DAI = new web3.eth.Contract(
     IERC20Artifact.abi, constants.DAI_MAINNET_ADDRESS
@@ -24,8 +29,16 @@ module.exports = {test: async function (provider, testingContext) {
     IERC20Artifact.abi, constants.CDAI_MAINNET_ADDRESS
   )
 
+  const CSAI = new web3.eth.Contract(
+    IERC20Artifact.abi, constants.CSAI_MAINNET_ADDRESS
+  )
+
   const CUSDC = new web3.eth.Contract(
     IERC20Artifact.abi, constants.CUSDC_MAINNET_ADDRESS
+  )
+
+  const MockSaiToDaiMigrator = new web3.eth.Contract(
+    MockSaiToDaiMigratorArtifact.abi, constants.DAI_MIGRATOR_MAINNET_ADDRESS
   )
 
   const UNITROLLER = new web3.eth.Contract(
@@ -4612,24 +4625,29 @@ module.exports = {test: async function (provider, testingContext) {
   }
 
   // *************************** deploy contracts *************************** //
-  const currentDaiCode = await web3.eth.getCode(constants.DAI_MAINNET_ADDRESS)
-  if (currentDaiCode !== '0x') {
+  const currentSaiCode = await web3.eth.getCode(constants.SAI_MAINNET_ADDRESS)
+  if (currentSaiCode !== '0x') {
     console.log('contracts already set up, skipping...')
     return 0
   }
 
-  console.log('deploying mock price oracle contract...')
-  const priceOracleDeployReceipt = await web3.eth.sendTransaction({
-    from: address,
-    gas: (testingContext !== 'coverage') ? '1000000' : gasLimit - 1,
-    gasPrice: 1,
-    data: mockPriceOracleDeploymentData
+  console.log('funding mcd deployer address...')
+  await web3.eth.sendTransaction({
+    from: originalAddress,
+    to: '0xb5b06a16621616875A6C2637948bF98eA57c58fa',
+    value: web3.utils.toWei('0.1', 'ether'),
+    gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+    gasPrice: 1
   })
 
-  assert.strictEqual(
-    priceOracleDeployReceipt.contractAddress,
-    '0x43Af172dFC1017c775D789f5B6cDD375E3D8Fe14'
-  )
+  console.log('funding Dai migrator deployer address...')
+  await web3.eth.sendTransaction({
+    from: originalAddress,
+    to: '0xddb108893104de4e1c6d0e47c42237db4e617acc',
+    value: web3.utils.toWei('0.8', 'ether'),
+    gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+    gasPrice: 1
+  })
 
   console.log('funding dai deployer address...')
   await web3.eth.sendTransaction({
@@ -4658,11 +4676,24 @@ module.exports = {test: async function (provider, testingContext) {
     gasPrice: 1
   })
 
+  console.log('deploying mock price oracle contract...')
+  const priceOracleDeployReceipt = await web3.eth.sendTransaction({
+    from: address,
+    gas: (testingContext !== 'coverage') ? '1000000' : gasLimit - 1,
+    gasPrice: 1,
+    data: mockPriceOracleDeploymentData
+  })
+
+  assert.strictEqual(
+    priceOracleDeployReceipt.contractAddress,
+    '0x43Af172dFC1017c775D789f5B6cDD375E3D8Fe14'
+  )
+
   console.log('incrementing dai deployment nonce...')
   let daiDeployReceipt
-  for (i = 0; i < 4; i++) {
+  for (i = 0; i < 1; i++) {
     daiDeployReceipt = await web3.eth.sendTransaction({
-      from: '0x552F355CCb9b91C8FB47D9c011AbAD5B72EC30e9',
+      from: '0xb5b06a16621616875A6C2637948bF98eA57c58fa',
       gas: (testingContext !== 'coverage') ? '1000000' : gasLimit - 1,
       gasPrice: 1,
       data: '0x3838533838f3'
@@ -4671,7 +4702,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   console.log('deploying mock Dai...')
   daiDeployReceipt = await web3.eth.sendTransaction({
-    from: '0x552F355CCb9b91C8FB47D9c011AbAD5B72EC30e9',
+    from: '0xb5b06a16621616875A6C2637948bF98eA57c58fa',
     gas: (testingContext !== 'coverage') ? '1000000' : gasLimit - 1,
     gasPrice: 1,
     data: mockDaiDeploymentData
@@ -4679,6 +4710,56 @@ module.exports = {test: async function (provider, testingContext) {
 
   assert.strictEqual(
     daiDeployReceipt.contractAddress, constants.DAI_MAINNET_ADDRESS
+  )
+
+  console.log('incrementing Sai deployment nonce...')
+  let saiDeployReceipt
+  for (i = 0; i < 4; i++) {
+    saiDeployReceipt = await web3.eth.sendTransaction({
+      from: '0x552F355CCb9b91C8FB47D9c011AbAD5B72EC30e9',
+      gas: (testingContext !== 'coverage') ? '1000000' : gasLimit - 1,
+      gasPrice: 1,
+      data: '0x3838533838f3'
+    })
+  }
+
+  console.log('deploying mock Sai...')
+  saiDeployReceipt = await web3.eth.sendTransaction({
+    from: '0x552F355CCb9b91C8FB47D9c011AbAD5B72EC30e9',
+    gas: (testingContext !== 'coverage') ? '1000000' : gasLimit - 1,
+    gasPrice: 1,
+    data: mockDaiDeploymentData
+  })
+
+  assert.strictEqual(
+    saiDeployReceipt.contractAddress, constants.SAI_MAINNET_ADDRESS
+  )
+
+  console.log(
+    'incrementing Dai migrator deployment nonce (this takes ~30 seconds)...'
+  )
+  let daiMigratorDeployReceipt
+  for (i = 0; i < 1250; i++) {
+    daiMigratorDeployReceipt = await web3.eth.sendTransaction({
+      from: '0xddb108893104de4e1c6d0e47c42237db4e617acc',
+      to: '0xddb108893104de4e1c6d0e47c42237db4e617acc',
+      gas: (testingContext !== 'coverage') ? '1000000' : gasLimit - 1,
+      gasPrice: 1,
+      data: '0x'
+    }).catch(console.error)
+  }
+
+  console.log('deploying mock Dai migrator...')
+  daiMigratorDeployReceipt = await web3.eth.sendTransaction({
+    from: '0xddb108893104de4e1c6d0e47c42237db4e617acc',
+    gas: (testingContext !== 'coverage') ? '1000000' : gasLimit - 1,
+    gasPrice: 1,
+    data: MockSaiToDaiMigratorArtifact.bytecode
+  })
+
+  assert.strictEqual(
+    daiMigratorDeployReceipt.contractAddress,
+    constants.DAI_MIGRATOR_MAINNET_ADDRESS
   )
 
   await runTest(
@@ -4692,17 +4773,45 @@ module.exports = {test: async function (provider, testingContext) {
     ],
     true,
     receipt => {},
+    '0xb5b06a16621616875A6C2637948bF98eA57c58fa'
+  )
+
+  await runTest(
+    'Transfer Dai to migrator address',
+    DAI,
+    'transfer',
+    'send',
+    [
+      constants.DAI_MIGRATOR_MAINNET_ADDRESS,
+      '1000000000000000000000000000000000000000000000000000000000000000000000000000'
+    ],
+    true,
+    receipt => {},
+    '0xb5b06a16621616875A6C2637948bF98eA57c58fa'
+  )
+
+  await runTest(
+    'Transfer Sai to whale address',
+    SAI,
+    'transfer',
+    'send',
+    [
+      constants.SAI_WHALE_ADDRESS,
+      '8555083659983933209597798445644913612440610624038028786991485007418559037440'
+    ],
+    true,
+    receipt => {},
     '0x552F355CCb9b91C8FB47D9c011AbAD5B72EC30e9'
   )
 
   await runTest(
     'Transfer Dai to primary address',
-    DAI,
+    SAI,
     'transfer',
     'send',
     [
       address,
-      '100000000000000000000000000000000000000000000000000000000000000000000000000000'
+      '1000000000000000000000000000000000000000000000000000000000000000000000000000'
     ],
     true,
     receipt => {},
@@ -4711,7 +4820,7 @@ module.exports = {test: async function (provider, testingContext) {
 
   await runTest(
     'Dai totalSupply is reachable',
-    DAI,
+    SAI,
     'totalSupply',
     'call',
     [],
@@ -4904,8 +5013,8 @@ module.exports = {test: async function (provider, testingContext) {
     })
   }
 
-  console.log('deploying Compound cDAI IRM...')
-  const cDAIIRMDeploymentReceipt = await web3.eth.sendTransaction({
+  console.log('deploying Compound cSAI IRM...')
+  const cSAIIRMDeploymentReceipt = await web3.eth.sendTransaction({
     from: '0xA7ff0d561cd15eD525e31bbe0aF3fE34ac2059F6',
     gas: (testingContext !== 'coverage') ? '1000000' : gasLimit - 1,
     gasPrice: 1,
@@ -4913,7 +5022,7 @@ module.exports = {test: async function (provider, testingContext) {
   })  
 
   assert.strictEqual(
-    cDAIIRMDeploymentReceipt.contractAddress,
+    cSAIIRMDeploymentReceipt.contractAddress,
     '0xa1046abfc2598F48C44Fb320d281d3F3c0733c9a'
   )
 
@@ -4940,8 +5049,8 @@ module.exports = {test: async function (provider, testingContext) {
     })
   }
 
-  console.log('deploying Compound cDai...')
-  const cDaiDeploymentReceipt = await web3.eth.sendTransaction({
+  console.log('deploying Compound cSai...')
+  const cSaiDeploymentReceipt = await web3.eth.sendTransaction({
     from: '0xA7ff0d561cd15eD525e31bbe0aF3fE34ac2059F6',
     gas: (testingContext !== 'coverage') ? '7000000' : gasLimit - 1,
     gasPrice: 1,
@@ -4949,7 +5058,7 @@ module.exports = {test: async function (provider, testingContext) {
   })  
 
   assert.strictEqual(
-    cDaiDeploymentReceipt.contractAddress, constants.CDAI_MAINNET_ADDRESS
+    cSaiDeploymentReceipt.contractAddress, constants.CSAI_MAINNET_ADDRESS
   )
 
   for (i = 15; i < 17; i++) {
@@ -5073,13 +5182,38 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
+  console.log('incrementing Compound deployment nonce...')
+  for (i = 72; i < 90; i++) {
+    compoundDeployReceipt = await web3.eth.sendTransaction({
+      from: '0xA7ff0d561cd15eD525e31bbe0aF3fE34ac2059F6',
+      gas: (testingContext !== 'coverage') ? '1000000' : gasLimit - 1,
+      gasPrice: 1,
+      data: '0x3838533838f3'
+    })
+  }
+
+  console.log('deploying Compound cDai...')
+  const daiDeploymentReceipt = await web3.eth.sendTransaction({
+    from: '0xA7ff0d561cd15eD525e31bbe0aF3fE34ac2059F6',
+    gas: (testingContext !== 'coverage') ? '7000000' : gasLimit - 1,
+    gasPrice: 1,
+    data: mockCDaiDeploymentData.replace(
+      '89d24a6b4ccb1b6faa2625fe562bdd9a23260359',
+      constants.DAI_MAINNET_ADDRESS.slice(2)
+    )
+  })
+
+  assert.strictEqual(
+    daiDeploymentReceipt.contractAddress, constants.CDAI_MAINNET_ADDRESS
+  )
+
   await runTest(
-    'List cDai on Comptroller',
+    'List cSai on Comptroller',
     UNITROLLER_COMPTROLLER,
     '_supportMarket',
     'send',
     [
-      CDAI.options.address
+      CSAI.options.address
     ]
   ) 
 
@@ -5091,6 +5225,24 @@ module.exports = {test: async function (provider, testingContext) {
     [
       CUSDC.options.address
     ]
+  )
+
+  await runTest(
+    'List cDai on Comptroller',
+    UNITROLLER_COMPTROLLER,
+    '_supportMarket',
+    'send',
+    [
+      CDAI.options.address
+    ]
+  )
+
+  await runTest(
+    'Call MockSaiToDaiMigrator',
+    MockSaiToDaiMigrator,
+    'swapSaiToDai',
+    'send',
+    [0]
   )
 
   // TODO: list increase cDAI and cUSDC collateral factor on comptroller
