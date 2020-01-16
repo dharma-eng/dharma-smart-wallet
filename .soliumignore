@@ -5,8 +5,7 @@ contracts/mock/RelayContractV2.sol
 interfaces/RelayContractInterface.sol
 
 # disagree with indentation error
-contracts/helpers/FactoryFactFinder.sol
-contracts/helpers/SmartWalletFactoryV1UserSigningKeyUpdater.sol
+extra-contracts/helpers/FactoryFactFinder.sol
 contracts/upgradeability/DharmaUpgradeBeaconController.sol
 contracts/implementations/smart-wallet/AdharmaSmartWalletImplementation.sol
 
@@ -18,6 +17,7 @@ contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV3.sol
 contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV4.sol
 contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV5.sol
 contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV6.sol
+contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV7.sol
 contracts/implementations/smart-wallet/DharmaSmartWalletImplementationVX.sol
 
 extra-contracts/implementations/smart-wallet/DharmaSmartWalletImplementationV0.sol

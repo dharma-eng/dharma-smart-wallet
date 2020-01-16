@@ -7,6 +7,8 @@ let DharmaUpgradeBeaconArtifact;
 let DharmaUpgradeBeaconControllerArtifact;
 let DharmaUpgradeBeaconEnvoyArtifact;
 let DharmaKeyRingUpgradeBeaconArtifact;
+let DharmaDaiUpgradeBeaconArtifact;
+let DharmaUSDCUpgradeBeaconArtifact;
 let DharmaKeyRegistryV1Artifact;
 let DharmaKeyRegistryV2Artifact;
 let DharmaAccountRecoveryManagerV2Artifact;
@@ -17,6 +19,8 @@ let AdharmaKeyRingImplementationArtifact;
 let DharmaUpgradeBeaconControllerManagerArtifact;
 let DharmaKeyRingFactoryV2Artifact;
 let DharmaEscapeHatchRegistryArtifact;
+let DharmaDaiArtifact;
+let DharmaUSDCArtifact;
 
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
@@ -84,6 +88,8 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaUpgradeBeaconControllerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconController.json')
     DharmaUpgradeBeaconArtifact = require('../../../build/contracts/DharmaUpgradeBeacon.json')
     DharmaKeyRingUpgradeBeaconArtifact = require('../../../build/contracts/DharmaKeyRingUpgradeBeacon.json')
+    DharmaDaiUpgradeBeaconArtifact = require('../../../build/contracts/DharmaDaiUpgradeBeacon.json')
+    DharmaUSDCUpgradeBeaconArtifact = require('../../../build/contracts/DharmaUSDCUpgradeBeacon.json')
     DharmaKeyRegistryV1Artifact = require('../../../build/contracts/DharmaKeyRegistryV1.json')
     DharmaKeyRegistryV2Artifact = require('../../../build/contracts/DharmaKeyRegistryV2.json')
     DharmaSmartWalletFactoryV1Artifact = require('../../../build/contracts/DharmaSmartWalletFactoryV1.json')
@@ -94,11 +100,15 @@ module.exports = {test: async function (provider, testingContext) {
     AdharmaKeyRingImplementationArtifact = require('../../../build/contracts/AdharmaKeyRingImplementation.json')
     DharmaUpgradeBeaconControllerManagerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
     DharmaEscapeHatchRegistryArtifact = require('../../../build/contracts/DharmaEscapeHatchRegistry.json')
+    DharmaDaiArtifact = require('../../../build/contracts/DharmaDai.json')
+    DharmaUSDCArtifact = require('../../../build/contracts/DharmaUSDC.json')
   } else {
     DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
     DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
     DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
     DharmaKeyRingUpgradeBeaconArtifact = require('../../build/contracts/DharmaKeyRingUpgradeBeacon.json')
+    DharmaDaiUpgradeBeaconArtifact = require('../../build/contracts/DharmaDaiUpgradeBeacon.json')
+    DharmaUSDCUpgradeBeaconArtifact = require('../../build/contracts/DharmaUSDCUpgradeBeacon.json')
     DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
     DharmaKeyRegistryV2Artifact = require('../../build/contracts/DharmaKeyRegistryV2.json')
     DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
@@ -109,6 +119,8 @@ module.exports = {test: async function (provider, testingContext) {
     AdharmaKeyRingImplementationArtifact = require('../../build/contracts/AdharmaKeyRingImplementation.json')
     DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
     DharmaEscapeHatchRegistryArtifact = require('../../build/contracts/DharmaEscapeHatchRegistry.json')
+    DharmaDaiArtifact = require('../../build/contracts/DharmaDai.json')
+    DharmaUSDCArtifact = require('../../build/contracts/DharmaUSDC.json')
   }
 
   var web3 = provider
@@ -120,12 +132,12 @@ module.exports = {test: async function (provider, testingContext) {
   /*
   console.log(
     swapMetadataHash(
-      DharmaSmartWalletImplementationV5Artifact.bytecode,
-      constants.DHARMA_SMART_WALLET_IMPLEMENTATION_V5_METADATA
+      DharmaUSDCArtifact.bytecode,
+      constants.DHARMA_DAI_METADATA
     ),
     web3.utils.keccak256(swapMetadataHash(
-      DharmaSmartWalletImplementationV5Artifact.bytecode,
-      constants.DHARMA_SMART_WALLET_IMPLEMENTATION_V5_METADATA
+      DharmaUSDCArtifact.bytecode,
+      constants.DHARMA_DAI_METADATA
     ), {encoding: 'hex'})
   )
   process.exit(0)

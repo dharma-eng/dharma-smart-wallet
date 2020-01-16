@@ -8,21 +8,23 @@ interface CTokenInterface {
 
   function redeemUnderlying(uint256 redeemAmount) external returns (uint256 err);
 
-  function balanceOf(address account) external returns (uint256 balance);
+  function balanceOf(address account) external view returns (uint256 balance);
 
   function balanceOfUnderlying(address account) external returns (uint256 balance);
 
-  function borrow(uint256 borrowAmount) external returns (uint256 err);
+  function exchangeRateCurrent() external returns (uint256 exchangeRate);
 
-  function repayBorrow(uint256 borrowAmount) external returns (uint256 err);
+  function transfer(address recipient, uint256 value) external returns (bool);
 
-  // NOTE: we could use borrowBalanceStored if interest has already been accrued
-  function borrowBalanceCurrent(address account) external returns (uint256 err);
+  function transferFrom(address sender, address recipient, uint256 value) external returns (bool);
 
-  function getAccountSnapshot(address account) external view returns (
-    uint256 err,
-    uint256 cTokenBalance,
-    uint256 borrowBalance,
-    uint256 exchangeRateMantissa
-  ); // balanceOfUnderlying = (cTokenBalance * exchangeRateMantissa) / 1e18
+  function approve(address spender, uint256 amount) external returns (bool);
+
+  function allowance(address owner, address spender) external view returns (uint256);
+
+  function supplyRatePerBlock() external view returns (uint256 rate);
+
+  function exchangeRateStored() external view returns (uint256 rate);
+
+  function accrualBlockNumber() external view returns (uint256 blockNumber);
 }

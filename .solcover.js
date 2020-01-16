@@ -26,7 +26,8 @@ module.exports = {
     'implementations/smart-wallet/DharmaSmartWalletImplementationV3.sol',
     'implementations/smart-wallet/DharmaSmartWalletImplementationV4.sol',
     'implementations/smart-wallet/DharmaSmartWalletImplementationV5.sol',
-    //'implementations/smart-wallet/DharmaSmartWalletImplementationV6.sol',
+    'implementations/smart-wallet/DharmaSmartWalletImplementationV6.sol',
+    //'implementations/smart-wallet/DharmaSmartWalletImplementationV7.sol'
     'implementations/smart-wallet/DharmaSmartWalletImplementationVX.sol',
     'mock/MockSaiToDaiMigrator.sol',
     'mock/MockCodeCheck.sol',
