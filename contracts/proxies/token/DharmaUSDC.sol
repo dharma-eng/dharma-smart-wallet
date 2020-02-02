@@ -3,7 +3,7 @@ pragma solidity 0.5.11; // optimization runs: 200, evm version: petersburg
 
 /**
  * @title DharmaUSDC
- * @author 0ages
+ * @author 0age
  * @notice Dharma USDC delegates all logic to an implementation contract
  * specified by a hard-coded "upgrade beacon" contract.
  */

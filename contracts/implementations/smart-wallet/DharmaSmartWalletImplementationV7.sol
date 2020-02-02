@@ -42,7 +42,8 @@ contract DharmaSmartWalletImplementationV7 is
   DharmaSmartWalletImplementationV1Interface,
   DharmaSmartWalletImplementationV3Interface,
   DharmaSmartWalletImplementationV4Interface,
-  DharmaSmartWalletImplementationV7Interface {
+  DharmaSmartWalletImplementationV7Interface,
+  ERC1271 {
   using Address for address;
   using ECDSA for bytes32;
   // WARNING: DO NOT REMOVE OR REORDER STORAGE WHEN WRITING NEW IMPLEMENTATIONS!
@@ -85,7 +86,27 @@ contract DharmaSmartWalletImplementationV7 is
     DharmaEscapeHatchRegistryInterface(0x00000000005280B515004B998a944630B6C663f8)
   );
 
-  // Interface with Sai, Dai, USDC, related CompoundV2 contracts, and migrator.
+  // Interface with dDai, dUSDC, Dai, USDC, Sai, cSai, cDai, cUSDC, & migrator.
+  DTokenInterface internal constant _DDAI = DTokenInterface(
+    0x00000000001876eB1444c986fD502e618c587430 // mainnet
+  );
+
+  DTokenInterface internal constant _DUSDC = DTokenInterface(
+    0x0000000000946A7848C50C8f0AE1BB2792602Cb7 // mainnet
+  );
+
+  IERC20 internal constant _DAI = IERC20(
+    0x6B175474E89094C44Da98b954EedeAC495271d0F // mainnet
+  );
+
+  IERC20 internal constant _USDC = IERC20(
+    0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 // mainnet
+  );
+
+  IERC20 internal constant _SAI = IERC20(
+    0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359 // mainnet
+  );
+
   CTokenInterface internal constant _CSAI = CTokenInterface(
     0xF5DCe57282A584D2746FaF1593d3121Fcac444dC // mainnet
   );
@@ -96,26 +117,6 @@ contract DharmaSmartWalletImplementationV7 is
 
   CTokenInterface internal constant _CUSDC = CTokenInterface(
     0x39AA39c021dfbaE8faC545936693aC917d5E7563 // mainnet
-  );
-
-  DTokenInterface internal constant _DDAI = DTokenInterface(
-    0x00000000001876eB1444c986fD502e618c587430 // mainnet
-  );
-
-  DTokenInterface internal constant _DUSDC = DTokenInterface(
-    0x0000000000946A7848C50C8f0AE1BB2792602Cb7 // mainnet
-  );
-
-  IERC20 internal constant _SAI = IERC20(
-    0x89d24A6b4CcB1B6fAA2625fE562bDD9a23260359 // mainnet
-  );
-
-  IERC20 internal constant _DAI = IERC20(
-    0x6B175474E89094C44Da98b954EedeAC495271d0F // mainnet
-  );
-
-  IERC20 internal constant _USDC = IERC20(
-    0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 // mainnet
   );
 
   SaiToDaiMigratorInterface internal constant _MIGRATOR = SaiToDaiMigratorInterface(
@@ -1099,6 +1100,75 @@ contract DharmaSmartWalletImplementationV7 is
       _userSigningKey,
       _getDharmaSigningKey()
     );
+  }
+
+  /**
+   * @notice View function that implements ERC-1271 and validates a set of
+   * signatures, one from the owner (using ERC-1271 as well if the user signing
+   * key is a contract) and one from the Dharma Key Registry against the
+   * supplied data. The data must be ABI encoded as (bytes32, bytes), where the
+   * first bytes32 parameter represents the hash digest for validating the
+   * supplied signatures and the second bytes parameter contains context for the
+   * requested validation.
+   * @param data bytes The data used to validate the signature.
+   * @param signatures bytes The two signatures, each 65 bytes - one from the
+   * owner (using ERC-1271 as well if the user signing key is a contract) and
+   * one from the Dharma Key Registry.
+   * @return The 4-byte magic value to signify a valid signature in ERC-1271, if
+   * the signatures are both valid.
+   */
+  function isValidSignature(
+    bytes calldata data, bytes calldata signatures
+  ) external view returns (bytes4 magicValue) {
+    // Get message hash digest and any additional context from data argument.
+    bytes32 digest;
+    bytes memory context;
+    if (data.length == 32) {
+      digest = abi.decode(data, (bytes32));
+    } else {
+      (digest, context) = abi.decode(data, (bytes32, bytes));
+    }
+
+    // Get user signature & Dharma signature from combined signatures argument.
+    require(signatures.length == 130, "Must supply two 65-byte signatures.");
+    bytes memory signaturesInMemory = signatures;
+    bytes32 r;
+    bytes32 s;
+    uint8 v;
+    assembly {
+      r := mload(add(signaturesInMemory, 0x20))
+      s := mload(add(signaturesInMemory, 0x40))
+      v := byte(0, mload(add(signaturesInMemory, 0x60)))
+    }
+    bytes memory userSignature = abi.encodePacked(r, s, v);
+
+    assembly {
+      r := mload(add(signaturesInMemory, 0x61))
+      s := mload(add(signaturesInMemory, 0x81))
+      v := byte(0, mload(add(signaturesInMemory, 0xa1)))
+    }
+    bytes memory dharmaSignature = abi.encodePacked(r, s, v);
+
+    // Validate user signature with `SignatureVerification` as the action type.
+    require(
+      _validateUserSignature(
+        digest,
+        ActionType.SignatureVerification,
+        context,
+        _userSigningKey,
+        userSignature
+      ),
+      "Verification failed - invalid user signature."
+    );
+
+    // Recover Dharma signature against key returned from Dharma Key Registry.
+    require(
+      _getDharmaSigningKey() == digest.recover(dharmaSignature),
+      "Verification failed - invalid Dharma signature."
+    );
+
+    // Return the ERC-1271 magic value to indicate success.
+    magicValue = _ERC_1271_MAGIC_VALUE;
   }
 
   /**

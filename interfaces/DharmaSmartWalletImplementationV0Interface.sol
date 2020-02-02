@@ -29,6 +29,7 @@ interface DharmaSmartWalletImplementationV0Interface {
     RemoveEscapeHatch,
     DisableEscapeHatch,
     DAIWithdrawal,
+    SignatureVerification,
     DAIBorrow,
     USDCBorrow
   }
