@@ -92,7 +92,7 @@ contract DharmaSmartWalletImplementationV7 is
   );
 
   DTokenInterface internal constant _DUSDC = DTokenInterface(
-    0x0000000000946A7848C50C8f0AE1BB2792602Cb7 // mainnet
+    0x00000000008943c65cAf789FFFCF953bE156f6f8 // mainnet
   );
 
   IERC20 internal constant _DAI = IERC20(
