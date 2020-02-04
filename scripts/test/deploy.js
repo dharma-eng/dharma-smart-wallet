@@ -129,19 +129,19 @@ module.exports = {test: async function (provider, testingContext) {
   let gasUsage = {}
   let counts = {}
 
-  /*
+  
   console.log(
     swapMetadataHash(
       DharmaUSDCArtifact.bytecode,
-      constants.DHARMA_DAI_METADATA
+      constants.DHARMA_USDC_METADATA
     ),
     web3.utils.keccak256(swapMetadataHash(
       DharmaUSDCArtifact.bytecode,
-      constants.DHARMA_DAI_METADATA
+      constants.DHARMA_USDC_METADATA
     ), {encoding: 'hex'})
   )
   process.exit(0)
-  */
+  
 
   const DharmaUpgradeBeaconController = new web3.eth.Contract(
     DharmaUpgradeBeaconControllerArtifact.abi,

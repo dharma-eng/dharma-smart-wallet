@@ -4,8 +4,9 @@ pragma solidity 0.5.11; // optimization runs: 200, evm version: petersburg
 /**
  * @title DharmaDai
  * @author 0age
- * @notice Dharma Dai delegates all logic to an implementation contract
- * specified by a hard-coded "upgrade beacon" contract.
+ * @notice Dharma Dai is an upgradeable ERC20 token that delegates all logic to
+ * an implementation contract specified by a hard-coded "upgrade beacon"
+ * contract.
  */
 contract DharmaDai {
   // Set upgrade beacon address as a constant (i.e. not in contract storage).
