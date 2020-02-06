@@ -7,8 +7,6 @@ let DharmaUpgradeBeaconArtifact;
 let DharmaUpgradeBeaconControllerArtifact;
 let DharmaUpgradeBeaconEnvoyArtifact;
 let DharmaKeyRingUpgradeBeaconArtifact;
-let DharmaDaiUpgradeBeaconArtifact;
-let DharmaUSDCUpgradeBeaconArtifact;
 let DharmaKeyRegistryV1Artifact;
 let DharmaKeyRegistryV2Artifact;
 let DharmaAccountRecoveryManagerV2Artifact;
@@ -19,9 +17,20 @@ let AdharmaKeyRingImplementationArtifact;
 let DharmaUpgradeBeaconControllerManagerArtifact;
 let DharmaKeyRingFactoryV2Artifact;
 let DharmaEscapeHatchRegistryArtifact;
+
+let DharmaDaiUpgradeBeaconArtifact;
 let DharmaDaiArtifact;
+
+let DharmaUSDCUpgradeBeaconArtifact;
 let DharmaUSDCArtifact;
+
 let SmartWalletRevertReasonHelperV1Artifact;
+
+const DharmaDaiInitializerArtifact = require('../../build/contracts/DharmaDaiInitializer.json')
+const DharmaDaiImplementationV1Artifact = require('../../build/contracts/MockDharmaDaiImplementationV1.json')
+
+const DharmaUSDCInitializerArtifact = require('../../build/contracts/DharmaUSDCInitializer.json')
+const DharmaUSDCImplementationV1Artifact = require('../../build/contracts/DharmaUSDCImplementationV1.json')
 
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
@@ -103,7 +112,9 @@ module.exports = {test: async function (provider, testingContext) {
     AdharmaKeyRingImplementationArtifact = require('../../../build/contracts/AdharmaKeyRingImplementation.json')
     DharmaUpgradeBeaconControllerManagerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
     DharmaEscapeHatchRegistryArtifact = require('../../../build/contracts/DharmaEscapeHatchRegistry.json')
+    DharmaDaiUpgradeBeaconArtifact = require('../../../build/contracts/DharmaDaiUpgradeBeacon.json')
     DharmaDaiArtifact = require('../../../build/contracts/DharmaDai.json')
+    DharmaUSDCUpgradeBeaconArtifact = require('../../../build/contracts/DharmaUSDCUpgradeBeacon.json')
     DharmaUSDCArtifact = require('../../../build/contracts/DharmaUSDC.json')
     SmartWalletRevertReasonHelperV1Artifact = require('../../../build/contracts/SmartWalletRevertReasonHelperV1.json')
   } else {
@@ -123,7 +134,9 @@ module.exports = {test: async function (provider, testingContext) {
     AdharmaKeyRingImplementationArtifact = require('../../build/contracts/AdharmaKeyRingImplementation.json')
     DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
     DharmaEscapeHatchRegistryArtifact = require('../../build/contracts/DharmaEscapeHatchRegistry.json')
+    DharmaDaiUpgradeBeaconArtifact = require('../../build/contracts/DharmaDaiUpgradeBeacon.json')
     DharmaDaiArtifact = require('../../build/contracts/DharmaDai.json')
+    DharmaUSDCUpgradeBeaconArtifact = require('../../build/contracts/DharmaUSDCUpgradeBeacon.json')
     DharmaUSDCArtifact = require('../../build/contracts/DharmaUSDC.json')
     SmartWalletRevertReasonHelperV1Artifact = require('../../build/contracts/SmartWalletRevertReasonHelperV1.json')
   }
@@ -201,6 +214,26 @@ module.exports = {test: async function (provider, testingContext) {
   const ActualIndestructibleRegistry = new web3.eth.Contract(
     IndestructibleRegistryArtifact.abi,
     constants.INDESTRUCTIBLE_REGISTRY_ADDRESS
+  )
+
+  const DharmaDaiUpgradeBeaconController = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerArtifact.abi,
+    constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_ADDRESS
+  )
+
+  const DharmaUSDCUpgradeBeaconController = new web3.eth.Contract(
+    DharmaUpgradeBeaconControllerArtifact.abi,
+    constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_ADDRESS
+  )
+
+  const DharmaDaiInitializer = new web3.eth.Contract(
+    DharmaDaiInitializerArtifact.abi,
+    constants.DHARMA_DAI_ADDRESS
+  )
+
+  const DharmaUSDCInitializer = new web3.eth.Contract(
+    DharmaUSDCInitializerArtifact.abi,
+    constants.DHARMA_USDC_ADDRESS
   )
 
   const SmartWalletRevertReasonHelperV1 = new web3.eth.Contract(
@@ -456,6 +489,34 @@ module.exports = {test: async function (provider, testingContext) {
       DharmaSmartWalletImplementationV7Artifact.bytecode,
       ['0000000000000000000000000000000000000000000000000000000000000000']
     )
+  )
+
+  const DharmaDaiInitializerDeployer = new web3.eth.Contract(
+    DharmaDaiInitializerArtifact.abi
+  )
+  DharmaDaiInitializerDeployer.options.data = (
+    DharmaDaiInitializerArtifact.bytecode
+  )
+
+  const DharmaDaiImplementationV1Deployer = new web3.eth.Contract(
+    DharmaDaiImplementationV1Artifact.abi
+  )
+  DharmaDaiImplementationV1Deployer.options.data = (
+    DharmaDaiImplementationV1Artifact.bytecode
+  )
+
+  const DharmaUSDCInitializerDeployer = new web3.eth.Contract(
+    DharmaUSDCInitializerArtifact.abi
+  )
+  DharmaUSDCInitializerDeployer.options.data = (
+    DharmaUSDCInitializerArtifact.bytecode
+  )
+
+  const DharmaUSDCImplementationV1Deployer = new web3.eth.Contract(
+    DharmaUSDCImplementationV1Artifact.abi
+  )
+  DharmaUSDCImplementationV1Deployer.options.data = (
+    DharmaUSDCImplementationV1Artifact.bytecode
   )
 
   /*
@@ -2145,6 +2206,489 @@ module.exports = {test: async function (provider, testingContext) {
         constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_METADATA
       ))
     }
+  )
+
+
+
+
+
+
+
+
+
+
+  let currentDharmaDaiUpgradeBeaconControllerCode;
+  await runTest(
+    'Checking Dharma Dai Upgrade Beacon Controller runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_ADDRESS],
+    true,
+    value => {
+      currentDharmaDaiUpgradeBeaconControllerCode = value;
+    }
+  )
+
+  if (
+    currentDharmaDaiUpgradeBeaconControllerCode !== swapMetadataHash(
+      DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
+      constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_METADATA
+    )
+  ) {
+    await runTest(
+      `DharmaDaiUpgradeBeaconController contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_SALT,
+        swapMetadataHash(
+          DharmaUpgradeBeaconControllerArtifact.bytecode,
+          constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_METADATA
+        )
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaDaiUpgradeBeaconController contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_SALT,
+        swapMetadataHash(
+          DharmaUpgradeBeaconControllerArtifact.bytecode,
+          constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_METADATA
+        )
+      ]
+    )
+  }
+
+  await runTest(
+    'Deployed DharmaDaiUpgradeBeaconController code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_ADDRESS],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
+        constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_METADATA
+      ))
+    }
+  )
+
+  let currentDharmaUSDCUpgradeBeaconControllerCode;
+  await runTest(
+    'Checking Dharma USDC Upgrade Beacon Controller runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_ADDRESS],
+    true,
+    value => {
+      currentDharmaUSDCUpgradeBeaconControllerCode = value;
+    }
+  )
+
+  if (
+    currentDharmaUSDCUpgradeBeaconControllerCode !== swapMetadataHash(
+      DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
+      constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_METADATA
+    )
+  ) {
+    await runTest(
+      `DharmaUSDCUpgradeBeaconController contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_SALT,
+        swapMetadataHash(
+          DharmaUpgradeBeaconControllerArtifact.bytecode,
+          constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_METADATA
+        )
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaUSDCUpgradeBeaconController contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_SALT,
+        swapMetadataHash(
+          DharmaUpgradeBeaconControllerArtifact.bytecode,
+          constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_METADATA
+        )
+      ]
+    )
+  }
+
+  await runTest(
+    'Deployed DharmaUSDCUpgradeBeaconController code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_ADDRESS],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
+        constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_METADATA
+      ))
+    }
+  )
+
+  let currentDharmaDaiUpgradeBeaconCode;
+  await runTest(
+    'Checking Dharma Dai Upgrade Beacon Controller runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.DHARMA_DAI_UPGRADE_BEACON_ADDRESS],
+    true,
+    value => {
+      currentDharmaDaiUpgradeBeaconCode = value;
+    }
+  )
+
+  if (
+    currentDharmaDaiUpgradeBeaconCode !== swapMetadataHash(
+      DharmaDaiUpgradeBeaconArtifact.deployedBytecode,
+      constants.DHARMA_DAI_UPGRADE_BEACON_METADATA
+    )
+  ) {
+    await runTest(
+      `DharmaDaiUpgradeBeacon contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        constants.DHARMA_DAI_UPGRADE_BEACON_SALT,
+        swapMetadataHash(
+          DharmaDaiUpgradeBeaconArtifact.bytecode,
+          constants.DHARMA_DAI_UPGRADE_BEACON_METADATA
+        )
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, constants.DHARMA_DAI_UPGRADE_BEACON_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaDaiUpgradeBeacon contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        constants.DHARMA_DAI_UPGRADE_BEACON_SALT,
+        swapMetadataHash(
+          DharmaDaiUpgradeBeaconArtifact.bytecode,
+          constants.DHARMA_DAI_UPGRADE_BEACON_METADATA
+        )
+      ]
+    )
+  }
+
+  await runTest(
+    'Deployed DharmaDaiUpgradeBeacon code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.DHARMA_DAI_UPGRADE_BEACON_ADDRESS],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaDaiUpgradeBeaconArtifact.deployedBytecode,
+        constants.DHARMA_DAI_UPGRADE_BEACON_METADATA
+      ))
+    }
+  )
+
+  let currentDharmaUSDCUpgradeBeaconCode;
+  await runTest(
+    'Checking Dharma USDC Upgrade Beacon Controller runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.DHARMA_USDC_UPGRADE_BEACON_ADDRESS],
+    true,
+    value => {
+      currentDharmaUSDCUpgradeBeaconCode = value;
+    }
+  )
+
+  if (
+    currentDharmaUSDCUpgradeBeaconCode !== swapMetadataHash(
+      DharmaUSDCUpgradeBeaconArtifact.deployedBytecode,
+      constants.DHARMA_USDC_UPGRADE_BEACON_METADATA
+    )
+  ) {
+    await runTest(
+      `DharmaUSDCUpgradeBeacon contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        constants.DHARMA_USDC_UPGRADE_BEACON_SALT,
+        swapMetadataHash(
+          DharmaUSDCUpgradeBeaconArtifact.bytecode,
+          constants.DHARMA_USDC_UPGRADE_BEACON_METADATA
+        )
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, constants.DHARMA_USDC_UPGRADE_BEACON_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaUSDCUpgradeBeacon contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        constants.DHARMA_USDC_UPGRADE_BEACON_SALT,
+        swapMetadataHash(
+          DharmaUSDCUpgradeBeaconArtifact.bytecode,
+          constants.DHARMA_USDC_UPGRADE_BEACON_METADATA
+        )
+      ]
+    )
+  }
+
+  await runTest(
+    'Deployed DharmaUSDCUpgradeBeacon code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.DHARMA_USDC_UPGRADE_BEACON_ADDRESS],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaUSDCUpgradeBeaconArtifact.deployedBytecode,
+        constants.DHARMA_USDC_UPGRADE_BEACON_METADATA
+      ))
+    }
+  )
+
+  let currentDharmaDaiCode;
+  await runTest(
+    'Checking Dharma Dai Upgrade Beacon Controller runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.DHARMA_DAI_ADDRESS],
+    true,
+    value => {
+      currentDharmaDaiCode = value;
+    }
+  )
+
+  if (
+    currentDharmaDaiCode !== swapMetadataHash(
+      DharmaDaiArtifact.deployedBytecode,
+      constants.DHARMA_DAI_METADATA
+    )
+  ) {
+    await runTest(
+      `DharmaDai contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        constants.DHARMA_DAI_SALT,
+        swapMetadataHash(
+          DharmaDaiArtifact.bytecode,
+          constants.DHARMA_DAI_METADATA
+        )
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, constants.DHARMA_DAI_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaDai contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        constants.DHARMA_DAI_SALT,
+        swapMetadataHash(
+          DharmaDaiArtifact.bytecode,
+          constants.DHARMA_DAI_METADATA
+        )
+      ]
+    )
+  }
+
+  await runTest(
+    'Deployed DharmaDai code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.DHARMA_DAI_ADDRESS],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaDaiArtifact.deployedBytecode,
+        constants.DHARMA_DAI_METADATA
+      ))
+    }
+  )
+
+  let currentDharmaUSDCCode;
+  await runTest(
+    'Checking Dharma USDC Upgrade Beacon Controller runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.DHARMA_USDC_ADDRESS],
+    true,
+    value => {
+      currentDharmaUSDCCode = value;
+    }
+  )
+
+  if (
+    currentDharmaUSDCCode !== swapMetadataHash(
+      DharmaUSDCArtifact.deployedBytecode,
+      constants.DHARMA_USDC_METADATA
+    )
+  ) {
+    await runTest(
+      `DharmaUSDC contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        constants.DHARMA_USDC_SALT,
+        swapMetadataHash(
+          DharmaUSDCArtifact.bytecode,
+          constants.DHARMA_USDC_METADATA
+        )
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, constants.DHARMA_USDC_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `DharmaUSDC contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        constants.DHARMA_USDC_SALT,
+        swapMetadataHash(
+          DharmaUSDCArtifact.bytecode,
+          constants.DHARMA_USDC_METADATA
+        )
+      ]
+    )
+  }
+
+  await runTest(
+    'Deployed DharmaUSDC code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.DHARMA_USDC_ADDRESS],
+    true,
+    value => {
+      assert.strictEqual(value, swapMetadataHash(
+        DharmaUSDCArtifact.deployedBytecode,
+        constants.DHARMA_USDC_METADATA
+      ))
+    }
+  )
+
+  const DharmaDaiInitializerImplementation = await runTest(
+    `DharmaDaiInitializer contract deployment`,
+    DharmaDaiInitializerDeployer,
+    '',
+    'deploy'
+  )
+
+  const DharmaUSDCInitializerImplementation = await runTest(
+    `DharmaUSDCInitializer contract deployment`,
+    DharmaUSDCInitializerDeployer,
+    '',
+    'deploy'
+  )
+
+  const DharmaDaiImplementationV1 = await runTest(
+    `DharmaDaiImplementationV1 contract deployment`,
+    DharmaDaiImplementationV1Deployer,
+    '',
+    'deploy'
+  )
+
+  const DharmaUSDCImplementationV1 = await runTest(
+    `DharmaUSDCImplementationV1 contract deployment`,
+    DharmaUSDCImplementationV1Deployer,
+    '',
+    'deploy'
+  )
+
+  await runTest(
+    'DharmaDaiUpgradeBeaconController can set initializer implementation',
+    DharmaDaiUpgradeBeaconController,
+    'upgrade',
+    'send',
+    [constants.DHARMA_DAI_UPGRADE_BEACON_ADDRESS, DharmaDaiInitializerImplementation.options.address]
+  )
+
+  await runTest(
+    'DharmaDai can be initialized',
+    DharmaDaiInitializer,
+    'initialize'
+  )
+
+  await runTest(
+    'DharmaDaiUpgradeBeaconController can set implementation V1',
+    DharmaDaiUpgradeBeaconController,
+    'upgrade',
+    'send',
+    [constants.DHARMA_DAI_UPGRADE_BEACON_ADDRESS, DharmaDaiImplementationV1.options.address]
+  )
+
+  await runTest(
+    'DharmaUSDCUpgradeBeaconController can set initializer implementation',
+    DharmaUSDCUpgradeBeaconController,
+    'upgrade',
+    'send',
+    [constants.DHARMA_USDC_UPGRADE_BEACON_ADDRESS, DharmaUSDCInitializerImplementation.options.address]
+  )
+
+  await runTest(
+    'DharmaUSDC can be initialized',
+    DharmaUSDCInitializer,
+    'initialize'
+  )
+
+  await runTest(
+    'DharmaUSDCUpgradeBeaconController can set implementation V1',
+    DharmaUSDCUpgradeBeaconController,
+    'upgrade',
+    'send',
+    [constants.DHARMA_USDC_UPGRADE_BEACON_ADDRESS, DharmaUSDCImplementationV1.options.address]
   )
 
   await runTest(

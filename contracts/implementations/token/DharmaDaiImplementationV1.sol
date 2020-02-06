@@ -4,19 +4,19 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./DharmaTokenV1.sol";
 import "../../../interfaces/CTokenInterface.sol";
 import "../../../interfaces/ERC20Interface.sol";
-import "../../../interfaces/CDaiInterestRateModelInterface.sol";
+import "../../../interfaces/CUSDCInterestRateModelInterface.sol";
 import "../../../interfaces/PotInterface.sol";
 
 
 /**
- * @title DharmaDaiImplementationV1
+ * @title MockDharmaDaiImplementationV1
  * @author 0age (dToken mechanics derived from Compound cTokens, ERC20 methods
  * derived from Open Zeppelin's ERC20 contract)
  * @notice Dharma Dai is an interest-bearing token, with cDai as the backing
  * token and Dai as the underlying token. The dDai exchange rate will initially
  * increase at 90% the rate of the cDai exchange rate.
  */
-contract DharmaDaiImplementationV1 is DharmaTokenV1 {
+contract MockDharmaDaiImplementationV1 is DharmaTokenV1 {
   string internal constant _NAME = "Dharma Dai";
   string internal constant _SYMBOL = "dDai";
   string internal constant _UNDERLYING_NAME = "Dai";
@@ -30,39 +30,36 @@ contract DharmaDaiImplementationV1 is DharmaTokenV1 {
     0x6B175474E89094C44Da98b954EedeAC495271d0F // mainnet
   );
 
-  PotInterface internal constant _POT = PotInterface(
-    0x197E90f9FAD81970bA7976f33CbD77088E5D7cf7 // mainnet
-  );
-
   // Note: this is just an EOA for the initial prototype.
   address internal constant _VAULT = 0x7e4A8391C728fEd9069B2962699AB416628B19Fa;
 
+  uint256 internal constant _SCALING_FACTOR_SQUARED = 1e36;
+
   /**
-   * @notice Internal view function to get the current cDai exchange rate and
-   * supply rate per block.
-   * @return The current cDai exchange rate, or amount of Dai that is redeemable
-   * for each cDai, and the cDai supply rate per block (with 18 decimal places
-   * added to each returned rate).
+   * @notice Internal view function to get the current cDAI exchange rate and
+   * supply rate per block. NOTE: THIS IS MOCKED USING SAI DEPLOYED TO THE DAI
+   * ADDRESS!
+   * @return The current cDAI exchange rate, or amount of Dai that is
+   * redeemable for each cDAI, and the cDAI supply rate per block (with 18
+   * decimal places added to each returned rate).
    */
   function _getCurrentCTokenRates() internal view returns (
     uint256 exchangeRate, uint256 supplyRate
   ) {
-    // Determine the number of blocks that have elapsed since last cDai accrual.
+    // Determine number of blocks that have elapsed since last cDAI accrual.
     uint256 blockDelta = block.number.sub(_CDAI.accrualBlockNumber());
 
     // Return stored values if accrual has already been performed this block.
     if (blockDelta == 0) return (
       _CDAI.exchangeRateStored(), _CDAI.supplyRatePerBlock()
     );
-    
-    // Determine total "cash" held by cDai contract by calculating DSR interest.
-    uint256 cash = ( // solhint-disable-next-line not-rely-on-time
-      _rpow(_POT.dsr(), now.sub(_POT.rho()), 1e27).mul(_POT.chi()) / 1e27 // chi
-    ).mul(_POT.pie(address(_CDAI))) / 1e27;
 
-    // Get the latest interest rate model from the cDai contract.
-    CDaiInterestRateModelInterface interestRateModel = (
-      CDaiInterestRateModelInterface(_CDAI.interestRateModel())
+    // Determine total "cash" held by cDAI contract.
+    uint256 cash = _DAI.balanceOf(address(_CDAI));
+
+    // Get the latest interest rate model from the cDAI contract.
+    CUSDCInterestRateModelInterface interestRateModel = (
+      CUSDCInterestRateModelInterface(_CDAI.interestRateModel())
     );
 
     // Get the current stored total borrows, reserves, and reserve factor.
@@ -71,23 +68,34 @@ contract DharmaDaiImplementationV1 is DharmaTokenV1 {
     uint256 reserveFactor = _CDAI.reserveFactorMantissa();
 
     // Get accumulated borrow interest via interest rate model and block delta.
-    uint256 interest = interestRateModel.getBorrowRate(
+    (uint256 err, uint256 borrowRate) = interestRateModel.getBorrowRate(
       cash, borrows, reserves
-    ).mul(blockDelta).mul(borrows) / _SCALING_FACTOR;
+    );
+    require(
+      err == _COMPOUND_SUCCESS, "Interest Rate Model borrow rate check failed."
+    );
+
+    uint256 interest = borrowRate.mul(blockDelta).mul(borrows) / _SCALING_FACTOR;
 
     // Update total borrows and reserves using calculated accumulated interest.
     borrows = borrows.add(interest);
     reserves = reserves.add(reserveFactor.mul(interest) / _SCALING_FACTOR);
 
-    // Determine cDai exchange rate: (cash + borrows - reserves) / total supply
-    exchangeRate = (
-      ((cash.add(borrows)).sub(reserves)).mul(_SCALING_FACTOR)
-    ).div(_CDAI.totalSupply());
+    // Get "underlying": (cash + borrows - reserves)
+    uint256 underlying = (cash.add(borrows)).sub(reserves);
 
-    // Get supply rate via interest rate model and calculated parameters.
-    supplyRate = interestRateModel.getSupplyRate(
-      cash, borrows, reserves, reserveFactor
-    );
+    // Determine cDAI exchange rate: underlying / total supply
+    exchangeRate = (underlying.mul(_SCALING_FACTOR)).div(_CDAI.totalSupply());
+
+    // Get "borrows per" by dividing total borrows by underlying and scaling up.
+    uint256 borrowsPer = (
+      borrows.mul(_SCALING_FACTOR_SQUARED)
+    ).div(underlying);
+
+    // Supply rate is borrow interest * (1 - reserveFactor) * borrowsPer
+    supplyRate = (
+      interest.mul(_SCALING_FACTOR.sub(reserveFactor)).mul(borrowsPer)
+    ) / _SCALING_FACTOR_SQUARED;
   }
 
   function _getUnderlyingName() internal pure returns (string memory underlyingName) {
