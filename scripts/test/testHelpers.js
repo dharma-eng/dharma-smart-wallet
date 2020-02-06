@@ -1,5 +1,6 @@
 const { web3 } = require("./web3");
 const constants = require("./constants");
+const assert = require("assert");
 
 const SCALING_FACTOR = web3.utils.toBN("1000000000000000000");
 const ZERO = web3.utils.toBN("0");

@@ -600,10 +600,9 @@ module.exports = {test: async function (testingContext) {
     targetCodeCheckAddress
   )
 
-        
+
   const tester = new Tester(testingContext);
   await tester.init();
-
 
 
   console.log('funding initial create2 contract deployer address...')
@@ -617,408 +616,14 @@ module.exports = {test: async function (testingContext) {
 
   console.log('running tests...')
 
-  // ************************** helper functions **************************** //
-  async function send(
-    title,
-    instance,
-    method,
-    args,
-    from,
-    value,
-    gas,
-    gasPrice,
-    shouldSucceed,
-    assertionCallback
-  ) {
-    const receipt = await instance.methods[method](...args).send({
-      from: from,
-      value: value,
-      gas: gas,
-      gasPrice: gasPrice
-    }).on('confirmation', (confirmationNumber, r) => {
-      confirmations[r.transactionHash] = confirmationNumber
-    }).catch(error => {
-      if (shouldSucceed) {
-        console.error(error)
-      }
-      return {status: false}
-    })
-
-    if (receipt.status !== shouldSucceed) {
-      return false
-    } else if (!shouldSucceed) {
-      return true
-    }
-
-    let assertionsPassed
-    try {
-      assertionCallback(receipt)
-      assertionsPassed = true
-    } catch(error) {
-      assertionsPassed = false
-      console.log(error);
-    }
-
-    return assertionsPassed
-  }
-
-  async function call(
-    title,
-    instance,
-    method,
-    args,
-    from,
-    value,
-    gas,
-    gasPrice,
-    shouldSucceed,
-    assertionCallback
-  ) {
-    let succeeded = true
-    returnValues = await instance.methods[method](...args).call({
-      from: from,
-      value: value,
-      gas: gas,
-      gasPrice: gasPrice
-    }).catch(error => {
-      if (shouldSucceed) {
-        console.error(error)
-      }
-      succeeded = false
-    })
-
-    if (succeeded !== shouldSucceed) {
-      return false
-    } else if (!shouldSucceed) {
-      return true
-    }
-
-    let assertionsPassed
-    try {
-      assertionCallback(returnValues)
-      assertionsPassed = true
-    } catch(error) {
-      assertionsPassed = false
-      console.log(error);
-    }
-
-    return assertionsPassed
-  }
-
-  async function deploy(
-    title,
-    instance,
-    args,
-    from,
-    value,
-    gas,
-    gasPrice,
-    shouldSucceed,
-    assertionCallback
-  ) {
-    let deployData = instance.deploy({arguments: args}).encodeABI()
-    let deployGas = await web3.eth.estimateGas({
-        from: from,
-        data: deployData
-    }).catch(error => {
-      if (shouldSucceed) {
-        console.error(error)
-      }
-      return tester.gasLimit
-    })
-
-    if (deployGas > tester.gasLimit) {
-      console.error(` ✘ ${title}: deployment costs exceed block gas limit!`)
-      process.exit(1)
-    }
-
-    if (typeof(gas) === 'undefined') {
-      gas = deployGas
-    }
-
-    if (deployGas > gas) {
-      console.error(` ✘ ${title}: deployment costs exceed supplied gas.`)
-      process.exit(1)
-    }
-
-    let signed
-    let deployHash
-    let receipt
-    const contract = await instance.deploy({arguments: args}).send({
-      from: from,
-      gas: gas,
-      gasPrice: gasPrice
-    }).on('transactionHash', hash => {
-      deployHash = hash
-    }).on('receipt', r => {
-      receipt = r
-    }).on('confirmation', (confirmationNumber, r) => {
-      confirmations[r.transactionHash] = confirmationNumber
-    }).catch(error => {
-      if (shouldSucceed) {
-        console.error(error)
-      }
-
-      receipt = {status: false}
-    })
-
-    if (receipt.status !== shouldSucceed) {
-      if (contract) {
-        return [false, contract, gas]
-      }
-      return [false, instance, gas]
-    } else if (!shouldSucceed) {
-      if (contract) {
-        return [true, contract, gas]
-      }
-      return [true, instance, gas]
-    }
-
-    assert.ok(receipt.status)
-
-    let assertionsPassed
-    try {
-      assertionCallback(receipt)
-      assertionsPassed = true
-    } catch(error) {
-      assertionsPassed = false
-    }
-
-    if (contract) {
-      return [assertionsPassed, contract, gas]
-    }
-    return [assertionsPassed, instance, gas]
-  }
-
-  async function runTest(
-    title,
-    instance,
-    method,
-    callOrSend,
-    args,
-    shouldSucceed,
-    assertionCallback,
-    from,
-    value,
-    gas
-  ) {
-    if (typeof(callOrSend) === 'undefined') {
-      callOrSend = 'send'
-    }
-    if (typeof(args) === 'undefined') {
-      args = []
-    }
-    if (typeof(shouldSucceed) === 'undefined') {
-      shouldSucceed = true
-    }
-    if (typeof(assertionCallback) === 'undefined') {
-      assertionCallback = (value) => {}
-    }
-    if (typeof(from) === 'undefined') {
-      from = tester.address
-    }
-    if (typeof(value) === 'undefined') {
-      value = 0
-    }
-    if (typeof(gas) === 'undefined' && callOrSend !== 'deploy') {
-      gas = 6009006
-      if (testingContext === 'coverage') {
-        gas = tester.gasLimit - 1
-      }
-    }
-    let ok = false
-    let contract
-    let deployGas
-    if (callOrSend === 'send') {
-      ok = await send(
-        title,
-        instance,
-        method,
-        args,
-        from,
-        value,
-        gas,
-        1,
-        shouldSucceed,
-        assertionCallback
-      )
-    } else if (callOrSend === 'call') {
-      ok = await call(
-        title,
-        instance,
-        method,
-        args,
-        from,
-        value,
-        gas,
-        1,
-        shouldSucceed,
-        assertionCallback
-      )
-    } else if (callOrSend === 'deploy') {
-      const fields = await deploy(
-        title,
-        instance,
-        args,
-        from,
-        value,
-        gas,
-        1,
-        shouldSucceed,
-        assertionCallback
-      )
-      ok = fields[0]
-      contract = fields[1]
-      deployGas = fields[2]
-    } else {
-      console.error('must use call, send, or deploy!')
-      process.exit(1)
-    }
-
-    if (ok) {
-      console.log(
-        ` ✓ ${
-          callOrSend === 'deploy' ? 'successful ' : ''
-        }${title}${
-          callOrSend === 'deploy' ? ` (${deployGas} gas)` : ''
-        }`
-      )
-      passed++
-    } else {
-      console.log(
-        ` ✘ ${
-          callOrSend === 'deploy' ? 'failed ' : ''
-        }${title}${
-          callOrSend === 'deploy' ? ` (${deployGas} gas)` : ''
-        }`
-      )
-      failed++
-    }
-
-    if (contract) {
-      return contract
-    }
-  }
-
-  async function setupNewDefaultAddress(newPrivateKey) {
-    const pubKey = await web3.eth.accounts.privateKeyToAccount(newPrivateKey)
-    await web3.eth.accounts.wallet.add(pubKey)
-
-    await web3.eth.sendTransaction({
-      from: tester.originalAddress,
-      to: pubKey.address,
-      value: 10 ** 18,
-      gas: '0x5208',
-      gasPrice: '0x4A817C800'
-    })
-
-    return pubKey.address
-  }
-
-  async function raiseGasLimit(necessaryGas) {
-    iterations = 9999
-    if (necessaryGas > 8000000) {
-      console.error('the gas needed is too high!')
-      process.exit(1)
-    } else if (typeof necessaryGas === 'undefined') {
-      iterations = 20
-      necessaryGas = 8000000
-    }
-
-    // bring up gas limit if necessary by doing additional transactions
-    var block = await web3.eth.getBlock("latest")
-    while (iterations > 0 && block.gasLimit < necessaryGas) {
-      await web3.eth.sendTransaction({
-        from: tester.originalAddress,
-        to: tester.originalAddress,
-        value: '0x01',
-        gas: '0x5208',
-        gasPrice: '0x4A817C800'
-      })
-      var block = await web3.eth.getBlock("latest")
-      iterations--
-    }
-
-    console.log("raising gasLimit, currently at " + block.gasLimit)
-    return block.gasLimit
-  }
-
-  async function getDeployGas(dataPayload) {
-    await web3.eth.estimateGas({
-      from: tester.address,
-      data: dataPayload
-    }).catch(async error => {
-      if (
-        error.message === (
-          'Returned error: gas required exceeds allowance or always failing ' +
-          'transaction'
-        )
-      ) {
-        await raiseGasLimit()
-        await getDeployGas(dataPayload)
-      }
-    })
-
-    deployGas = await web3.eth.estimateGas({
-      from: tester.address,
-      data: dataPayload
-    })
-
-    return deployGas
-  }
-
-  function signHashedPrefixedHexString(hashedHexString, account) {
-    const hashedPrefixedMessage = web3.utils.keccak256(
-      // prefix => "\x19Ethereum Signed Message:\n32"
-      "0x19457468657265756d205369676e6564204d6573736167653a0a3332" +
-      hashedHexString.slice(2),
-      {encoding: "hex"}
-    )
-
-    const sig = util.ecsign(
-      util.toBuffer(hashedPrefixedMessage),
-      util.toBuffer(web3.eth.accounts.wallet[account].privateKey)
-    )
-
-    return (
-      util.bufferToHex(sig.r) +
-      util.bufferToHex(sig.s).slice(2) +
-      web3.utils.toHex(sig.v).slice(2)
-    )
-  }
-
-  function signHashedPrefixedHashedHexString(hexString, account) {
-    const hashedPrefixedHashedMessage = web3.utils.keccak256(
-      // prefix => "\x19Ethereum Signed Message:\n32"
-      "0x19457468657265756d205369676e6564204d6573736167653a0a3332" +
-      web3.utils.keccak256(hexString, {encoding: "hex"}).slice(2),
-      {encoding: "hex"}
-    )
-
-    const sig = util.ecsign(
-      util.toBuffer(hashedPrefixedHashedMessage),
-      util.toBuffer(web3.eth.accounts.wallet[account].privateKey)
-    )
-
-    return (
-      util.bufferToHex(sig.r) +
-      util.bufferToHex(sig.s).slice(2) +
-      web3.utils.toHex(sig.v).slice(2)
-    )
-  }
-
-  // *************************** deploy contracts *************************** //
-  let deployGas
-  let selfAddress
-
-  const MockCodeCheck = await runTest(
+  const MockCodeCheck = await tester.runTest(
     `MockCodeCheck contract deployment`,
     MockCodeCheckDeployer,
     '',
     'deploy'
   )
 
-  await runTest(
+  await tester.runTest(
     'Deployed MockCodeCheck code is correct',
     MockCodeCheck,
     'code',
@@ -1030,7 +635,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Deployed MockCodeCheck has correct extcodehash',
     MockCodeCheck,
     'hash',
@@ -1049,7 +654,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentKeylessCreate2Runtime;
-  await runTest(
+  await tester.runTest(
     'Current runtime code at address of initial create2 factory can be retrieved',
     MockCodeCheck,
     'code',
@@ -1067,7 +672,7 @@ module.exports = {test: async function (testingContext) {
     await web3.eth.sendSignedTransaction(
       constants.KEYLESS_CREATE2_DEPLOYMENT_TRANSACTION
     );
-    passed++
+    tester.passed++
 
     // deploy a mock code check contract using the initial create2 deployer
     console.log(' ✓ deploying test contract via create2 contract...')
@@ -1079,13 +684,13 @@ module.exports = {test: async function (testingContext) {
       gasPrice: 1,
       data: MockCodeCheckArtifact.bytecode
     })
-    passed++
+    tester.passed++
   } else {
     console.log(' ✓ initial create2 contract already deployed, skipping...')
   }
 
   let currentInefficientImmutableCreate2FactoryRuntimeHash;
-  await runTest(
+  await tester.runTest(
     'Current runtime hash at address of inefficient immutable create2 factory can be retrieved',
     MockCodeCheck,
     'hash',
@@ -1111,13 +716,13 @@ module.exports = {test: async function (testingContext) {
       gasPrice: 1,
       data: constants.IMMUTABLE_CREATE2_FACTORY_CREATION_CODE
     });
-    passed++
+    tester.passed++
   } else {
     console.log(' ✓ inefficient immutable create2 factory contract already deployed, skipping...')
   }
 
   let currentImmutableCreate2FactoryRuntimeHash;
-  await runTest(
+  await tester.runTest(
     'Current runtime hash at address of immutable create2 factory can be retrieved',
     MockCodeCheck,
     'hash',
@@ -1131,7 +736,7 @@ module.exports = {test: async function (testingContext) {
 
   // submit the immutable create2 deployment transaction if needed  
   if (currentImmutableCreate2FactoryRuntimeHash !== constants.IMMUTABLE_CREATE2_FACTORY_RUNTIME_HASH) {
-    await runTest(
+    await tester.runTest(
       `submitting immutable create2 factory deployment through initial create2 contract...`,
       InefficientImmutableCreate2Factory,
       'safeCreate2',
@@ -1147,7 +752,7 @@ module.exports = {test: async function (testingContext) {
   }
 
   let currentIndestructibleRegistryRuntimeHash;
-  await runTest(
+  await tester.runTest(
     'Current runtime hash at address of indestructible registry can be retrieved',
     MockCodeCheck,
     'hash',
@@ -1170,14 +775,14 @@ module.exports = {test: async function (testingContext) {
       gasPrice: 1,
       data: constants.INDESTRUCTIBLE_REGISTRY_CREATION_TX
     });
-    passed++    
+    tester.passed++
   } else {
     console.log(' ✓ indestructible registry contract already deployed, skipping...')
   }
 
   // BEGIN ACTUAL DEPLOYMENT TESTS
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController contract deployment fails before other deployments`,
     DharmaUpgradeBeaconControllerCoverageDeployer,
     '',
@@ -1186,7 +791,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager contract deployment fails before other deployments`,
     DharmaUpgradeBeaconControllerManagerCoverageDeployer,
     '',
@@ -1196,7 +801,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentUpgradeBeaconEnvoyCode;
-  await runTest(
+  await tester.runTest(
     'Checking Upgrade Beacon Envoy runtime code',
     MockCodeCheck,
     'code',
@@ -1211,7 +816,7 @@ module.exports = {test: async function (testingContext) {
   if (
     currentUpgradeBeaconEnvoyCode !== constants.UPGRADE_BEACON_ENVOY_RUNTIME_CODE
   ) {
-    await runTest(
+    await tester.runTest(
       `UpgradeBeaconEnvoy contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -1226,7 +831,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `Upgrade Beacon Envoy contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -1238,7 +843,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed Upgrade Beacon Envoy code is correct',
     MockCodeCheck,
     'code',
@@ -1251,7 +856,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentUpgradeBeaconControllerCode;
-  await runTest(
+  await tester.runTest(
     'Checking Upgrade Beacon Controller runtime code',
     MockCodeCheck,
     'code',
@@ -1269,7 +874,7 @@ module.exports = {test: async function (testingContext) {
       constants.UPGRADE_BEACON_CONTROLLER_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaUpgradeBeaconController contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -1287,7 +892,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaUpgradeBeaconController contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -1302,7 +907,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed Upgrade Beacon Controller code is correct',
     MockCodeCheck,
     'code',
@@ -1318,7 +923,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentKeyRingUpgradeBeaconControllerCode;
-  await runTest(
+  await tester.runTest(
     'Checking Key Ring Upgrade Beacon Controller runtime code',
     MockCodeCheck,
     'code',
@@ -1336,7 +941,7 @@ module.exports = {test: async function (testingContext) {
       constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaKeyRingUpgradeBeaconController contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -1354,7 +959,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaKeyRingUpgradeBeaconController contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -1369,7 +974,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed Key Ring Upgrade Beacon Controller code is correct',
     MockCodeCheck,
     'code',
@@ -1384,14 +989,14 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController contract deployment`,
     DharmaUpgradeBeaconControllerDeployer,
     '',
     'deploy'
   )
 
-  const FailedUpgradeBeaconProxy = await runTest(
+  const FailedUpgradeBeaconProxy = await tester.runTest(
     `failure when deploying UpgradeBeaconProxyV1 contract using an undeployed beacon`,
     UpgradeBeaconProxyV1Deployer,
     '',
@@ -1401,7 +1006,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentUpgradeBeaconCode;
-  await runTest(
+  await tester.runTest(
     'Checking Upgrade Beacon runtime code',
     MockCodeCheck,
     'code',
@@ -1419,7 +1024,7 @@ module.exports = {test: async function (testingContext) {
       constants.UPGRADE_BEACON_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaUpgradeBeacon contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -1437,7 +1042,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaUpgradeBeacon contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -1452,7 +1057,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed Upgrade Beacon code is correct',
     MockCodeCheck,
     'code',
@@ -1467,7 +1072,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeacon contract deployment`,
     DharmaUpgradeBeaconDeployer,
     '',
@@ -1475,7 +1080,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentKeyRingUpgradeBeaconCode;
-  await runTest(
+  await tester.runTest(
     'Checking Upgrade Beacon runtime code',
     MockCodeCheck,
     'code',
@@ -1493,7 +1098,7 @@ module.exports = {test: async function (testingContext) {
       constants.KEY_RING_UPGRADE_BEACON_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaKeyRingUpgradeBeacon contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -1511,7 +1116,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaUpgradeBeacon contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -1526,7 +1131,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed Key Ring Upgrade Beacon code is correct',
     MockCodeCheck,
     'code',
@@ -1541,7 +1146,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingUpgradeBeacon contract deployment`,
     DharmaKeyRingUpgradeBeaconDeployer,
     '',
@@ -1549,7 +1154,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentKeyRegistryCode;
-  await runTest(
+  await tester.runTest(
     'Checking Key Registry runtime code',
     MockCodeCheck,
     'code',
@@ -1567,7 +1172,7 @@ module.exports = {test: async function (testingContext) {
       constants.KEY_REGISTRY_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaKeyRegistryV1 Code contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -1585,7 +1190,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaKeyRegistryV1 contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -1600,7 +1205,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed Key Registry code is correct',
     MockCodeCheck,
     'code',
@@ -1616,7 +1221,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentKeyRegistryV2Code;
-  await runTest(
+  await tester.runTest(
     'Checking Key Registry V2 runtime code',
     MockCodeCheck,
     'code',
@@ -1634,7 +1239,7 @@ module.exports = {test: async function (testingContext) {
       constants.KEY_REGISTRY_V2_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaKeyRegistryV2 Code contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -1652,7 +1257,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaKeyRegistryV2 contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -1667,7 +1272,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed Key Registry code is correct',
     MockCodeCheck,
     'code',
@@ -1683,7 +1288,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentRevertReasonHelperCode;
-  await runTest(
+  await tester.runTest(
     'Checking Revert Reason Helper runtime code',
     MockCodeCheck,
     'code',
@@ -1698,7 +1303,7 @@ module.exports = {test: async function (testingContext) {
   if (
     currentRevertReasonHelperCode !== SmartWalletRevertReasonHelperV1Artifact.deployedBytecode
   ) {
-    await runTest(
+    await tester.runTest(
       `SmartWalletRevertReasonHelperV1 Code contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -1713,7 +1318,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `SmartWalletRevertReasonHelperV1 contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -1725,7 +1330,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed Revert Reason Helper code is correct',
     MockCodeCheck,
     'code',
@@ -1738,7 +1343,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentEscapeHatchRegistryCode;
-  await runTest(
+  await tester.runTest(
     'Checking Escape Hatch Registry runtime code',
     MockCodeCheck,
     'code',
@@ -1756,7 +1361,7 @@ module.exports = {test: async function (testingContext) {
       constants.ESCAPE_HATCH_REGISTRY_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaEscapeHatchRegistry Code contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -1774,7 +1379,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaEscapeHatchRegistry contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -1789,7 +1394,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed Escape Hatch Registry code is correct',
     MockCodeCheck,
     'code',
@@ -1804,21 +1409,21 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  const DharmaSmartWalletImplementationV0 = await runTest(
+  const DharmaSmartWalletImplementationV0 = await tester.runTest(
     `DharmaSmartWalletImplementationV0 contract deployment`,
     DharmaSmartWalletImplementationV0Deployer,
     '',
     'deploy'
   )
 
-  const DharmaSmartWalletImplementationV1 = await runTest(
+  const DharmaSmartWalletImplementationV1 = await tester.runTest(
     `DharmaSmartWalletImplementationV1 contract deployment`,
     DharmaSmartWalletImplementationV1Deployer,
     '',
     'deploy'
   )
 
-  const DharmaSmartWalletImplementationV2 = await runTest(
+  const DharmaSmartWalletImplementationV2 = await tester.runTest(
     `DharmaSmartWalletImplementationV2 contract deployment`,
     DharmaSmartWalletImplementationV2Deployer,
     '',
@@ -1841,21 +1446,21 @@ module.exports = {test: async function (testingContext) {
   )
   */
 
-  const DharmaSmartWalletImplementationV5 = await runTest(
+  const DharmaSmartWalletImplementationV5 = await tester.runTest(
     `DharmaSmartWalletImplementationV5 contract deployment`,
     DharmaSmartWalletImplementationV5Deployer,
     '',
     'deploy'
   )
 
-  const DharmaSmartWalletImplementationV6 = await runTest(
+  const DharmaSmartWalletImplementationV6 = await tester.runTest(
     `DharmaSmartWalletImplementationV6 contract deployment`,
     DharmaSmartWalletImplementationV6Deployer,
     '',
     'deploy'
   )
 
-  const DharmaSmartWalletImplementationV7 = await runTest(
+  const DharmaSmartWalletImplementationV7 = await tester.runTest(
     `DharmaSmartWalletImplementationV7 contract deployment`,
     DharmaSmartWalletImplementationV7Deployer,
     '',
@@ -1871,7 +1476,7 @@ module.exports = {test: async function (testingContext) {
   )
   */
 
-  const DharmaKeyRingImplementationV1 = await runTest(
+  const DharmaKeyRingImplementationV1 = await tester.runTest(
     `DharmaKeyRingImplementationV1 contract deployment`,
     DharmaKeyRingImplementationV1Deployer,
     '',
@@ -1888,7 +1493,7 @@ module.exports = {test: async function (testingContext) {
   */
 
   let currentAccountRecoveryManagerCode;
-  await runTest(
+  await tester.runTest(
     'Checking Account Recovery Manager runtime code',
     MockCodeCheck,
     'code',
@@ -1906,7 +1511,7 @@ module.exports = {test: async function (testingContext) {
       constants.ACCOUNT_RECOVERY_MANAGER_V2_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaAccountRecoveryManagerV2 contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -1924,7 +1529,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaAccountRecoveryManagerV2 contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -1939,7 +1544,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed Account Recovery Manager code is correct',
     MockCodeCheck,
     'code',
@@ -1954,7 +1559,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 contract deployment`,
     DharmaAccountRecoveryManagerV2Deployer,
     '',
@@ -1962,7 +1567,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentFactoryCode;
-  await runTest(
+  await tester.runTest(
     'Checking Factory runtime code',
     MockCodeCheck,
     'code',
@@ -1980,7 +1585,7 @@ module.exports = {test: async function (testingContext) {
       constants.FACTORY_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaSmartWalletFactoryV1 Code contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -1998,7 +1603,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaSmartWalletFactoryV1 contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -2013,7 +1618,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed FactoryV1 code is correct',
     MockCodeCheck,
     'code',
@@ -2028,7 +1633,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaSmartWalletFactoryV1 contract deployment`,
     DharmaSmartWalletFactoryV1Deployer,
     '',
@@ -2037,7 +1642,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentKeyRingFactoryCode;
-  await runTest(
+  await tester.runTest(
     'Checking Key Ring Factory runtime code',
     MockCodeCheck,
     'code',
@@ -2055,7 +1660,7 @@ module.exports = {test: async function (testingContext) {
       constants.KEY_RING_FACTORY_V2_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaKeyRingFactoryV2 Code contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -2073,7 +1678,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaKeyRingFactoryV2 contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -2088,7 +1693,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed KeyRingFactoryV2 code is correct',
     MockCodeCheck,
     'code',
@@ -2103,7 +1708,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV2 contract deployment`,
     DharmaKeyRingFactoryV2Deployer,
     '',
@@ -2112,7 +1717,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentAdharmaSmartWalletImplementationCode;
-  await runTest(
+  await tester.runTest(
     'Checking Adharma smart wallet implementation runtime code',
     MockCodeCheck,
     'code',
@@ -2130,7 +1735,7 @@ module.exports = {test: async function (testingContext) {
       constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `AdharmaSmartWalletImplementation contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -2148,7 +1753,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `AdharmaSmartWalletImplementation contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -2163,7 +1768,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed AdharmaSmartWalletImplementation code is correct',
     MockCodeCheck,
     'code',
@@ -2179,16 +1784,8 @@ module.exports = {test: async function (testingContext) {
   )
 
 
-
-
-
-
-
-
-
-
   let currentDharmaDaiUpgradeBeaconControllerCode;
-  await runTest(
+  await tester.runTest(
     'Checking Dharma Dai Upgrade Beacon Controller runtime code',
     MockCodeCheck,
     'code',
@@ -2206,7 +1803,7 @@ module.exports = {test: async function (testingContext) {
       constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaDaiUpgradeBeaconController contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -2224,7 +1821,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaDaiUpgradeBeaconController contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -2239,7 +1836,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed DharmaDaiUpgradeBeaconController code is correct',
     MockCodeCheck,
     'code',
@@ -2255,7 +1852,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentDharmaUSDCUpgradeBeaconControllerCode;
-  await runTest(
+  await tester.runTest(
     'Checking Dharma USDC Upgrade Beacon Controller runtime code',
     MockCodeCheck,
     'code',
@@ -2273,7 +1870,7 @@ module.exports = {test: async function (testingContext) {
       constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaUSDCUpgradeBeaconController contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -2291,7 +1888,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaUSDCUpgradeBeaconController contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -2306,7 +1903,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed DharmaUSDCUpgradeBeaconController code is correct',
     MockCodeCheck,
     'code',
@@ -2322,7 +1919,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentDharmaDaiUpgradeBeaconCode;
-  await runTest(
+  await tester.runTest(
     'Checking Dharma Dai Upgrade Beacon Controller runtime code',
     MockCodeCheck,
     'code',
@@ -2340,7 +1937,7 @@ module.exports = {test: async function (testingContext) {
       constants.DHARMA_DAI_UPGRADE_BEACON_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaDaiUpgradeBeacon contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -2358,7 +1955,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaDaiUpgradeBeacon contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -2373,7 +1970,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed DharmaDaiUpgradeBeacon code is correct',
     MockCodeCheck,
     'code',
@@ -2389,7 +1986,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentDharmaUSDCUpgradeBeaconCode;
-  await runTest(
+  await tester.runTest(
     'Checking Dharma USDC Upgrade Beacon Controller runtime code',
     MockCodeCheck,
     'code',
@@ -2407,7 +2004,7 @@ module.exports = {test: async function (testingContext) {
       constants.DHARMA_USDC_UPGRADE_BEACON_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaUSDCUpgradeBeacon contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -2425,7 +2022,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaUSDCUpgradeBeacon contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -2440,7 +2037,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed DharmaUSDCUpgradeBeacon code is correct',
     MockCodeCheck,
     'code',
@@ -2456,7 +2053,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentDharmaDaiCode;
-  await runTest(
+  await tester.runTest(
     'Checking Dharma Dai Upgrade Beacon Controller runtime code',
     MockCodeCheck,
     'code',
@@ -2474,7 +2071,7 @@ module.exports = {test: async function (testingContext) {
       constants.DHARMA_DAI_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaDai contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -2492,7 +2089,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaDai contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -2507,7 +2104,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed DharmaDai code is correct',
     MockCodeCheck,
     'code',
@@ -2523,7 +2120,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentDharmaUSDCCode;
-  await runTest(
+  await tester.runTest(
     'Checking Dharma USDC Upgrade Beacon Controller runtime code',
     MockCodeCheck,
     'code',
@@ -2541,7 +2138,7 @@ module.exports = {test: async function (testingContext) {
       constants.DHARMA_USDC_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaUSDC contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -2559,7 +2156,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaUSDC contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -2574,7 +2171,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed DharmaUSDC code is correct',
     MockCodeCheck,
     'code',
@@ -2589,35 +2186,35 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  const DharmaDaiInitializerImplementation = await runTest(
+  const DharmaDaiInitializerImplementation = await tester.runTest(
     `DharmaDaiInitializer contract deployment`,
     DharmaDaiInitializerDeployer,
     '',
     'deploy'
   )
 
-  const DharmaUSDCInitializerImplementation = await runTest(
+  const DharmaUSDCInitializerImplementation = await tester.runTest(
     `DharmaUSDCInitializer contract deployment`,
     DharmaUSDCInitializerDeployer,
     '',
     'deploy'
   )
 
-  const DharmaDaiImplementationV1 = await runTest(
+  const DharmaDaiImplementationV1 = await tester.runTest(
     `DharmaDaiImplementationV1 contract deployment`,
     DharmaDaiImplementationV1Deployer,
     '',
     'deploy'
   )
 
-  const DharmaUSDCImplementationV1 = await runTest(
+  const DharmaUSDCImplementationV1 = await tester.runTest(
     `DharmaUSDCImplementationV1 contract deployment`,
     DharmaUSDCImplementationV1Deployer,
     '',
     'deploy'
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaDaiUpgradeBeaconController can set initializer implementation',
     DharmaDaiUpgradeBeaconController,
     'upgrade',
@@ -2625,13 +2222,13 @@ module.exports = {test: async function (testingContext) {
     [constants.DHARMA_DAI_UPGRADE_BEACON_ADDRESS, DharmaDaiInitializerImplementation.options.address]
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaDai can be initialized',
     DharmaDaiInitializer,
     'initialize'
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaDaiUpgradeBeaconController can set implementation V1',
     DharmaDaiUpgradeBeaconController,
     'upgrade',
@@ -2639,7 +2236,7 @@ module.exports = {test: async function (testingContext) {
     [constants.DHARMA_DAI_UPGRADE_BEACON_ADDRESS, DharmaDaiImplementationV1.options.address]
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaUSDCUpgradeBeaconController can set initializer implementation',
     DharmaUSDCUpgradeBeaconController,
     'upgrade',
@@ -2647,13 +2244,13 @@ module.exports = {test: async function (testingContext) {
     [constants.DHARMA_USDC_UPGRADE_BEACON_ADDRESS, DharmaUSDCInitializerImplementation.options.address]
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaUSDC can be initialized',
     DharmaUSDCInitializer,
     'initialize'
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaUSDCUpgradeBeaconController can set implementation V1',
     DharmaUSDCUpgradeBeaconController,
     'upgrade',
@@ -2661,7 +2258,7 @@ module.exports = {test: async function (testingContext) {
     [constants.DHARMA_USDC_UPGRADE_BEACON_ADDRESS, DharmaUSDCImplementationV1.options.address]
   )
 
-  await runTest(
+  await tester.runTest(
     `AdharmaSmartWalletImplementation contract deployment`,
     AdharmaSmartWalletImplementationDeployer,
     '',
@@ -2669,7 +2266,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentAdharmaKeyRingImplementationCode;
-  await runTest(
+  await tester.runTest(
     'Checking Adharma key ring implementation runtime code',
     MockCodeCheck,
     'code',
@@ -2687,7 +2284,7 @@ module.exports = {test: async function (testingContext) {
       constants.ADHARMA_KEY_RING_IMPLEMENTATION_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `AdharmaKeyRingImplementation contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -2705,7 +2302,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `AdharmaKeyRingImplementation contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -2720,7 +2317,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed AdharmaSmartWalletImplementation code is correct',
     MockCodeCheck,
     'code',
@@ -2735,14 +2332,14 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `AdharmaKeyRingImplementation contract deployment`,
     AdharmaKeyRingImplementationDeployer,
     '',
     'deploy'
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig contract deployment fails if threshold is not met`,
     DharmaAccountRecoveryMultisigDeployer,
     '',
@@ -2753,7 +2350,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig contract deployment fails if sigs are out of order`,
     DharmaAccountRecoveryMultisigDeployer,
     '',
@@ -2768,7 +2365,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig contract deployment fails with too many owners`,
     DharmaAccountRecoveryMultisigDeployer,
     '',
@@ -2789,7 +2386,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig contract deployment fails if threshold is not met`,
     DharmaAccountRecoveryOperatorMultisigDeployer,
     '',
@@ -2800,7 +2397,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig contract deployment fails if sigs are out of order`,
     DharmaAccountRecoveryOperatorMultisigDeployer,
     '',
@@ -2815,7 +2412,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig contract deployment fails with too many owners`,
     DharmaAccountRecoveryOperatorMultisigDeployer,
     '',
@@ -2836,7 +2433,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  const DharmaAccountRecoveryMultisig = await runTest(
+  const DharmaAccountRecoveryMultisig = await tester.runTest(
     `DharmaAccountRecoveryMultisig contract deployment`,
     DharmaAccountRecoveryMultisigDeployer,
     '',
@@ -2844,7 +2441,7 @@ module.exports = {test: async function (testingContext) {
     [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour]]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig contract deployment fails if threshold is not met`,
     DharmaKeyRegistryMultisigDeployer,
     '',
@@ -2855,7 +2452,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig contract deployment fails if sigs are out of order`,
     DharmaKeyRegistryMultisigDeployer,
     '',
@@ -2870,7 +2467,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig contract deployment fails with too many owners`,
     DharmaKeyRegistryMultisigDeployer,
     '',
@@ -2891,7 +2488,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  const DharmaKeyRegistryMultisig = await runTest(
+  const DharmaKeyRegistryMultisig = await tester.runTest(
     `DharmaKeyRegistryMultisig contract deployment`,
     DharmaKeyRegistryMultisigDeployer,
     '',
@@ -2899,7 +2496,7 @@ module.exports = {test: async function (testingContext) {
     [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour, tester.ownerFive]]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager contract deployment fails before indestructible registration`,
     DharmaUpgradeBeaconControllerManagerCoverageDeployer,
     '',
@@ -2908,14 +2505,14 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  const IndestructibleRegistry = await runTest(
+  const IndestructibleRegistry = await tester.runTest(
     `IndestructibleRegistry contract deployment`,
     IndestructibleRegistryDeployer,
     '',
     'deploy'
   )
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register itself as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -2923,7 +2520,7 @@ module.exports = {test: async function (testingContext) {
     [IndestructibleRegistry.options.address]
   )
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register the upgrade beacon as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -2931,7 +2528,7 @@ module.exports = {test: async function (testingContext) {
     [constants.UPGRADE_BEACON_ADDRESS]
   )  
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register the upgrade beacon controller as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -2939,7 +2536,7 @@ module.exports = {test: async function (testingContext) {
     [constants.UPGRADE_BEACON_CONTROLLER_ADDRESS]
   )
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register the key ring upgrade beacon as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -2947,7 +2544,7 @@ module.exports = {test: async function (testingContext) {
     [constants.KEY_RING_UPGRADE_BEACON_ADDRESS]
   )  
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register the key ring upgrade beacon controller as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -2955,7 +2552,7 @@ module.exports = {test: async function (testingContext) {
     [constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS]
   )
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register the upgrade beacon envoy as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -2963,7 +2560,7 @@ module.exports = {test: async function (testingContext) {
     [constants.UPGRADE_BEACON_ENVOY_ADDRESS]
   )  
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register the account recovery manager as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -2971,7 +2568,7 @@ module.exports = {test: async function (testingContext) {
     [constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS]
   )
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register DharmaKeyRegistryV1 as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -2979,7 +2576,7 @@ module.exports = {test: async function (testingContext) {
     [constants.KEY_REGISTRY_ADDRESS]
   )
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register DharmaKeyRegistryV2 as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -2987,7 +2584,7 @@ module.exports = {test: async function (testingContext) {
     [constants.KEY_REGISTRY_V2_ADDRESS]
   )
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register DharmaEscapeHatchRegistry as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -2995,7 +2592,7 @@ module.exports = {test: async function (testingContext) {
     [constants.ESCAPE_HATCH_REGISTRY_ADDRESS]
   )
 
-  await runTest(
+  await tester.runTest(
     'WARNING: IndestructibleRegistry CANNOT register the smart wallet factory as indestructible (even though it is in fact NOT destructible)',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -3004,7 +2601,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register the Adharma smart wallet implementation as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -3012,7 +2609,7 @@ module.exports = {test: async function (testingContext) {
     [constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS]
   )
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register the Adharma key ring implementation as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -3020,7 +2617,7 @@ module.exports = {test: async function (testingContext) {
     [constants.ADHARMA_KEY_RING_IMPLEMENTATION_ADDRESS]
   )
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register V0 implementation as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -3038,7 +2635,7 @@ module.exports = {test: async function (testingContext) {
   )
   */
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register V1 implementation as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -3047,7 +2644,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   if (testingContext !== 'coverage') {
-    await runTest(
+    await tester.runTest(
       'IndestructibleRegistry can register V2 implementation as indestructible',
       IndestructibleRegistry,
       'registerAsIndestructible',
@@ -3073,7 +2670,7 @@ module.exports = {test: async function (testingContext) {
     )
     */
 
-    await runTest(
+    await tester.runTest(
       'IndestructibleRegistry can register V5 implementation as indestructible',
       IndestructibleRegistry,
       'registerAsIndestructible',
@@ -3081,7 +2678,7 @@ module.exports = {test: async function (testingContext) {
       [DharmaSmartWalletImplementationV5.options.address]
     )
 
-    await runTest(
+    await tester.runTest(
       'IndestructibleRegistry can register V6 implementation as indestructible',
       IndestructibleRegistry,
       'registerAsIndestructible',
@@ -3089,7 +2686,7 @@ module.exports = {test: async function (testingContext) {
       [DharmaSmartWalletImplementationV6.options.address]
     )
 
-    await runTest(
+    await tester.runTest(
       'IndestructibleRegistry can register V7 implementation as indestructible',
       IndestructibleRegistry,
       'registerAsIndestructible',
@@ -3097,7 +2694,7 @@ module.exports = {test: async function (testingContext) {
       [DharmaSmartWalletImplementationV7.options.address]
     )
 
-    await runTest(
+    await tester.runTest(
       'IndestructibleRegistry can register V1 key ring implementation as indestructible',
       IndestructibleRegistry,
       'registerAsIndestructible',
@@ -3116,7 +2713,7 @@ module.exports = {test: async function (testingContext) {
   )
   */
 
-  await runTest(
+  await tester.runTest(
     '"actual" IndestructibleRegistry can register the upgrade beacon as indestructible',
     ActualIndestructibleRegistry,
     'registerAsIndestructible',
@@ -3124,7 +2721,7 @@ module.exports = {test: async function (testingContext) {
     [constants.UPGRADE_BEACON_ADDRESS]
   )  
 
-  await runTest(
+  await tester.runTest(
     '"actual" IndestructibleRegistry can register the upgrade beacon controller as indestructible',
     ActualIndestructibleRegistry,
     'registerAsIndestructible',
@@ -3132,7 +2729,7 @@ module.exports = {test: async function (testingContext) {
     [constants.UPGRADE_BEACON_CONTROLLER_ADDRESS]
   )
 
-  await runTest(
+  await tester.runTest(
     '"actual" IndestructibleRegistry can register the key ring upgrade beacon as indestructible',
     ActualIndestructibleRegistry,
     'registerAsIndestructible',
@@ -3140,7 +2737,7 @@ module.exports = {test: async function (testingContext) {
     [constants.KEY_RING_UPGRADE_BEACON_ADDRESS]
   )  
 
-  await runTest(
+  await tester.runTest(
     '"actual" IndestructibleRegistry can register the key ring upgrade beacon controller as indestructible',
     ActualIndestructibleRegistry,
     'registerAsIndestructible',
@@ -3148,7 +2745,7 @@ module.exports = {test: async function (testingContext) {
     [constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS]
   )
 
-  await runTest(
+  await tester.runTest(
     '"actual" IndestructibleRegistry can register the Adharma smart wallet implementation as indestructible',
     ActualIndestructibleRegistry,
     'registerAsIndestructible',
@@ -3156,7 +2753,7 @@ module.exports = {test: async function (testingContext) {
     [constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS]
   )
 
-  await runTest(
+  await tester.runTest(
     '"actual" IndestructibleRegistry can register the Adharma key ring implementation as indestructible',
     ActualIndestructibleRegistry,
     'registerAsIndestructible',
@@ -3164,14 +2761,14 @@ module.exports = {test: async function (testingContext) {
     [constants.ADHARMA_KEY_RING_IMPLEMENTATION_ADDRESS]
   )
 
-  const CodeHashCache = await runTest(
+  const CodeHashCache = await tester.runTest(
     `CodeHashCache contract deployment`,
     CodeHashCacheDeployer,
     '',
     'deploy'
   )
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register codehashcache as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -3179,7 +2776,7 @@ module.exports = {test: async function (testingContext) {
     [CodeHashCache.options.address]
   )
 
-  await runTest(
+  await tester.runTest(
     'CodeHashCache can register the runtime code hash of the smart wallet factory',
     CodeHashCache,
     'registerCodeHash',
@@ -3188,7 +2785,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentUpgradeBeaconControllerManagerCode;
-  await runTest(
+  await tester.runTest(
     'Checking Upgrade Beacon Controller Manager runtime code',
     MockCodeCheck,
     'code',
@@ -3206,7 +2803,7 @@ module.exports = {test: async function (testingContext) {
       constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
     )
   ) {
-    await runTest(
+    await tester.runTest(
       `DharmaUpgradeBeaconControllerManager contract address check through immutable create2 factory`,
       ImmutableCreate2Factory,
       'findCreate2Address',
@@ -3224,7 +2821,7 @@ module.exports = {test: async function (testingContext) {
       }
     )
 
-    await runTest(
+    await tester.runTest(
       `DharmaUpgradeBeaconControllerManager contract deployment through immutable create2 factory`,
       ImmutableCreate2Factory,
       'safeCreate2',
@@ -3239,7 +2836,7 @@ module.exports = {test: async function (testingContext) {
     )
   }
 
-  await runTest(
+  await tester.runTest(
     'Deployed DharmaUpgradeBeaconControllerManager code is correct',
     MockCodeCheck,
     'code',
@@ -3254,7 +2851,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'IndestructibleRegistry can register the upgrade beacon controller manager as indestructible',
     IndestructibleRegistry,
     'registerAsIndestructible',
@@ -3262,7 +2859,7 @@ module.exports = {test: async function (testingContext) {
     [constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig contract deployment fails if threshold is not met`,
     DharmaUpgradeMultisigDeployer,
     '',
@@ -3273,7 +2870,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig contract deployment fails if sigs are out of order`,
     DharmaUpgradeMultisigDeployer,
     '',
@@ -3288,7 +2885,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig contract deployment fails with too many owners`,
     DharmaUpgradeMultisigDeployer,
     '',
@@ -3309,7 +2906,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  const DharmaUpgradeMultisig = await runTest(
+  const DharmaUpgradeMultisig = await tester.runTest(
     `DharmaUpgradeMultisig contract deployment`,
     DharmaUpgradeMultisigDeployer,
     '',
@@ -3317,14 +2914,14 @@ module.exports = {test: async function (testingContext) {
     [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour, tester.ownerFive]]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager contract deployment`,
     DharmaUpgradeBeaconControllerManagerDeployer,
     '',
     'deploy'
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager contract coverage deployment`,
     DharmaUpgradeBeaconControllerManagerCoverageDeployer,
     '',
@@ -3332,7 +2929,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentSaiCode;
-  await runTest(
+  await tester.runTest(
     'Checking for required external contracts...',
     MockCodeCheck,
     'code',
@@ -3346,8 +2943,8 @@ module.exports = {test: async function (testingContext) {
 
   if (!currentSaiCode) {
     console.log(
-      `completed ${passed + failed} test${passed + failed === 1 ? '' : 's'} ` +
-      `with ${failed} failure${failed === 1 ? '' : 's'}.`
+      `completed ${tester.passed + tester.failed} test${tester.passed + tester.failed === 1 ? '' : 's'} ` +
+      `with ${tester.failed} failure${tester.failed === 1 ? '' : 's'}.`
     )
 
     console.log(
@@ -3355,7 +2952,7 @@ module.exports = {test: async function (testingContext) {
       'run against a fork of mainnet using `yarn forkStart` and `yarn test`.'
     )
 
-    if (failed > 0) {
+    if (tester.failed > 0) {
       process.exit(1)
     }
 
@@ -3365,11 +2962,11 @@ module.exports = {test: async function (testingContext) {
 
 
   console.log(
-    `completed ${passed + failed} test${passed + failed === 1 ? '' : 's'} ` +
-    `with ${failed} failure${failed === 1 ? '' : 's'}.`
+    `completed ${tester.passed + tester.failed} test${tester.passed + tester.failed === 1 ? '' : 's'} ` +
+    `with ${tester.failed} failure${tester.failed === 1 ? '' : 's'}.`
   )
 
-  if (failed > 0) {
+  if (tester.failed > 0) {
     process.exit(1)
   }
 
