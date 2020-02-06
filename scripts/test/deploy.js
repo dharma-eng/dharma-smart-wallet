@@ -21,6 +21,7 @@ let DharmaKeyRingFactoryV2Artifact;
 let DharmaEscapeHatchRegistryArtifact;
 let DharmaDaiArtifact;
 let DharmaUSDCArtifact;
+let SmartWalletRevertReasonHelperV1Artifact;
 
 const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
 const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
@@ -104,6 +105,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaEscapeHatchRegistryArtifact = require('../../../build/contracts/DharmaEscapeHatchRegistry.json')
     DharmaDaiArtifact = require('../../../build/contracts/DharmaDai.json')
     DharmaUSDCArtifact = require('../../../build/contracts/DharmaUSDC.json')
+    SmartWalletRevertReasonHelperV1Artifact = require('../../../build/contracts/SmartWalletRevertReasonHelperV1.json')
   } else {
     DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
     DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
@@ -123,6 +125,7 @@ module.exports = {test: async function (provider, testingContext) {
     DharmaEscapeHatchRegistryArtifact = require('../../build/contracts/DharmaEscapeHatchRegistry.json')
     DharmaDaiArtifact = require('../../build/contracts/DharmaDai.json')
     DharmaUSDCArtifact = require('../../build/contracts/DharmaUSDC.json')
+    SmartWalletRevertReasonHelperV1Artifact = require('../../build/contracts/SmartWalletRevertReasonHelperV1.json')
   }
 
   var web3 = provider
@@ -198,6 +201,11 @@ module.exports = {test: async function (provider, testingContext) {
   const ActualIndestructibleRegistry = new web3.eth.Contract(
     IndestructibleRegistryArtifact.abi,
     constants.INDESTRUCTIBLE_REGISTRY_ADDRESS
+  )
+
+  const SmartWalletRevertReasonHelperV1 = new web3.eth.Contract(
+    SmartWalletRevertReasonHelperV1Artifact.abi,
+    constants.REVERT_REASON_HELPER_ADDRESS
   )
 
   const IndestructibleRegistryDeployer = new web3.eth.Contract(
@@ -426,6 +434,26 @@ module.exports = {test: async function (provider, testingContext) {
   DharmaSmartWalletImplementationV5Deployer.options.data = (
     swapMetadataHash(
       DharmaSmartWalletImplementationV5Artifact.bytecode,
+      ['0000000000000000000000000000000000000000000000000000000000000000']
+    )
+  )
+
+  const DharmaSmartWalletImplementationV6Deployer = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV6Artifact.abi
+  )
+  DharmaSmartWalletImplementationV6Deployer.options.data = (
+    swapMetadataHash(
+      DharmaSmartWalletImplementationV6Artifact.bytecode,
+      ['0000000000000000000000000000000000000000000000000000000000000000']
+    )
+  )
+
+  const DharmaSmartWalletImplementationV7Deployer = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV7Artifact.abi
+  )
+  DharmaSmartWalletImplementationV7Deployer.options.data = (
+    swapMetadataHash(
+      DharmaSmartWalletImplementationV7Artifact.bytecode,
       ['0000000000000000000000000000000000000000000000000000000000000000']
     )
   )
@@ -1623,6 +1651,61 @@ module.exports = {test: async function (provider, testingContext) {
     }
   )
 
+  let currentRevertReasonHelperCode;
+  await runTest(
+    'Checking Revert Reason Helper runtime code',
+    MockCodeCheck,
+    'code',
+    'call',
+    [constants.REVERT_REASON_HELPER_ADDRESS],
+    true,
+    value => {
+      currentRevertReasonHelperCode = value;
+    }
+  )
+
+  if (
+    currentRevertReasonHelperCode !== SmartWalletRevertReasonHelperV1Artifact.deployedBytecode
+  ) {
+    await runTest(
+      `SmartWalletRevertReasonHelperV1 Code contract address check through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'findCreate2Address',
+      'call',
+      [
+        constants.NULL_BYTES_32,
+        SmartWalletRevertReasonHelperV1Artifact.bytecode
+      ],
+      true,
+      value => {
+        assert.strictEqual(value, constants.REVERT_REASON_HELPER_ADDRESS)
+      }
+    )
+
+    await runTest(
+      `SmartWalletRevertReasonHelperV1 contract deployment through immutable create2 factory`,
+      ImmutableCreate2Factory,
+      'safeCreate2',
+      'send',
+      [
+        constants.NULL_BYTES_32,
+        SmartWalletRevertReasonHelperV1Artifact.bytecode
+      ]
+    )
+  }
+
+  await runTest(
+    'Deployed Revert Reason Helper code is correct',
+    MockCodeCheck,
+    'code',
+    'call',
+    [SmartWalletRevertReasonHelperV1.options.address],
+    true,
+    value => {
+      assert.strictEqual(value, SmartWalletRevertReasonHelperV1Artifact.deployedBytecode)
+    }
+  )
+
   let currentEscapeHatchRegistryCode;
   await runTest(
     'Checking Escape Hatch Registry runtime code',
@@ -1730,6 +1813,20 @@ module.exports = {test: async function (provider, testingContext) {
   const DharmaSmartWalletImplementationV5 = await runTest(
     `DharmaSmartWalletImplementationV5 contract deployment`,
     DharmaSmartWalletImplementationV5Deployer,
+    '',
+    'deploy'
+  )
+
+  const DharmaSmartWalletImplementationV6 = await runTest(
+    `DharmaSmartWalletImplementationV6 contract deployment`,
+    DharmaSmartWalletImplementationV6Deployer,
+    '',
+    'deploy'
+  )
+
+  const DharmaSmartWalletImplementationV7 = await runTest(
+    `DharmaSmartWalletImplementationV7 contract deployment`,
+    DharmaSmartWalletImplementationV7Deployer,
     '',
     'deploy'
   )
@@ -2468,6 +2565,22 @@ module.exports = {test: async function (provider, testingContext) {
       'registerAsIndestructible',
       'send',
       [DharmaSmartWalletImplementationV5.options.address]
+    )
+
+    await runTest(
+      'IndestructibleRegistry can register V6 implementation as indestructible',
+      IndestructibleRegistry,
+      'registerAsIndestructible',
+      'send',
+      [DharmaSmartWalletImplementationV6.options.address]
+    )
+
+    await runTest(
+      'IndestructibleRegistry can register V7 implementation as indestructible',
+      IndestructibleRegistry,
+      'registerAsIndestructible',
+      'send',
+      [DharmaSmartWalletImplementationV7.options.address]
     )
 
     await runTest(

@@ -18,6 +18,7 @@ import "../../../interfaces/DharmaKeyRegistryInterface.sol";
 import "../../../interfaces/DharmaEscapeHatchRegistryInterface.sol";
 import "../../../interfaces/ERC1271.sol";
 import "../../../interfaces/SaiToDaiMigratorInterface.sol";
+import "../../helpers/SmartWalletRevertReasonHelperV1.sol";
 
 
 /**
@@ -125,6 +126,10 @@ contract DharmaSmartWalletImplementationV7 is
 
   USDCV1Interface internal constant _USDC_NAUGHTY = USDCV1Interface(
     0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 // mainnet
+  );
+
+  SmartWalletRevertReasonHelperV1 internal constant _REVERT_REASON_HELPER = (
+    SmartWalletRevertReasonHelperV1(0x13821c0129FB9e2CC16dE2660783Ff4E4861e92d)
   );
 
   // Compound returns a value of 0 to indicate success, or lack of an error.
@@ -272,10 +277,10 @@ contract DharmaSmartWalletImplementationV7 is
     );
 
     // Ensure that an amount of at least 0.001 Dai has been supplied.
-    require(amount > _JUST_UNDER_ONE_1000th_DAI, "Insufficient Dai supplied.");
+    require(amount > _JUST_UNDER_ONE_1000th_DAI, _revertReason(0));
 
     // Ensure that a non-zero recipient has been supplied.
-    require(recipient != address(0), "No recipient supplied.");
+    require(recipient != address(0), _revertReason(1));
 
     // Set the self-call context in order to call _withdrawDaiAtomic.
     _selfCallContext = this.withdrawDai.selector;
@@ -292,7 +297,7 @@ contract DharmaSmartWalletImplementationV7 is
 
     // If the atomic call failed, emit an event signifying a transfer failure.
     if (!ok) {
-      emit ExternalError(address(_DAI), "Could not transfer Dai.");
+      emit ExternalError(address(_DAI), _revertReason(2));
     } else {
       // Set ok to false if the call succeeded but the withdrawal failed.
       ok = abi.decode(returnData, (bool));
@@ -388,10 +393,10 @@ contract DharmaSmartWalletImplementationV7 is
     );
 
     // Ensure that an amount of at least 0.001 USDC has been supplied.
-    require(amount > _JUST_UNDER_ONE_1000th_USDC, "Insufficient USDC supplied.");
+    require(amount > _JUST_UNDER_ONE_1000th_USDC, _revertReason(3));
 
     // Ensure that a non-zero recipient has been supplied.
-    require(recipient != address(0), "No recipient supplied.");
+    require(recipient != address(0), _revertReason(1));
 
     // Set the self-call context in order to call _withdrawUSDCAtomic.
     _selfCallContext = this.withdrawUSDC.selector;
@@ -491,10 +496,10 @@ contract DharmaSmartWalletImplementationV7 is
     );
 
     // Ensure that a non-zero amount of Ether has been supplied.
-    require(amount > 0, "Must supply a non-zero amount of Ether.");
+    require(amount > 0, _revertReason(4));
 
     // Ensure that a non-zero recipient has been supplied.
-    require(recipient != address(0), "No recipient supplied.");
+    require(recipient != address(0), _revertReason(1));
 
     // Attempt to transfer Ether to the recipient and emit an appropriate event.
     ok = _transferETH(recipient, amount);
@@ -677,7 +682,7 @@ contract DharmaSmartWalletImplementationV7 is
     );
 
     // Ensure that an escape hatch account has been provided.
-    require(account != address(0), "Must supply an escape hatch account.");
+    require(account != address(0), _revertReason(5));
 
     // Set a new escape hatch for the smart wallet unless it has been disabled.
     _ESCAPE_HATCH_REGISTRY.setEscapeHatch(account);
@@ -775,13 +780,10 @@ contract DharmaSmartWalletImplementationV7 is
     (bool exists, address escapeHatch) = _ESCAPE_HATCH_REGISTRY.getEscapeHatch();
 
     // Ensure that an escape hatch is currently set for this smart wallet.
-    require(exists, "No escape hatch is currently set for this smart wallet.");
+    require(exists, _revertReason(6));
 
     // Ensure that the escape hatch account is the caller.
-    require(
-      msg.sender == escapeHatch,
-      "Only the escape hatch account may call this function."
-    );
+    require(msg.sender == escapeHatch, _revertReason(7));
 
     // Attempt to redeem all dDai for Dai on Dharma Dai.
     _withdrawMaxFromDharmaToken(AssetType.DAI);
@@ -831,10 +833,7 @@ contract DharmaSmartWalletImplementationV7 is
    * smart wallet.
    */
   function recover(address newUserSigningKey) external {
-    require(
-      msg.sender == _ACCOUNT_RECOVERY_MANAGER,
-      "Only the account recovery manager may call this function."
-    );
+    require(msg.sender == _ACCOUNT_RECOVERY_MANAGER, _revertReason(8));
 
     // Increment nonce to prevent signature reuse should original key be reset.
     _nonce++;
@@ -869,9 +868,7 @@ contract DharmaSmartWalletImplementationV7 is
       uint256 currentSaiBalance = _SAI.balanceOf(address(this));
 
       // Redeem underlying balance from cSai and revert if unsuccessful.
-      require(
-        _CSAI.redeem(redeemAmount) == _COMPOUND_SUCCESS, "cSai redeem failed."
-      );
+      require(_CSAI.redeem(redeemAmount) == _COMPOUND_SUCCESS, _revertReason(9));
 
       // Calculate difference between pre-redeem and post-redeem Sai balances.
       uint256 saiBalance = _SAI.balanceOf(address(this)) - currentSaiBalance;
@@ -881,9 +878,7 @@ contract DharmaSmartWalletImplementationV7 is
       
       // If the dDai allowance is insufficient, set it before depositing.
       if (_DAI.allowance(address(this), address(_DDAI)) < daiBalance) {
-        require(
-          _DAI.approve(address(_DDAI), uint256(-1)), "Dai approval failed."
-        );
+        require(_DAI.approve(address(_DDAI), uint256(-1)), _revertReason(10));
       }
       
       // Deposit the new Dai balance on Dharma Dai.
@@ -1130,7 +1125,7 @@ contract DharmaSmartWalletImplementationV7 is
     }
 
     // Get user signature & Dharma signature from combined signatures argument.
-    require(signatures.length == 130, "Must supply two 65-byte signatures.");
+    require(signatures.length == 130, _revertReason(11));
     bytes memory signaturesInMemory = signatures;
     bytes32 r;
     bytes32 s;
@@ -1158,13 +1153,13 @@ contract DharmaSmartWalletImplementationV7 is
         _userSigningKey,
         userSignature
       ),
-      "Verification failed - invalid user signature."
+      _revertReason(12)
     );
 
     // Recover Dharma signature against key returned from Dharma Key Registry.
     require(
       _getDharmaSigningKey() == digest.recover(dharmaSignature),
-      "Verification failed - invalid Dharma signature."
+      _revertReason(13)
     );
 
     // Return the ERC-1271 magic value to indicate success.
@@ -1416,7 +1411,7 @@ contract DharmaSmartWalletImplementationV7 is
    */
   function _setUserSigningKey(address userSigningKey) internal {
     // Ensure that a user signing key is set on this smart wallet.
-    require(userSigningKey != address(0), "No user signing key provided.");
+    require(userSigningKey != address(0), _revertReason(14));
 
     _userSigningKey = userSigningKey;
     emit NewUserSigningKey(userSigningKey);
@@ -1438,7 +1433,7 @@ contract DharmaSmartWalletImplementationV7 is
       if (saiToSwap > allowance) {
         // Approve migrator contract to transfer Sai on behalf of this wallet.
         require(
-          _SAI.approve(address(_MIGRATOR), uint256(-1)), "Sai approval failed."
+          _SAI.approve(address(_MIGRATOR), uint256(-1)), _revertReason(15)
         );
       }
 
@@ -1452,7 +1447,7 @@ contract DharmaSmartWalletImplementationV7 is
       dai = _DAI.balanceOf(address(this)) - currentDaiBalance;
 
       // Ensure that the Sai-to-Dai exchange rate was at least 1-to-1.
-      require(dai >= saiToSwap, "Exchange rate cannot be below 1:1.");
+      require(dai >= saiToSwap, _revertReason(16));
     } else {
       // Explicitly specify a change in balance of zero if no swap occurred.
       dai = 0;
@@ -1487,7 +1482,7 @@ contract DharmaSmartWalletImplementationV7 is
     // Emit a corresponding event if the approval failed.
     if (!ok) {
       if (asset == AssetType.DAI) {
-        emit ExternalError(address(_DAI), "DAI contract reverted on approval.");
+        emit ExternalError(address(_DAI), _revertReason(17));
       } else {
         // Find out why USDC transfer reverted (it doesn't give revert reasons).
         _diagnoseAndEmitUSDCSpecificError(_USDC.approve.selector);
@@ -1568,13 +1563,26 @@ contract DharmaSmartWalletImplementationV7 is
     // Get dToken address for the asset type. (No custom ETH withdrawal action.)
     address dToken = asset == AssetType.DAI ? address(_DDAI) : address(_DUSDC);
 
-    // Get the current dToken balance for this account.
-    uint256 redeemAmount = IERC20(dToken).balanceOf(address(this));
+    // Try to retrieve the current dToken balance for this account.
+    IERC20 dTokenBalance;
+    (bool ok, bytes memory data) = dToken.call(abi.encodeWithSelector(
+      dTokenBalance.balanceOf.selector, address(this)
+    ));
+
+    uint256 redeemAmount = 0;
+    if (ok && data.length == 32) {
+      redeemAmount = abi.decode(data, (uint256));
+    } else {
+      // Something went wrong with the balance check - log an ExternalError.
+      _checkDharmaTokenInteractionAndLogAnyErrors(
+        asset, dTokenBalance.balanceOf.selector, ok, data
+      );
+    }
 
     // Only perform the call to redeem if there is a non-zero balance.
     if (redeemAmount > 0) {
       // Attempt to redeem the underlying balance from the dToken contract.
-      (bool ok, bytes memory data) = dToken.call(abi.encodeWithSelector(
+      (ok, data) = dToken.call(abi.encodeWithSelector(
         // Function selector is the same for all dTokens, so just use dDai's.
         _DDAI.redeem.selector, redeemAmount
       ));
@@ -1604,24 +1612,38 @@ contract DharmaSmartWalletImplementationV7 is
     IERC20 token, address recipient, bool suppressRevert
   ) internal returns (bool success) {
     // Get the current balance on the smart wallet for the supplied ERC20 token.
-    uint256 transferAmount = token.balanceOf(address(this));
+    uint256 balance = 0;
+    bool balanceCheckWorked = true;
+    if (!suppressRevert) {
+      balance = token.balanceOf(address(this));
+    } else {
+      // Try to retrieve current token balance for this account with 1/2 gas.
+      (bool ok, bytes memory data) = address(token).call.gas(gasleft() / 2)(
+        abi.encodeWithSelector(token.balanceOf.selector, address(this))
+      );
+
+      if (ok && data.length == 32) {
+        balance = abi.decode(data, (uint256));
+      } else {
+        // Something went wrong with the balance check.
+        balanceCheckWorked = false;
+      }
+    }
 
     // Only perform the call to transfer if there is a non-zero balance.
-    if (transferAmount > 0) {
+    if (balance > 0) {
       if (!suppressRevert) {
         // Perform the transfer and pass along the returned boolean (or revert).
-        success = token.transfer(recipient, transferAmount);
+        success = token.transfer(recipient, balance);
       } else {
         // Attempt transfer with 1/2 gas, allow reverts, and return call status.
         (success, ) = address(token).call.gas(gasleft() / 2)(
-          abi.encodeWithSelector(
-            token.transfer.selector, recipient, transferAmount
-          )
+          abi.encodeWithSelector(token.transfer.selector, recipient, balance)
         );
       }
     } else {
-      // Skip the transfer and return true.
-      success = true;
+      // Skip the transfer and return true as long as the balance check worked.
+      success = balanceCheckWorked;
     }
   }
 
@@ -1640,7 +1662,7 @@ contract DharmaSmartWalletImplementationV7 is
     // Attempt to transfer any Ether to caller and emit an event if it fails.
     (success, ) = recipient.call.gas(_ETH_TRANSFER_GAS).value(amount)("");
     if (!success) {
-      emit ExternalError(recipient, "Recipient rejected ether transfer.");
+      emit ExternalError(recipient, _revertReason(18));
     } else {
       emit EthWithdrawal(amount, recipient);
     }
@@ -1690,10 +1712,7 @@ contract DharmaSmartWalletImplementationV7 is
     // ~30,000 additional gas should suffice when submitting transactions. To
     // skip this requirement, supply zero for the minimumActionGas argument.
     if (minimumActionGas != 0) {
-      require(
-        gasleft() >= minimumActionGas,
-        "Invalid action - insufficient gas supplied by transaction submitter."
-      );
+      require(gasleft() >= minimumActionGas, _revertReason(19));
     }
 
     // Get the current nonce for the action to be performed.
@@ -1726,7 +1745,7 @@ contract DharmaSmartWalletImplementationV7 is
           _validateUserSignature(
             messageHash, action, arguments, userSigningKey, userSignature
           ),
-          "Invalid action - invalid user signature."
+          _revertReason(20)
         );
       }
 
@@ -1734,7 +1753,7 @@ contract DharmaSmartWalletImplementationV7 is
       if (msg.sender != dharmaSigningKey) {
         require(
           dharmaSigningKey == messageHash.recover(dharmaSignature),
-          "Invalid action - invalid Dharma signature."
+          _revertReason(21)
         );
       }
     } else {
@@ -1745,7 +1764,7 @@ contract DharmaSmartWalletImplementationV7 is
           _validateUserSignature(
             messageHash, action, arguments, userSigningKey, userSignature
           ),
-          "Invalid action - invalid signature."
+          _revertReason(22)
         );
       }
     }
@@ -1779,13 +1798,11 @@ contract DharmaSmartWalletImplementationV7 is
     if (balance > 0) {    
       // If the allowance is insufficient, set it before depositing.
       if (cToken.allowance(address(this), address(dToken)) < balance) {
-        require(
-          cToken.approve(address(dToken), uint256(-1)), "Approval failed."
-        );
+        require(cToken.approve(address(dToken), uint256(-1)), _revertReason(23));
       }
       
       // Deposit the new balance on the Dharma Token.
-      dToken.mintViaCToken(balance);
+      require(dToken.mintViaCToken(balance) > 0, _revertReason(24));
     }
   }
 
@@ -1810,7 +1827,47 @@ contract DharmaSmartWalletImplementationV7 is
   ) internal returns (bool success) {
     // Log an external error if something went wrong with the attempt.
     if (ok) {
-      success = true;
+      if (data.length == 32) {
+        uint256 amount = abi.decode(data, (uint256));
+        if (amount > 0) {
+          success = true;
+        } else {
+          // Get called contract address, name of contract, and function name.
+          (address account, string memory name, string memory functionName) = (
+            _getDharmaTokenDetails(asset, functionSelector)
+          );
+
+          emit ExternalError(
+            account,
+            string(
+              abi.encodePacked(
+                name,
+                " contract did not provide any tokens when calling ",
+                functionName,
+                "."
+              )
+            )
+          );         
+        }
+      } else {
+        // Get called contract address, name of contract, and function name.
+        (address account, string memory name, string memory functionName) = (
+          _getDharmaTokenDetails(asset, functionSelector)
+        );
+
+        emit ExternalError(
+          account,
+          string(
+            abi.encodePacked(
+              name,
+              " contract returned malformed data while attempting to call ",
+              functionName,
+              "."
+            )
+          )
+        );        
+      }
+      
     } else {
       // Get called contract address, name of contract, and function name.
       (address account, string memory name, string memory functionName) = (
@@ -1897,9 +1954,8 @@ contract DharmaSmartWalletImplementationV7 is
   function _enforceSelfCallFrom(bytes4 selfCallContext) internal {
     // Ensure caller is this contract and self-call context is correctly set.
     require(
-      msg.sender == address(this) &&
-      _selfCallContext == selfCallContext,
-      "External accounts or unapproved internal functions cannot call this."
+      msg.sender == address(this) && _selfCallContext == selfCallContext,
+      _revertReason(25)
     );
 
     // Clear the self-call context.
@@ -2034,10 +2090,14 @@ contract DharmaSmartWalletImplementationV7 is
     if (functionSelector == _DDAI.mint.selector) {
       functionName = "mint";
     } else {
-      functionName = string(abi.encodePacked(
-        "redeem",
-        functionSelector == _DDAI.redeemUnderlying.selector ? "Underlying" : ""
-      ));
+      if (functionSelector == IERC20(account).balanceOf.selector) {
+        functionName = "balanceOf";
+      } else {
+        functionName = string(abi.encodePacked(
+          "redeem",
+          functionSelector == _DDAI.redeem.selector ? "" : "Underlying"
+        ));
+      }
     }
   }
 
@@ -2050,20 +2110,11 @@ contract DharmaSmartWalletImplementationV7 is
    * @param to address The address that will be targeted by the generic call.
    */
   function _ensureValidGenericCallTarget(address to) internal view {
-    require(
-      to.isContract(),
-      "Invalid `to` parameter - must supply a contract address containing code."
-    );
+    require(to.isContract(), _revertReason(26));
 
-    require(
-      to != address(this),
-      "Invalid `to` parameter - cannot supply the address of this contract."
-    );
+    require(to != address(this), _revertReason(27));
 
-    require(
-      to != address(_ESCAPE_HATCH_REGISTRY),
-      "Invalid `to` parameter - cannot supply the Dharma Escape Hatch Registry."
-    );
+    require(to != address(_ESCAPE_HATCH_REGISTRY), _revertReason(28));
   }
 
   /**
@@ -2095,7 +2146,7 @@ contract DharmaSmartWalletImplementationV7 is
       action == ActionType.SetEscapeHatch ||
       action == ActionType.RemoveEscapeHatch ||
       action == ActionType.DisableEscapeHatch,
-      "Invalid custom action type."
+      _revertReason(29)
     );
 
     // Use action type to determine parameters to include in returned arguments.
@@ -2145,7 +2196,19 @@ contract DharmaSmartWalletImplementationV7 is
       revertReason = abi.decode(revertReasonBytes, (string));
     } else {
       // Simply return the default, with no revert reason.
-      revertReason = "(no revert reason)";
+      revertReason = _revertReason(30);
     }
+  }
+
+  /**
+   * @notice Internal pure function call the revert reason helper contract,
+   * supplying a revert "code" and receiving back a revert reason string.
+   * @param code uint256 The code for the revert reason.
+   * @return The revert reason string.
+   */
+  function _revertReason(
+    uint256 code
+  ) internal pure returns (string memory reason) {
+    reason = _REVERT_REASON_HELPER.reason(code);
   }
 }
