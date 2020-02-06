@@ -1,10 +1,10 @@
 pragma solidity 0.5.11;
 
 import "./DharmaTokenHelpers.sol";
-import "../../interfaces/CTokenInterface.sol";
-import "../../interfaces/DTokenInterface.sol";
-import "../../interfaces/ERC20Interface.sol";
-import "../../interfaces/ERC1271Interface.sol";
+import "../../../interfaces/CTokenInterface.sol";
+import "../../../interfaces/DTokenInterface.sol";
+import "../../../interfaces/ERC20Interface.sol";
+import "../../../interfaces/ERC1271Interface.sol";
 
 
 /**

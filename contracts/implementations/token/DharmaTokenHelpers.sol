@@ -1,7 +1,7 @@
 pragma solidity 0.5.11;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "../../interfaces/CTokenInterface.sol";
+import "../../../interfaces/CTokenInterface.sol";
 import "./DharmaTokenOverrides.sol";
 
 

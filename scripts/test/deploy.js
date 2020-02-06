@@ -34,6 +34,8 @@ const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts
 //const DharmaSmartWalletImplementationV3Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV3.json')
 //const DharmaSmartWalletImplementationV4Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV4.json')
 const DharmaSmartWalletImplementationV5Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV5.json')
+const DharmaSmartWalletImplementationV6Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV6.json')
+const DharmaSmartWalletImplementationV7Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV7.json')
 
 //const DharmaKeyRingImplementationV0Artifact = require('../../build/contracts/DharmaKeyRingImplementationV0.json')
 const DharmaKeyRingImplementationV1Artifact = require('../../build/contracts/DharmaKeyRingImplementationV1.json')
@@ -129,19 +131,19 @@ module.exports = {test: async function (provider, testingContext) {
   let gasUsage = {}
   let counts = {}
 
-  
+  /*
   console.log(
     swapMetadataHash(
-      DharmaUSDCArtifact.bytecode,
-      constants.DHARMA_USDC_METADATA
+      DharmaSmartWalletImplementationV7Artifact.bytecode,
+      constants.DHARMA_SMART_WALLET_IMPLEMENTATION_V7_METADATA
     ),
     web3.utils.keccak256(swapMetadataHash(
-      DharmaUSDCArtifact.bytecode,
-      constants.DHARMA_USDC_METADATA
+      DharmaSmartWalletImplementationV7Artifact.bytecode,
+      constants.DHARMA_SMART_WALLET_IMPLEMENTATION_V7_METADATA
     ), {encoding: 'hex'})
   )
   process.exit(0)
-  
+  */
 
   const DharmaUpgradeBeaconController = new web3.eth.Contract(
     DharmaUpgradeBeaconControllerArtifact.abi,

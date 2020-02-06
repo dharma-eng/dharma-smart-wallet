@@ -2,16 +2,16 @@ pragma solidity 0.5.11; // optimization runs: 200, evm version: petersburg
 
 
 /**
- * @title DharmaUSDC (staging version)
+ * @title DharmaUSDC
  * @author 0age
  * @notice Dharma USD Coin is an upgradeable ERC20 token that delegates all
  * logic to an implementation contract specified by a hard-coded "upgrade
- * beacon" contract.
+ *beacon" contract.
  */
-contract DharmaUSDCStaging {
+contract DharmaUSDC {
   // Set upgrade beacon address as a constant (i.e. not in contract storage).
   address private constant _UPGRADE_BEACON = address(
-    0xe9DDDA6C56bFD31725D118E7F13a3eb4f3A82226
+    0x00000000000274bE4365Aa18CfDC9A22A947f67D
   );
 
   /**

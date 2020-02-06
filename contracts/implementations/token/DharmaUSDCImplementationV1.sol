@@ -2,9 +2,9 @@ pragma solidity 0.5.11;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./DharmaTokenV1.sol";
-import "../../interfaces/CTokenInterface.sol";
-import "../../interfaces/ERC20Interface.sol";
-import "../../interfaces/CUSDCInterestRateModelInterface.sol";
+import "../../../interfaces/CTokenInterface.sol";
+import "../../../interfaces/ERC20Interface.sol";
+import "../../../interfaces/CUSDCInterestRateModelInterface.sol";
 
 
 /**
