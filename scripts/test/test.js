@@ -2,6 +2,7 @@ var assert = require('assert')
 var fs = require('fs')
 var util = require('ethereumjs-util')
 const constants = require('./constants.js')
+const { web3 } = require("./web3");
 
 const AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
 const AdharmaKeyRingImplementationArtifact = require('../../build/contracts/AdharmaKeyRingImplementation.json')
@@ -57,8 +58,7 @@ function longer() {
   return new Promise(resolve => {setTimeout(() => {resolve()}, 500)})
 }
 
-module.exports = {test: async function (provider, testingContext) {
-  var web3 = provider
+module.exports = {test: async function (testingContext) {
   let passed = 0
   let failed = 0
   let gasUsage = {}

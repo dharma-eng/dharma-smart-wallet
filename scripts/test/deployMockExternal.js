@@ -6,8 +6,9 @@ const constants = require('./constants.js')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
 const MockSaiToDaiMigratorArtifact = require('../../build/contracts/MockSaiToDaiMigrator.json')
 
-module.exports = {test: async function (provider, testingContext) {
-  var web3 = provider
+const { web3 } = require("./web3");
+
+module.exports = {test: async function (testingContext) {
   let passed = 0
   let failed = 0
   let gasUsage = {}

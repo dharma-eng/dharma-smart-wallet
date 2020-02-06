@@ -2,6 +2,7 @@ var assert = require('assert')
 var fs = require('fs')
 var util = require('ethereumjs-util')
 const constants = require('./constants.js')
+const { web3 } = require("./web3");
 
 let DharmaUpgradeBeaconArtifact;
 let DharmaUpgradeBeaconControllerArtifact;
@@ -94,7 +95,7 @@ function swapMetadataHash(bytecode, newMetadataHashes) {
   return bytecode
 }
 
-module.exports = {test: async function (provider, testingContext) {
+module.exports = {test: async function (testingContext) {
   if (testingContext === 'coverage') {
     DharmaUpgradeBeaconEnvoyArtifact = require('../../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
     DharmaUpgradeBeaconControllerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconController.json')
@@ -141,7 +142,6 @@ module.exports = {test: async function (provider, testingContext) {
     SmartWalletRevertReasonHelperV1Artifact = require('../../build/contracts/SmartWalletRevertReasonHelperV1.json')
   }
 
-  var web3 = provider
   let passed = 0
   let failed = 0
   let gasUsage = {}
