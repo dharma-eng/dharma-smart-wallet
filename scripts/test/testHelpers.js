@@ -730,8 +730,112 @@ class Tester {
             })
             .filter(value => value !== null);
     }
+
+
+    async checkAndDeploy(
+        name,
+        address,
+        salt,
+        runtimeCode,
+        creationCode,
+        mockCodeCheck,
+        create2Factory
+    ) {
+        let currentCode;
+        await this.runTest(
+            `Checking ${name} runtime code`,
+            mockCodeCheck,
+            'code',
+            'call',
+            [address],
+            true,
+            value => {
+                currentCode = value;
+            }
+        );
+
+        if (
+            currentCode !== runtimeCode
+        ) {
+            await this.runTest(
+                `${name} contract address check through immutable create2 factory`,
+                create2Factory,
+                'findCreate2Address',
+                'call',
+                [
+                    salt,
+                    creationCode
+                ],
+                true,
+                value => {
+                    assert.strictEqual(value, address)
+                }
+            );
+
+            await this.runTest(
+                `${name} contract deployment through immutable create2 factory`,
+                create2Factory,
+                'safeCreate2',
+                'send',
+                [salt, creationCode]
+            );
+        }
+
+        await this.runTest(
+            `Deployed ${name} code is correct`,
+            mockCodeCheck,
+            'code',
+            'call',
+            [address],
+            true,
+            value => {
+                assert.strictEqual(value, runtimeCode)
+            }
+        );
+    }
+}
+
+function swapMetadataHash(bytecode, newMetadataHashes) {
+    const totalBzzrs = bytecode.split(constants.METADATA_IDENTIFIER).length - 1;
+
+    if (totalBzzrs !== newMetadataHashes.length) {
+        throw("number of metadata hashes to replace must match provided number.");
+    }
+
+    let startingPoint = bytecode.length - 1;
+
+    for (let i = 0; i < totalBzzrs; i++) {
+        let replacement = constants.METADATA_IDENTIFIER + newMetadataHashes.slice(i)[0];
+        let lastIndex = bytecode.lastIndexOf(
+            constants.METADATA_IDENTIFIER, startingPoint
+        );
+        bytecode = (
+            bytecode.slice(0, lastIndex) + replacement + bytecode.slice(
+                lastIndex + replacement.length, bytecode.length
+            )
+        );
+        startingPoint = lastIndex - 1;
+    }
+    return bytecode;
+}
+
+function newContractAndSwapMetadataHash(artifact) {
+    const contract = new web3.eth.Contract(
+        artifact.abi
+    );
+
+    contract.options.data = (
+        swapMetadataHash(
+            artifact.bytecode,
+            ['0000000000000000000000000000000000000000000000000000000000000000']
+        )
+    );
+
+    return contract;
 }
 
 module.exports = {
     Tester,
+    swapMetadataHash,
+    newContractAndSwapMetadataHash,
 };
