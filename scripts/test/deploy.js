@@ -3,6 +3,7 @@ var fs = require('fs')
 var util = require('ethereumjs-util')
 const constants = require('./constants.js')
 const { web3 } = require("./web3");
+const { Tester } = require("./testHelpers");
 
 let DharmaUpgradeBeaconArtifact;
 let DharmaUpgradeBeaconControllerArtifact;
@@ -599,49 +600,18 @@ module.exports = {test: async function (testingContext) {
     targetCodeCheckAddress
   )
 
-  // get available addresses and assign them to various roles
-  const addresses = await web3.eth.getAccounts()
-  if (addresses.length < 1) {
-    console.log('cannot find enough addresses to run tests!')
-    process.exit(1)
-  }
+        
+  const tester = new Tester(testingContext);
+  await tester.init();
 
-  let latestBlock = await web3.eth.getBlock('latest')
 
-  const originalAddress = addresses[0]
-
-  let address = await setupNewDefaultAddress(
-    '0xfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeed'
-  )
-
-  let addressTwo = await setupNewDefaultAddress(
-    '0xf00df00df00df00df00df00df00df00df00df00df00df00df00df00df00df00d'
-  )
-
-  const ownerOne = await setupNewDefaultAddress(
-    constants.MOCK_OWNER_PRIVATE_KEYS[0]
-  )
-  const ownerTwo = await setupNewDefaultAddress(
-    constants.MOCK_OWNER_PRIVATE_KEYS[1]
-  )
-  const ownerThree = await setupNewDefaultAddress(
-    constants.MOCK_OWNER_PRIVATE_KEYS[2]
-  )
-  const ownerFour = await setupNewDefaultAddress(
-    constants.MOCK_OWNER_PRIVATE_KEYS[3]
-  )
-  const ownerFive = await setupNewDefaultAddress(
-    constants.MOCK_OWNER_PRIVATE_KEYS[4]
-  )
-
-  const gasLimit = latestBlock.gasLimit
 
   console.log('funding initial create2 contract deployer address...')
   await web3.eth.sendTransaction({
-    from: originalAddress,
+    from: tester.originalAddress,
     to: constants.KEYLESS_CREATE2_DEPLOYER_ADDRESS,
     value: web3.utils.toWei('0.01', 'ether'),
-    gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+    gas: (testingContext !== 'coverage') ? '0x5208' : tester.gasLimit - 1,
     gasPrice: 1
   })
 
@@ -754,10 +724,10 @@ module.exports = {test: async function (testingContext) {
       if (shouldSucceed) {
         console.error(error)
       }
-      return gasLimit
+      return tester.gasLimit
     })
 
-    if (deployGas > gasLimit) {
+    if (deployGas > tester.gasLimit) {
       console.error(` ✘ ${title}: deployment costs exceed block gas limit!`)
       process.exit(1)
     }
@@ -845,7 +815,7 @@ module.exports = {test: async function (testingContext) {
       assertionCallback = (value) => {}
     }
     if (typeof(from) === 'undefined') {
-      from = address
+      from = tester.address
     }
     if (typeof(value) === 'undefined') {
       value = 0
@@ -853,7 +823,7 @@ module.exports = {test: async function (testingContext) {
     if (typeof(gas) === 'undefined' && callOrSend !== 'deploy') {
       gas = 6009006
       if (testingContext === 'coverage') {
-        gas = gasLimit - 1
+        gas = tester.gasLimit - 1
       }
     }
     let ok = false
@@ -935,7 +905,7 @@ module.exports = {test: async function (testingContext) {
     await web3.eth.accounts.wallet.add(pubKey)
 
     await web3.eth.sendTransaction({
-      from: originalAddress,
+      from: tester.originalAddress,
       to: pubKey.address,
       value: 10 ** 18,
       gas: '0x5208',
@@ -959,8 +929,8 @@ module.exports = {test: async function (testingContext) {
     var block = await web3.eth.getBlock("latest")
     while (iterations > 0 && block.gasLimit < necessaryGas) {
       await web3.eth.sendTransaction({
-        from: originalAddress,
-        to: originalAddress,
+        from: tester.originalAddress,
+        to: tester.originalAddress,
         value: '0x01',
         gas: '0x5208',
         gasPrice: '0x4A817C800'
@@ -975,7 +945,7 @@ module.exports = {test: async function (testingContext) {
 
   async function getDeployGas(dataPayload) {
     await web3.eth.estimateGas({
-      from: address,
+      from: tester.address,
       data: dataPayload
     }).catch(async error => {
       if (
@@ -990,7 +960,7 @@ module.exports = {test: async function (testingContext) {
     })
 
     deployGas = await web3.eth.estimateGas({
-      from: address,
+      from: tester.address,
       data: dataPayload
     })
 
@@ -1102,10 +1072,10 @@ module.exports = {test: async function (testingContext) {
     // deploy a mock code check contract using the initial create2 deployer
     console.log(' ✓ deploying test contract via create2 contract...')
     const DeploymentTx = await web3.eth.sendTransaction({
-      from: originalAddress,
+      from: tester.originalAddress,
       to: constants.KEYLESS_CREATE2_ADDRESS,
       value: 0,
-      gas: (testingContext !== 'coverage') ? 1500051 : gasLimit - 1,
+      gas: (testingContext !== 'coverage') ? 1500051 : tester.gasLimit - 1,
       gasPrice: 1,
       data: MockCodeCheckArtifact.bytecode
     })
@@ -1134,10 +1104,10 @@ module.exports = {test: async function (testingContext) {
       ' initial create2 contract...'
     )
     await web3.eth.sendTransaction({
-      from: originalAddress,
+      from: tester.originalAddress,
       to: constants.KEYLESS_CREATE2_ADDRESS,
       value: '0',
-      gas: (testingContext !== 'coverage') ? '608261' : gasLimit - 1,
+      gas: (testingContext !== 'coverage') ? '608261' : tester.gasLimit - 1,
       gasPrice: 1,
       data: constants.IMMUTABLE_CREATE2_FACTORY_CREATION_CODE
     });
@@ -1193,10 +1163,10 @@ module.exports = {test: async function (testingContext) {
   if (currentIndestructibleRegistryRuntimeHash !== constants.INDESTRUCTIBLE_REGISTRY_RUNTIME_HASH) {
     console.log(` ✓ submitting indestructible registry deployment through immutable create2 contract...`)
     await web3.eth.sendTransaction({
-      from: originalAddress,
+      from: tester.originalAddress,
       to: constants.IMMUTABLE_CREATE2_FACTORY_ADDRESS,
       value: '0',
-      gas: (testingContext !== 'coverage') ? '3000000' : gasLimit - 1,
+      gas: (testingContext !== 'coverage') ? '3000000' : tester.gasLimit - 1,
       gasPrice: 1,
       data: constants.INDESTRUCTIBLE_REGISTRY_CREATION_TX
     });
@@ -2871,7 +2841,7 @@ module.exports = {test: async function (testingContext) {
     DharmaAccountRecoveryMultisigDeployer,
     '',
     'deploy',
-    [[ownerOne, ownerTwo, ownerThree, ownerFour]]
+    [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour]]
   )
 
   await runTest(
@@ -2926,7 +2896,7 @@ module.exports = {test: async function (testingContext) {
     DharmaKeyRegistryMultisigDeployer,
     '',
     'deploy',
-    [[ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]]
+    [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour, tester.ownerFive]]
   )
 
   await runTest(
@@ -3344,7 +3314,7 @@ module.exports = {test: async function (testingContext) {
     DharmaUpgradeMultisigDeployer,
     '',
     'deploy',
-    [[ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]]
+    [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour, tester.ownerFive]]
   )
 
   await runTest(
