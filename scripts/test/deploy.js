@@ -5,6 +5,10 @@ const constants = require('./constants.js')
 const { web3 } = require("./web3");
 const { Tester, swapMetadataHash, newContractAndSwapMetadataHash } = require("./testHelpers");
 const { testIndestructibleRegistry } = require("./contracts/indestructible-registry/testIndestructibleRegistry");
+const { testDharmaUpgradeMultisigDeployer } = require("./contracts/multisig-deployers/testDharmaUpgradeMultisigDeployer");
+const { testDharmaAccountRecoveryMultisigDeployer } = require("./contracts/multisig-deployers/testDharmaAccountRecoveryMultisigDeployer");
+const { testDharmaAccountRecoveryOperatorMultisigDeployer } = require("./contracts/multisig-deployers/testDharmaAccountRecoveryOperatorMultisigDeployer");
+const { testDharmaKeyRegistryMultisigDeployer } = require("./contracts/multisig-deployers/testDharmaKeyRegistryMultisigDeployer");
 
 let DharmaUpgradeBeaconArtifact;
 let DharmaUpgradeBeaconControllerArtifact;
@@ -1345,163 +1349,13 @@ async function test(testingContext) {
     'deploy'
   )
 
-  await tester.runTest(
-    `DharmaAccountRecoveryMultisig contract deployment fails if threshold is not met`,
-    DharmaAccountRecoveryMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000001'
-    ]],
-    false
-  )
+  await testDharmaAccountRecoveryMultisigDeployer(tester, DharmaAccountRecoveryMultisigDeployer);
 
-  await tester.runTest(
-    `DharmaAccountRecoveryMultisig contract deployment fails if sigs are out of order`,
-    DharmaAccountRecoveryMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000005',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004',
-      '0x0000000000000000000000000000000000000001'
-    ]],
-    false
-  )
+  await testDharmaAccountRecoveryOperatorMultisigDeployer(tester, DharmaAccountRecoveryOperatorMultisigDeployer);
 
-  await tester.runTest(
-    `DharmaAccountRecoveryMultisig contract deployment fails with too many owners`,
-    DharmaAccountRecoveryMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000001',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004',
-      '0x0000000000000000000000000000000000000005',
-      '0x0000000000000000000000000000000000000006',
-      '0x0000000000000000000000000000000000000007',
-      '0x0000000000000000000000000000000000000008',
-      '0x0000000000000000000000000000000000000009',
-      '0x000000000000000000000000000000000000000a',
-      '0x000000000000000000000000000000000000000b'
-    ]],
-    false
-  )
+  await testDharmaKeyRegistryMultisigDeployer(tester, DharmaKeyRegistryMultisigDeployer);
 
-  await tester.runTest(
-    `DharmaAccountRecoveryOperatorMultisig contract deployment fails if threshold is not met`,
-    DharmaAccountRecoveryOperatorMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000001'
-    ]],
-    false
-  )
-
-  await tester.runTest(
-    `DharmaAccountRecoveryOperatorMultisig contract deployment fails if sigs are out of order`,
-    DharmaAccountRecoveryOperatorMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000005',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004',
-      '0x0000000000000000000000000000000000000001'
-    ]],
-    false
-  )
-
-  await tester.runTest(
-    `DharmaAccountRecoveryOperatorMultisig contract deployment fails with too many owners`,
-    DharmaAccountRecoveryOperatorMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000001',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004',
-      '0x0000000000000000000000000000000000000005',
-      '0x0000000000000000000000000000000000000006',
-      '0x0000000000000000000000000000000000000007',
-      '0x0000000000000000000000000000000000000008',
-      '0x0000000000000000000000000000000000000009',
-      '0x000000000000000000000000000000000000000a',
-      '0x000000000000000000000000000000000000000b'
-    ]],
-    false
-  )
-
-  await tester.runTest(
-    `DharmaAccountRecoveryMultisig contract deployment`,
-    DharmaAccountRecoveryMultisigDeployer,
-    '',
-    'deploy',
-    [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour]]
-  )
-
-  await tester.runTest(
-    `DharmaKeyRegistryMultisig contract deployment fails if threshold is not met`,
-    DharmaKeyRegistryMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000001'
-    ]],
-    false
-  )
-
-  await tester.runTest(
-    `DharmaKeyRegistryMultisig contract deployment fails if sigs are out of order`,
-    DharmaKeyRegistryMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000005',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004',
-      '0x0000000000000000000000000000000000000001'
-    ]],
-    false
-  )
-
-  await tester.runTest(
-    `DharmaKeyRegistryMultisig contract deployment fails with too many owners`,
-    DharmaKeyRegistryMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000001',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004',
-      '0x0000000000000000000000000000000000000005',
-      '0x0000000000000000000000000000000000000006',
-      '0x0000000000000000000000000000000000000007',
-      '0x0000000000000000000000000000000000000008',
-      '0x0000000000000000000000000000000000000009',
-      '0x000000000000000000000000000000000000000a',
-      '0x000000000000000000000000000000000000000b'
-    ]],
-    false
-  )
-
-  await tester.runTest(
-    `DharmaKeyRegistryMultisig contract deployment`,
-    DharmaKeyRegistryMultisigDeployer,
-    '',
-    'deploy',
-    [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour, tester.ownerFive]]
-  )
-
+//
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager contract deployment fails before indestructible registration`,
     DharmaUpgradeBeaconControllerManagerCoverageDeployer,
@@ -1609,60 +1463,7 @@ async function test(testingContext) {
 
   await testIndestructibleRegistry(tester, testIndestructibleRegistryContracts);
 
-  await tester.runTest(
-    `DharmaUpgradeMultisig contract deployment fails if threshold is not met`,
-    DharmaUpgradeMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000001'
-    ]],
-    false
-  )
-
-  await tester.runTest(
-    `DharmaUpgradeMultisig contract deployment fails if sigs are out of order`,
-    DharmaUpgradeMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000005',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004',
-      '0x0000000000000000000000000000000000000001'
-    ]],
-    false
-  )
-
-  await tester.runTest(
-    `DharmaUpgradeMultisig contract deployment fails with too many owners`,
-    DharmaUpgradeMultisigDeployer,
-    '',
-    'deploy',
-    [[
-      '0x0000000000000000000000000000000000000001',
-      '0x0000000000000000000000000000000000000002',
-      '0x0000000000000000000000000000000000000003',
-      '0x0000000000000000000000000000000000000004',
-      '0x0000000000000000000000000000000000000005',
-      '0x0000000000000000000000000000000000000006',
-      '0x0000000000000000000000000000000000000007',
-      '0x0000000000000000000000000000000000000008',
-      '0x0000000000000000000000000000000000000009',
-      '0x000000000000000000000000000000000000000a',
-      '0x000000000000000000000000000000000000000b'
-    ]],
-    false
-  )
-
-  await tester.runTest(
-    `DharmaUpgradeMultisig contract deployment`,
-    DharmaUpgradeMultisigDeployer,
-    '',
-    'deploy',
-    [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour, tester.ownerFive]]
-  )
+  await testDharmaUpgradeMultisigDeployer(tester, DharmaUpgradeMultisigDeployer);
 
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager contract deployment`,
