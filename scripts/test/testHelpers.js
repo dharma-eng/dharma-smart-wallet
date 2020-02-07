@@ -1202,6 +1202,11 @@ class Tester {
         this.DharmaEscapeHatchRegistryDeployer.options.data = (
             DharmaEscapeHatchRegistryArtifact.bytecode
         )
+        this.DharmaSmartWalletFactoryV1OnChain = new web3.eth.Contract(
+            DharmaSmartWalletFactoryV1Artifact.abi,
+            constants.FACTORY_ADDRESS
+        )
+
 
     }
 }
