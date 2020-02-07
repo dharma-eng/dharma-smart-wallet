@@ -8,9 +8,12 @@ var test = require('./test.js')
 
 // run tests
 async function runTests() {
-  await deployMockExternal.test(web3Provider, 'coverage')
-  await deploy.test(web3Provider, 'coverage')
-  await test.test(web3Provider, 'coverage')
+  const context = process.env.CONTEXT;
+
+  await deployMockExternal.test(context);
+  await deploy.test(context);
+  await test.test(context);
+
   process.exit(0)
 }
 

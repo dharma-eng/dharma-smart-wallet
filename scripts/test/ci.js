@@ -1,11 +1,11 @@
 // import tests
 const deployMockExternal = require('./deployMockExternal.js');
-const deploy = require('./deploy.js');
-const test = require('./test.js');
+const deploy = require('./deploy');
+const test = require('./test');
 
 // run tests
 async function runTests() {
-    const context = "development";
+    const context = process.env.CONTEXT;
 
 	await deployMockExternal.test(context);
 	await deploy.test(context);
