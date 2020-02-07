@@ -3,7 +3,7 @@ const constants = require("./constants");
 const assert = require("assert");
 const util = require('ethereumjs-util');
 
-const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
+const artifact = require('../../build/contracts/MockCodeCheck.json')
 const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
 
 const SCALING_FACTOR = web3.utils.toBN("1000000000000000000");
@@ -27,6 +27,8 @@ class Tester {
         this.UpgradeBeaconImplementationCheckDeployer = (
             UpgradeBeaconImplementationCheckDeployer
         );
+
+        this.contracts = {};
     }
 
     async init() {
@@ -67,47 +69,57 @@ class Tester {
 
         this.gasLimit = latestBlock.gasLimit
 
-        const MockCodeCheckDeployer = new web3.eth.Contract(
-            MockCodeCheckArtifact.abi
-        );
-        MockCodeCheckDeployer.options.data = MockCodeCheckArtifact.bytecode;
+    }
+    async getOrdeploy(name, artifact) {
+        if (Object.keys(this.contracts).includes(name)) {
+            return this.contracts[name];
+        }
 
-        this.MockCodeCheck = await this.runTest(
-            `MockCodeCheck contract deployment`,
-            MockCodeCheckDeployer,
+        const deployer = new web3.eth.Contract(
+            artifact.abi
+        );
+        deployer.options.data = artifact.bytecode;
+
+        const contract = await this.runTest(
+            `${name} contract deployment`,
+            deployer,
             '',
             'deploy'
-        )
+        );
 
         await this.runTest(
-            'Deployed MockCodeCheck code is correct',
-            this.MockCodeCheck,
+            `${name} deployed MockCodeCheck code is correct`,
+            contract,
             'code',
             'call',
-            [this.MockCodeCheck.options.address],
+            [contract.options.address],
             true,
             value => {
-              assert.strictEqual(value, MockCodeCheckArtifact.deployedBytecode)
+              assert.strictEqual(value, artifact.deployedBytecode)
             }
-        )
+        );
 
         await this.runTest(
-            'Deployed MockCodeCheck has correct extcodehash',
-            this.MockCodeCheck,
+            `Deployed ${name} has correct extcodehash`,
+            contract,
             'hash',
             'call',
-            [this.MockCodeCheck.options.address],
+            [contract.options.address],
             true,
             value => {
               assert.strictEqual(
                 value,
                 web3.utils.keccak256(
-                  MockCodeCheckArtifact.deployedBytecode,
+                  artifact.deployedBytecode,
                   {encoding: 'hex'}
                 )
               )
             }
-        )
+        );
+
+        this.contracts[name] = contract;
+
+        return contract;
     }
 
     async setupNewDefaultAddress(newPrivateKey) {

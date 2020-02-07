@@ -52,6 +52,7 @@ const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
 const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
 const TimelockEdgecaseTesterArtifact = require('../../build/contracts/TimelockEdgecaseTester.json')
 
+const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json');
 const MockDharmaKeyRingFactoryArtifact = require('../../build/contracts/MockDharmaKeyRingFactory.json')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
 const ComptrollerArtifact = require('../../build/contracts/ComptrollerInterface.json')
@@ -927,10 +928,12 @@ async function test(testingContext) {
     }
   )
 
+  const MockCodeCheck = await tester.getOrdeploy("MockCodeCheck", MockCodeCheckArtifact);
+
   let currentSaiCode;
   await tester.runTest(
     'Checking for required external contracts...',
-    tester.MockCodeCheck,
+    MockCodeCheck,
     'code',
     'call',
     [constants.SAI_MAINNET_ADDRESS],

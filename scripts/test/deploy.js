@@ -500,10 +500,12 @@ async function test(testingContext) {
 
   console.log('running tests...')
 
+  const MockCodeCheck = await tester.getOrdeploy("MockCodeCheck", MockCodeCheckArtifact);
+
   let currentKeylessCreate2Runtime;
   await tester.runTest(
     'Current runtime code at address of initial create2 factory can be retrieved',
-    tester.MockCodeCheck,
+    MockCodeCheck,
     'code',
     'call',
     [constants.KEYLESS_CREATE2_ADDRESS],
@@ -539,7 +541,7 @@ async function test(testingContext) {
   let currentInefficientImmutableCreate2FactoryRuntimeHash;
   await tester.runTest(
     'Current runtime hash at address of inefficient immutable create2 factory can be retrieved',
-    tester.MockCodeCheck,
+    MockCodeCheck,
     'hash',
     'call',
     [constants.INEFFICIENT_IMMUTABLE_CREATE2_FACTORY_ADDRESS],
@@ -571,7 +573,7 @@ async function test(testingContext) {
   let currentImmutableCreate2FactoryRuntimeHash;
   await tester.runTest(
     'Current runtime hash at address of immutable create2 factory can be retrieved',
-    tester.MockCodeCheck,
+    MockCodeCheck,
     'hash',
     'call',
     [constants.IMMUTABLE_CREATE2_FACTORY_ADDRESS],
@@ -601,7 +603,7 @@ async function test(testingContext) {
   let currentIndestructibleRegistryRuntimeHash;
   await tester.runTest(
     'Current runtime hash at address of indestructible registry can be retrieved',
-    tester.MockCodeCheck,
+    MockCodeCheck,
     'hash',
     'call',
     [constants.INDESTRUCTIBLE_REGISTRY_ADDRESS],
@@ -655,7 +657,7 @@ async function test(testingContext) {
       constants.UPGRADE_BEACON_ENVOY_SALT,
       constants.UPGRADE_BEACON_ENVOY_RUNTIME_CODE,
       constants.UPGRADE_BEACON_ENVOY_CREATION_CODE,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -677,7 +679,7 @@ async function test(testingContext) {
       constants.UPGRADE_BEACON_CONTROLLER_SALT,
       upgradeBeaconControllerRuntimeCode,
       upgradeBeaconControllerCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -699,7 +701,7 @@ async function test(testingContext) {
       constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_SALT,
       keyRingUpgradeBeaconControllerRuntimeCode,
       keyRingUpgradeBeaconControllerCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -737,7 +739,7 @@ async function test(testingContext) {
       constants.UPGRADE_BEACON_SALT,
       upgradeBeaconRuntimeCode,
       upgradeBeaconCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -767,7 +769,7 @@ async function test(testingContext) {
       constants.KEY_RING_UPGRADE_BEACON_SALT,
       keyRingUpgradeBeaconRuntimeCode,
       keyRingUpgradeBeaconCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -796,7 +798,7 @@ async function test(testingContext) {
       constants.KEY_REGISTRY_SALT,
       keyRegistryRuntimeCode,
       keyRegistryCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -818,7 +820,7 @@ async function test(testingContext) {
       constants.KEY_REGISTRY_V2_SALT,
       keyRegistryV2RuntimeCode,
       keyRegistryV2CreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -840,7 +842,7 @@ async function test(testingContext) {
       constants.NULL_BYTES_32,
       revertReasonHelperRuntimeCode,
       revertReasonHelperCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -862,7 +864,7 @@ async function test(testingContext) {
       constants.ESCAPE_HATCH_REGISTRY_SALT,
       escapeHatchRegistryRuntimeCode,
       escapeHatchRegistryCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -970,7 +972,7 @@ async function test(testingContext) {
       constants.ACCOUNT_RECOVERY_MANAGER_V2_SALT,
       accountRecoveryManagerRuntimeCode,
       accountRecoveryManagerCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -999,7 +1001,7 @@ async function test(testingContext) {
       constants.FACTORY_SALT,
       dharmaSmartWalletFactoryRuntimeCode,
       dharmaSmartWalletFactoryCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -1029,7 +1031,7 @@ async function test(testingContext) {
       constants.KEY_RING_FACTORY_V2_SALT,
       keyRingFactoryRuntimeCode,
       keyRingFactoryCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -1058,7 +1060,7 @@ async function test(testingContext) {
       constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_SALT,
       adharmaSmartWalletImplementationRuntimeCode,
       adharmaSmartWalletImplementationCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -1080,7 +1082,7 @@ async function test(testingContext) {
       constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_SALT,
       dharmaDaiUpgradeBeaconControllerRuntimeCode,
       dharmaDaiUpgradeBeaconControllerCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -1102,7 +1104,7 @@ async function test(testingContext) {
       constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_SALT,
       dharmaUSDCUpgradeBeaconControllerRuntimeCode,
       dharmaUSDCUpgradeBeaconControllerCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -1123,7 +1125,7 @@ async function test(testingContext) {
       constants.DHARMA_DAI_UPGRADE_BEACON_SALT,
       dharmaDaiUpgradeBeaconRuntimeCode,
       dharmaDaiUpgradeBeaconCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -1144,7 +1146,7 @@ async function test(testingContext) {
       constants.DHARMA_USDC_UPGRADE_BEACON_SALT,
       dharmaUSDCUpgradeBeaconRuntimeCode,
       dharmaUSDCUpgradeBeaconCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -1166,7 +1168,7 @@ async function test(testingContext) {
       constants.DHARMA_DAI_SALT,
       dharmaDaiRuntimeCode,
       dharmaDaiCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -1187,7 +1189,7 @@ async function test(testingContext) {
       constants.DHARMA_USDC_SALT,
       dharmaUSDCRuntimeCode,
       dharmaUSDCCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -1289,7 +1291,7 @@ async function test(testingContext) {
       constants.ADHARMA_KEY_RING_IMPLEMENTATION_SALT,
       adharmaKeyRingImplementationRuntimeCode,
       adharmaKeyRingImplementationCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -1398,7 +1400,7 @@ async function test(testingContext) {
       constants.UPGRADE_BEACON_CONTROLLER_MANAGER_SALT,
       upgradeBeaconControllerManagerRuntimeCode,
       upgradeBeaconControllerManagerCreationCode,
-      tester.MockCodeCheck,
+      MockCodeCheck,
       ImmutableCreate2Factory
   );
 
@@ -1434,7 +1436,7 @@ async function test(testingContext) {
   let currentSaiCode;
   await tester.runTest(
     'Checking for required external contracts...',
-    tester.MockCodeCheck,
+    MockCodeCheck,
     'code',
     'call',
     [constants.SAI_MAINNET_ADDRESS],
