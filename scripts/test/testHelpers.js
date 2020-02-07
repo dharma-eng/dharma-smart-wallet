@@ -31,7 +31,7 @@ class Tester {
             '0xfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeed'
         );
 
-        let addressTwo = await this.setupNewDefaultAddress(
+        this.addressTwo = await this.setupNewDefaultAddress(
             '0xf00df00df00df00df00df00df00df00df00df00df00df00df00df00df00df00d'
         );
 
@@ -834,8 +834,14 @@ function newContractAndSwapMetadataHash(artifact) {
     return contract;
 }
 
+// used to wait for more confirmations
+function longer() {
+    return new Promise(resolve => {setTimeout(() => {resolve()}, 500)})
+}
+
 module.exports = {
     Tester,
     swapMetadataHash,
     newContractAndSwapMetadataHash,
+    longer,
 };

@@ -3,6 +3,7 @@ var fs = require('fs')
 var util = require('ethereumjs-util')
 const constants = require('./constants.js')
 const { web3 } = require("./web3");
+const { Tester, longer } = require("./testHelpers");
 
 const AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
 const AdharmaKeyRingImplementationArtifact = require('../../build/contracts/AdharmaKeyRingImplementation.json')
@@ -53,10 +54,6 @@ const ComptrollerArtifact = require('../../build/contracts/ComptrollerInterface.
 
 const contractNames = Object.assign({}, constants.CONTRACT_NAMES)
 
-// used to wait for more confirmations
-function longer() {
-  return new Promise(resolve => {setTimeout(() => {resolve()}, 500)})
-}
 
 module.exports = {test: async function (testingContext) {
   let passed = 0
@@ -380,6 +377,10 @@ module.exports = {test: async function (testingContext) {
     DharmaEscapeHatchRegistryArtifact.bytecode
   )
 
+
+  const tester = new Tester(testingContext);
+  await tester.init();
+
   // get available addresses and assign them to various roles
   const addresses = await web3.eth.getAccounts()
   if (addresses.length < 1) {
@@ -423,7 +424,7 @@ module.exports = {test: async function (testingContext) {
 
   console.log('running tests...')
 
-  // ************************** helper functions **************************** //
+    // ************************** helper functions **************************** //
   async function send(
     title,
     instance,
@@ -621,7 +622,7 @@ module.exports = {test: async function (testingContext) {
       assertionCallback = (value) => {}
     }
     if (typeof(from) === 'undefined') {
-      from = address
+      from = tester.address
     }
     if (typeof(value) === 'undefined') {
       value = 0
@@ -711,7 +712,7 @@ module.exports = {test: async function (testingContext) {
     await web3.eth.accounts.wallet.add(pubKey)
 
     await web3.eth.sendTransaction({
-      from: originalAddress,
+      from: tester.originalAddress,
       to: pubKey.address,
       value: 2 * 10 ** 18,
       gas: '0x5208',
@@ -721,57 +722,57 @@ module.exports = {test: async function (testingContext) {
     return pubKey.address
   }
 
-  async function raiseGasLimit(necessaryGas) {
-    iterations = 9999
-    if (necessaryGas > 8000000) {
-      console.error('the gas needed is too high!')
-      process.exit(1)
-    } else if (typeof necessaryGas === 'undefined') {
-      iterations = 20
-      necessaryGas = 8000000
-    }
+  // async function raiseGasLimit(necessaryGas) {
+  //   iterations = 9999
+  //   if (necessaryGas > 8000000) {
+  //     console.error('the gas needed is too high!')
+  //     process.exit(1)
+  //   } else if (typeof necessaryGas === 'undefined') {
+  //     iterations = 20
+  //     necessaryGas = 8000000
+  //   }
+  //
+  //   // bring up gas limit if necessary by doing additional transactions
+  //   var block = await web3.eth.getBlock("latest")
+  //   while (iterations > 0 && block.gasLimit < necessaryGas) {
+  //     await web3.eth.sendTransaction({
+  //       from: tester.originalAddress,
+  //       to: tester.originalAddress,
+  //       value: '0x01',
+  //       gas: '0x5208',
+  //       gasPrice: '0x4A817C800'
+  //     })
+  //     var block = await web3.eth.getBlock("latest")
+  //     iterations--
+  //   }
+  //
+  //   console.log("raising gasLimit, currently at " + block.gasLimit)
+  //   return block.gasLimit
+  // }
 
-    // bring up gas limit if necessary by doing additional transactions
-    var block = await web3.eth.getBlock("latest")
-    while (iterations > 0 && block.gasLimit < necessaryGas) {
-      await web3.eth.sendTransaction({
-        from: originalAddress,
-        to: originalAddress,
-        value: '0x01',
-        gas: '0x5208',
-        gasPrice: '0x4A817C800'
-      })
-      var block = await web3.eth.getBlock("latest")
-      iterations--
-    }
-
-    console.log("raising gasLimit, currently at " + block.gasLimit)
-    return block.gasLimit
-  }
-
-  async function getDeployGas(dataPayload) {
-    await web3.eth.estimateGas({
-      from: address,
-      data: dataPayload
-    }).catch(async error => {
-      if (
-        error.message === (
-          'Returned error: gas required exceeds allowance or always failing ' +
-          'transaction'
-        )
-      ) {
-        await raiseGasLimit()
-        await getDeployGas(dataPayload)
-      }
-    })
-
-    deployGas = await web3.eth.estimateGas({
-      from: address,
-      data: dataPayload
-    })
-
-    return deployGas
-  }
+  // async function getDeployGas(dataPayload) {
+  //   await web3.eth.estimateGas({
+  //     from: tester.address,
+  //     data: dataPayload
+  //   }).catch(async error => {
+  //     if (
+  //       error.message === (
+  //         'Returned error: gas required exceeds allowance or always failing ' +
+  //         'transaction'
+  //       )
+  //     ) {
+  //       await raiseGasLimit()
+  //       await getDeployGas(dataPayload)
+  //     }
+  //   })
+  //
+  //   deployGas = await web3.eth.estimateGas({
+  //     from: tester.address,
+  //     data: dataPayload
+  //   })
+  //
+  //   return deployGas
+  // }
 
   function signHashedPrefixedHexString(hashedHexString, account) {
     const hashedPrefixedMessage = web3.utils.keccak256(
@@ -835,22 +836,22 @@ module.exports = {test: async function (testingContext) {
   let deployGas
   let selfAddress
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController can transfer owner`,
     DharmaUpgradeBeaconController,
     'transferOwnership',
     'send',
-    [address]
+    [tester.address]
   )
 
-  const MockCodeCheck = await runTest(
+  const MockCodeCheck = await tester.runTest(
     `MockCodeCheck contract deployment`,
     MockCodeCheckDeployer,
     '',
     'deploy'
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V1 gets the initial global key correctly',
     DharmaKeyRegistryV1,
     'getGlobalKey',
@@ -858,20 +859,20 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V1 attempt to get an unset specific key throws',
     DharmaKeyRegistryV1,
     'getSpecificKey',
     'call',
-    [address],
+    [tester.address],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V1 gets the global key when requesting unset key',
     DharmaKeyRegistryV1,
     'getKey',
@@ -879,11 +880,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V1 cannot set a new empty global key',
     DharmaKeyRegistryV1,
     'setGlobalKey',
@@ -894,59 +895,59 @@ module.exports = {test: async function (testingContext) {
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
   const message = (
     DharmaKeyRegistryV1.options.address +
-    address.slice(2) +
+    tester.address.slice(2) +
     web3.utils.asciiToHex(
       "This signature demonstrates that the supplied signing key is valid."
     ).slice(2)
   )
 
-  const newKeySignature = signHashedPrefixedHashedHexString(message, address)
+  const newKeySignature = signHashedPrefixedHashedHexString(message, tester.address)
 
-  const badNewKeySignature = signHashedPrefixedHashedHexString('0x12', address)
+  const badNewKeySignature = signHashedPrefixedHashedHexString('0x12', tester.address)
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V1 cannot set a new global key unless called by owner',
     DharmaKeyRegistryV1,
     'setGlobalKey',
     'send',
     [
-      address,
+      tester.address,
       newKeySignature
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V1 cannot set a new global key with a bad signature',
     DharmaKeyRegistryV1,
     'setGlobalKey',
     'send',
     [
-      address,
+      tester.address,
       badNewKeySignature
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V1 can set a new global key correctly',
     DharmaKeyRegistryV1,
     'setGlobalKey',
     'send',
     [
-      address,
+      tester.address,
       newKeySignature
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V1 gets the new global key correctly',
     DharmaKeyRegistryV1,
     'getGlobalKey',
@@ -954,48 +955,48 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V1 cannot set a new specific key unless called by owner',
     DharmaKeyRegistryV1,
     'setSpecificKey',
     'send',
     [
-      address,
+      tester.address,
       DharmaKeyRegistryV1.options.address
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V1 can set a new specific key',
     DharmaKeyRegistryV1,
     'setSpecificKey',
     'send',
     [
-      address,
+      tester.address,
       DharmaKeyRegistryV1.options.address
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V1 gets the new specific key correctly',
     DharmaKeyRegistryV1,
     'getSpecificKey',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.strictEqual(value, DharmaKeyRegistryV1.options.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V1 gets the specific key when requesting set key',
     DharmaKeyRegistryV1,
     'getKey',
@@ -1007,17 +1008,17 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V1 can set a new owner',
     DharmaKeyRegistryV1,
     'transferOwnership',
     'send',
     [
-      address
+      tester.address
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V1 gets the new owner',
     DharmaKeyRegistryV1,
     'owner',
@@ -1025,11 +1026,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 gets the new global key correctly',
     DharmaKeyRegistryV2,
     'getGlobalKey',
@@ -1037,96 +1038,96 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
   const messageV2 = (
     DharmaKeyRegistryV2.options.address +
-    address.slice(2) +
+    tester.address.slice(2) +
     web3.utils.asciiToHex(
       "This signature demonstrates that the supplied signing key is valid."
     ).slice(2)
   )
 
-  const v2KeySignature = signHashedPrefixedHashedHexString(messageV2, address)
+  const v2KeySignature = signHashedPrefixedHashedHexString(messageV2, tester.address)
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 cannot set a previously used global key',
     DharmaKeyRegistryV2,
     'setGlobalKey',
     'send',
     [
-      address,
+      tester.address,
       v2KeySignature
     ],
     false
   )
 
-  const BadBeacon = await runTest(
+  const BadBeacon = await tester.runTest(
     `Mock Bad Beacon contract deployment`,
     BadBeaconDeployer,
     '',
     'deploy'
   )
 
-  const BadBeaconTwo = await runTest(
+  const BadBeaconTwo = await tester.runTest(
     `Mock Bad Beacon Two contract deployment`,
     BadBeaconTwoDeployer,
     '',
     'deploy'
   )
 
-  const DharmaSmartWalletImplementationV0 = await runTest(
+  const DharmaSmartWalletImplementationV0 = await tester.runTest(
     `DharmaSmartWalletImplementationV0 contract deployment`,
     DharmaSmartWalletImplementationV0Deployer,
     '',
     'deploy'
   )
 
-  const DharmaSmartWalletImplementationV1 = await runTest(
+  const DharmaSmartWalletImplementationV1 = await tester.runTest(
     `DharmaSmartWalletImplementationV1 contract deployment`,
     DharmaSmartWalletImplementationV1Deployer,
     '',
     'deploy'
   )
 
-  const DharmaSmartWalletImplementationV2 = await runTest(
+  const DharmaSmartWalletImplementationV2 = await tester.runTest(
     `DharmaSmartWalletImplementationV2 contract deployment`,
     DharmaSmartWalletImplementationV2Deployer,
     '',
     'deploy'
   )
 
-  const DharmaSmartWalletImplementationV5 = await runTest(
+  const DharmaSmartWalletImplementationV5 = await tester.runTest(
     `DharmaSmartWalletImplementationV5 contract deployment`,
     DharmaSmartWalletImplementationV5Deployer,
     '',
     'deploy'
   )
 
-  const DharmaSmartWalletImplementationV6 = await runTest(
+  const DharmaSmartWalletImplementationV6 = await tester.runTest(
     `DharmaSmartWalletImplementationV6 contract deployment`,
     DharmaSmartWalletImplementationV6Deployer,
     '',
     'deploy'
   )
 
-  const DharmaSmartWalletImplementationV7 = await runTest(
+  const DharmaSmartWalletImplementationV7 = await tester.runTest(
     `DharmaSmartWalletImplementationV7 contract deployment`,
     DharmaSmartWalletImplementationV7Deployer,
     '',
     'deploy'
   )
 
-  const DharmaKeyRingImplementationV1 = await runTest(
+  const DharmaKeyRingImplementationV1 = await tester.runTest(
     `DharmaKeyRingImplementationV1 contract deployment`,
     DharmaKeyRingImplementationV1Deployer,
     '',
     'deploy'
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Upgrade Beacon Controller cannot set null address as implementation',
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -1138,19 +1139,19 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Upgrade Beacon Controller cannot set non-contract as implementation',
     DharmaUpgradeBeaconController,
     'upgrade',
     'send',
     [
       DharmaUpgradeBeacon.options.address,
-      address
+      tester.address
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Upgrade Beacon Controller cannot support a "bad" beacon that throws',
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -1162,7 +1163,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Upgrade Beacon Controller cannot upgrade a non-upgradeable beacon',
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -1174,7 +1175,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Upgrade Beacon Controller is inaccessible from a non-owner',
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -1185,10 +1186,10 @@ module.exports = {test: async function (testingContext) {
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Upgrade Beacon Controller can set initial upgrade beacon implementation',
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -1226,7 +1227,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Upgrade Beacon Controller cannot clear upgrade beacon implementation',
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -1238,7 +1239,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Upgrade Beacon Controller can reset upgrade beacon implementation',
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -1278,7 +1279,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  const UpgradeBeaconImplementationCheck = await runTest(
+  const UpgradeBeaconImplementationCheck = await tester.runTest(
     `UpgradeBeaconImplementationCheck deployment`,
     UpgradeBeaconImplementationCheckDeployer,
     '',
@@ -1289,7 +1290,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaUpgradeBeacon has the implementation set',
     DharmaUpgradeBeaconController,
     'getImplementation',
@@ -1301,7 +1302,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Ring Upgrade Beacon Controller can set initial key ring upgrade beacon implementation',
     DharmaKeyRingUpgradeBeaconController,
     'upgrade',
@@ -1339,7 +1340,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  const KeyRingUpgradeBeaconImplementationCheck = await runTest(
+  const KeyRingUpgradeBeaconImplementationCheck = await tester.runTest(
     `KeyRingUpgradeBeaconImplementationCheck deployment`,
     UpgradeBeaconImplementationCheckDeployer,
     '',
@@ -1350,7 +1351,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaKeyRingUpgradeBeacon has the implementation set',
     DharmaKeyRingUpgradeBeaconController,
     'getImplementation',
@@ -1369,7 +1370,7 @@ module.exports = {test: async function (testingContext) {
     '5afa1551368280375af43d3d93803e602e57fd5bf3'
   )
 
-  const DharmaSmartWalletNoFactoryNoConstructor = await runTest(
+  const DharmaSmartWalletNoFactoryNoConstructor = await tester.runTest(
     `DharmaSmartWallet minimal upgradeable proxy deployment - no factory or constructor`,
     DharmaSmartWalletNoFactoryNoConstructorDeployer,
     '',
@@ -1381,7 +1382,7 @@ module.exports = {test: async function (testingContext) {
     DharmaSmartWalletNoFactoryNoConstructor.options.address
   )
 
-  await runTest(
+  await tester.runTest(
     'test passes',
     DharmaSmartWalletImplementationTest,
     'test',
@@ -1394,7 +1395,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentSaiCode;
-  await runTest(
+  await tester.runTest(
     'Checking for required external contracts...',
     MockCodeCheck,
     'code',
@@ -1435,7 +1436,7 @@ module.exports = {test: async function (testingContext) {
     'c4d66de80000000000000000000000009999999999999999999999999999999999999999'
   )
 
-  const DharmaSmartWalletNoFactory = await runTest(
+  const DharmaSmartWalletNoFactory = await tester.runTest(
     `DharmaSmartWallet minimal upgradeable proxy deployment - no factory but with constructor`,
     DharmaSmartWalletNoFactoryDeployer,
     '',
@@ -1447,7 +1448,7 @@ module.exports = {test: async function (testingContext) {
     DharmaSmartWalletNoFactory.options.address
   )
 
-  await runTest(
+  await tester.runTest(
     'test passes',
     DharmaSmartWalletImplementationTestWithConstructor,
     'test',
@@ -1459,7 +1460,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'new user smart wallet can be called and has the correct dharma key set',
     DharmaSmartWalletImplementationTestWithConstructor,
     'getUserSigningKey',
@@ -1471,7 +1472,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  const DharmaSmartWalletFactoryV1 = await runTest(
+  const DharmaSmartWalletFactoryV1 = await tester.runTest(
     `DharmaSmartWalletFactoryV1 contract deployment`,
     DharmaSmartWalletFactoryV1Deployer,
     '',
@@ -1480,12 +1481,12 @@ module.exports = {test: async function (testingContext) {
   )
 
   let targetWalletAddress;
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can get a new smart wallet address ahead of time',
     DharmaSmartWalletFactoryV1,
     'getNextSmartWallet',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       // TODO: verify against expected value
@@ -1502,7 +1503,7 @@ module.exports = {test: async function (testingContext) {
 
   if (ethWhaleBalance === '0') {
     await web3.eth.sendTransaction({
-      from: address,
+      from: tester.address,
       to: constants.ETH_WHALE_ADDRESS,
       value: web3.utils.toWei('.2', 'ether'),
       gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
@@ -1513,7 +1514,7 @@ module.exports = {test: async function (testingContext) {
 
   if (saiWhaleBalance === '0') {
     await web3.eth.sendTransaction({
-      from: address,
+      from: tester.address,
       to: constants.SAI_WHALE_ADDRESS,
       value: web3.utils.toWei('.1', 'ether'),
       gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
@@ -1524,7 +1525,7 @@ module.exports = {test: async function (testingContext) {
 
   if (usdcWhaleBalance === '0') {
     await web3.eth.sendTransaction({
-      from: address,
+      from: tester.address,
       to: constants.USDC_WHALE_ADDRESS,
       value: web3.utils.toWei('.1', 'ether'),
       gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
@@ -1542,7 +1543,7 @@ module.exports = {test: async function (testingContext) {
   })
   console.log(' ✓ Eth Whale can deposit eth into the yet-to-be-deployed smart wallet')
 
-  await runTest(
+  await tester.runTest(
     'Sai Whale can deposit sai into the yet-to-be-deployed smart wallet',
     SAI,
     'transfer',
@@ -1568,7 +1569,7 @@ module.exports = {test: async function (testingContext) {
     constants.SAI_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'USDC Whale can deposit usdc into the yet-to-be-deployed smart wallet',
     USDC,
     'transfer',
@@ -1594,7 +1595,7 @@ module.exports = {test: async function (testingContext) {
     constants.USDC_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 cannot deploy a new smart wallet with no key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
@@ -1603,12 +1604,12 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can deploy a new smart wallet using a Dharma Key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
     'send',
-    [address],
+    [tester.address],
     true,
     receipt => {
       //console.log(receipt.status, receipt.gasUsed)
@@ -1631,7 +1632,7 @@ module.exports = {test: async function (testingContext) {
 
         assert.strictEqual(events[0].address, 'Smart Wallet')
         assert.strictEqual(events[0].eventName, 'NewUserSigningKey')
-        assert.strictEqual(events[0].returnValues.userSigningKey, address)
+        assert.strictEqual(events[0].returnValues.userSigningKey, tester.address)
 
         assert.strictEqual(events[1].address, 'SAI')
         assert.strictEqual(events[1].eventName, 'Approval')
@@ -1692,12 +1693,12 @@ module.exports = {test: async function (testingContext) {
     targetWalletAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 gets a new smart wallet address with same key',
     DharmaSmartWalletFactoryV1,
     'getNextSmartWallet',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       // TODO: verify against expected value
@@ -1715,7 +1716,7 @@ module.exports = {test: async function (testingContext) {
     console.log(' ✓ Eth Whale can no longer deposit eth into the deployed smart wallet')
   })
 
-  await runTest(
+  await tester.runTest(
     'Sai Whale can deposit sai into the deployed smart wallet',
     SAI,
     'transfer',
@@ -1741,7 +1742,7 @@ module.exports = {test: async function (testingContext) {
     constants.SAI_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'USDC Whale can deposit usdc into the deployed smart wallet',
     USDC,
     'transfer',
@@ -1767,7 +1768,7 @@ module.exports = {test: async function (testingContext) {
     constants.USDC_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'new user smart wallet can trigger repayAndDeposit to deposit all new funds',
     UserSmartWallet,
     'repayAndDeposit',
@@ -1821,7 +1822,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'new user smart wallet can trigger repayAndDeposit even with no funds',
     UserSmartWallet,
     'repayAndDeposit',
@@ -1849,7 +1850,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'test passes',
     UserSmartWallet,
     'test',
@@ -1862,7 +1863,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   // TODO: wrap in a contract to validate revert reason
-  await runTest(
+  await tester.runTest(
     'revert test with revert reason passes',
     UserSmartWallet,
     'testRevert',
@@ -1871,7 +1872,7 @@ module.exports = {test: async function (testingContext) {
     false // set this to true to verify that the revert reason is displayed
   )
 
-  await runTest(
+  await tester.runTest(
     'new user smart wallet can be called and has the correct dharma key set',
     UserSmartWallet,
     'getUserSigningKey',
@@ -1879,11 +1880,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get the version (0)',
     UserSmartWallet,
     'getVersion',
@@ -1895,7 +1896,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet nonce is initially set to 0',
     UserSmartWallet,
     'getNonce',
@@ -1907,7 +1908,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get balances',
     UserSmartWallet,
     'getBalances',
@@ -1919,14 +1920,14 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet secondary can call to withdraw sai',
     UserSmartWallet,
     'withdrawDai',
     'send',
     [
       '1000000000000000000',
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
@@ -1949,7 +1950,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet nonce is now set to 1',
     UserSmartWallet,
     'getNonce',
@@ -1961,14 +1962,14 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet secondary can call to withdraw usdc',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
     [
       1,
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
@@ -1980,7 +1981,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet nonce is now set to 2',
     UserSmartWallet,
     'getNonce',
@@ -1992,7 +1993,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet secondary can call to cancel',
     UserSmartWallet,
     'cancel',
@@ -2003,7 +2004,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet nonce is now set to 3',
     UserSmartWallet,
     'getNonce',
@@ -2015,20 +2016,20 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet secondary can call to set userSigningKey',
     UserSmartWallet,
     'setUserSigningKey',
     'send',
     [
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet nonce is now set to 4',
     UserSmartWallet,
     'getNonce',
@@ -2041,7 +2042,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let customActionId
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get next custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -2049,7 +2050,7 @@ module.exports = {test: async function (testingContext) {
     [
       4, // SAIWithdrawal,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -2058,7 +2059,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get custom action ID 4 and it matches next action ID',
     UserSmartWallet,
     'getCustomActionID',
@@ -2066,7 +2067,7 @@ module.exports = {test: async function (testingContext) {
     [
       4, // SAIWithdrawal,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       4,
       0
     ],
@@ -2076,7 +2077,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -2084,7 +2085,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -2095,17 +2096,17 @@ module.exports = {test: async function (testingContext) {
 
   let usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet relay cannot call with bad signature to withdraw USDC',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       '0x',
       '0xffffffff' + usdcWithdrawalSignature.slice(10)
@@ -2115,17 +2116,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet relay can call with signature to withdraw USDC',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       '0x',
       usdcWithdrawalSignature
@@ -2135,7 +2136,7 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt.events)
     },
-    originalAddress
+    tester.originalAddress
   )
 
   /* TODO: get this working manually
@@ -2157,14 +2158,14 @@ module.exports = {test: async function (testingContext) {
   )
   */
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet cannot withdraw too much sai',
     UserSmartWallet,
     'withdrawDai',
     'send',
     [
       '100000000000000000000000000000000000000',
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
@@ -2187,14 +2188,14 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet cannot withdraw too much usdc',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
     [
       '100000000000000000000000000000000',
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
@@ -2217,14 +2218,14 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet cannot withdraw too little sai',
     UserSmartWallet,
     'withdrawDai',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
@@ -2245,7 +2246,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get a Sai withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -2253,7 +2254,7 @@ module.exports = {test: async function (testingContext) {
     [
       10, // SaiWithdrawal,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -2264,17 +2265,17 @@ module.exports = {test: async function (testingContext) {
 
   let saiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet relay cannot call with bad signature to withdraw sai',
     UserSmartWallet,
     'withdrawDai',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       '0x',
       '0xffffffff' + saiWithdrawalSignature.slice(10)
@@ -2284,17 +2285,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet relay can call with signature to withdraw sai',
     UserSmartWallet,
     'withdrawDai',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       '0x',
       saiWithdrawalSignature
@@ -2303,10 +2304,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet calls revert if insufficient action gas is supplied',
     UserSmartWallet,
     'cancel',
@@ -2318,7 +2319,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet calls succeed if sufficient non-zero action gas supplied',
     UserSmartWallet,
     'cancel',
@@ -2329,20 +2330,20 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet calls to atomic methods revert',
     UserSmartWallet,
     '_withdrawDaiAtomic',
     'send',
     [
       '1',
-     address
+     tester.address
     ],
     false
   )
 
   let originalNonce
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get the nonce prior to upgrade',
     UserSmartWallet,
     'getNonce',
@@ -2354,7 +2355,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Upgrade Beacon Controller can upgrade to V1 implementation',
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -2394,7 +2395,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  const UpgradeBeaconImplementationCheckV1 = await runTest(
+  const UpgradeBeaconImplementationCheckV1 = await tester.runTest(
     `UpgradeBeaconImplementationCheck deployment`,
     UpgradeBeaconImplementationCheckDeployer,
     '',
@@ -2405,7 +2406,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaUpgradeBeacon has the implementation set',
     DharmaUpgradeBeaconController,
     'getImplementation',
@@ -2417,7 +2418,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Upgrade Beacon Controller can upgrade to V2 implementation',
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -2457,7 +2458,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  const UpgradeBeaconImplementationCheckV2 = await runTest(
+  const UpgradeBeaconImplementationCheckV2 = await tester.runTest(
     `UpgradeBeaconImplementationCheck deployment`,
     UpgradeBeaconImplementationCheckDeployer,
     '',
@@ -2468,7 +2469,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaUpgradeBeacon has the implementation set',
     DharmaUpgradeBeaconController,
     'getImplementation',
@@ -2480,7 +2481,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V2 user smart wallet can be called and still has original dharma key set',
     UserSmartWallet,
     'getUserSigningKey',
@@ -2488,11 +2489,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V2 UserSmartWallet can get the new version (2)',
     UserSmartWallet,
     'getVersion',
@@ -2504,7 +2505,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Upgrade Beacon Controller can upgrade to V5 implementation',
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -2544,7 +2545,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaUpgradeBeacon has the implementation set',
     DharmaUpgradeBeaconController,
     'getImplementation',
@@ -2556,7 +2557,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  const UpgradeBeaconImplementationCheckV5 = await runTest(
+  const UpgradeBeaconImplementationCheckV5 = await tester.runTest(
     `UpgradeBeaconImplementationCheck deployment`,
     UpgradeBeaconImplementationCheckDeployer,
     '',
@@ -2567,7 +2568,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 user smart wallet can be called and still has original dharma key set',
     UserSmartWalletV5,
     'getUserSigningKey',
@@ -2575,11 +2576,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get the new version (5)',
     UserSmartWalletV5,
     'getVersion',
@@ -2591,7 +2592,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet nonce is still set to value from before upgrade',
     UserSmartWalletV5,
     'getNonce',
@@ -2603,7 +2604,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get balances',
     UserSmartWalletV5,
     'getBalances',
@@ -2615,7 +2616,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet secondary can call to cancel',
     UserSmartWalletV5,
     'cancel',
@@ -2626,7 +2627,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet nonce is now set to original + 1',
     UserSmartWalletV5,
     'getNonce',
@@ -2638,7 +2639,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get next custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -2646,7 +2647,7 @@ module.exports = {test: async function (testingContext) {
     [
       4, // SAIWithdrawal,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -2655,7 +2656,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get custom action ID and it matches next action ID',
     UserSmartWalletV5,
     'getCustomActionID',
@@ -2663,7 +2664,7 @@ module.exports = {test: async function (testingContext) {
     [
       4, // SAIWithdrawal,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       parseInt(originalNonce) + 1,
       0
     ],
@@ -2674,13 +2675,13 @@ module.exports = {test: async function (testingContext) {
   )
 
   let genericActionID
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get next generic action ID',
     UserSmartWalletV5,
     'getNextGenericActionID',
     'call',
     [
-      address,
+      tester.address,
       '0x',
       0
     ],
@@ -2690,13 +2691,13 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get generic action ID and it matches next action ID',
     UserSmartWalletV5,
     'getGenericActionID',
     'call',
     [
-      address,
+      tester.address,
       '0x',
       parseInt(originalNonce) + 1,
       0
@@ -2707,19 +2708,19 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet calls to atomic methods revert',
     UserSmartWalletV5,
     '_withdrawSaiAtomic',
     'send',
     [
       '1',
-     address
+     tester.address
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Sai Whale can deposit sai into the V5 smart wallet',
     SAI,
     'transfer',
@@ -2745,7 +2746,7 @@ module.exports = {test: async function (testingContext) {
     constants.SAI_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'USDC Whale can deposit usdc into the V5 smart wallet',
     USDC,
     'transfer',
@@ -2771,7 +2772,7 @@ module.exports = {test: async function (testingContext) {
     constants.USDC_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 user smart wallet can trigger repayAndDeposit to deposit all new funds',
     UserSmartWalletV5,
     'repayAndDeposit',
@@ -2826,7 +2827,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Sai Whale can deposit sai into the V5 smart wallet again',
     SAI,
     'transfer',
@@ -2852,7 +2853,7 @@ module.exports = {test: async function (testingContext) {
     constants.SAI_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a generic action ID',
     UserSmartWalletV5,
     'getNextGenericActionID',
@@ -2870,15 +2871,15 @@ module.exports = {test: async function (testingContext) {
 
   let executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   let executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet cannot call executeAction and target Escape Hatch Registry',
     UserSmartWalletV5,
     'executeAction',
@@ -2893,7 +2894,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a generic action ID',
     UserSmartWalletV5,
     'getNextGenericActionID',
@@ -2911,15 +2912,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can call executeAction',
     UserSmartWalletV5,
     'executeAction',
@@ -2933,7 +2934,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 user smart wallet repayAndDeposit cannot deposit without approval',
     UserSmartWalletV5,
     'repayAndDeposit',
@@ -2961,7 +2962,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a generic action ID',
     UserSmartWalletV5,
     'getNextGenericActionID',
@@ -2979,15 +2980,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can call executeAction',
     UserSmartWalletV5,
     'executeAction',
@@ -3001,7 +3002,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 user smart wallet repayAndDeposit can deposit with approval added back',
     UserSmartWalletV5,
     'repayAndDeposit',
@@ -3029,7 +3030,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 user smart wallet can trigger repayAndDeposit even with no funds',
     UserSmartWalletV5,
     'repayAndDeposit',
@@ -3057,7 +3058,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet secondary cannot set an empty user userSigningKey',
     UserSmartWalletV5,
     'setUserSigningKey',
@@ -3071,20 +3072,20 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet secondary can set a custom user userSigningKey',
     UserSmartWalletV5,
     'setUserSigningKey',
     'send',
     [
-      addressTwo,
+      tester.addressTwo,
       0,
       '0x',
       '0x'
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get next custom action ID to set a user signing key',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3092,7 +3093,7 @@ module.exports = {test: async function (testingContext) {
     [
       1, // SetUserSigningKey,
       constants.FULL_APPROVAL, // This value shouldn't matter
-      addressTwo,
+      tester.addressTwo,
       0
     ],
     true,
@@ -3102,7 +3103,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let currentNonce
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get the nonce',
     UserSmartWalletV5,
     'getNonce',
@@ -3114,7 +3115,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get custom action ID and it matches next action ID',
     UserSmartWalletV5,
     'getCustomActionID',
@@ -3122,7 +3123,7 @@ module.exports = {test: async function (testingContext) {
     [
       1, // SetUserSigningKey,
       0, // Note that this value differs from above
-      addressTwo,
+      tester.addressTwo,
       currentNonce,
       0
     ],
@@ -3134,31 +3135,31 @@ module.exports = {test: async function (testingContext) {
 
   let setUserSigningKeyUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
   let setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can set a new user signing key with signatures',
     UserSmartWalletV5,
     'setUserSigningKey',
     'send',
     [
-      addressTwo,
+      tester.addressTwo,
       0,
       setUserSigningKeyUserSignature,
       setUserSigningKeyDharmaSignature
     ],
     true,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get next custom action ID to cancel',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3166,7 +3167,7 @@ module.exports = {test: async function (testingContext) {
     [
       0, // Cancel
       constants.FULL_APPROVAL, // This value shouldn't matter
-      originalAddress,  // This value shouldn't matter either
+      tester.originalAddress,  // This value shouldn't matter either
       0
     ],
     true,
@@ -3175,7 +3176,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get the nonce',
     UserSmartWalletV5,
     'getNonce',
@@ -3187,7 +3188,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get custom action ID and it matches next action ID',
     UserSmartWalletV5,
     'getCustomActionID',
@@ -3195,7 +3196,7 @@ module.exports = {test: async function (testingContext) {
     [
       0, // Cancel
       0, // Note that this value differs from above
-      addressTwo, // This one too
+      tester.addressTwo, // This one too
       currentNonce,
       0
     ],
@@ -3207,10 +3208,10 @@ module.exports = {test: async function (testingContext) {
 
   let cancelUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet secondary can cancel using a signature',
     UserSmartWalletV5,
     'cancel',
@@ -3221,10 +3222,10 @@ module.exports = {test: async function (testingContext) {
     ],
     true,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet nonce is incremented after cancelling',
     UserSmartWalletV5,
     'getNonce',
@@ -3236,14 +3237,14 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet secondary cannot call to withdraw sai without primary',
     UserSmartWalletV5,
     'withdrawSai',
     'send',
     [
       '1000000000000000000',
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
@@ -3251,14 +3252,14 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet secondary cannot call to withdraw usdc without primary',
     UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
       1,
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
@@ -3266,13 +3267,13 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet secondary can no longer call to set userSigningKey without primary',
     UserSmartWalletV5,
     'setUserSigningKey',
     'send',
     [
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
@@ -3280,7 +3281,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3288,7 +3289,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       '1', // dust
-      address,
+      tester.address,
       0
     ],
     true,
@@ -3299,22 +3300,22 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   let usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot withdraw "dust" USDC',
     UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -3324,10 +3325,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3346,15 +3347,15 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot withdraw USDC to null address',
     UserSmartWalletV5,
     'withdrawUSDC',
@@ -3371,10 +3372,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3382,7 +3383,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       '100000',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -3393,22 +3394,22 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay can call with two signatures to withdraw USDC',
     UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
       '100000',
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -3418,10 +3419,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3429,7 +3430,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -3440,22 +3441,22 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot call with bad signature to withdraw USDC',
     UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       '0xffffffff' + usdcWithdrawalSignature.slice(10)
@@ -3465,17 +3466,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet cannot call with bad user signature to withdraw USDC',
     UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       '0xffffffff' + usdcUserWithdrawalSignature.slice(10),
       usdcWithdrawalSignature
@@ -3485,17 +3486,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay can call with two signatures to withdraw max USDC',
     UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -3505,7 +3506,7 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
   /* TODO: get this working manually
@@ -3527,7 +3528,7 @@ module.exports = {test: async function (testingContext) {
   )
   */
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3535,7 +3536,7 @@ module.exports = {test: async function (testingContext) {
     [
       4, // SaiWithdrawal,
       '1',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -3546,32 +3547,32 @@ module.exports = {test: async function (testingContext) {
 
   saiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   let saiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot withdraw "dust" sai',
     UserSmartWalletV5,
     'withdrawDai',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       saiUserWithdrawalSignature,
       saiWithdrawalSignature
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3590,15 +3591,15 @@ module.exports = {test: async function (testingContext) {
 
   saiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   saiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot withdraw sai to null address',
     UserSmartWalletV5,
     'withdrawDai',
@@ -3612,10 +3613,10 @@ module.exports = {test: async function (testingContext) {
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3623,7 +3624,7 @@ module.exports = {test: async function (testingContext) {
     [
       4, // SaiWithdrawal,
       '1000000000000000',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -3634,22 +3635,22 @@ module.exports = {test: async function (testingContext) {
 
   saiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   saiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay can call with signature to withdraw sai',
     UserSmartWalletV5,
     'withdrawDai',
     'send',
     [
       '1000000000000000',
-      address,
+      tester.address,
       0,
       saiUserWithdrawalSignature,
       saiWithdrawalSignature
@@ -3659,10 +3660,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt.events)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet cannot get a non-custom "custom" next action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3670,13 +3671,13 @@ module.exports = {test: async function (testingContext) {
     [
       2, // Generic,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet cannot get a non-custom "custom" action ID',
     UserSmartWalletV5,
     'getCustomActionID',
@@ -3684,14 +3685,14 @@ module.exports = {test: async function (testingContext) {
     [
       2, // Generic,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       0
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3699,7 +3700,7 @@ module.exports = {test: async function (testingContext) {
     [
       4, // SaiWithdrawal,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -3710,22 +3711,22 @@ module.exports = {test: async function (testingContext) {
 
   saiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   saiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot call with bad signature to withdraw sai',
     UserSmartWalletV5,
     'withdrawDai',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       saiUserWithdrawalSignature,
       '0xffffffff' + saiWithdrawalSignature.slice(10)
@@ -3735,17 +3736,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot call with bad user signature to withdraw sai',
     UserSmartWalletV5,
     'withdrawDai',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       '0xffffffff' + saiUserWithdrawalSignature.slice(10),
       saiWithdrawalSignature
@@ -3755,17 +3756,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay can call with signature to withdraw sai',
     UserSmartWalletV5,
     'withdrawDai',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       saiUserWithdrawalSignature,
       saiWithdrawalSignature
@@ -3774,10 +3775,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3785,7 +3786,7 @@ module.exports = {test: async function (testingContext) {
     [
       6, // ETHWithdrawal,
       '0', // no amount
-      address,
+      tester.address,
       0
     ],
     true,
@@ -3796,22 +3797,22 @@ module.exports = {test: async function (testingContext) {
 
   let ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   let ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot to withdraw ether with no amount',
     UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
       '0',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       ethWithdrawalSignature
@@ -3820,10 +3821,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3842,15 +3843,15 @@ module.exports = {test: async function (testingContext) {
 
   ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot to withdraw ether with no recipient',
     UserSmartWalletV5,
     'withdrawEther',
@@ -3866,10 +3867,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3877,7 +3878,7 @@ module.exports = {test: async function (testingContext) {
     [
       6, // ETHWithdrawal,
       '1',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -3888,22 +3889,22 @@ module.exports = {test: async function (testingContext) {
 
   ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot call with bad signature to withdraw eth',
     UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       '0xffffffff' + ethWithdrawalSignature.slice(10)
@@ -3913,17 +3914,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
     UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       '0xffffffff' + ethUserWithdrawalSignature.slice(10),
       ethWithdrawalSignature
@@ -3933,17 +3934,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay can call with signature to withdraw ether',
     UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       ethWithdrawalSignature
@@ -3952,10 +3953,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -3963,7 +3964,7 @@ module.exports = {test: async function (testingContext) {
     [
       6, // ETHWithdrawal,
       '1',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -3974,22 +3975,22 @@ module.exports = {test: async function (testingContext) {
 
   ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot call with bad signature to withdraw eth',
     UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       '0xffffffff' + ethWithdrawalSignature.slice(10)
@@ -3999,17 +4000,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
     UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       '0xffffffff' + ethUserWithdrawalSignature.slice(10),
       ethWithdrawalSignature
@@ -4019,17 +4020,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay can call with signature to withdraw ether',
     UserSmartWalletV5,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       ethWithdrawalSignature
@@ -4038,10 +4039,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet cancel reverts with bad signature',
     UserSmartWalletV5,
     'cancel',
@@ -4052,10 +4053,10 @@ module.exports = {test: async function (testingContext) {
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet calls revert if insufficient action gas is supplied',
     UserSmartWalletV5,
     'cancel',
@@ -4067,7 +4068,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet calls succeed if sufficient non-zero action gas supplied',
     UserSmartWalletV5,
     'cancel',
@@ -4078,7 +4079,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a cancel custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -4086,7 +4087,7 @@ module.exports = {test: async function (testingContext) {
     [
       0, // Cancel,
       '0',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -4095,9 +4096,9 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  let cancelSignature = signHashedPrefixedHexString(customActionId, addressTwo)
+  let cancelSignature = signHashedPrefixedHexString(customActionId, tester.addressTwo)
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can cancel using a signature',
     UserSmartWalletV5,
     'cancel',
@@ -4108,38 +4109,38 @@ module.exports = {test: async function (testingContext) {
     ],
     true,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet calls to atomic methods revert',
     UserSmartWalletV5,
     '_withdrawSaiAtomic',
     'send',
     [
       '1',
-     address
+     tester.address
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet calls to recover from random address revert',
     UserSmartWalletV5,
     'recover',
     'send',
     [
-     address
+     tester.address
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can deploy a V5 smart wallet using a Dharma Key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
     'send',
-    [addressTwo],
+    [tester.addressTwo],
     true,
     receipt => {
       //console.log(receipt.status, receipt.gasUsed)
@@ -4158,7 +4159,7 @@ module.exports = {test: async function (testingContext) {
         })
 
         assert.strictEqual(events[0].eventName, 'NewUserSigningKey')
-        assert.strictEqual(events[0].returnValues.userSigningKey, addressTwo)
+        assert.strictEqual(events[0].returnValues.userSigningKey, tester.addressTwo)
         //console.log(events)
 
         // TODO: test more events
@@ -4166,7 +4167,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a generic action ID',
     UserSmartWalletV5,
     'getNextGenericActionID',
@@ -4184,21 +4185,21 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet cannot call executeAction and target a non-contract',
     UserSmartWalletV5,
     'executeAction',
     'send',
     [
-      address,
+      tester.address,
       USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
@@ -4207,7 +4208,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet cannot call executeAction and target itself',
     UserSmartWalletV5,
     'executeAction',
@@ -4222,7 +4223,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can call executeAction',
     UserSmartWalletV5,
     'executeAction',
@@ -4236,7 +4237,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get the next generic batch action ID',
     UserSmartWalletV5,
     'getNextGenericAtomicBatchActionID',
@@ -4251,7 +4252,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get the nonce',
     UserSmartWalletV5,
     'getNonce',
@@ -4263,7 +4264,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet generic batch action ID with nonce matches next ID',
     UserSmartWalletV5,
     'getGenericAtomicBatchActionID',
@@ -4281,15 +4282,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can call executeActionWithAtomicBatchCalls',
     UserSmartWalletV5,
     'executeActionWithAtomicBatchCalls',
@@ -4302,7 +4303,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'USDC Whale can deposit usdc into the deployed smart wallet',
     USDC,
     'transfer',
@@ -4328,7 +4329,7 @@ module.exports = {test: async function (testingContext) {
     constants.USDC_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'new user smart wallet can trigger repayAndDeposit to deposit all new funds',
     UserSmartWalletV5,
     'repayAndDeposit',
@@ -4407,7 +4408,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let blacklister
-  await runTest(
+  await tester.runTest(
     'Check blacklister address',
     FIAT_TOKEN,
     'blacklister',
@@ -4420,7 +4421,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let pausear
-  await runTest(
+  await tester.runTest(
     'Check pauser address',
     FIAT_TOKEN,
     'pauser',
@@ -4432,7 +4433,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'blacklist mock address',
     FIAT_TOKEN,
     'blacklist',
@@ -4444,7 +4445,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   let targetBlacklistAddress;
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can get a new smart wallet address ahead of time',
     DharmaSmartWalletFactoryV1,
     'getNextSmartWallet',
@@ -4461,7 +4462,7 @@ module.exports = {test: async function (testingContext) {
     targetBlacklistAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'USDC Whale can deposit usdc into the yet-to-be-blacklisted smart wallet',
     USDC,
     'transfer',
@@ -4487,7 +4488,7 @@ module.exports = {test: async function (testingContext) {
     constants.USDC_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'blacklist counterfactual deployment address',
     FIAT_TOKEN,
     'blacklist',
@@ -4498,7 +4499,7 @@ module.exports = {test: async function (testingContext) {
     blacklister
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can deploy to a blacklisted address',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
@@ -4511,7 +4512,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'blacklisted smart wallet will not approve USDC during repayAndDeposit',
     BlacklistedUserSmartWalletV5,
     'repayAndDeposit',
@@ -4524,7 +4525,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'un-blacklist counterfactual deployment address',
     FIAT_TOKEN,
     'unBlacklist',
@@ -4535,7 +4536,7 @@ module.exports = {test: async function (testingContext) {
     blacklister
   )
 
-  await runTest(
+  await tester.runTest(
     'pause USDC',
     FIAT_TOKEN,
     'pause',
@@ -4546,7 +4547,7 @@ module.exports = {test: async function (testingContext) {
     pauser
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -4554,7 +4555,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -4565,22 +4566,22 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet attempt to withdraw max USDC when paused causes ExternalError',
     UserSmartWalletV5,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -4590,10 +4591,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'smart wallet will not approve USDC when paused during repayAndDeposit',
     BlacklistedUserSmartWalletV5,
     'repayAndDeposit',
@@ -4606,7 +4607,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'unpause USDC',
     FIAT_TOKEN,
     'unpause',
@@ -4617,7 +4618,7 @@ module.exports = {test: async function (testingContext) {
     pauser
   )
 
-  await runTest(
+  await tester.runTest(
     'unblacklisted, unpaused smart wallet approves USDC during repayAndDeposit',
     BlacklistedUserSmartWalletV5,
     'repayAndDeposit',
@@ -4630,7 +4631,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -4649,15 +4650,15 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay call to withdraw USDC to blacklisted address',
     UserSmartWallet,
     'withdrawUSDC',
@@ -4675,10 +4676,10 @@ module.exports = {test: async function (testingContext) {
       //console.log(receipt.events[0])
       //console.log(receipt.events.ExternalError)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -4697,15 +4698,15 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay call to withdraw USDC to itself',
     UserSmartWallet,
     'withdrawUSDC',
@@ -4721,10 +4722,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -4743,15 +4744,15 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay call to withdraw USDC to blacklisted address',
     UserSmartWallet,
     'withdrawUSDC',
@@ -4769,10 +4770,10 @@ module.exports = {test: async function (testingContext) {
       //console.log(receipt.events[0])
       //console.log(receipt.events.ExternalError)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -4791,15 +4792,15 @@ module.exports = {test: async function (testingContext) {
 
   ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot withdraw eth to a non-payable account',
     UserSmartWalletV5,
     'withdrawEther',
@@ -4816,11 +4817,11 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
   let targetWalletAddressTwo;
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can get a new smart wallet address ahead of time',
     DharmaSmartWalletFactoryV1,
     'getNextSmartWallet',
@@ -4833,7 +4834,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can deploy a V5 smart wallet using a contract key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
@@ -4846,7 +4847,7 @@ module.exports = {test: async function (testingContext) {
     targetWalletAddressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet cancel reverts with bad contract signature',
     UserSmartWalletV5Two,
     'cancel',
@@ -4857,17 +4858,17 @@ module.exports = {test: async function (testingContext) {
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a generic action ID',
     UserSmartWalletV5,
     'getNextGenericActionID',
     'call',
     [
       SAI.options.address,
-      SAI.methods.transfer(address, constants.FULL_APPROVAL).encodeABI(),
+      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -4878,29 +4879,29 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can call executeAction',
     UserSmartWalletV5,
     'executeAction',
     'send',
     [
       SAI.options.address,
-      SAI.methods.transfer(address, constants.FULL_APPROVAL).encodeABI(),
+      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -4908,7 +4909,7 @@ module.exports = {test: async function (testingContext) {
     [
       4, // SaiWithdrawal,
       '100000000000000000000000000000000000000', // too much
-      address,
+      tester.address,
       0
     ],
     true,
@@ -4919,22 +4920,22 @@ module.exports = {test: async function (testingContext) {
 
   saiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   saiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot withdraw too much sai',
     UserSmartWallet,
     'withdrawDai',
     'send',
     [
       '100000000000000000000000000000000000000', // too much
-      address,
+      tester.address,
       0,
       saiUserWithdrawalSignature,
       saiWithdrawalSignature
@@ -4944,10 +4945,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt.events)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -4955,7 +4956,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       '100000000000000000000000000000000000000', // too much
-      address,
+      tester.address,
       0
     ],
     true,
@@ -4966,23 +4967,23 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay can call with two signatures to withdraw USDC',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
     [
       '100000000000000000000000000000000000000', // too much
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -4992,10 +4993,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get next generic batch action ID',
     UserSmartWalletV5,
     'getNextGenericAtomicBatchActionID',
@@ -5004,7 +5005,7 @@ module.exports = {test: async function (testingContext) {
       [{
         to: SAI.options.address,
         data: SAI.methods.transfer(
-          address, '100000000000000000000000000000'
+          tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
       0
@@ -5017,15 +5018,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet bad executeActionWithAtomicBatchCalls emits CallFailure',
     UserSmartWalletV5,
     'executeActionWithAtomicBatchCalls',
@@ -5034,7 +5035,7 @@ module.exports = {test: async function (testingContext) {
       [{
         to: SAI.options.address,
         data: SAI.methods.transfer(
-          address, '100000000000000000000000000000'
+          tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
       0,
@@ -5047,7 +5048,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a generic action ID',
     UserSmartWalletV5,
     'getNextGenericActionID',
@@ -5067,15 +5068,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can call executeAction to enter sai market',
     UserSmartWalletV5,
     'executeAction',
@@ -5091,7 +5092,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'Sai Whale can deposit sai into the smart wallet',
     SAI,
     'transfer',
@@ -5117,20 +5118,20 @@ module.exports = {test: async function (testingContext) {
     constants.SAI_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can trigger repayAndDeposit to deposit all new funds',
     UserSmartWalletV5,
     'repayAndDeposit'
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a generic action ID',
     UserSmartWalletV5,
     'getNextGenericActionID',
     'call',
     [
       CSAI.options.address,
-      CSAI.methods.transfer(address, web3.utils.toWei('1', 'mwei')).encodeABI(),
+      CSAI.methods.transfer(tester.address, web3.utils.toWei('1', 'mwei')).encodeABI(),
       0
     ],
     true,
@@ -5141,22 +5142,22 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can call executeAction to transfer cSai',
     UserSmartWalletV5,
     'executeAction',
     'send',
     [
       CSAI.options.address,
-      CSAI.methods.transfer(address, web3.utils.toWei('1', 'mwei')).encodeABI(),
+      CSAI.methods.transfer(tester.address, web3.utils.toWei('1', 'mwei')).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -5165,10 +5166,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       //console.log(receipt.events)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a generic action ID',
     UserSmartWalletV5,
     'getNextGenericActionID',
@@ -5186,15 +5187,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can call executeAction to perform a borrow',
     UserSmartWalletV5,
     'executeAction',
@@ -5210,10 +5211,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       //console.log(receipt.events)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
     UserSmartWalletV5,
     'getNextCustomActionID',
@@ -5221,7 +5222,7 @@ module.exports = {test: async function (testingContext) {
     [
       4, // SaiWithdrawal,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -5232,22 +5233,22 @@ module.exports = {test: async function (testingContext) {
 
   saiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   saiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V5 UserSmartWallet relay cannot withdraw max sai with an outstanding borrow',
     UserSmartWalletV5,
     'withdrawDai',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       saiUserWithdrawalSignature,
       saiWithdrawalSignature
@@ -5257,18 +5258,18 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt.events)
     },
-    originalAddress
+    tester.originalAddress
   )
 
   // Initiate account recovery
-  await runTest(
+  await tester.runTest(
     'smart wallet account recovery can be initiated',
     DharmaAccountRecoveryManagerV2,
     'initiateAccountRecovery',
     'send',
     [
       UserSmartWalletV5.options.address,
-      originalAddress,
+      tester.originalAddress,
       0 // extraTime in seconds
     ],
     true,
@@ -5278,14 +5279,14 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'smart wallet account recovery cannot be performed right away',
     DharmaAccountRecoveryManagerV2,
     'recover',
     'send',
     [
       UserSmartWalletV5.options.address,
-      originalAddress
+      tester.originalAddress
     ],
     false
   )
@@ -5294,14 +5295,14 @@ module.exports = {test: async function (testingContext) {
   await advanceTime((60 * 60 * 24 * 3) + 5)
 
   // recover account
-  await runTest(
+  await tester.runTest(
     'smart wallet account recovery can be performed after three days',
     DharmaAccountRecoveryManagerV2,
     'recover',
     'send',
     [
       UserSmartWalletV5.options.address,
-      originalAddress
+      tester.originalAddress
     ],
     true,
     receipt => {    
@@ -5310,7 +5311,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWalletV5 can get the nonce prior to upgrade',
     UserSmartWalletV5,
     'getNonce',
@@ -5326,7 +5327,7 @@ module.exports = {test: async function (testingContext) {
 
 
 
-  await runTest(
+  await tester.runTest(
     'Dharma Upgrade Beacon Controller can upgrade to V6 implementation',
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -5366,7 +5367,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaUpgradeBeacon has the implementation set',
     DharmaUpgradeBeaconController,
     'getImplementation',
@@ -5378,7 +5379,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  const UpgradeBeaconImplementationCheckV6 = await runTest(
+  const UpgradeBeaconImplementationCheckV6 = await tester.runTest(
     `UpgradeBeaconImplementationCheck deployment`,
     UpgradeBeaconImplementationCheckDeployer,
     '',
@@ -5389,7 +5390,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 user smart wallet can be called and still has the same dharma key set',
     UserSmartWalletV6,
     'getUserSigningKey',
@@ -5397,11 +5398,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, originalAddress)
+      assert.strictEqual(value, tester.originalAddress)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get the new version (6)',
     UserSmartWalletV6,
     'getVersion',
@@ -5413,7 +5414,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet nonce is still set to value from before upgrade',
     UserSmartWalletV6,
     'getNonce',
@@ -5425,7 +5426,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get balances',
     UserSmartWalletV6,
     'getBalances',
@@ -5437,7 +5438,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet secondary can call to cancel',
     UserSmartWalletV6,
     'cancel',
@@ -5448,7 +5449,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet nonce is now set to original + 1',
     UserSmartWalletV6,
     'getNonce',
@@ -5460,7 +5461,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get next custom action ID to set a user signing key',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -5468,7 +5469,7 @@ module.exports = {test: async function (testingContext) {
     [
       1, // SetUserSigningKey,
       constants.FULL_APPROVAL, // This value shouldn't matter
-      addressTwo,
+      tester.addressTwo,
       0
     ],
     true,
@@ -5479,26 +5480,26 @@ module.exports = {test: async function (testingContext) {
 
   setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can set a new user signing key with signatures',
     UserSmartWalletV6,
     'setUserSigningKey',
     'send',
     [
-      addressTwo,
+      tester.addressTwo,
       0,
       '0x',
       setUserSigningKeyDharmaSignature
     ],
     true,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet has the new user signing key set',
     UserSmartWalletV6,
     'getUserSigningKey',
@@ -5506,11 +5507,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, addressTwo)
+      assert.strictEqual(value, tester.addressTwo)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'cSai can be sent to V6 UserSmartWallet',
     CSAI,
     'transfer',
@@ -5518,7 +5519,7 @@ module.exports = {test: async function (testingContext) {
     [UserSmartWalletV6.options.address, web3.utils.toWei('0.5', 'mwei')]
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay can trigger cSai to cDai migration before cDai approval',
     UserSmartWalletV6,
     'migrateCSaiToCDai',
@@ -5528,10 +5529,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get next custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -5539,7 +5540,7 @@ module.exports = {test: async function (testingContext) {
     [
       0, // DAIWithdrawal
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -5548,7 +5549,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get custom action ID and it matches next action ID',
     UserSmartWalletV6,
     'getCustomActionID',
@@ -5556,7 +5557,7 @@ module.exports = {test: async function (testingContext) {
     [
       0, // DAIWithdrawal
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       parseInt(originalNonce) + 2,
       0
     ],
@@ -5566,13 +5567,13 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get next generic action ID',
     UserSmartWalletV6,
     'getNextGenericActionID',
     'call',
     [
-      address,
+      tester.address,
       '0x',
       0
     ],
@@ -5582,13 +5583,13 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get generic action ID and it matches next action ID',
     UserSmartWalletV6,
     'getGenericActionID',
     'call',
     [
-      address,
+      tester.address,
       '0x',
       parseInt(originalNonce) + 2,
       0
@@ -5599,28 +5600,28 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet calls to atomic methods revert',
     UserSmartWalletV6,
     '_withdrawDaiAtomic',
     'send',
     [
       '1',
-     address
+     tester.address
     ],
     false
   )
 
   // Give the Dai Whale some ETH so it can make transactions
   await web3.eth.sendTransaction({
-    from: address,
+    from: tester.address,
     to: constants.DAI_WHALE_ADDRESS,
     value: web3.utils.toWei('1', 'ether'),
     gas: (testingContext !== 'coverage') ? '0xffff' : gasLimit - 1,
     gasPrice: 1
   })
 
-  await runTest(
+  await tester.runTest(
     'Dai Whale can deposit Dai into the V6 smart wallet',
     DAI,
     'transfer',
@@ -5646,7 +5647,7 @@ module.exports = {test: async function (testingContext) {
     constants.DAI_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'USDC Whale can deposit usdc into the V6 smart wallet',
     USDC,
     'transfer',
@@ -5672,7 +5673,7 @@ module.exports = {test: async function (testingContext) {
     constants.USDC_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a generic action ID',
     UserSmartWalletV6,
     'getNextGenericActionID',
@@ -5690,15 +5691,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can call executeAction',
     UserSmartWalletV6,
     'executeAction',
@@ -5712,7 +5713,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 user smart wallet can trigger repayAndDeposit to deposit all new funds',
     UserSmartWalletV6,
     'repayAndDeposit',
@@ -5769,7 +5770,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dai Whale can deposit dai into the V6 smart wallet',
     DAI,
     'transfer',
@@ -5795,7 +5796,7 @@ module.exports = {test: async function (testingContext) {
     constants.DAI_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a generic action ID',
     UserSmartWalletV6,
     'getNextGenericActionID',
@@ -5813,15 +5814,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet cannot call executeAction and target Escape Hatch Registry',
     UserSmartWalletV6,
     'executeAction',
@@ -5836,7 +5837,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a generic action ID',
     UserSmartWalletV6,
     'getNextGenericActionID',
@@ -5854,15 +5855,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can call executeAction',
     UserSmartWalletV6,
     'executeAction',
@@ -5876,7 +5877,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 user smart wallet repayAndDeposit can still deposit without approval',
     UserSmartWalletV6,
     'repayAndDeposit',
@@ -5904,7 +5905,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a generic action ID',
     UserSmartWalletV6,
     'getNextGenericActionID',
@@ -5922,15 +5923,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can call executeAction',
     UserSmartWalletV6,
     'executeAction',
@@ -5944,7 +5945,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 user smart wallet repayAndDeposit can deposit with approval added back',
     UserSmartWalletV6,
     'repayAndDeposit',
@@ -5972,7 +5973,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 user smart wallet can trigger repayAndDeposit even with no funds',
     UserSmartWalletV6,
     'repayAndDeposit',
@@ -6000,7 +6001,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get custom action ID and it matches next action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6019,15 +6020,15 @@ module.exports = {test: async function (testingContext) {
 
   setUserSigningKeyUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
   setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet cannot set the null address as a new user signing key',
     UserSmartWalletV6,
     'setUserSigningKey',
@@ -6040,10 +6041,10 @@ module.exports = {test: async function (testingContext) {
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get next custom action ID to set a user signing key',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6051,7 +6052,7 @@ module.exports = {test: async function (testingContext) {
     [
       1, // SetUserSigningKey,
       constants.FULL_APPROVAL, // This value shouldn't matter
-      addressTwo,
+      tester.addressTwo,
       0
     ],
     true,
@@ -6060,7 +6061,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get the nonce',
     UserSmartWalletV6,
     'getNonce',
@@ -6072,7 +6073,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get custom action ID and it matches next action ID',
     UserSmartWalletV6,
     'getCustomActionID',
@@ -6080,7 +6081,7 @@ module.exports = {test: async function (testingContext) {
     [
       1, // SetUserSigningKey,
       0, // Note that this value differs from above
-      addressTwo,
+      tester.addressTwo,
       currentNonce,
       0
     ],
@@ -6092,31 +6093,31 @@ module.exports = {test: async function (testingContext) {
 
   setUserSigningKeyUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
   setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can set a new user signing key with signatures',
     UserSmartWalletV6,
     'setUserSigningKey',
     'send',
     [
-      addressTwo,
+      tester.addressTwo,
       0,
       setUserSigningKeyUserSignature,
       setUserSigningKeyDharmaSignature
     ],
     true,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get next custom action ID to cancel',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6124,7 +6125,7 @@ module.exports = {test: async function (testingContext) {
     [
       0, // Cancel
       constants.FULL_APPROVAL, // This value shouldn't matter
-      originalAddress,  // This value shouldn't matter either
+      tester.originalAddress,  // This value shouldn't matter either
       0
     ],
     true,
@@ -6133,7 +6134,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get the nonce',
     UserSmartWalletV6,
     'getNonce',
@@ -6145,7 +6146,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get custom action ID and it matches next action ID',
     UserSmartWalletV6,
     'getCustomActionID',
@@ -6153,7 +6154,7 @@ module.exports = {test: async function (testingContext) {
     [
       0, // Cancel
       0, // Note that this value differs from above
-      addressTwo, // This one too
+      tester.addressTwo, // This one too
       currentNonce,
       0
     ],
@@ -6165,10 +6166,10 @@ module.exports = {test: async function (testingContext) {
 
   cancelUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet secondary can cancel using a signature',
     UserSmartWalletV6,
     'cancel',
@@ -6179,10 +6180,10 @@ module.exports = {test: async function (testingContext) {
     ],
     true,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet nonce is incremented after cancelling',
     UserSmartWalletV6,
     'getNonce',
@@ -6194,14 +6195,14 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet secondary cannot call to withdraw dai without primary',
     UserSmartWalletV6,
     'withdrawDai',
     'send',
     [
       '1000000000000000000',
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
@@ -6209,14 +6210,14 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet secondary cannot call to withdraw usdc without primary',
     UserSmartWalletV6,
     'withdrawUSDC',
     'send',
     [
       1,
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
@@ -6224,13 +6225,13 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet secondary can no longer call to set userSigningKey without primary',
     UserSmartWalletV6,
     'setUserSigningKey',
     'send',
     [
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
@@ -6238,7 +6239,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6246,7 +6247,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       '1', // dust
-      address,
+      tester.address,
       0
     ],
     true,
@@ -6257,22 +6258,22 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot withdraw "dust" USDC',
     UserSmartWalletV6,
     'withdrawUSDC',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -6282,10 +6283,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6304,15 +6305,15 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot withdraw USDC to null address',
     UserSmartWalletV6,
     'withdrawUSDC',
@@ -6329,10 +6330,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6340,7 +6341,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       '100000',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -6351,22 +6352,22 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay can call with two signatures to withdraw USDC',
     UserSmartWalletV6,
     'withdrawUSDC',
     'send',
     [
       '100000',
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -6376,10 +6377,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6387,7 +6388,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -6398,22 +6399,22 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot call with bad signature to withdraw USDC',
     UserSmartWalletV6,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       '0xffffffff' + usdcWithdrawalSignature.slice(10)
@@ -6423,17 +6424,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet cannot call with bad user signature to withdraw USDC',
     UserSmartWalletV6,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       '0xffffffff' + usdcUserWithdrawalSignature.slice(10),
       usdcWithdrawalSignature
@@ -6443,17 +6444,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay can call with two signatures to withdraw max USDC',
     UserSmartWalletV6,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -6463,7 +6464,7 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
   /* TODO: get this working manually
@@ -6485,7 +6486,7 @@ module.exports = {test: async function (testingContext) {
   )
   */
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6493,7 +6494,7 @@ module.exports = {test: async function (testingContext) {
     [
       10, // DaiWithdrawal
       '1',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -6504,32 +6505,32 @@ module.exports = {test: async function (testingContext) {
 
   let daiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   let daiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot withdraw "dust" dai',
     UserSmartWalletV6,
     'withdrawDai',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       daiUserWithdrawalSignature,
       daiWithdrawalSignature
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6548,15 +6549,15 @@ module.exports = {test: async function (testingContext) {
 
   daiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   daiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot withdraw dai to null address',
     UserSmartWalletV6,
     'withdrawDai',
@@ -6570,10 +6571,10 @@ module.exports = {test: async function (testingContext) {
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6581,7 +6582,7 @@ module.exports = {test: async function (testingContext) {
     [
       10, // DaiWithdrawal
       '1000000000000000',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -6592,22 +6593,22 @@ module.exports = {test: async function (testingContext) {
 
   daiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   daiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay can call with signature to withdraw dai',
     UserSmartWalletV6,
     'withdrawDai',
     'send',
     [
       '1000000000000000',
-      address,
+      tester.address,
       0,
       daiUserWithdrawalSignature,
       daiWithdrawalSignature
@@ -6617,10 +6618,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt.events)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet cannot get a non-custom "custom" next action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6628,13 +6629,13 @@ module.exports = {test: async function (testingContext) {
     [
       2, // Generic,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet cannot get a non-custom "custom" action ID',
     UserSmartWalletV6,
     'getCustomActionID',
@@ -6642,14 +6643,14 @@ module.exports = {test: async function (testingContext) {
     [
       2, // Generic,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       0
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6657,7 +6658,7 @@ module.exports = {test: async function (testingContext) {
     [
       10, // DaiWithdrawal
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -6668,22 +6669,22 @@ module.exports = {test: async function (testingContext) {
 
   daiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   daiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot call with bad signature to withdraw dai',
     UserSmartWalletV6,
     'withdrawDai',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       daiUserWithdrawalSignature,
       '0xffffffff' + daiWithdrawalSignature.slice(10)
@@ -6693,17 +6694,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot call with bad user signature to withdraw dai',
     UserSmartWalletV6,
     'withdrawDai',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       '0xffffffff' + daiUserWithdrawalSignature.slice(10),
       daiWithdrawalSignature
@@ -6713,17 +6714,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay can call with signature to withdraw sai',
     UserSmartWalletV6,
     'withdrawDai',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       daiUserWithdrawalSignature,
       daiWithdrawalSignature
@@ -6732,10 +6733,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6743,7 +6744,7 @@ module.exports = {test: async function (testingContext) {
     [
       6, // ETHWithdrawal,
       '0', // no amount
-      address,
+      tester.address,
       0
     ],
     true,
@@ -6754,22 +6755,22 @@ module.exports = {test: async function (testingContext) {
 
   ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot to withdraw ether with no amount',
     UserSmartWalletV6,
     'withdrawEther',
     'send',
     [
       '0',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       ethWithdrawalSignature
@@ -6778,10 +6779,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6800,15 +6801,15 @@ module.exports = {test: async function (testingContext) {
 
   ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot to withdraw ether with no recipient',
     UserSmartWalletV6,
     'withdrawEther',
@@ -6824,10 +6825,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6835,7 +6836,7 @@ module.exports = {test: async function (testingContext) {
     [
       6, // ETHWithdrawal,
       '1',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -6846,22 +6847,22 @@ module.exports = {test: async function (testingContext) {
 
   ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot call with bad signature to withdraw eth',
     UserSmartWalletV6,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       '0xffffffff' + ethWithdrawalSignature.slice(10)
@@ -6871,17 +6872,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
     UserSmartWalletV6,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       '0xffffffff' + ethUserWithdrawalSignature.slice(10),
       ethWithdrawalSignature
@@ -6891,17 +6892,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay can call with signature to withdraw ether',
     UserSmartWalletV6,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       ethWithdrawalSignature
@@ -6910,10 +6911,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -6921,7 +6922,7 @@ module.exports = {test: async function (testingContext) {
     [
       6, // ETHWithdrawal,
       '1',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -6932,22 +6933,22 @@ module.exports = {test: async function (testingContext) {
 
   ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot call with bad signature to withdraw eth',
     UserSmartWalletV6,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       '0xffffffff' + ethWithdrawalSignature.slice(10)
@@ -6957,17 +6958,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
     UserSmartWalletV6,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       '0xffffffff' + ethUserWithdrawalSignature.slice(10),
       ethWithdrawalSignature
@@ -6977,17 +6978,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay can call with signature to withdraw ether',
     UserSmartWalletV6,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       ethWithdrawalSignature
@@ -6996,10 +6997,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet cancel reverts with bad signature',
     UserSmartWalletV6,
     'cancel',
@@ -7010,10 +7011,10 @@ module.exports = {test: async function (testingContext) {
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet calls revert if insufficient action gas is supplied',
     UserSmartWalletV6,
     'cancel',
@@ -7025,7 +7026,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet calls succeed if sufficient non-zero action gas supplied',
     UserSmartWalletV6,
     'cancel',
@@ -7036,7 +7037,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a cancel custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -7044,7 +7045,7 @@ module.exports = {test: async function (testingContext) {
     [
       0, // Cancel,
       '0',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -7053,9 +7054,9 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  cancelSignature = signHashedPrefixedHexString(customActionId, addressTwo)
+  cancelSignature = signHashedPrefixedHexString(customActionId, tester.addressTwo)
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can cancel using a signature',
     UserSmartWalletV6,
     'cancel',
@@ -7066,38 +7067,38 @@ module.exports = {test: async function (testingContext) {
     ],
     true,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet calls to atomic methods revert',
     UserSmartWalletV6,
     '_withdrawDaiAtomic',
     'send',
     [
       '1',
-     address
+     tester.address
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet calls to recover from random address revert',
     UserSmartWalletV6,
     'recover',
     'send',
     [
-     address
+     tester.address
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can deploy a V6 smart wallet using a Dharma Key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
     'send',
-    [addressTwo],
+    [tester.addressTwo],
     true,
     receipt => {
       //console.log(receipt.status, receipt.gasUsed)
@@ -7116,7 +7117,7 @@ module.exports = {test: async function (testingContext) {
         })
 
         assert.strictEqual(events[0].eventName, 'NewUserSigningKey')
-        assert.strictEqual(events[0].returnValues.userSigningKey, addressTwo)
+        assert.strictEqual(events[0].returnValues.userSigningKey, tester.addressTwo)
         //console.log(events)
 
         // TODO: test more events
@@ -7124,7 +7125,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a generic action ID',
     UserSmartWalletV6,
     'getNextGenericActionID',
@@ -7142,21 +7143,21 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet cannot call executeAction and target a non-contract',
     UserSmartWalletV6,
     'executeAction',
     'send',
     [
-      address,
+      tester.address,
       USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
@@ -7165,7 +7166,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet cannot call executeAction and target itself',
     UserSmartWalletV6,
     'executeAction',
@@ -7180,7 +7181,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can call executeAction',
     UserSmartWalletV6,
     'executeAction',
@@ -7194,7 +7195,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get the next generic batch action ID',
     UserSmartWalletV6,
     'getNextGenericAtomicBatchActionID',
@@ -7209,7 +7210,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get the nonce',
     UserSmartWalletV6,
     'getNonce',
@@ -7221,7 +7222,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet generic batch action ID with nonce matches next ID',
     UserSmartWalletV6,
     'getGenericAtomicBatchActionID',
@@ -7239,15 +7240,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can call executeActionWithAtomicBatchCalls',
     UserSmartWalletV6,
     'executeActionWithAtomicBatchCalls',
@@ -7260,7 +7261,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'USDC Whale can deposit usdc into the deployed smart wallet',
     USDC,
     'transfer',
@@ -7286,7 +7287,7 @@ module.exports = {test: async function (testingContext) {
     constants.USDC_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'new user smart wallet can trigger repayAndDeposit to deposit all new funds',
     UserSmartWalletV6,
     'repayAndDeposit',
@@ -7329,7 +7330,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Check blacklister address',
     FIAT_TOKEN,
     'blacklister',
@@ -7341,7 +7342,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Check pauser address',
     FIAT_TOKEN,
     'pauser',
@@ -7353,7 +7354,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'blacklist mock address',
     FIAT_TOKEN,
     'blacklist',
@@ -7364,7 +7365,7 @@ module.exports = {test: async function (testingContext) {
     blacklister
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can get a new smart wallet address ahead of time',
     DharmaSmartWalletFactoryV1,
     'getNextSmartWallet',
@@ -7381,7 +7382,7 @@ module.exports = {test: async function (testingContext) {
     targetBlacklistAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'USDC Whale can deposit usdc into the yet-to-be-blacklisted smart wallet',
     USDC,
     'transfer',
@@ -7407,7 +7408,7 @@ module.exports = {test: async function (testingContext) {
     constants.USDC_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'blacklist counterfactual deployment address',
     FIAT_TOKEN,
     'blacklist',
@@ -7418,7 +7419,7 @@ module.exports = {test: async function (testingContext) {
     blacklister
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can deploy to a blacklisted address',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
@@ -7431,7 +7432,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'blacklisted smart wallet will not approve USDC during repayAndDeposit',
     BlacklistedUserSmartWalletV6,
     'repayAndDeposit',
@@ -7444,7 +7445,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'un-blacklist counterfactual deployment address',
     FIAT_TOKEN,
     'unBlacklist',
@@ -7455,7 +7456,7 @@ module.exports = {test: async function (testingContext) {
     blacklister
   )
 
-  await runTest(
+  await tester.runTest(
     'pause USDC',
     FIAT_TOKEN,
     'pause',
@@ -7466,7 +7467,7 @@ module.exports = {test: async function (testingContext) {
     pauser
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -7474,7 +7475,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -7485,22 +7486,22 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet attempt to withdraw max USDC when paused causes ExternalError',
     UserSmartWalletV6,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -7510,10 +7511,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'smart wallet will not approve USDC when paused during repayAndDeposit',
     BlacklistedUserSmartWalletV6,
     'repayAndDeposit',
@@ -7526,7 +7527,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'unpause USDC',
     FIAT_TOKEN,
     'unpause',
@@ -7537,7 +7538,7 @@ module.exports = {test: async function (testingContext) {
     pauser
   )
 
-  await runTest(
+  await tester.runTest(
     'unblacklisted, unpaused smart wallet approves USDC during repayAndDeposit',
     BlacklistedUserSmartWalletV6,
     'repayAndDeposit',
@@ -7550,7 +7551,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -7569,15 +7570,15 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay call to withdraw USDC to blacklisted address',
     UserSmartWallet,
     'withdrawUSDC',
@@ -7595,10 +7596,10 @@ module.exports = {test: async function (testingContext) {
       //console.log(receipt.events[0])
       //console.log(receipt.events.ExternalError)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -7617,15 +7618,15 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay call to withdraw USDC to itself',
     UserSmartWallet,
     'withdrawUSDC',
@@ -7641,10 +7642,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -7663,15 +7664,15 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay call to withdraw USDC to blacklisted address',
     UserSmartWallet,
     'withdrawUSDC',
@@ -7689,10 +7690,10 @@ module.exports = {test: async function (testingContext) {
       //console.log(receipt.events[0])
       //console.log(receipt.events.ExternalError)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -7711,15 +7712,15 @@ module.exports = {test: async function (testingContext) {
 
   ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot withdraw eth to a non-payable account',
     UserSmartWalletV6,
     'withdrawEther',
@@ -7736,10 +7737,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can get a new smart wallet address ahead of time',
     DharmaSmartWalletFactoryV1,
     'getNextSmartWallet',
@@ -7752,7 +7753,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can deploy a V6 smart wallet using a contract key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
@@ -7765,7 +7766,7 @@ module.exports = {test: async function (testingContext) {
     targetWalletAddressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet cancel reverts with bad contract signature',
     UserSmartWalletV6Two,
     'cancel',
@@ -7776,17 +7777,17 @@ module.exports = {test: async function (testingContext) {
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a generic action ID',
     UserSmartWalletV6,
     'getNextGenericActionID',
     'call',
     [
       SAI.options.address,
-      SAI.methods.transfer(address, constants.FULL_APPROVAL).encodeABI(),
+      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -7797,29 +7798,29 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can call executeAction',
     UserSmartWalletV6,
     'executeAction',
     'send',
     [
       SAI.options.address,
-      SAI.methods.transfer(address, constants.FULL_APPROVAL).encodeABI(),
+      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -7838,15 +7839,15 @@ module.exports = {test: async function (testingContext) {
 
   daiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   daiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot withdraw to the null address',
     UserSmartWallet,
     'withdrawDai',
@@ -7863,10 +7864,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt.events)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -7874,7 +7875,7 @@ module.exports = {test: async function (testingContext) {
     [
       10, // DaiWithdrawal
       '100000000000000000000000000000000000000', // too much
-      address,
+      tester.address,
       0
     ],
     true,
@@ -7885,22 +7886,22 @@ module.exports = {test: async function (testingContext) {
 
   daiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   daiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay cannot withdraw too much dai',
     UserSmartWallet,
     'withdrawDai',
     'send',
     [
       '100000000000000000000000000000000000000', // too much
-      address,
+      tester.address,
       0,
       daiUserWithdrawalSignature,
       daiWithdrawalSignature
@@ -7910,10 +7911,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt.events)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -7921,7 +7922,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       '100000000000000000000000000000000000000', // too much
-      address,
+      tester.address,
       0
     ],
     true,
@@ -7932,22 +7933,22 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet relay can call with two signatures to withdraw USDC',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
     [
       '100000000000000000000000000000000000000', // too much
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -7957,10 +7958,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get next generic batch action ID',
     UserSmartWalletV6,
     'getNextGenericAtomicBatchActionID',
@@ -7969,7 +7970,7 @@ module.exports = {test: async function (testingContext) {
       [{
         to: DAI.options.address,
         data: DAI.methods.transfer(
-          address, '100000000000000000000000000000'
+          tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
       0
@@ -7982,15 +7983,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet bad executeActionWithAtomicBatchCalls emits CallFailure',
     UserSmartWalletV6,
     'executeActionWithAtomicBatchCalls',
@@ -7999,7 +8000,7 @@ module.exports = {test: async function (testingContext) {
       [{
         to: DAI.options.address,
         data: DAI.methods.transfer(
-          address, '100000000000000000000000000000'
+          tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
       0,
@@ -8012,7 +8013,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a generic action ID',
     UserSmartWalletV6,
     'getNextGenericActionID',
@@ -8032,15 +8033,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can call executeAction to enter dai market',
     UserSmartWalletV6,
     'executeAction',
@@ -8056,7 +8057,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'Dai Whale can deposit dai into the smart wallet',
     DAI,
     'transfer',
@@ -8082,13 +8083,13 @@ module.exports = {test: async function (testingContext) {
     constants.DAI_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can trigger repayAndDeposit to deposit all new funds',
     UserSmartWalletV6,
     'repayAndDeposit'
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get a generic action ID',
     UserSmartWalletV6,
     'getNextGenericActionID',
@@ -8106,15 +8107,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can call executeAction to perform a borrow',
     UserSmartWalletV6,
     'executeAction',
@@ -8130,10 +8131,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       //console.log(receipt.events)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V6 UserSmartWallet can get an escape hatch action ID',
     UserSmartWalletV6,
     'getNextCustomActionID',
@@ -8152,17 +8153,17 @@ module.exports = {test: async function (testingContext) {
 
   let escapeHatchSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   let escapeHatchUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
   // YYYYY
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWalletV6 can get the nonce prior to upgrade',
     UserSmartWalletV6,
     'getNonce',
@@ -8174,7 +8175,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWalletV6 can check the user signing key prior to upgrade',
     UserSmartWalletV6,
     'getUserSigningKey',
@@ -8182,11 +8183,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, addressTwo)
+      assert.strictEqual(value, tester.addressTwo)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Upgrade Beacon Controller can upgrade to V7 implementation',
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -8226,7 +8227,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaUpgradeBeacon has the implementation set',
     DharmaUpgradeBeaconController,
     'getImplementation',
@@ -8238,7 +8239,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  const UpgradeBeaconImplementationCheckV7 = await runTest(
+  const UpgradeBeaconImplementationCheckV7 = await tester.runTest(
     `UpgradeBeaconImplementationCheck deployment`,
     UpgradeBeaconImplementationCheckDeployer,
     '',
@@ -8249,7 +8250,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 user smart wallet can be called and still has the same dharma key set',
     UserSmartWalletV7,
     'getUserSigningKey',
@@ -8257,11 +8258,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, addressTwo)
+      assert.strictEqual(value, tester.addressTwo)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get the new version (7)',
     UserSmartWalletV7,
     'getVersion',
@@ -8273,7 +8274,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet nonce is still set to value from before upgrade',
     UserSmartWalletV7,
     'getNonce',
@@ -8285,7 +8286,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get balances',
     UserSmartWalletV7,
     'getBalances',
@@ -8297,7 +8298,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet secondary can call to cancel',
     UserSmartWalletV7,
     'cancel',
@@ -8308,7 +8309,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet nonce is now set to original + 1',
     UserSmartWalletV7,
     'getNonce',
@@ -8320,7 +8321,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get next custom action ID to set a user signing key',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -8328,7 +8329,7 @@ module.exports = {test: async function (testingContext) {
     [
       1, // SetUserSigningKey,
       constants.FULL_APPROVAL, // This value shouldn't matter
-      addressTwo,
+      tester.addressTwo,
       0
     ],
     true,
@@ -8339,26 +8340,26 @@ module.exports = {test: async function (testingContext) {
 
   setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can set a new user signing key with signatures',
     UserSmartWalletV7,
     'setUserSigningKey',
     'send',
     [
-      addressTwo,
+      tester.addressTwo,
       0,
       '0x',
       setUserSigningKeyDharmaSignature
     ],
     true,
     receipt => {},
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet has the new user signing key set',
     UserSmartWalletV7,
     'getUserSigningKey',
@@ -8366,11 +8367,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, addressTwo)
+      assert.strictEqual(value, tester.addressTwo)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'cSai can be sent to V7 UserSmartWallet',
     CSAI,
     'transfer',
@@ -8378,7 +8379,7 @@ module.exports = {test: async function (testingContext) {
     [UserSmartWalletV7.options.address, web3.utils.toWei('0.5', 'mwei')]
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can trigger cSai to dDai migration before dDai approval',
     UserSmartWalletV7,
     'migrateCSaiToDDai',
@@ -8388,10 +8389,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get next custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -8399,7 +8400,7 @@ module.exports = {test: async function (testingContext) {
     [
       0, // DAIWithdrawal
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -8408,7 +8409,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get custom action ID and it matches next action ID',
     UserSmartWalletV7,
     'getCustomActionID',
@@ -8416,7 +8417,7 @@ module.exports = {test: async function (testingContext) {
     [
       0, // DAIWithdrawal
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       parseInt(originalNonce) + 2,
       0
     ],
@@ -8426,13 +8427,13 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get next generic action ID',
     UserSmartWalletV7,
     'getNextGenericActionID',
     'call',
     [
-      address,
+      tester.address,
       '0x',
       0
     ],
@@ -8442,13 +8443,13 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get generic action ID and it matches next action ID',
     UserSmartWalletV7,
     'getGenericActionID',
     'call',
     [
-      address,
+      tester.address,
       '0x',
       parseInt(originalNonce) + 2,
       0
@@ -8459,28 +8460,28 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet calls to atomic methods revert',
     UserSmartWalletV7,
     '_withdrawDaiAtomic',
     'send',
     [
       '1',
-     address
+     tester.address
     ],
     false
   )
 
   // Give the Dai Whale some ETH so it can make transactions
   await web3.eth.sendTransaction({
-    from: address,
+    from: tester.address,
     to: constants.DAI_WHALE_ADDRESS,
     value: web3.utils.toWei('1', 'ether'),
     gas: (testingContext !== 'coverage') ? '0xffff' : gasLimit - 1,
     gasPrice: 1
   })
 
-  await runTest(
+  await tester.runTest(
     'Dai Whale can deposit Dai into the V7 smart wallet',
     DAI,
     'transfer',
@@ -8506,7 +8507,7 @@ module.exports = {test: async function (testingContext) {
     constants.DAI_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'USDC Whale can deposit usdc into the V7 smart wallet',
     USDC,
     'transfer',
@@ -8532,7 +8533,7 @@ module.exports = {test: async function (testingContext) {
     constants.USDC_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a generic action ID',
     UserSmartWalletV7,
     'getNextGenericActionID',
@@ -8550,15 +8551,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can call executeAction',
     UserSmartWalletV7,
     'executeAction',
@@ -8572,7 +8573,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 user smart wallet can trigger repayAndDeposit to deposit all new funds',
     UserSmartWalletV7,
     'repayAndDeposit',
@@ -8584,7 +8585,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dai Whale can deposit dai into the V7 smart wallet',
     DAI,
     'transfer',
@@ -8610,7 +8611,7 @@ module.exports = {test: async function (testingContext) {
     constants.DAI_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a generic action ID',
     UserSmartWalletV7,
     'getNextGenericActionID',
@@ -8628,15 +8629,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet cannot call executeAction and target Escape Hatch Registry',
     UserSmartWalletV7,
     'executeAction',
@@ -8651,7 +8652,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a generic action ID',
     UserSmartWalletV7,
     'getNextGenericActionID',
@@ -8669,15 +8670,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can call executeAction',
     UserSmartWalletV7,
     'executeAction',
@@ -8691,7 +8692,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 user smart wallet repayAndDeposit can still deposit without approval',
     UserSmartWalletV7,
     'repayAndDeposit',
@@ -8703,7 +8704,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a generic action ID',
     UserSmartWalletV7,
     'getNextGenericActionID',
@@ -8721,15 +8722,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can call executeAction',
     UserSmartWalletV7,
     'executeAction',
@@ -8743,7 +8744,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 user smart wallet repayAndDeposit can deposit with approval added back',
     UserSmartWalletV7,
     'repayAndDeposit',
@@ -8755,7 +8756,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 user smart wallet can trigger repayAndDeposit even with no funds',
     UserSmartWalletV7,
     'repayAndDeposit',
@@ -8767,7 +8768,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get custom action ID and it matches next action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -8786,15 +8787,15 @@ module.exports = {test: async function (testingContext) {
 
   setUserSigningKeyUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
   setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet cannot set the null address as a new user signing key',
     UserSmartWalletV7,
     'setUserSigningKey',
@@ -8807,10 +8808,10 @@ module.exports = {test: async function (testingContext) {
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get next custom action ID to set a user signing key',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -8818,7 +8819,7 @@ module.exports = {test: async function (testingContext) {
     [
       1, // SetUserSigningKey,
       constants.FULL_APPROVAL, // This value shouldn't matter
-      addressTwo,
+      tester.addressTwo,
       0
     ],
     true,
@@ -8827,7 +8828,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get the nonce',
     UserSmartWalletV7,
     'getNonce',
@@ -8839,7 +8840,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get custom action ID and it matches next action ID',
     UserSmartWalletV7,
     'getCustomActionID',
@@ -8847,7 +8848,7 @@ module.exports = {test: async function (testingContext) {
     [
       1, // SetUserSigningKey,
       0, // Note that this value differs from above
-      addressTwo,
+      tester.addressTwo,
       currentNonce,
       0
     ],
@@ -8859,31 +8860,31 @@ module.exports = {test: async function (testingContext) {
 
   setUserSigningKeyUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
   setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can set a new user signing key with signatures',
     UserSmartWalletV7,
     'setUserSigningKey',
     'send',
     [
-      addressTwo,
+      tester.addressTwo,
       0,
       setUserSigningKeyUserSignature,
       setUserSigningKeyDharmaSignature
     ],
     true,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get next custom action ID to cancel',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -8891,7 +8892,7 @@ module.exports = {test: async function (testingContext) {
     [
       0, // Cancel
       constants.FULL_APPROVAL, // This value shouldn't matter
-      originalAddress,  // This value shouldn't matter either
+      tester.originalAddress,  // This value shouldn't matter either
       0
     ],
     true,
@@ -8900,7 +8901,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get the nonce',
     UserSmartWalletV7,
     'getNonce',
@@ -8912,7 +8913,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get custom action ID and it matches next action ID',
     UserSmartWalletV7,
     'getCustomActionID',
@@ -8920,7 +8921,7 @@ module.exports = {test: async function (testingContext) {
     [
       0, // Cancel
       0, // Note that this value differs from above
-      addressTwo, // This one too
+      tester.addressTwo, // This one too
       currentNonce,
       0
     ],
@@ -8932,10 +8933,10 @@ module.exports = {test: async function (testingContext) {
 
   cancelUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet secondary can cancel using a signature',
     UserSmartWalletV7,
     'cancel',
@@ -8946,10 +8947,10 @@ module.exports = {test: async function (testingContext) {
     ],
     true,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet nonce is incremented after cancelling',
     UserSmartWalletV7,
     'getNonce',
@@ -8961,14 +8962,14 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet secondary cannot call to withdraw dai without primary',
     UserSmartWalletV7,
     'withdrawDai',
     'send',
     [
       '1000000000000000000',
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
@@ -8976,14 +8977,14 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet secondary cannot call to withdraw usdc without primary',
     UserSmartWalletV7,
     'withdrawUSDC',
     'send',
     [
       1,
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
@@ -8991,13 +8992,13 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet secondary can no longer call to set userSigningKey without primary',
     UserSmartWalletV7,
     'setUserSigningKey',
     'send',
     [
-      address,
+      tester.address,
       0,
       '0x',
       '0x'
@@ -9005,7 +9006,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -9013,7 +9014,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       '1', // dust
-      address,
+      tester.address,
       0
     ],
     true,
@@ -9024,22 +9025,22 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot withdraw "dust" USDC',
     UserSmartWalletV7,
     'withdrawUSDC',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -9049,10 +9050,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -9071,15 +9072,15 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot withdraw USDC to null address',
     UserSmartWalletV7,
     'withdrawUSDC',
@@ -9096,10 +9097,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -9107,7 +9108,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       '100000',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -9118,22 +9119,22 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can call with two signatures to withdraw USDC',
     UserSmartWalletV7,
     'withdrawUSDC',
     'send',
     [
       '100000',
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -9143,10 +9144,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -9154,7 +9155,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -9165,22 +9166,22 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot call with bad signature to withdraw USDC',
     UserSmartWalletV7,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       '0xffffffff' + usdcWithdrawalSignature.slice(10)
@@ -9190,17 +9191,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet cannot call with bad user signature to withdraw USDC',
     UserSmartWalletV7,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       '0xffffffff' + usdcUserWithdrawalSignature.slice(10),
       usdcWithdrawalSignature
@@ -9210,17 +9211,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can call with two signatures to withdraw max USDC',
     UserSmartWalletV7,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -9230,7 +9231,7 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
   /* TODO: get this working manually
@@ -9252,7 +9253,7 @@ module.exports = {test: async function (testingContext) {
   )
   */
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -9260,7 +9261,7 @@ module.exports = {test: async function (testingContext) {
     [
       10, // DaiWithdrawal
       '1',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -9271,32 +9272,32 @@ module.exports = {test: async function (testingContext) {
 
   daiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   daiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot withdraw "dust" dai',
     UserSmartWalletV7,
     'withdrawDai',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       daiUserWithdrawalSignature,
       daiWithdrawalSignature
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -9315,15 +9316,15 @@ module.exports = {test: async function (testingContext) {
 
   daiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   daiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot withdraw dai to null address',
     UserSmartWalletV7,
     'withdrawDai',
@@ -9337,10 +9338,10 @@ module.exports = {test: async function (testingContext) {
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -9348,7 +9349,7 @@ module.exports = {test: async function (testingContext) {
     [
       10, // DaiWithdrawal
       '1000000000000000',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -9359,22 +9360,22 @@ module.exports = {test: async function (testingContext) {
 
   daiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   daiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can call with signature to withdraw dai',
     UserSmartWalletV7,
     'withdrawDai',
     'send',
     [
       '1000000000000000',
-      address,
+      tester.address,
       0,
       daiUserWithdrawalSignature,
       daiWithdrawalSignature
@@ -9384,10 +9385,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt.events)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet cannot get a non-custom "custom" next action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -9395,13 +9396,13 @@ module.exports = {test: async function (testingContext) {
     [
       2, // Generic,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet cannot get a non-custom "custom" action ID',
     UserSmartWalletV7,
     'getCustomActionID',
@@ -9409,14 +9410,14 @@ module.exports = {test: async function (testingContext) {
     [
       2, // Generic,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       0
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -9424,7 +9425,7 @@ module.exports = {test: async function (testingContext) {
     [
       10, // DaiWithdrawal
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -9435,22 +9436,22 @@ module.exports = {test: async function (testingContext) {
 
   daiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   daiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot call with bad signature to withdraw dai',
     UserSmartWalletV7,
     'withdrawDai',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       daiUserWithdrawalSignature,
       '0xffffffff' + daiWithdrawalSignature.slice(10)
@@ -9460,17 +9461,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot call with bad user signature to withdraw dai',
     UserSmartWalletV7,
     'withdrawDai',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       '0xffffffff' + daiUserWithdrawalSignature.slice(10),
       daiWithdrawalSignature
@@ -9480,17 +9481,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can call with signature to withdraw sai',
     UserSmartWalletV7,
     'withdrawDai',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       daiUserWithdrawalSignature,
       daiWithdrawalSignature
@@ -9499,10 +9500,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -9510,7 +9511,7 @@ module.exports = {test: async function (testingContext) {
     [
       6, // ETHWithdrawal,
       '0', // no amount
-      address,
+      tester.address,
       0
     ],
     true,
@@ -9521,22 +9522,22 @@ module.exports = {test: async function (testingContext) {
 
   ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot to withdraw ether with no amount',
     UserSmartWalletV7,
     'withdrawEther',
     'send',
     [
       '0',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       ethWithdrawalSignature
@@ -9545,10 +9546,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -9567,15 +9568,15 @@ module.exports = {test: async function (testingContext) {
 
   ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot to withdraw ether with no recipient',
     UserSmartWalletV7,
     'withdrawEther',
@@ -9591,10 +9592,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -9602,7 +9603,7 @@ module.exports = {test: async function (testingContext) {
     [
       6, // ETHWithdrawal,
       '1',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -9613,22 +9614,22 @@ module.exports = {test: async function (testingContext) {
 
   ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot call with bad signature to withdraw eth',
     UserSmartWalletV7,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       '0xffffffff' + ethWithdrawalSignature.slice(10)
@@ -9638,17 +9639,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
     UserSmartWalletV7,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       '0xffffffff' + ethUserWithdrawalSignature.slice(10),
       ethWithdrawalSignature
@@ -9658,17 +9659,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can call with signature to withdraw ether',
     UserSmartWalletV7,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       ethWithdrawalSignature
@@ -9677,10 +9678,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -9688,7 +9689,7 @@ module.exports = {test: async function (testingContext) {
     [
       6, // ETHWithdrawal,
       '1',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -9699,22 +9700,22 @@ module.exports = {test: async function (testingContext) {
 
   ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot call with bad signature to withdraw eth',
     UserSmartWalletV7,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       '0xffffffff' + ethWithdrawalSignature.slice(10)
@@ -9724,17 +9725,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
     UserSmartWalletV7,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       '0xffffffff' + ethUserWithdrawalSignature.slice(10),
       ethWithdrawalSignature
@@ -9744,17 +9745,17 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can call with signature to withdraw ether',
     UserSmartWalletV7,
     'withdrawEther',
     'send',
     [
       '1',
-      address,
+      tester.address,
       0,
       ethUserWithdrawalSignature,
       ethWithdrawalSignature
@@ -9763,10 +9764,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet cancel reverts with bad signature',
     UserSmartWalletV7,
     'cancel',
@@ -9777,10 +9778,10 @@ module.exports = {test: async function (testingContext) {
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet calls revert if insufficient action gas is supplied',
     UserSmartWalletV7,
     'cancel',
@@ -9792,7 +9793,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet calls succeed if sufficient non-zero action gas supplied',
     UserSmartWalletV7,
     'cancel',
@@ -9803,7 +9804,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a cancel custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -9811,7 +9812,7 @@ module.exports = {test: async function (testingContext) {
     [
       0, // Cancel,
       '0',
-      address,
+      tester.address,
       0
     ],
     true,
@@ -9820,9 +9821,9 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  cancelSignature = signHashedPrefixedHexString(customActionId, addressTwo)
+  cancelSignature = signHashedPrefixedHexString(customActionId, tester.addressTwo)
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can cancel using a signature',
     UserSmartWalletV7,
     'cancel',
@@ -9833,38 +9834,38 @@ module.exports = {test: async function (testingContext) {
     ],
     true,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet calls to atomic methods revert',
     UserSmartWalletV7,
     '_withdrawDaiAtomic',
     'send',
     [
       '1',
-     address
+     tester.address
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet calls to recover from random address revert',
     UserSmartWalletV7,
     'recover',
     'send',
     [
-     address
+     tester.address
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can deploy a V7 smart wallet using a Dharma Key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
     'send',
-    [addressTwo],
+    [tester.addressTwo],
     true,
     receipt => {
       //console.log(receipt.status, receipt.gasUsed)
@@ -9883,7 +9884,7 @@ module.exports = {test: async function (testingContext) {
         })
 
         assert.strictEqual(events[0].eventName, 'NewUserSigningKey')
-        assert.strictEqual(events[0].returnValues.userSigningKey, addressTwo)
+        assert.strictEqual(events[0].returnValues.userSigningKey, tester.addressTwo)
         //console.log(events)
 
         // TODO: test more events
@@ -9891,7 +9892,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a generic action ID',
     UserSmartWalletV7,
     'getNextGenericActionID',
@@ -9909,21 +9910,21 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet cannot call executeAction and target a non-contract',
     UserSmartWalletV7,
     'executeAction',
     'send',
     [
-      address,
+      tester.address,
       USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
@@ -9932,7 +9933,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet cannot call executeAction and target itself',
     UserSmartWalletV7,
     'executeAction',
@@ -9947,7 +9948,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can call executeAction',
     UserSmartWalletV7,
     'executeAction',
@@ -9961,7 +9962,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get the next generic batch action ID',
     UserSmartWalletV7,
     'getNextGenericAtomicBatchActionID',
@@ -9976,7 +9977,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'UserSmartWallet can get the nonce',
     UserSmartWalletV7,
     'getNonce',
@@ -9988,7 +9989,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet generic batch action ID with nonce matches next ID',
     UserSmartWalletV7,
     'getGenericAtomicBatchActionID',
@@ -10006,15 +10007,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can call executeActionWithAtomicBatchCalls',
     UserSmartWalletV7,
     'executeActionWithAtomicBatchCalls',
@@ -10027,7 +10028,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'USDC Whale can deposit usdc into the deployed smart wallet',
     USDC,
     'transfer',
@@ -10053,7 +10054,7 @@ module.exports = {test: async function (testingContext) {
     constants.USDC_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'new user smart wallet can trigger repayAndDeposit to deposit all new funds',
     UserSmartWalletV7,
     'repayAndDeposit',
@@ -10065,7 +10066,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Check blacklister address',
     FIAT_TOKEN,
     'blacklister',
@@ -10077,7 +10078,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Check pauser address',
     FIAT_TOKEN,
     'pauser',
@@ -10089,7 +10090,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'blacklist mock address',
     FIAT_TOKEN,
     'blacklist',
@@ -10100,7 +10101,7 @@ module.exports = {test: async function (testingContext) {
     blacklister
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can get a new smart wallet address ahead of time',
     DharmaSmartWalletFactoryV1,
     'getNextSmartWallet',
@@ -10117,7 +10118,7 @@ module.exports = {test: async function (testingContext) {
     targetBlacklistAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'USDC Whale can deposit usdc into the yet-to-be-blacklisted smart wallet',
     USDC,
     'transfer',
@@ -10143,7 +10144,7 @@ module.exports = {test: async function (testingContext) {
     constants.USDC_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'blacklist counterfactual deployment address',
     FIAT_TOKEN,
     'blacklist',
@@ -10154,7 +10155,7 @@ module.exports = {test: async function (testingContext) {
     blacklister
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can deploy to a blacklisted address',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
@@ -10167,7 +10168,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'blacklisted smart wallet will not approve USDC during repayAndDeposit',
     BlacklistedUserSmartWalletV7,
     'repayAndDeposit',
@@ -10180,7 +10181,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'un-blacklist counterfactual deployment address',
     FIAT_TOKEN,
     'unBlacklist',
@@ -10191,7 +10192,7 @@ module.exports = {test: async function (testingContext) {
     blacklister
   )
 
-  await runTest(
+  await tester.runTest(
     'pause USDC',
     FIAT_TOKEN,
     'pause',
@@ -10202,7 +10203,7 @@ module.exports = {test: async function (testingContext) {
     pauser
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -10210,7 +10211,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -10221,22 +10222,22 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet attempt to withdraw max USDC when paused causes ExternalError',
     UserSmartWalletV7,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -10246,10 +10247,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'smart wallet will not approve USDC when paused during repayAndDeposit',
     BlacklistedUserSmartWalletV7,
     'repayAndDeposit',
@@ -10262,7 +10263,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'unpause USDC',
     FIAT_TOKEN,
     'unpause',
@@ -10273,7 +10274,7 @@ module.exports = {test: async function (testingContext) {
     pauser
   )
 
-  await runTest(
+  await tester.runTest(
     'unblacklisted, unpaused smart wallet approves USDC during repayAndDeposit',
     BlacklistedUserSmartWalletV7,
     'repayAndDeposit',
@@ -10286,7 +10287,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -10305,15 +10306,15 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay call to withdraw USDC to blacklisted address',
     UserSmartWallet,
     'withdrawUSDC',
@@ -10331,10 +10332,10 @@ module.exports = {test: async function (testingContext) {
       //console.log(receipt.events[0])
       //console.log(receipt.events.ExternalError)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -10353,15 +10354,15 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay call to withdraw USDC to itself',
     UserSmartWallet,
     'withdrawUSDC',
@@ -10377,10 +10378,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -10399,15 +10400,15 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay call to withdraw USDC to blacklisted address',
     UserSmartWallet,
     'withdrawUSDC',
@@ -10425,10 +10426,10 @@ module.exports = {test: async function (testingContext) {
       //console.log(receipt.events[0])
       //console.log(receipt.events.ExternalError)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a Ether withdrawal custom action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -10447,15 +10448,15 @@ module.exports = {test: async function (testingContext) {
 
   ethWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   ethUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot withdraw eth to a non-payable account',
     UserSmartWalletV7,
     'withdrawEther',
@@ -10472,10 +10473,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can get a new smart wallet address ahead of time',
     DharmaSmartWalletFactoryV1,
     'getNextSmartWallet',
@@ -10488,7 +10489,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can deploy a V7 smart wallet using a contract key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
@@ -10501,7 +10502,7 @@ module.exports = {test: async function (testingContext) {
     targetWalletAddressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet cancel reverts with bad contract signature',
     UserSmartWalletV7Two,
     'cancel',
@@ -10512,17 +10513,17 @@ module.exports = {test: async function (testingContext) {
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a generic action ID',
     UserSmartWalletV7,
     'getNextGenericActionID',
     'call',
     [
       SAI.options.address,
-      SAI.methods.transfer(address, constants.FULL_APPROVAL).encodeABI(),
+      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -10533,29 +10534,29 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can call executeAction',
     UserSmartWalletV7,
     'executeAction',
     'send',
     [
       SAI.options.address,
-      SAI.methods.transfer(address, constants.FULL_APPROVAL).encodeABI(),
+      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -10574,15 +10575,15 @@ module.exports = {test: async function (testingContext) {
 
   daiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   daiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot withdraw to the null address',
     UserSmartWallet,
     'withdrawDai',
@@ -10599,10 +10600,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt.events)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a Dai withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -10610,7 +10611,7 @@ module.exports = {test: async function (testingContext) {
     [
       10, // DaiWithdrawal
       '100000000000000000000000000000000000000', // too much
-      address,
+      tester.address,
       0
     ],
     true,
@@ -10621,22 +10622,22 @@ module.exports = {test: async function (testingContext) {
 
   daiWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   daiUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot withdraw too much dai',
     UserSmartWallet,
     'withdrawDai',
     'send',
     [
       '100000000000000000000000000000000000000', // too much
-      address,
+      tester.address,
       0,
       daiUserWithdrawalSignature,
       daiWithdrawalSignature
@@ -10646,10 +10647,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt.events)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a USDC withdrawal custom action ID',
     UserSmartWallet,
     'getNextCustomActionID',
@@ -10657,7 +10658,7 @@ module.exports = {test: async function (testingContext) {
     [
       5, // USDCWithdrawal,
       '100000000000000000000000000000000000000', // too much
-      address,
+      tester.address,
       0
     ],
     true,
@@ -10668,22 +10669,22 @@ module.exports = {test: async function (testingContext) {
 
   usdcWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   usdcUserWithdrawalSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can call with two signatures to withdraw USDC',
     UserSmartWallet,
     'withdrawUSDC',
     'send',
     [
       '100000000000000000000000000000000000000', // too much
-      address,
+      tester.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -10693,10 +10694,10 @@ module.exports = {test: async function (testingContext) {
       // TODO: verify logs
       //console.log(receipt)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get next generic batch action ID',
     UserSmartWalletV7,
     'getNextGenericAtomicBatchActionID',
@@ -10705,7 +10706,7 @@ module.exports = {test: async function (testingContext) {
       [{
         to: DAI.options.address,
         data: DAI.methods.transfer(
-          address, '100000000000000000000000000000'
+          tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
       0
@@ -10718,15 +10719,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet bad executeActionWithAtomicBatchCalls emits CallFailure',
     UserSmartWalletV7,
     'executeActionWithAtomicBatchCalls',
@@ -10735,7 +10736,7 @@ module.exports = {test: async function (testingContext) {
       [{
         to: DAI.options.address,
         data: DAI.methods.transfer(
-          address, '100000000000000000000000000000'
+          tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
       0,
@@ -10748,7 +10749,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a generic action ID',
     UserSmartWalletV7,
     'getNextGenericActionID',
@@ -10768,15 +10769,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can call executeAction to enter dai market',
     UserSmartWalletV7,
     'executeAction',
@@ -10792,7 +10793,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'Dai Whale can deposit dai into the smart wallet',
     DAI,
     'transfer',
@@ -10818,13 +10819,13 @@ module.exports = {test: async function (testingContext) {
     constants.DAI_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can trigger repayAndDeposit to deposit all new funds',
     UserSmartWalletV7,
     'repayAndDeposit'
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get a generic action ID',
     UserSmartWalletV7,
     'getNextGenericActionID',
@@ -10842,15 +10843,15 @@ module.exports = {test: async function (testingContext) {
 
   executeActionSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   executeActionUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can call executeAction to perform a borrow',
     UserSmartWalletV7,
     'executeAction',
@@ -10866,13 +10867,13 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       //console.log(receipt.events)
     },
-    originalAddress
+    tester.originalAddress
   )
 
 
 
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get an escape hatch action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -10891,15 +10892,15 @@ module.exports = {test: async function (testingContext) {
 
   escapeHatchSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   escapeHatchUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot set an escape hatch with no account',
     UserSmartWalletV7,
     'setEscapeHatch',
@@ -10914,10 +10915,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get an escape hatch action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -10925,7 +10926,7 @@ module.exports = {test: async function (testingContext) {
     [
       7, // SetEscapeHatch,
       0,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -10936,15 +10937,15 @@ module.exports = {test: async function (testingContext) {
 
   escapeHatchSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   escapeHatchUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet cannot call escape before escape hatch is set',
     UserSmartWalletV7,
     'escape',
@@ -10956,13 +10957,13 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can set an escape hatch',
     UserSmartWalletV7,
     'setEscapeHatch',
     'send',
     [
-      address,
+      tester.address,
       0,
       escapeHatchUserSignature,
       escapeHatchSignature
@@ -10971,10 +10972,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet non-escape hatch account cannot call escape',
     UserSmartWalletV7,
     'escape',
@@ -10984,10 +10985,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet escape hatch account can call escape',
     UserSmartWalletV7,
     'escape',
@@ -10997,10 +10998,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    address
+    tester.address
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet escape hatch account can call escape again',
     UserSmartWalletV7,
     'escape',
@@ -11010,10 +11011,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    address
+    tester.address
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get an escape hatch action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -11032,15 +11033,15 @@ module.exports = {test: async function (testingContext) {
 
   escapeHatchSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   escapeHatchUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can remove an escape hatch',
     UserSmartWalletV7,
     'removeEscapeHatch',
@@ -11054,10 +11055,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet cannot call escape once escape hatch is removed',
     UserSmartWalletV7,
     'escape',
@@ -11069,7 +11070,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get an escape hatch action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -11088,15 +11089,15 @@ module.exports = {test: async function (testingContext) {
 
   escapeHatchSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   escapeHatchUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can disable the escape hatch',
     UserSmartWalletV7,
     'permanentlyDisableEscapeHatch',
@@ -11110,10 +11111,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet can get an escape hatch action ID',
     UserSmartWalletV7,
     'getNextCustomActionID',
@@ -11121,7 +11122,7 @@ module.exports = {test: async function (testingContext) {
     [
       7, // SetEscapeHatch,
       0,
-      address,
+      tester.address,
       0
     ],
     true,
@@ -11132,21 +11133,21 @@ module.exports = {test: async function (testingContext) {
 
   escapeHatchSignature = signHashedPrefixedHexString(
     customActionId,
-    address
+    tester.address
   )
 
   escapeHatchUserSignature = signHashedPrefixedHexString(
     customActionId,
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay cannot set an escape hatch once disabled',
     UserSmartWalletV7,
     'setEscapeHatch',
     'send',
     [
-      address,
+      tester.address,
       0,
       escapeHatchUserSignature,
       escapeHatchSignature
@@ -11155,10 +11156,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can trigger sai to dai migration as a no-op',
     UserSmartWalletV7,
     'migrateSaiToDai',
@@ -11168,10 +11169,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can trigger cSai to dDai migration as a no-op',
     UserSmartWalletV7,
     'migrateCSaiToDDai',
@@ -11181,10 +11182,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'cSai can be sent to V7 UserSmartWallet',
     CSAI,
     'transfer',
@@ -11192,7 +11193,7 @@ module.exports = {test: async function (testingContext) {
     [UserSmartWalletV7.options.address, web3.utils.toWei('0.5', 'mwei')]
   )
 
-  await runTest(
+  await tester.runTest(
     'Sai Whale can deposit sai into the V7 user smart wallet',
     SAI,
     'transfer',
@@ -11218,7 +11219,7 @@ module.exports = {test: async function (testingContext) {
     constants.SAI_WHALE_ADDRESS
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can trigger sai to dai migration',
     UserSmartWalletV7,
     'migrateSaiToDai',
@@ -11228,10 +11229,10 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'V7 UserSmartWallet relay can trigger cSai to dDai migration',
     UserSmartWalletV7,
     'migrateCSaiToDDai',
@@ -11241,18 +11242,18 @@ module.exports = {test: async function (testingContext) {
     receipt => {
       // TODO: verify logs
     },
-    originalAddress
+    tester.originalAddress
   )
 
   // Initiate account recovery
-  await runTest(
+  await tester.runTest(
     'smart wallet account recovery can be initiated',
     DharmaAccountRecoveryManagerV2,
     'initiateAccountRecovery',
     'send',
     [
       UserSmartWalletV7.options.address,
-      originalAddress,
+      tester.originalAddress,
       0 // extraTime in seconds
     ],
     true,
@@ -11262,14 +11263,14 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'smart wallet account recovery cannot be performed right away',
     DharmaAccountRecoveryManagerV2,
     'recover',
     'send',
     [
       UserSmartWalletV7.options.address,
-      originalAddress
+      tester.originalAddress
     ],
     false
   )
@@ -11278,14 +11279,14 @@ module.exports = {test: async function (testingContext) {
   await advanceTime((60 * 60 * 24 * 3) + 5)
 
   // recover account
-  await runTest(
+  await tester.runTest(
     'smart wallet account recovery can be performed after three days',
     DharmaAccountRecoveryManagerV2,
     'recover',
     'send',
     [
       UserSmartWalletV7.options.address,
-      originalAddress
+      tester.originalAddress
     ],
     true,
     receipt => {    
@@ -11297,70 +11298,70 @@ module.exports = {test: async function (testingContext) {
   // ZZZZZ
 
   // COVERAGE TESTING - deployments
-  const DharmaUpgradeBeaconControllerManagerCoverage = await runTest(
+  const DharmaUpgradeBeaconControllerManagerCoverage = await tester.runTest(
     `DharmaUpgradeBeaconControllerManager contract deployment`,
     DharmaUpgradeBeaconControllerManagerDeployer,
     '',
     'deploy'
   )
 
-  const DharmaUpgradeBeaconControllerCoverage = await runTest(
+  const DharmaUpgradeBeaconControllerCoverage = await tester.runTest(
     `DharmaUpgradeBeaconController contract deployment`,
     DharmaUpgradeBeaconControllerDeployer,
     '',
     'deploy'
   )
 
-  const DharmaAccountRecoveryManagerV2Coverage = await runTest(
+  const DharmaAccountRecoveryManagerV2Coverage = await tester.runTest(
     `DharmaAccountRecoveryManagerV2 contract deployment`,
     DharmaAccountRecoveryManagerV2Deployer,
     '',
     'deploy'
   )
 
-  const DharmaKeyRegistryV2Coverage = await runTest(
+  const DharmaKeyRegistryV2Coverage = await tester.runTest(
     `DharmaKeyRegistryV2 contract deployment`,
     DharmaKeyRegistryV2Deployer,
     '',
     'deploy'
   )
 
-  const DharmaUpgradeBeaconCoverage = await runTest(
+  const DharmaUpgradeBeaconCoverage = await tester.runTest(
     `DharmaUpgradeBeacon (smart wallet) contract deployment`,
     DharmaUpgradeBeaconDeployer,
     '',
     'deploy'
   )
 
-  const DharmaKeyRingUpgradeBeaconCoverage = await runTest(
+  const DharmaKeyRingUpgradeBeaconCoverage = await tester.runTest(
     `DharmaKeyRingUpgradeBeacon contract deployment`,
     DharmaKeyRingUpgradeBeaconDeployer,
     '',
     'deploy'
   )
 
-  const DharmaUpgradeBeaconEnvoy = await runTest(
+  const DharmaUpgradeBeaconEnvoy = await tester.runTest(
     `DharmaUpgradeBeaconEnvoy contract deployment`,
     DharmaUpgradeBeaconEnvoyDeployer,
     '',
     'deploy'
   )
 
-  const AdharmaSmartWalletImplementation = await runTest(
+  const AdharmaSmartWalletImplementation = await tester.runTest(
     `AdharmaSmartWalletImplementation contract deployment`,
     AdharmaSmartWalletImplementationDeployer,
     '',
     'deploy'
   )
 
-  const AdharmaKeyRingImplementation = await runTest(
+  const AdharmaKeyRingImplementation = await tester.runTest(
     `AdharmaKeyRingImplementation contract deployment`,
     AdharmaKeyRingImplementationDeployer,
     '',
     'deploy'
   )
 
-  const DharmaSmartWalletFactoryV1Coverage = await runTest(
+  const DharmaSmartWalletFactoryV1Coverage = await tester.runTest(
     `DharmaSmartWalletFactoryV1 contract deployment`,
     DharmaSmartWalletFactoryV1Deployer,
     '',
@@ -11368,7 +11369,7 @@ module.exports = {test: async function (testingContext) {
     []
   )
 
-  const DharmaKeyRingFactoryV1 = await runTest(
+  const DharmaKeyRingFactoryV1 = await tester.runTest(
     `DharmaKeyRingFactoryV1 contract deployment`,
     DharmaKeyRingFactoryV1Deployer,
     '',
@@ -11376,7 +11377,7 @@ module.exports = {test: async function (testingContext) {
     []
   )
 
-  const DharmaKeyRingFactoryV2 = await runTest(
+  const DharmaKeyRingFactoryV2 = await tester.runTest(
     `DharmaKeyRingFactoryV2 contract deployment`,
     DharmaKeyRingFactoryV2Deployer,
     '',
@@ -11384,7 +11385,7 @@ module.exports = {test: async function (testingContext) {
     []
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV1 cannot create a V1 key ring with no key`,
     DharmaKeyRingFactoryV1,
     'newKeyRing',
@@ -11393,42 +11394,42 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV1 cannot create a V1 key ring and set a new null key`,
     DharmaKeyRingFactoryV1,
     'newKeyRingAndAdditionalKey',
     'send',
-    [address, constants.NULL_ADDRESS, '0x'],
+    [tester.address, constants.NULL_ADDRESS, '0x'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV1 cannot create a V1 key ring and set a duplicate key`,
     DharmaKeyRingFactoryV1,
     'newKeyRingAndAdditionalKey',
     'send',
-    [address, address, '0x'],
+    [tester.address, tester.address, '0x'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV1 can get the address of the next key ring`,
     DharmaKeyRingFactoryV1,
     'getNextKeyRing',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       nextKeyRing = value;
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV1 can create a V1 key ring`,
     DharmaKeyRingFactoryV1,
     'newKeyRing',
     'send',
-    [address]
+    [tester.address]
   )
 
   const KeyRingInstance = new web3.eth.Contract(
@@ -11436,19 +11437,19 @@ module.exports = {test: async function (testingContext) {
     nextKeyRing
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV1 gets new key ring after a deploy with same input`,
     DharmaKeyRingFactoryV1,
     'getNextKeyRing',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.ok(nextKeyRing !== value)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `KeyRingInstance can get the version of the key ring`,
     KeyRingInstance,
     'getVersion',
@@ -11460,7 +11461,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `KeyRingInstance can get the nonce of the key ring`,
     KeyRingInstance,
     'getNonce',
@@ -11472,7 +11473,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `KeyRingInstance can get the key count of the key ring`,
     KeyRingInstance,
     'getKeyCount',
@@ -11485,7 +11486,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `KeyRingInstance can does not verify a bad signature`,
     KeyRingInstance,
     'isValidSignature',
@@ -11500,7 +11501,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `KeyRingInstance can get an adminActionID using getNextAdminActionID`,
     KeyRingInstance,
     'getNextAdminActionID',
@@ -11512,7 +11513,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `KeyRingInstance getAdminActionID matches getNextAdminActionID`,
     KeyRingInstance,
     'getAdminActionID',
@@ -11524,7 +11525,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `KeyRingInstance cannot add a non-dual key in V1`,
     KeyRingInstance,
     'takeAdminAction',
@@ -11533,21 +11534,21 @@ module.exports = {test: async function (testingContext) {
     false
   ) 
 
-  await runTest(
+  await tester.runTest(
     `KeyRingInstance cannot add key that already exists`,
     KeyRingInstance,
     'takeAdminAction',
     'send',
-    [6, address, '0x'],
+    [6, tester.address, '0x'],
     false
   )
 
   const takeAdminActionSignature = signHashedPrefixedHexString(
     adminActionID,
-    address
+    tester.address
   )
 
-  await runTest(
+  await tester.runTest(
     `KeyRingInstance can verify a valid signature`,
     KeyRingInstance,
     'isValidSignature',
@@ -11571,7 +11572,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `KeyRingInstance can add a new key with a valid signature`,
     KeyRingInstance,
     'takeAdminAction',
@@ -11580,7 +11581,7 @@ module.exports = {test: async function (testingContext) {
     true
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV2 cannot create a V1 key ring with no key`,
     DharmaKeyRingFactoryV2,
     'newKeyRing',
@@ -11589,42 +11590,42 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV2 cannot create a V1 key ring and set a new null key`,
     DharmaKeyRingFactoryV2,
     'newKeyRingAndAdditionalKey',
     'send',
-    [address, constants.NULL_ADDRESS, constants.NULL_ADDRESS, '0x'],
+    [tester.address, constants.NULL_ADDRESS, constants.NULL_ADDRESS, '0x'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV2 cannot create a V1 key ring and set a duplicate key`,
     DharmaKeyRingFactoryV2,
     'newKeyRingAndAdditionalKey',
     'send',
-    [address, constants.NULL_ADDRESS, address, '0x'],
+    [tester.address, constants.NULL_ADDRESS, tester.address, '0x'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV2 can get the address of the next key ring`,
     DharmaKeyRingFactoryV2,
     'getNextKeyRing',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       nextKeyRing = value;
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV2 can create a V1 key ring if the target address matches`,
     DharmaKeyRingFactoryV2,
     'newKeyRing',
     'send',
-    [address, nextKeyRing]
+    [tester.address, nextKeyRing]
   )
 
   const KeyRingInstanceFromV2Factory = new web3.eth.Contract(
@@ -11632,23 +11633,23 @@ module.exports = {test: async function (testingContext) {
     nextKeyRing
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV2 won't deploy a V1 key ring if the target address has one`,
     DharmaKeyRingFactoryV2,
     'newKeyRing',
     'send',
-    [address, KeyRingInstanceFromV2Factory.options.address]
+    [tester.address, KeyRingInstanceFromV2Factory.options.address]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV2 can call getFirstKeyRingAdminActionID`,
     DharmaKeyRingFactoryV2,
     'getFirstKeyRingAdminActionID',
     'call',
-    [address, address]
+    [tester.address, tester.address]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV2 reverts when no new key ring supplied`,
     DharmaKeyRingFactoryV2,
     'getNextKeyRing',
@@ -11657,73 +11658,73 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV2 gets new key ring after a deploy with same input`,
     DharmaKeyRingFactoryV2,
     'getNextKeyRing',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.ok(nextKeyRing !== value)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV2 can call newKeyRingAndDaiWithdrawal`,
     DharmaKeyRingFactoryV2,
     'newKeyRingAndDaiWithdrawal',
     'send',
-    [address, address, address, 0, address, 0, '0x', '0x'],
+    [tester.address, tester.address, tester.address, 0, tester.address, 0, '0x', '0x'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV2 can call newKeyRingAndUSDCWithdrawal`,
     DharmaKeyRingFactoryV2,
     'newKeyRingAndUSDCWithdrawal',
     'send',
-    [address, address, address, 0, address, 0, '0x', '0x'],
+    [tester.address, tester.address, tester.address, 0, tester.address, 0, '0x', '0x'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `AdharmaSmartWalletImplementation cannot be initialized directly post-deployment`,
     AdharmaSmartWalletImplementation,
     'initialize',
     'send',
-    [address],
+    [tester.address],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `AdharmaSmartWalletImplementation cannot be used to perform calls directly`,
     AdharmaSmartWalletImplementation,
     'performCall',
     'send',
-    [address, 1, '0x'],
+    [tester.address, 1, '0x'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `AdharmaKeyRingImplementation cannot be initialized directly post-deployment`,
     AdharmaKeyRingImplementation,
     'initialize',
     'send',
-    [1, 1, [address], [3]],
+    [1, 1, [tester.address], [3]],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `AdharmaKeyRingImplementation cannot be used to take action directly`,
     AdharmaKeyRingImplementation,
     'takeAction',
     'send',
-    [address, 1, '0x', '0x'],
+    [tester.address, 1, '0x', '0x'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `UpgradeBeaconProxyV1 contract deployment fails with no init data`,
     UpgradeBeaconProxyV1Deployer,
     '',
@@ -11732,7 +11733,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `KeyRingUpgradeBeaconProxyV1 contract deployment fails with no init data`,
     KeyRingUpgradeBeaconProxyV1Deployer,
     '',
@@ -11741,7 +11742,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  const UpgradeBeaconProxyV1 = await runTest(
+  const UpgradeBeaconProxyV1 = await tester.runTest(
     `UpgradeBeaconProxyV1 contract deployment (direct)`,
     UpgradeBeaconProxyV1Deployer,
     '',
@@ -11753,7 +11754,7 @@ module.exports = {test: async function (testingContext) {
           type: 'address',
           name: 'userSigningKey'
       }]
-    }, [address])]
+    }, [tester.address])]
   )
 
   const UpgradeBeaconProxyV1Implementation = new web3.eth.Contract(
@@ -11761,7 +11762,7 @@ module.exports = {test: async function (testingContext) {
     UpgradeBeaconProxyV1.options.address
   )
 
-  await runTest(
+  await tester.runTest(
     `UpgradeBeaconProxyV1 can retrieve its user signing key`,
     UpgradeBeaconProxyV1Implementation,
     'getUserSigningKey',
@@ -11769,11 +11770,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  const KeyRingUpgradeBeaconProxyV1 = await runTest(
+  const KeyRingUpgradeBeaconProxyV1 = await tester.runTest(
     `KeyRingUpgradeBeaconProxyV1 contract deployment (direct)`,
     KeyRingUpgradeBeaconProxyV1Deployer,
     '',
@@ -11794,7 +11795,7 @@ module.exports = {test: async function (testingContext) {
           type: 'uint8[]',
           name: 'keyTypes'
       }]
-    }, [1, 1, [address], [3]])]
+    }, [1, 1, [tester.address], [3]])]
   )
 
   const KeyRingUpgradeBeaconProxyV1Implementation = new web3.eth.Contract(
@@ -11802,12 +11803,12 @@ module.exports = {test: async function (testingContext) {
     KeyRingUpgradeBeaconProxyV1.options.address
   )
 
-  await runTest(
+  await tester.runTest(
     `KeyRingUpgradeBeaconProxyV1 can retrieve its user signing key`,
     KeyRingUpgradeBeaconProxyV1Implementation,
     'getKeyType',
     'call',
-    [address],
+    [tester.address],
     true,
     values => {
       assert.ok(values.standard)
@@ -11821,7 +11822,7 @@ module.exports = {test: async function (testingContext) {
   // (actually, they're not working yet, period... skip them for now)
   /*
   if (testingContext !== 'coverage') {
-    const DharmaSmartWalletFactoryV2 = await runTest(
+    const DharmaSmartWalletFactoryV2 = await tester.runTest(
       `DharmaSmartWalletFactoryV2 contract deployment`,
       DharmaSmartWalletFactoryV2Deployer,
       '',
@@ -11829,7 +11830,7 @@ module.exports = {test: async function (testingContext) {
       []
     )
 
-    const DharmaKeyRingFactoryV3 = await runTest(
+    const DharmaKeyRingFactoryV3 = await tester.runTest(
       `DharmaKeyRingFactoryV3 contract deployment`,
       DharmaKeyRingFactoryV3Deployer,
       '',
@@ -11839,7 +11840,7 @@ module.exports = {test: async function (testingContext) {
   }
   */
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 gets the initial global key correctly',
     DharmaKeyRegistryV2Coverage,
     'getGlobalKey',
@@ -11847,20 +11848,20 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 attempt to get an unset specific key throws',
     DharmaKeyRegistryV2Coverage,
     'getSpecificKey',
     'call',
-    [address],
+    [tester.address],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 gets the global key when requesting unset key',
     DharmaKeyRegistryV2Coverage,
     'getKey',
@@ -11868,11 +11869,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 cannot set a new empty global key',
     DharmaKeyRegistryV2Coverage,
     'setGlobalKey',
@@ -11883,36 +11884,36 @@ module.exports = {test: async function (testingContext) {
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
   const messageCoverage = (
     DharmaKeyRegistryV2Coverage.options.address +
-    addressTwo.slice(2) +
+    tester.addressTwo.slice(2) +
     web3.utils.asciiToHex(
       "This signature demonstrates that the supplied signing key is valid."
     ).slice(2)
   )
 
-  const newKeySignatureCoverage = signHashedPrefixedHashedHexString(messageCoverage, addressTwo)
+  const newKeySignatureCoverage = signHashedPrefixedHashedHexString(messageCoverage, tester.addressTwo)
 
-  const badNewKeySignatureCoverage = signHashedPrefixedHashedHexString('0x12', addressTwo)
+  const badNewKeySignatureCoverage = signHashedPrefixedHashedHexString('0x12', tester.addressTwo)
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 cannot set a new global key unless called by owner',
     DharmaKeyRegistryV2Coverage,
     'setGlobalKey',
     'send',
     [
-      addressTwo,
+      tester.addressTwo,
       newKeySignatureCoverage
     ],
     false,
     receipt => {},
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 cannot set an empty global key',
     DharmaKeyRegistryV2Coverage,
     'setGlobalKey',
@@ -11924,30 +11925,30 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 cannot set a new global key with a bad signature',
     DharmaKeyRegistryV2Coverage,
     'setGlobalKey',
     'send',
     [
-      addressTwo,
+      tester.addressTwo,
       badNewKeySignatureCoverage
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 can set a new global key correctly',
     DharmaKeyRegistryV2Coverage,
     'setGlobalKey',
     'send',
     [
-      addressTwo,
+      tester.addressTwo,
       newKeySignatureCoverage
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 gets the new global key correctly',
     DharmaKeyRegistryV2Coverage,
     'getGlobalKey',
@@ -11955,72 +11956,72 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, addressTwo)
+      assert.strictEqual(value, tester.addressTwo)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 cannot set a new specific key unless called by owner',
     DharmaKeyRegistryV2Coverage,
     'setSpecificKey',
     'send',
     [
-      address,
+      tester.address,
       DharmaKeyRegistryV2.options.address
     ],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 gets global key for a user if no specific key set',
     DharmaKeyRegistryV2Coverage,
     'getKeyForUser',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
-      assert.strictEqual(value, addressTwo)
+      assert.strictEqual(value, tester.addressTwo)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 can set a new specific key',
     DharmaKeyRegistryV2Coverage,
     'setSpecificKey',
     'send',
     [
-      address,
+      tester.address,
       DharmaKeyRegistryV2.options.address
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 gets specific key for user if one is set',
     DharmaKeyRegistryV2Coverage,
     'getKeyForUser',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.strictEqual(value, DharmaKeyRegistryV2.options.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 gets the new specific key correctly',
     DharmaKeyRegistryV2Coverage,
     'getSpecificKey',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.strictEqual(value, DharmaKeyRegistryV2.options.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 gets the specific key when requesting set key',
     DharmaKeyRegistryV2Coverage,
     'getKey',
@@ -12032,19 +12033,19 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 cannot reuse a specific key',
     DharmaKeyRegistryV2Coverage,
     'setSpecificKey',
     'send',
     [
-      address,
+      tester.address,
       DharmaKeyRegistryV2.options.address
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 new owner cannot accept ownership before added',
     DharmaKeyRegistryV2Coverage,
     'acceptOwnership',
@@ -12053,7 +12054,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 cannot prepare to transfer to the null address',
     DharmaKeyRegistryV2Coverage,
     'transferOwnership',
@@ -12064,23 +12065,23 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 can prepare to transfer to a new owner',
     DharmaKeyRegistryV2Coverage,
     'transferOwnership',
     'send',
     [
-      address
+      tester.address
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 can cancel an ownership transfer',
     DharmaKeyRegistryV2Coverage,
     'cancelOwnershipTransfer'
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 new owner cannot accept ownership after cancellation',
     DharmaKeyRegistryV2Coverage,
     'acceptOwnership',
@@ -12089,23 +12090,23 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 can prepare to transfer to a new owner again',
     DharmaKeyRegistryV2Coverage,
     'transferOwnership',
     'send',
     [
-      address
+      tester.address
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 new owner can accept ownership',
     DharmaKeyRegistryV2Coverage,
     'acceptOwnership'
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 gets the new owner',
     DharmaKeyRegistryV2Coverage,
     'owner',
@@ -12113,11 +12114,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 gets the global key correctly',
     DharmaKeyRegistryV2Coverage,
     'getGlobalKey',
@@ -12125,45 +12126,45 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, addressTwo)
+      assert.strictEqual(value, tester.addressTwo)
     }
   )
 
   const messageV2Coverage = (
     DharmaKeyRegistryV2Coverage.options.address +
-    address.slice(2) +
+    tester.address.slice(2) +
     web3.utils.asciiToHex(
       "This signature demonstrates that the supplied signing key is valid."
     ).slice(2)
   )
 
-  const v2KeySignatureCoverage = signHashedPrefixedHashedHexString(messageV2Coverage, address)
+  const v2KeySignatureCoverage = signHashedPrefixedHashedHexString(messageV2Coverage, tester.address)
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Registry V2 cannot set a previously used global key',
     DharmaKeyRegistryV2Coverage,
     'setGlobalKey',
     'send',
     [
-      address,
+      tester.address,
       v2KeySignatureCoverage
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController initially gets zero for lastImplementation`,
     DharmaUpgradeBeaconControllerCoverage,
     'getCodeHashAtLastUpgrade',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.strictEqual(value, constants.NULL_BYTES_32)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController cannot call upgrade from non-owner account`,
     DharmaUpgradeBeaconControllerCoverage,
     'upgrade',
@@ -12171,10 +12172,10 @@ module.exports = {test: async function (testingContext) {
     [DharmaUpgradeBeaconCoverage.options.address, DharmaUpgradeBeaconController.options.address],
     false,
     receipt => {},
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController can set implementation on upgrade beacon contract`,
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -12182,7 +12183,7 @@ module.exports = {test: async function (testingContext) {
     [DharmaUpgradeBeaconCoverage.options.address, DharmaUpgradeBeaconController.options.address]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingUpgradeBeaconController can set implementation on key ring upgrade beacon contract`,
     DharmaKeyRingUpgradeBeaconController,
     'upgrade',
@@ -12190,7 +12191,7 @@ module.exports = {test: async function (testingContext) {
     [DharmaKeyRingUpgradeBeaconCoverage.options.address, DharmaUpgradeBeaconController.options.address]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconEnvoy throws when given invalid beacon`,
     DharmaUpgradeBeaconEnvoy,
     'getImplementation',
@@ -12199,16 +12200,16 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconEnvoy throws when given non-contract beacon`,
     DharmaUpgradeBeaconEnvoy,
     'getImplementation',
     'call',
-    [address],
+    [tester.address],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconEnvoy can get the implementation of a valid beacon`,
     DharmaUpgradeBeaconEnvoy,
     'getImplementation',
@@ -12220,7 +12221,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController cannot set null implementation on an upgrade beacon contract`,
     DharmaUpgradeBeaconControllerCoverage,
     'upgrade',
@@ -12229,16 +12230,16 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController cannot set non-contract implementation`,
     DharmaUpgradeBeaconControllerCoverage,
     'upgrade',
     'send',
-    [DharmaUpgradeBeaconCoverage.options.address, address],
+    [DharmaUpgradeBeaconCoverage.options.address, tester.address],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController cannot set null address beacon`,
     DharmaUpgradeBeaconControllerCoverage,
     'upgrade',
@@ -12247,16 +12248,16 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController cannot set non-contract address beacon`,
     DharmaUpgradeBeaconControllerCoverage,
     'upgrade',
     'send',
-    [address, DharmaUpgradeBeaconControllerCoverage.options.address],
+    [tester.address, DharmaUpgradeBeaconControllerCoverage.options.address],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController cannot set unowned bad beacon`,
     DharmaUpgradeBeaconControllerCoverage,
     'upgrade',
@@ -12265,7 +12266,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController cannot set unowned beacon (Note that it still logs an event!)`,
     DharmaUpgradeBeaconControllerCoverage,
     'upgrade',
@@ -12273,7 +12274,7 @@ module.exports = {test: async function (testingContext) {
     [DharmaUpgradeBeaconCoverage.options.address, DharmaUpgradeBeaconControllerCoverage.options.address]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController can get implementation of a beacon`,
     DharmaUpgradeBeaconControllerCoverage,
     'getImplementation',
@@ -12285,7 +12286,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController can get owner`,
     DharmaUpgradeBeaconControllerCoverage,
     'owner',
@@ -12293,11 +12294,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController can call isOwner and value is ok`,
     DharmaUpgradeBeaconControllerCoverage,
     'isOwner',
@@ -12309,7 +12310,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController cannot transfer ownership to null address`,
     DharmaUpgradeBeaconControllerCoverage,
     'transferOwnership',
@@ -12318,106 +12319,106 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController can transfer ownership`,
     DharmaUpgradeBeaconControllerCoverage,
     'transferOwnership',
     'send',
-    [address]
+    [tester.address]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController can renounce ownership`,
     DharmaUpgradeBeaconControllerCoverage,
     'renounceOwnership'
   )
 
   
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot transfer ownership from a non-owner`,
     DharmaAccountRecoveryManagerV2Coverage,
     'transferOwnership',
     'send',
-    [addressTwo],
+    [tester.addressTwo],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot initiate recovery with null smart wallet`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecovery',
     'send',
-    [constants.NULL_ADDRESS, addressTwo, 0],
+    [constants.NULL_ADDRESS, tester.addressTwo, 0],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot initiate recovery with null new key`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecovery',
     'send',
-    [address, constants.NULL_ADDRESS, 0],
+    [tester.address, constants.NULL_ADDRESS, 0],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can initiate recovery timelock`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecovery',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, addressTwo, 0]
+    [constants.UPGRADE_BEACON_ADDRESS, tester.addressTwo, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can initiate another recovery timelock`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecovery',
     'send',
-    [UserSmartWalletV6.options.address, addressTwo, 0]
+    [UserSmartWalletV6.options.address, tester.addressTwo, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can initiate a third recovery timelock`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecovery',
     'send',
-    [address, addressTwo, 0]
+    [tester.address, tester.addressTwo, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     'smart wallet account recovery cannot be cancelled with no smart wallet',
     DharmaAccountRecoveryManagerV2Coverage,
     'cancelAccountRecovery',
     'send',
     [
       constants.NULL_ADDRESS,
-      addressTwo
+      tester.addressTwo
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'smart wallet account recovery cannot be cancelled with no user signing key',
     DharmaAccountRecoveryManagerV2Coverage,
     'cancelAccountRecovery',
     'send',
     [
-      address,
+      tester.address,
       constants.NULL_ADDRESS
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'smart wallet account recovery can be cancelled',
     DharmaAccountRecoveryManagerV2Coverage,
     'cancelAccountRecovery',
     'send',
     [
-      address,
-      addressTwo
+      tester.address,
+      tester.addressTwo
     ],
     true,
     receipt => {    
@@ -12426,39 +12427,39 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     'smart wallet account recovery cannot be cancelled if it is already cancelled',
     DharmaAccountRecoveryManagerV2Coverage,
     'cancelAccountRecovery',
     'send',
     [
-      address,
-      addressTwo
+      tester.address,
+      tester.addressTwo
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'smart wallet account recovery cannot be cancelled if no timelock exists',
     DharmaAccountRecoveryManagerV2Coverage,
     'cancelAccountRecovery',
     'send',
     [
-      addressTwo,
-      addressTwo
+      tester.addressTwo,
+      tester.addressTwo
     ],
     false
   )
 
 
-  await runTest(
+  await tester.runTest(
     'smart wallet account recovery can be reinitiated',
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecovery',
     'send',
     [
-      address,
-      addressTwo,
+      tester.address,
+      tester.addressTwo,
       1 // extraTime in seconds - add one to ensure that timelock is extended
     ],
     true,
@@ -12468,7 +12469,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot initiate recovery disablement with null smart wallet`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecoveryDisablement',
@@ -12477,56 +12478,56 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can initiate recovery disablement timelock`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecoveryDisablement',
     'send',
-    [address, 0]
+    [tester.address, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call recover with null new key`,
     DharmaAccountRecoveryManagerV2Coverage,
     'recover',
     'send',
-    [constants.NULL_ADDRESS, addressTwo],
+    [constants.NULL_ADDRESS, tester.addressTwo],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call recover with null new key`,
     DharmaAccountRecoveryManagerV2Coverage,
     'recover',
     'send',
-    [address, constants.NULL_ADDRESS],
+    [tester.address, constants.NULL_ADDRESS],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call recover prior to timelock completion`,
     DharmaAccountRecoveryManagerV2Coverage,
     'recover',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, addressTwo],
+    [constants.UPGRADE_BEACON_ADDRESS, tester.addressTwo],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call disableAccountRecovery prior to timelock completion`,
     DharmaAccountRecoveryManagerV2Coverage,
     'disableAccountRecovery',
     'send',
-    [address],
+    [tester.address],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can check if account recovery is disabled`,
     DharmaAccountRecoveryManagerV2Coverage,
     'accountRecoveryDisabled',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.ok(!value)
@@ -12536,33 +12537,33 @@ module.exports = {test: async function (testingContext) {
   // advance time by 3 days
   await advanceTime((60 * 60 * 24 * 3) + 5)
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call recover after timelock completion`,
     DharmaAccountRecoveryManagerV2Coverage,
     'recover',
     'send',
-    [constants.UPGRADE_BEACON_ADDRESS, addressTwo]
+    [constants.UPGRADE_BEACON_ADDRESS, tester.addressTwo]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot recover an unowned smart wallet`,
     DharmaAccountRecoveryManagerV2Coverage,
     'recover',
     'send',
-    [UserSmartWalletV6.options.address, addressTwo],
+    [UserSmartWalletV6.options.address, tester.addressTwo],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot recover an EOA`,
     DharmaAccountRecoveryManagerV2Coverage,
     'recover',
     'send',
-    [address, addressTwo],
+    [tester.address, tester.addressTwo],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call disableAccountRecovery with null smart wallet`,
     DharmaAccountRecoveryManagerV2Coverage,
     'disableAccountRecovery',
@@ -12571,36 +12572,36 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call disableAccountRecovery after timelock completion`,
     DharmaAccountRecoveryManagerV2Coverage,
     'disableAccountRecovery',
     'send',
-    [address]
+    [tester.address]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can check if account recovery is disabled`,
     DharmaAccountRecoveryManagerV2Coverage,
     'accountRecoveryDisabled',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.ok(value)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot recover an account that has disabled recovery`,
     DharmaAccountRecoveryManagerV2Coverage,
     'recover',
     'send',
-    [address, addressTwo],
+    [tester.address, tester.addressTwo],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockInterval with no selector`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
@@ -12609,7 +12610,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockInterval to modify interval over 8 weeks`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
@@ -12618,7 +12619,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockInterval to set a timelock`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
@@ -12626,7 +12627,7 @@ module.exports = {test: async function (testingContext) {
     ['0xe950c085', 10000, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockInterval to set a timelock on another function`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
@@ -12634,7 +12635,7 @@ module.exports = {test: async function (testingContext) {
     ['0xaaaaaaaa', 10000, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockInterval with no selector`,
     DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockInterval',
@@ -12643,7 +12644,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockInterval before timelock completion`,
     DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockInterval',
@@ -12652,7 +12653,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration with no selector`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
@@ -12661,7 +12662,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration to with expiration over one month`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
@@ -12670,7 +12671,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration to modify expiration under one minute`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
@@ -12679,7 +12680,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration to modify expiration under one hour`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
@@ -12688,7 +12689,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockExpiration to set a timelock`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
@@ -12696,7 +12697,7 @@ module.exports = {test: async function (testingContext) {
     ['0xd7ce3c6f', 30000, 0],
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockExpiration to set a timelock on another function`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
@@ -12704,7 +12705,7 @@ module.exports = {test: async function (testingContext) {
     ['0xaaaaaaaa', 300000, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockExpiration with no selector`,
     DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockExpiration',
@@ -12713,7 +12714,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockExpiration before timelock completion`,
     DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockExpiration',
@@ -12722,15 +12723,15 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can initiate recovery disablement timelock`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecoveryDisablement',
     'send',
-    [addressTwo, 0]
+    [tester.addressTwo, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot cancel disablement with null address`,
     DharmaAccountRecoveryManagerV2Coverage,
     'cancelAccountRecoveryDisablement',
@@ -12739,54 +12740,54 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can cancel recovery disablement timelock`,
     DharmaAccountRecoveryManagerV2Coverage,
     'cancelAccountRecoveryDisablement',
     'send',
-    [addressTwo]
+    [tester.addressTwo]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can re-initiate recovery disablement timelock`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecoveryDisablement',
     'send',
-    [addressTwo, 1]
+    [tester.addressTwo, 1]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot shorten a timelock`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecoveryDisablement',
     'send',
-    [addressTwo, 0],
+    [tester.addressTwo, 0],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot initiate recovery with massive extraTime`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateAccountRecovery',
     'send',
-    [address, addressTwo, constants.FULL_APPROVAL],
+    [tester.address, tester.addressTwo, constants.FULL_APPROVAL],
     false
   )
 
   // advance time by 2 weeks
   await advanceTime((60 * 60 * 24 * 7 * 2) + 5)
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call disableAccountRecovery after timelock expiration`,
     DharmaAccountRecoveryManagerV2Coverage,
     'disableAccountRecovery',
     'send',
-    [addressTwo],
+    [tester.addressTwo],
     false
   )
 
-  await runTest(
-    `DharmaAccountRecoveryManagerV2 cannot set a role to the null address`,
+  await tester.runTest(
+    `DharmaAccountRecoveryManagerV2 cannot set a role to the null tester.address`,
     DharmaAccountRecoveryManagerV2Coverage,
     'setRole',
     'send',
@@ -12794,23 +12795,23 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can set a role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'setRole',
     'send',
-    [0, address]
+    [0, tester.address]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can set a role that is already set`,
     DharmaAccountRecoveryManagerV2Coverage,
     'setRole',
     'send',
-    [0, address]
+    [0, tester.address]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can check if the caller has a role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'isRole',
@@ -12822,7 +12823,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can check for an operator role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'getOperator',
@@ -12830,11 +12831,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can check for a recoverer role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'getRecoverer',
@@ -12846,7 +12847,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can check for a canceller role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'getCanceller',
@@ -12858,7 +12859,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can check for a disabler role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'getDisabler',
@@ -12870,7 +12871,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can check for a pauser role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'getPauser',
@@ -12882,7 +12883,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can remove a role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'removeRole',
@@ -12890,7 +12891,7 @@ module.exports = {test: async function (testingContext) {
     [0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can check if the caller has a role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'isRole',
@@ -12902,7 +12903,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can check if a role is paused`,
     DharmaAccountRecoveryManagerV2Coverage,
     'isPaused',
@@ -12914,7 +12915,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot pause a role if not owner or pauser`,
     DharmaAccountRecoveryManagerV2Coverage,
     'pause',
@@ -12922,18 +12923,18 @@ module.exports = {test: async function (testingContext) {
     [0],
     false,
     receipt => {},
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can set a role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'setRole',
     'send',
-    [4, addressTwo]
+    [4, tester.addressTwo]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot unpause an unpaused role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'unpause',
@@ -12942,7 +12943,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can pause an unpaused role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'pause',
@@ -12950,10 +12951,10 @@ module.exports = {test: async function (testingContext) {
     [0],
     true,
     receipt => {},
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot pause a paused role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'pause',
@@ -12961,10 +12962,10 @@ module.exports = {test: async function (testingContext) {
     [0],
     false,
     receipt => {},
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can pause the pauser role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'pause',
@@ -12972,7 +12973,7 @@ module.exports = {test: async function (testingContext) {
     [4]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 pauser cannot call a paused role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'pause',
@@ -12980,10 +12981,10 @@ module.exports = {test: async function (testingContext) {
     [4],
     false,
     receipt => {},
-    addressTwo
+    tester.addressTwo
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can check if a role is paused`,
     DharmaAccountRecoveryManagerV2Coverage,
     'isPaused',
@@ -12995,7 +12996,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can unpause a paused role`,
     DharmaAccountRecoveryManagerV2Coverage,
     'unpause',
@@ -13003,7 +13004,7 @@ module.exports = {test: async function (testingContext) {
     [0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can get an empty timelock`,
     DharmaAccountRecoveryManagerV2Coverage,
     'getTimelock',
@@ -13019,7 +13020,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can get an empty default timelock interval`,
     DharmaAccountRecoveryManagerV2Coverage,
     'getDefaultTimelockInterval',
@@ -13031,7 +13032,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can get an empty default timelock expiration`,
     DharmaAccountRecoveryManagerV2Coverage,
     'getDefaultTimelockExpiration',
@@ -13043,7 +13044,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockInterval with no selector`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
@@ -13052,7 +13053,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockInterval to modify interval over 8 weeks`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
@@ -13061,7 +13062,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot create timelock with excessive duration`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
@@ -13070,7 +13071,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockInterval to set a timelock`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
@@ -13078,7 +13079,7 @@ module.exports = {test: async function (testingContext) {
     ['0xe950c085', 10000, 5]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot shorten existing initiateModifyTimelockInterval timelock`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
@@ -13087,7 +13088,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockInterval to change a duration`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
@@ -13095,7 +13096,7 @@ module.exports = {test: async function (testingContext) {
     ['0xe950c085', 10001, 5]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockInterval to set a timelock on another function`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockInterval',
@@ -13103,7 +13104,7 @@ module.exports = {test: async function (testingContext) {
     ['0xaaaaaaaa', 10000, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockInterval with no selector`,
     DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockInterval',
@@ -13112,7 +13113,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockInterval before timelock completion`,
     DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockInterval',
@@ -13121,7 +13122,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration with no selector`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
@@ -13130,7 +13131,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration to with expiration over one month`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
@@ -13139,7 +13140,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call initiateModifyTimelockExpiration to modify expiration under one minute`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
@@ -13148,7 +13149,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockExpiration to set a timelock`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
@@ -13156,7 +13157,7 @@ module.exports = {test: async function (testingContext) {
     ['0xd7ce3c6f', 300000, 0],
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call initiateModifyTimelockExpiration to set a timelock on another function`,
     DharmaAccountRecoveryManagerV2Coverage,
     'initiateModifyTimelockExpiration',
@@ -13164,7 +13165,7 @@ module.exports = {test: async function (testingContext) {
     ['0xe950c085', 30, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockExpiration with no selector`,
     DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockExpiration',
@@ -13173,7 +13174,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockExpiration before timelock completion`,
     DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockExpiration',
@@ -13185,7 +13186,7 @@ module.exports = {test: async function (testingContext) {
   // advance time by 2 weeks
   await advanceTime((60 * 60 * 24 * 7 * 2) + 5)
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call modifyTimelockInterval`,
     DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockInterval',
@@ -13193,7 +13194,7 @@ module.exports = {test: async function (testingContext) {
     ['0xaaaaaaaa', 10000]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call modifyTimelockExpiration`,
     DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockExpiration',
@@ -13201,7 +13202,7 @@ module.exports = {test: async function (testingContext) {
     ['0xd7ce3c6f', 300000],
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call modifyTimelockExpiration if expiration is too short`,
     DharmaAccountRecoveryManagerV2Coverage,
     'modifyTimelockExpiration',
@@ -13210,71 +13211,71 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer ownership from a non-owner`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'transferOwnership',
     'send',
-    [addressTwo],
+    [tester.addressTwo],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with null controller`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
-    [constants.NULL_ADDRESS, address, addressTwo, 0],
+    [constants.NULL_ADDRESS, tester.address, tester.addressTwo, 0],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with null beacon`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
-    [address, constants.NULL_ADDRESS, addressTwo, 0],
+    [tester.address, constants.NULL_ADDRESS, tester.addressTwo, 0],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with null implementation`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
-    [address, addressTwo, constants.NULL_ADDRESS, 0],
+    [tester.address, tester.addressTwo, constants.NULL_ADDRESS, 0],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with non-contract implementation`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
-    [address, addressTwo, address, 0],
+    [tester.address, tester.addressTwo, tester.address, 0],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate an upgrade with massive extraTime`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
-    [address, addressTwo, DharmaUpgradeBeaconControllerManager.options.address, constants.FULL_APPROVAL],
+    [tester.address, tester.addressTwo, DharmaUpgradeBeaconControllerManager.options.address, constants.FULL_APPROVAL],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can initiate upgrade timelock`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateUpgrade',
     'send',
-    [address, addressTwo, DharmaUpgradeBeaconControllerManager.options.address, 0]
+    [tester.address, tester.addressTwo, DharmaUpgradeBeaconControllerManager.options.address, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can get an empty timelock`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'getTimelock',
@@ -13290,7 +13291,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can get an empty default timelock interval`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'getDefaultTimelockInterval',
@@ -13302,7 +13303,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can get an empty default timelock expiration`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'getDefaultTimelockExpiration',
@@ -13314,37 +13315,37 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot upgrade before timelock is complete`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'upgrade',
     'send',
-    [address, addressTwo, DharmaUpgradeBeaconControllerManager.options.address],
+    [tester.address, tester.addressTwo, DharmaUpgradeBeaconControllerManager.options.address],
     false
   )
 
   // advance time by 7 days
   await advanceTime((60 * 60 * 24 * 7) + 5)
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot upgrade an unowned controller`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'upgrade',
     'send',
-    [address, addressTwo, DharmaUpgradeBeaconControllerManager.options.address],
+    [tester.address, tester.addressTwo, DharmaUpgradeBeaconControllerManager.options.address],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer controller ownership before accepting ownership`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'transferControllerOwnership',
     'send',
-    [address, address],
+    [tester.address, tester.address],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot agree to accept ownership of null controller`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'agreeToAcceptControllerOwnership',
@@ -13353,71 +13354,71 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can agree to accept ownership`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'agreeToAcceptControllerOwnership',
     'send',
-    [address, true]
+    [tester.address, true]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate controller ownership transfer with null controller`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateTransferControllerOwnership',
     'send',
-    [constants.NULL_ADDRESS, addressTwo, 0],
+    [constants.NULL_ADDRESS, tester.addressTwo, 0],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate controller ownership transfer with null new owner`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateTransferControllerOwnership',
     'send',
-    [address, constants.NULL_ADDRESS, 0],
+    [tester.address, constants.NULL_ADDRESS, 0],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot initiate controller ownership transfer if new owner has not accepted`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateTransferControllerOwnership',
     'send',
-    [address, addressTwo, 0],
+    [tester.address, tester.addressTwo, 0],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can initiate controller ownership transfer if new owner has accepted`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateTransferControllerOwnership',
     'send',
-    [address, address, 0]
+    [tester.address, tester.address, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer controller ownership prior to timelock completion`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'transferControllerOwnership',
     'send',
-    [address, address],
+    [tester.address, tester.address],
     false
   )
 
   // advance time by 4 weeks
   await advanceTime((60 * 60 * 24 * 7 * 4) + 5)
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer unowned controller ownership`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'transferControllerOwnership',
     'send',
-    [address, address],
+    [tester.address, tester.address],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot heartbeat from non-heartbeater`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'heartbeat',
@@ -13425,16 +13426,16 @@ module.exports = {test: async function (testingContext) {
     [],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can heartbeat`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'heartbeat'
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot set new heartbeater to null address`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'newHeartbeater',
@@ -13443,15 +13444,15 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner can set new heartbeater`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'newHeartbeater',
     'send',
-    [address]
+    [tester.address]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot arm Adharma Contingency from non-owner when not expired`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
@@ -13459,10 +13460,10 @@ module.exports = {test: async function (testingContext) {
     [true],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when not armed`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
@@ -13471,7 +13472,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner can arm an Adharma Contingency`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
@@ -13479,7 +13480,7 @@ module.exports = {test: async function (testingContext) {
     [true]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner can disarm Adharma Contingency`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
@@ -13487,7 +13488,7 @@ module.exports = {test: async function (testingContext) {
     [false]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner can re-arm Adharma Contingency`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
@@ -13495,7 +13496,7 @@ module.exports = {test: async function (testingContext) {
     [true]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency from non-owner when not expired`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
@@ -13503,10 +13504,10 @@ module.exports = {test: async function (testingContext) {
     [],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when it doesn't own controllers`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
@@ -13515,26 +13516,26 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot roll back prior to first upgrade`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'rollback',
     'send',
-    [address, address, 0],
+    [tester.address, tester.address, 0],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot exit Adharma Contingency when not active`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
     'send',
-    [address, address],
+    [tester.address, tester.address],
     false
   )
 
   /*
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can activate Adharma Contingency`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
@@ -13542,7 +13543,7 @@ module.exports = {test: async function (testingContext) {
     []
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner cannot arm Adharma Contingency while active`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
@@ -13550,7 +13551,7 @@ module.exports = {test: async function (testingContext) {
     [true]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot activate Contingency when activated`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
@@ -13559,7 +13560,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner can disarm Adharma Contingency`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
@@ -13567,7 +13568,7 @@ module.exports = {test: async function (testingContext) {
     [false]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot exit Contingency before 48 hours`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
@@ -13582,7 +13583,7 @@ module.exports = {test: async function (testingContext) {
   // advance time by 2 days
   await advanceTime((60 * 60 * 24 * 2) + 5)
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot exit Contingency to null address`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
@@ -13591,7 +13592,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot exit Contingency to non-contract address`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
@@ -13600,7 +13601,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can exit Contingency after 48 hours`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
@@ -13611,7 +13612,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner can arm Adharma Contingency again`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
@@ -13619,7 +13620,7 @@ module.exports = {test: async function (testingContext) {
     [true]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can activate fake Adharma Contingency again`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
@@ -13627,7 +13628,7 @@ module.exports = {test: async function (testingContext) {
     []
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can roll back from fake Adharma Contingency`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'rollback',
@@ -13635,7 +13636,7 @@ module.exports = {test: async function (testingContext) {
     [constants.UPGRADE_BEACON_CONTROLLER_ADDRESS, constants.UPGRADE_BEACON_ADDRESS, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can "roll forward" after roll back`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'rollback',
@@ -13644,7 +13645,7 @@ module.exports = {test: async function (testingContext) {
   )
   */
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can get heartbeat status`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'heartbeatStatus',
@@ -13656,7 +13657,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager get contingency status when armed but not activated`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'contingencyStatus',
@@ -13670,46 +13671,46 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager gets 0 for non-existent total implementations`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'getTotalPriorImplementations',
     'call',
-    [address, address],
+    [tester.address, tester.address],
     true,
     value => {
       assert.strictEqual(value, '0')
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot get a prior implementation with no index`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'getPriorImplementation',
     'call',
-    [address, address, 100],
+    [tester.address, tester.address, 100],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot rollback to implementation with no index`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'rollback',
     'send',
-    [address, address, 100],
+    [tester.address, tester.address, 100],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot block rollback to implementation with no index`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'blockRollback',
     'send',
-    [address, address, 100],
+    [tester.address, tester.address, 100],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockInterval with no selector`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
@@ -13718,7 +13719,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockInterval to modify interval over 8 weeks`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
@@ -13727,7 +13728,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot create timelock with excessive duration`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
@@ -13736,7 +13737,7 @@ module.exports = {test: async function (testingContext) {
     false // TODO: move this outside of Controller manager
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockInterval to set a timelock`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
@@ -13744,7 +13745,7 @@ module.exports = {test: async function (testingContext) {
     ['0xe950c085', 10000, 5]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot shorten existing initiateModifyTimelockInterval timelock`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
@@ -13753,7 +13754,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockInterval to change a duration`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
@@ -13761,7 +13762,7 @@ module.exports = {test: async function (testingContext) {
     ['0xe950c085', 10001, 5]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockInterval to set a timelock on another function`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockInterval',
@@ -13769,7 +13770,7 @@ module.exports = {test: async function (testingContext) {
     ['0xaaaaaaaa', 10000, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockInterval with no selector`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockInterval',
@@ -13778,7 +13779,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockInterval before timelock completion`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockInterval',
@@ -13787,7 +13788,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockExpiration with no selector`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
@@ -13796,7 +13797,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockExpiration to with expiration over one month`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
@@ -13805,7 +13806,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot call initiateModifyTimelockExpiration to modify expiration under one minute`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
@@ -13814,7 +13815,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockExpiration to set a timelock`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
@@ -13822,7 +13823,7 @@ module.exports = {test: async function (testingContext) {
     ['0xd7ce3c6f', 300000, 0],
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can call initiateModifyTimelockExpiration to set a timelock on another function`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateModifyTimelockExpiration',
@@ -13830,7 +13831,7 @@ module.exports = {test: async function (testingContext) {
     ['0xe950c085', 30, 0]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockExpiration with no selector`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockExpiration',
@@ -13839,7 +13840,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockExpiration before timelock completion`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockExpiration',
@@ -13851,7 +13852,7 @@ module.exports = {test: async function (testingContext) {
   // advance time by 4 weeks
   await advanceTime((60 * 60 * 24 * 7 * 4) + 5)
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can call modifyTimelockInterval`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockInterval',
@@ -13859,7 +13860,7 @@ module.exports = {test: async function (testingContext) {
     ['0xaaaaaaaa', 10000]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can call modifyTimelockExpiration`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockExpiration',
@@ -13867,7 +13868,7 @@ module.exports = {test: async function (testingContext) {
     ['0xd7ce3c6f', 300000],
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot call modifyTimelockExpiration if expiration is too short`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'modifyTimelockExpiration',
@@ -13876,7 +13877,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  const MockDharmaKeyRingFactory = await runTest(
+  const MockDharmaKeyRingFactory = await tester.runTest(
     `MockDharmaKeyRingFactory contract deployment`,
     MockDharmaKeyRingFactoryDeployer,
     '',
@@ -13884,7 +13885,7 @@ module.exports = {test: async function (testingContext) {
     []
   )
 
-  await runTest(
+  await tester.runTest(
     `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with no keys`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
@@ -13893,7 +13894,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with null address as key`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
@@ -13902,34 +13903,34 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with non-dual key`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
-    [1, 1, [address], [1]],
+    [1, 1, [tester.address], [1]],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with admin threshold > 1`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
-    [2, 1, [address], [3]],
+    [2, 1, [tester.address], [3]],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `MockDharmaKeyRingFactory cannot deploy a DharmaV1 key ring with executor threshold > 1`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
-    [1, 2, [address], [3]],
+    [1, 2, [tester.address], [3]],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Upgrade Beacon Controller can upgrade to AdharmaSmartWalletImplementation',
     DharmaUpgradeBeaconController,
     'upgrade',
@@ -13940,7 +13941,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'Dharma Key Ring Upgrade Beacon Controller can upgrade to AdharmaKeyRingImplementation',
     DharmaKeyRingUpgradeBeaconController,
     'upgrade',
@@ -13951,7 +13952,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 cannot deploy an Adharma smart wallet with no key',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
@@ -13960,15 +13961,15 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     'DharmaSmartWalletFactoryV1 can deploy an Adharma smart wallet',
     DharmaSmartWalletFactoryV1,
     'newSmartWallet',
     'send',
-    [address]
+    [tester.address]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV1 cannot create a V1 key ring with no key`,
     DharmaKeyRingFactoryV1,
     'newKeyRing',
@@ -13977,16 +13978,16 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV1 cannot create an Adharma key ring and set a new null key`,
     DharmaKeyRingFactoryV1,
     'newKeyRingAndAdditionalKey',
     'send',
-    [address, constants.NULL_ADDRESS, '0x'],
+    [tester.address, constants.NULL_ADDRESS, '0x'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV1 reverts when no new key ring supplied`,
     DharmaKeyRingFactoryV1,
     'getNextKeyRing',
@@ -13995,30 +13996,30 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV1 can call newKeyRingAndDaiWithdrawal`,
     DharmaKeyRingFactoryV1,
     'newKeyRingAndDaiWithdrawal',
     'send',
-    [address, address, 0, address, 0, '0x', '0x'],
+    [tester.address, tester.address, 0, tester.address, 0, '0x', '0x'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV1 can call newKeyRingAndUSDCWithdrawal`,
     DharmaKeyRingFactoryV1,
     'newKeyRingAndUSDCWithdrawal',
     'send',
-    [address, address, 0, address, 0, '0x', '0x'],
+    [tester.address, tester.address, 0, tester.address, 0, '0x', '0x'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingFactoryV1 can create an Adharma key ring`,
     DharmaKeyRingFactoryV1,
     'newKeyRing',
     'send',
-    [address]
+    [tester.address]
   )
 
   const UserSmartWalletAdharma = new web3.eth.Contract(
@@ -14026,7 +14027,7 @@ module.exports = {test: async function (testingContext) {
     UserSmartWalletV6.options.address
   )
 
-  await runTest(
+  await tester.runTest(
     `Adharma Smart Wallet can be used to perform calls`,
     UserSmartWalletAdharma,
     'performCall',
@@ -14034,10 +14035,10 @@ module.exports = {test: async function (testingContext) {
     [UserSmartWalletAdharma.options.address, 0, '0x'],
     true,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     `Adharma Smart Wallet can be used to perform failing calls`,
     UserSmartWalletAdharma,
     'performCall',
@@ -14045,7 +14046,7 @@ module.exports = {test: async function (testingContext) {
     [BadBeacon.options.address, 0, '0x'],
     false,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
   const KeyRingAdharma = new web3.eth.Contract(
@@ -14053,15 +14054,15 @@ module.exports = {test: async function (testingContext) {
     KeyRingInstance.options.address
   )
 
-  await runTest(
+  await tester.runTest(
     `Adharma Key Ring can be used to take an action`,
     KeyRingAdharma,
     'takeAction',
     'send',
-    [address, 0, '0x', '0x']
+    [tester.address, 0, '0x', '0x']
   )
 
-  await runTest(
+  await tester.runTest(
     `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with no keys`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
@@ -14070,78 +14071,78 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with admin threshold of 0`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
-    [0, 1, [address], [3]],
+    [0, 1, [tester.address], [3]],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with executor threshold of 0`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
-    [1, 0, [address], [3]],
+    [1, 0, [tester.address], [3]],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `MockDharmaKeyRingFactory cannot deploy an Adharma key ring where length of keys and types are not equal`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
-    [1, 1, [address, addressTwo], [3]],
+    [1, 1, [tester.address, tester.addressTwo], [3]],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with duplicate keys`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
-    [1, 1, [address, address], [3, 3]],
+    [1, 1, [tester.address, tester.address], [3, 3]],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with no admin key`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
-    [1, 1, [address], [1]],
+    [1, 1, [tester.address], [1]],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with less admin keys than threshold`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
-    [2, 1, [address], [3]],
+    [2, 1, [tester.address], [3]],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `MockDharmaKeyRingFactory can deploy an Adharma key ring with multiple keys`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
-    [2, 2, [address, addressTwo], [3, 3]]
+    [2, 2, [tester.address, tester.addressTwo], [3, 3]]
   )
 
-  await runTest(
+  await tester.runTest(
     `MockDharmaKeyRingFactory cannot deploy an Adharma key ring with no standard key`,
     MockDharmaKeyRingFactory,
     'newKeyRing',
     'send',
-    [1, 1, [address], [2]],
+    [1, 1, [tester.address], [2]],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `TimelockEdgecaseTester contract deployment edge case 1`,
     TimelockEdgecaseTesterDeployer,
     '',
@@ -14150,7 +14151,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `TimelockEdgecaseTester contract deployment edge case 2`,
     TimelockEdgecaseTesterDeployer,
     '',
@@ -14159,7 +14160,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `TimelockEdgecaseTester contract deployment edge case 3`,
     TimelockEdgecaseTesterDeployer,
     '',
@@ -14168,7 +14169,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  const DharmaUpgradeMultisig = await runTest(
+  const DharmaUpgradeMultisig = await tester.runTest(
     `DharmaUpgradeMultisig contract deployment`,
     DharmaUpgradeMultisigDeployer,
     '',
@@ -14176,7 +14177,7 @@ module.exports = {test: async function (testingContext) {
     [[ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]]
   )
 
-  const DharmaAccountRecoveryMultisig = await runTest(
+  const DharmaAccountRecoveryMultisig = await tester.runTest(
     `DharmaAccountRecoveryMultisig contract deployment`,
     DharmaAccountRecoveryMultisigDeployer,
     '',
@@ -14184,7 +14185,7 @@ module.exports = {test: async function (testingContext) {
     [[ownerOne, ownerTwo, ownerThree, ownerFour]]
   )
 
-  const DharmaAccountRecoveryOperatorMultisig = await runTest(
+  const DharmaAccountRecoveryOperatorMultisig = await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig contract deployment`,
     DharmaAccountRecoveryOperatorMultisigDeployer,
     '',
@@ -14192,7 +14193,7 @@ module.exports = {test: async function (testingContext) {
     [[ownerOne, ownerTwo, ownerThree, ownerFour]]
   )
 
-  const DharmaKeyRegistryMultisig = await runTest(
+  const DharmaKeyRegistryMultisig = await tester.runTest(
     `DharmaKeyRegistryMultisig contract deployment`,
     DharmaKeyRegistryMultisigDeployer,
     '',
@@ -14210,7 +14211,7 @@ module.exports = {test: async function (testingContext) {
     '7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A01a'   
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig can get the initial nonce`,
     DharmaUpgradeMultisig,
     'getNonce',
@@ -14222,7 +14223,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig can get the owners`,
     DharmaUpgradeMultisig,
     'getOwners',
@@ -14236,7 +14237,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig can get an owner`,
     DharmaUpgradeMultisig,
     'isOwner',
@@ -14248,19 +14249,19 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig returns false for a non-owner`,
     DharmaUpgradeMultisig,
     'isOwner',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.ok(!value)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig can get the threshold`,
     DharmaUpgradeMultisig,
     'getThreshold',
@@ -14272,7 +14273,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig can get the destination`,
     DharmaUpgradeMultisig,
     'getDestination',
@@ -14288,31 +14289,31 @@ module.exports = {test: async function (testingContext) {
   hashInputs = (
     DharmaUpgradeMultisig.options.address +
     '0'.padStart(64, '0') +
-    address.slice(2) +
+    tester.address.slice(2) +
     executorGasLimit.toString(16).padStart(64, '0') +
     rawData.slice(2)
   )
 
   hash = util.bufferToHex(util.keccak256(hashInputs))
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig can get a hash`,
     DharmaUpgradeMultisig,
     'getNextHash',
     'call',
-    [rawData, address, executorGasLimit],
+    [rawData, tester.address, executorGasLimit],
     true,
     value => {
       assert.strictEqual(value, hash)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig can get a hash with a specific nonce`,
     DharmaUpgradeMultisig,
     'getHash',
     'call',
-    [rawData, address, executorGasLimit, 0],
+    [rawData, tester.address, executorGasLimit, 0],
     true,
     value => {
       assert.strictEqual(value, hash)
@@ -14324,72 +14325,72 @@ module.exports = {test: async function (testingContext) {
   ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
   ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2) + ownerThreeSig.slice(2)
-  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSig = signHashedPrefixedHexString(hash, tester.address)
   unownedSigs = unownedSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig cannot call execute from non-executor`,
     DharmaUpgradeMultisig,
     'execute',
     'send',
-    [rawData, addressTwo, executorGasLimit, ownerSigs],
+    [rawData, tester.addressTwo, executorGasLimit, ownerSigs],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig cannot call execute with oddly-sized signatures`,
     DharmaUpgradeMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigs + '1234'],
+    [rawData, tester.address, executorGasLimit, ownerSigs + '1234'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig cannot call execute with non-compliant signatures`,
     DharmaUpgradeMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, bizarreSigs],
+    [rawData, tester.address, executorGasLimit, bizarreSigs],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig cannot call execute without enough signatures`,
     DharmaUpgradeMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigs.slice(0, -130)],
+    [rawData, tester.address, executorGasLimit, ownerSigs.slice(0, -130)],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig cannot call execute without owner signatures`,
     DharmaUpgradeMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, unownedSigs],
+    [rawData, tester.address, executorGasLimit, unownedSigs],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig cannot call execute with out-of-order signatures`,
     DharmaUpgradeMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigsOutOfOrder],
+    [rawData, tester.address, executorGasLimit, ownerSigsOutOfOrder],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig can call execute`,
     DharmaUpgradeMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigs]
+    [rawData, tester.address, executorGasLimit, ownerSigs]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig nonce is incremented`,
     DharmaUpgradeMultisig,
     'getNonce',
@@ -14401,7 +14402,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig can get the initial nonce`,
     DharmaKeyRegistryMultisig,
     'getNonce',
@@ -14413,7 +14414,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig can get the owners`,
     DharmaKeyRegistryMultisig,
     'getOwners',
@@ -14427,7 +14428,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig can get an owner`,
     DharmaKeyRegistryMultisig,
     'isOwner',
@@ -14439,19 +14440,19 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig returns false for a non-owner`,
     DharmaKeyRegistryMultisig,
     'isOwner',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.ok(!value)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig can get the threshold`,
     DharmaKeyRegistryMultisig,
     'getThreshold',
@@ -14463,7 +14464,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig can get the destination`,
     DharmaKeyRegistryMultisig,
     'getDestination',
@@ -14479,31 +14480,31 @@ module.exports = {test: async function (testingContext) {
   hashInputs = (
     DharmaKeyRegistryMultisig.options.address +
     '0'.padStart(64, '0') +
-    address.slice(2) +
+    tester.address.slice(2) +
     executorGasLimit.toString(16).padStart(64, '0') +
     rawData.slice(2)
   )
 
   hash = util.bufferToHex(util.keccak256(hashInputs))
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig can get a hash`,
     DharmaKeyRegistryMultisig,
     'getNextHash',
     'call',
-    [rawData, address, executorGasLimit],
+    [rawData, tester.address, executorGasLimit],
     true,
     value => {
       assert.strictEqual(value, hash)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig can get a hash with a specific nonce`,
     DharmaKeyRegistryMultisig,
     'getHash',
     'call',
-    [rawData, address, executorGasLimit, 0],
+    [rawData, tester.address, executorGasLimit, 0],
     true,
     value => {
       assert.strictEqual(value, hash)
@@ -14515,72 +14516,72 @@ module.exports = {test: async function (testingContext) {
   ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
   ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2) + ownerThreeSig.slice(2)
-  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSig = signHashedPrefixedHexString(hash, tester.address)
   unownedSigs = unownedSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig cannot call execute from non-executor`,
     DharmaKeyRegistryMultisig,
     'execute',
     'send',
-    [rawData, addressTwo, executorGasLimit, ownerSigs],
+    [rawData, tester.addressTwo, executorGasLimit, ownerSigs],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig cannot call execute with oddly-sized signatures`,
     DharmaKeyRegistryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigs + '1234'],
+    [rawData, tester.address, executorGasLimit, ownerSigs + '1234'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig cannot call execute with non-compliant signatures`,
     DharmaKeyRegistryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, bizarreSigs],
+    [rawData, tester.address, executorGasLimit, bizarreSigs],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig cannot call execute without enough signatures`,
     DharmaKeyRegistryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigs.slice(0, -130)],
+    [rawData, tester.address, executorGasLimit, ownerSigs.slice(0, -130)],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig cannot call execute without owner signatures`,
     DharmaKeyRegistryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, unownedSigs],
+    [rawData, tester.address, executorGasLimit, unownedSigs],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig cannot call execute with out-of-order signatures`,
     DharmaKeyRegistryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigsOutOfOrder],
+    [rawData, tester.address, executorGasLimit, ownerSigsOutOfOrder],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig can call execute`,
     DharmaKeyRegistryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigs]
+    [rawData, tester.address, executorGasLimit, ownerSigs]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig nonce is incremented`,
     DharmaKeyRegistryMultisig,
     'getNonce',
@@ -14592,7 +14593,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig can get the initial nonce`,
     DharmaAccountRecoveryMultisig,
     'getNonce',
@@ -14604,7 +14605,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig can get the owners`,
     DharmaAccountRecoveryMultisig,
     'getOwners',
@@ -14618,7 +14619,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig can get an owner`,
     DharmaAccountRecoveryMultisig,
     'isOwner',
@@ -14630,19 +14631,19 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig returns false for a non-owner`,
     DharmaAccountRecoveryMultisig,
     'isOwner',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.ok(!value)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig can get the threshold`,
     DharmaAccountRecoveryMultisig,
     'getThreshold',
@@ -14654,7 +14655,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig can get the destination`,
     DharmaAccountRecoveryMultisig,
     'getDestination',
@@ -14670,31 +14671,31 @@ module.exports = {test: async function (testingContext) {
   hashInputs = (
     DharmaAccountRecoveryMultisig.options.address +
     '0'.padStart(64, '0') +
-    address.slice(2) +
+    tester.address.slice(2) +
     executorGasLimit.toString(16).padStart(64, '0') +
     rawData.slice(2)
   )
 
   hash = util.bufferToHex(util.keccak256(hashInputs))
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig can get a hash`,
     DharmaAccountRecoveryMultisig,
     'getNextHash',
     'call',
-    [rawData, address, executorGasLimit],
+    [rawData, tester.address, executorGasLimit],
     true,
     value => {
       assert.strictEqual(value, hash)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig can get a hash with a specific nonce`,
     DharmaAccountRecoveryMultisig,
     'getHash',
     'call',
-    [rawData, address, executorGasLimit, 0],
+    [rawData, tester.address, executorGasLimit, 0],
     true,
     value => {
       assert.strictEqual(value, hash)
@@ -14714,72 +14715,72 @@ module.exports = {test: async function (testingContext) {
 
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
   ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2) + ownerThreeSig.slice(2)
-  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSig = signHashedPrefixedHexString(hash, tester.address)
   unownedSigs = unownedSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig cannot call execute from non-executor`,
     DharmaAccountRecoveryMultisig,
     'execute',
     'send',
-    [rawData, addressTwo, executorGasLimit, ownerSigs],
+    [rawData, tester.addressTwo, executorGasLimit, ownerSigs],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig cannot call execute with oddly-sized signatures`,
     DharmaAccountRecoveryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigs + '1234'],
+    [rawData, tester.address, executorGasLimit, ownerSigs + '1234'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig cannot call execute with non-compliant signatures`,
     DharmaAccountRecoveryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, bizarreSigs],
+    [rawData, tester.address, executorGasLimit, bizarreSigs],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig cannot call execute without enough signatures`,
     DharmaAccountRecoveryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerOneSig],
+    [rawData, tester.address, executorGasLimit, ownerOneSig],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig cannot call execute without owner signatures`,
     DharmaAccountRecoveryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, unownedSigs],
+    [rawData, tester.address, executorGasLimit, unownedSigs],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig cannot call execute with out-of-order signatures`,
     DharmaAccountRecoveryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigsOutOfOrder],
+    [rawData, tester.address, executorGasLimit, ownerSigsOutOfOrder],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig can call execute`,
     DharmaAccountRecoveryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigs]
+    [rawData, tester.address, executorGasLimit, ownerSigs]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig nonce is incremented`,
     DharmaAccountRecoveryMultisig,
     'getNonce',
@@ -14791,7 +14792,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig can get the owners`,
     DharmaAccountRecoveryOperatorMultisig,
     'getOwners',
@@ -14805,7 +14806,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig can get an owner`,
     DharmaAccountRecoveryOperatorMultisig,
     'isOwner',
@@ -14817,19 +14818,19 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig returns false for a non-owner`,
     DharmaAccountRecoveryOperatorMultisig,
     'isOwner',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.ok(!value)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig can get the threshold`,
     DharmaAccountRecoveryOperatorMultisig,
     'getThreshold',
@@ -14841,7 +14842,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig can get the destination`,
     DharmaAccountRecoveryOperatorMultisig,
     'getDestination',
@@ -14857,19 +14858,19 @@ module.exports = {test: async function (testingContext) {
   hashInputs = (
     DharmaAccountRecoveryOperatorMultisig.options.address +
     '0'.padStart(64, '0') +
-    address.slice(2) +
+    tester.address.slice(2) +
     executorGasLimit.toString(16).padStart(64, '0') +
     rawData.slice(2)
   )
 
   hash = util.bufferToHex(util.keccak256(hashInputs))
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig can get a hash`,
     DharmaAccountRecoveryOperatorMultisig,
     'getHash',
     'call',
-    [rawData, address, executorGasLimit, constants.NULL_BYTES_32],
+    [rawData, tester.address, executorGasLimit, constants.NULL_BYTES_32],
     true,
     values => {
       assert.strictEqual(values.hash, hash)
@@ -14888,88 +14889,88 @@ module.exports = {test: async function (testingContext) {
 
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
   ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2)
-  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSig = signHashedPrefixedHexString(hash, tester.address)
   unownedSigs = unownedSig + ownerTwoSig.slice(2)
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig cannot call execute from non-executor`,
     DharmaAccountRecoveryOperatorMultisig,
     'execute',
     'send',
-    [rawData, addressTwo, executorGasLimit, constants.NULL_BYTES_32, ownerSigs],
+    [rawData, tester.addressTwo, executorGasLimit, constants.NULL_BYTES_32, ownerSigs],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig cannot call execute with oddly-sized signatures`,
     DharmaAccountRecoveryOperatorMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerSigs + '1234'],
+    [rawData, tester.address, executorGasLimit, constants.NULL_BYTES_32, ownerSigs + '1234'],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig cannot call execute with non-compliant signatures`,
     DharmaAccountRecoveryOperatorMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, bizarreSigs],
+    [rawData, tester.address, executorGasLimit, constants.NULL_BYTES_32, bizarreSigs],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig cannot call execute without enough signatures`,
     DharmaAccountRecoveryOperatorMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerOneSig],
+    [rawData, tester.address, executorGasLimit, constants.NULL_BYTES_32, ownerOneSig],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig cannot call execute without owner signatures`,
     DharmaAccountRecoveryOperatorMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, unownedSigs],
+    [rawData, tester.address, executorGasLimit, constants.NULL_BYTES_32, unownedSigs],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig cannot call execute with out-of-order signatures`,
     DharmaAccountRecoveryOperatorMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerSigsOutOfOrder],
+    [rawData, tester.address, executorGasLimit, constants.NULL_BYTES_32, ownerSigsOutOfOrder],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig can call execute`,
     DharmaAccountRecoveryOperatorMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerSigs]
+    [rawData, tester.address, executorGasLimit, constants.NULL_BYTES_32, ownerSigs]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig cannot replay a call to execute`,
     DharmaAccountRecoveryOperatorMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, constants.NULL_BYTES_32, ownerSigs],
+    [rawData, tester.address, executorGasLimit, constants.NULL_BYTES_32, ownerSigs],
     false
   )
 
-  const DharmaEscapeHatchRegistry = await runTest(
+  const DharmaEscapeHatchRegistry = await tester.runTest(
     `DharmaEscapeHatchRegistry contract deployment`,
     DharmaEscapeHatchRegistryDeployer,
     '',
     'deploy'
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry confirms that an escape hatch does not exist until set`,
     DharmaEscapeHatchRegistry,
     'getEscapeHatch',
@@ -14982,7 +14983,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry can set the null address as an escape hatch account`,
     DharmaEscapeHatchRegistry,
     'setEscapeHatch',
@@ -14991,15 +14992,15 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry can set an escape hatch account`,
     DharmaEscapeHatchRegistry,
     'setEscapeHatch',
     'send',
-    [addressTwo]
+    [tester.addressTwo]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry can get an escape hatch account once set`,
     DharmaEscapeHatchRegistry,
     'getEscapeHatch',
@@ -15008,13 +15009,13 @@ module.exports = {test: async function (testingContext) {
     true,
     value => {
       assert.ok(value.exists)
-      assert.strictEqual(value.escapeHatch, addressTwo)
+      assert.strictEqual(value.escapeHatch, tester.addressTwo)
     }
   )
 
   fallbackEscapeHatch = await web3.eth.call({
       to: DharmaEscapeHatchRegistry.options.address,
-      from: address,
+      from: tester.address,
       data: "0x"
   })
   
@@ -15023,25 +15024,25 @@ module.exports = {test: async function (testingContext) {
   )
   assert.strictEqual(
     web3.eth.abi.decodeParameter('address', fallbackEscapeHatch),
-    addressTwo
+    tester.addressTwo
   )
   passed++
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry can get an escape hatch for a specific smart wallet`,
     DharmaEscapeHatchRegistry,
     'getEscapeHatchForSmartWallet',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.ok(value.exists)
-      assert.strictEqual(value.escapeHatch, addressTwo)
+      assert.strictEqual(value.escapeHatch, tester.addressTwo)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry cannot get an escape hatch the null address`,
     DharmaEscapeHatchRegistry,
     'getEscapeHatchForSmartWallet',
@@ -15050,13 +15051,13 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry can remove an escape hatch account`,
     DharmaEscapeHatchRegistry,
     'removeEscapeHatch'
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry confirms that an escape hatch is successfully removed`,
     DharmaEscapeHatchRegistry,
     'getEscapeHatch',
@@ -15071,7 +15072,7 @@ module.exports = {test: async function (testingContext) {
 
   fallbackEscapeHatch = await web3.eth.call({
       to: DharmaEscapeHatchRegistry.options.address,
-      from: address,
+      from: tester.address,
       data: "0x"
   })
 
@@ -15084,26 +15085,26 @@ module.exports = {test: async function (testingContext) {
   )
   passed++
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry will not fire an event when removing an unset escape hatch account`,
     DharmaEscapeHatchRegistry,
     'removeEscapeHatch'
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry confirms that escape hatch functionality is not initially disabled`,
     DharmaEscapeHatchRegistry,
     'hasDisabledEscapeHatchForSmartWallet',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.ok(!value)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry cannot get disabled status for null address`,
     DharmaEscapeHatchRegistry,
     'hasDisabledEscapeHatchForSmartWallet',
@@ -15112,7 +15113,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry can reset an escape hatch account`,
     DharmaEscapeHatchRegistry,
     'setEscapeHatch',
@@ -15120,7 +15121,7 @@ module.exports = {test: async function (testingContext) {
     [ownerOne]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry can get an escape hatch account once reset`,
     DharmaEscapeHatchRegistry,
     'getEscapeHatch',
@@ -15133,7 +15134,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry setting an existing escape hatch account is a no-op`,
     DharmaEscapeHatchRegistry,
     'setEscapeHatch',
@@ -15141,26 +15142,26 @@ module.exports = {test: async function (testingContext) {
     [ownerOne]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry can disable the escape hatch mechanism`,
     DharmaEscapeHatchRegistry,
     'permanentlyDisableEscapeHatch'
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry confirms that escape hatch functionality is disabled`,
     DharmaEscapeHatchRegistry,
     'hasDisabledEscapeHatchForSmartWallet',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.ok(value)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry confirms that an escape hatch is successfully removed when disabling`,
     DharmaEscapeHatchRegistry,
     'getEscapeHatch',
@@ -15175,7 +15176,7 @@ module.exports = {test: async function (testingContext) {
 
   fallbackEscapeHatch = await web3.eth.call({
       to: DharmaEscapeHatchRegistry.options.address,
-      from: address,
+      from: tester.address,
       data: "0x"
   })
 
@@ -15188,21 +15189,21 @@ module.exports = {test: async function (testingContext) {
   )
   passed++
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry confirms escape hatch is removed after disabling for for a specific smart wallet`,
     DharmaEscapeHatchRegistry,
     'getEscapeHatchForSmartWallet',
     'call',
-    [address],
+    [tester.address],
     true,
     value => {
       assert.ok(!value.exists)
       assert.strictEqual(value.escapeHatch, constants.NULL_ADDRESS)
     },
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry cannot set an escape hatch account once disabled`,
     DharmaEscapeHatchRegistry,
     'setEscapeHatch',
@@ -15211,7 +15212,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry cannot remove an escape hatch account once disabled`,
     DharmaEscapeHatchRegistry,
     'removeEscapeHatch',
@@ -15220,7 +15221,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaEscapeHatchRegistry cannot re-disable an escape hatch account once disabled`,
     DharmaEscapeHatchRegistry,
     'permanentlyDisableEscapeHatch',
@@ -15229,7 +15230,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 owner can start ownership transfer to multisig`,
     DharmaAccountRecoveryManagerV2,
     'transferOwnership',
@@ -15238,12 +15239,12 @@ module.exports = {test: async function (testingContext) {
   )
 
   rawData = DharmaAccountRecoveryManagerV2.methods.acceptOwnership().encodeABI()
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig can get a hash`,
     DharmaAccountRecoveryMultisig,
     'getNextHash',
     'call',
-    [rawData, address, executorGasLimit],
+    [rawData, tester.address, executorGasLimit],
     true,
     value => {
       hash = value
@@ -15256,15 +15257,15 @@ module.exports = {test: async function (testingContext) {
   ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig can call execute to accept ownership`,
     DharmaAccountRecoveryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigs]
+    [rawData, tester.address, executorGasLimit, ownerSigs]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 owner is now set to multisig`,
     DharmaAccountRecoveryManagerV2,
     'owner',
@@ -15279,13 +15280,13 @@ module.exports = {test: async function (testingContext) {
   // TODO: test account recovery using the multisig?
 
   // transfer ownership back
-  rawData = DharmaAccountRecoveryManagerV2.methods.transferOwnership(address).encodeABI()
-  await runTest(
+  rawData = DharmaAccountRecoveryManagerV2.methods.transferOwnership(tester.address).encodeABI()
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig can get a hash`,
     DharmaAccountRecoveryMultisig,
     'getNextHash',
     'call',
-    [rawData, address, executorGasLimit],
+    [rawData, tester.address, executorGasLimit],
     true,
     value => {
       hash = value
@@ -15297,21 +15298,21 @@ module.exports = {test: async function (testingContext) {
   ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig can call execute to transfer ownership back`,
     DharmaAccountRecoveryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigs]
+    [rawData, tester.address, executorGasLimit, ownerSigs]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 EOA can accept ownership transfer from multisig`,
     DharmaAccountRecoveryManagerV2,
     'acceptOwnership'
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryManagerV2 owner is now set to EOA`,
     DharmaAccountRecoveryManagerV2,
     'owner',
@@ -15319,11 +15320,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryV2 owner can start ownership transfer to multisig`,
     DharmaKeyRegistryV2,
     'transferOwnership',
@@ -15332,12 +15333,12 @@ module.exports = {test: async function (testingContext) {
   )
 
   rawData = DharmaKeyRegistryV2.methods.acceptOwnership().encodeABI()
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig can get a hash`,
     DharmaKeyRegistryMultisig,
     'getNextHash',
     'call',
-    [rawData, address, executorGasLimit],
+    [rawData, tester.address, executorGasLimit],
     true,
     value => {
       hash = value
@@ -15350,15 +15351,15 @@ module.exports = {test: async function (testingContext) {
   ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig can call execute to accept ownership`,
     DharmaKeyRegistryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigs]
+    [rawData, tester.address, executorGasLimit, ownerSigs]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryV2 owner is now set to multisig`,
     DharmaKeyRegistryV2,
     'owner',
@@ -15373,13 +15374,13 @@ module.exports = {test: async function (testingContext) {
   // TODO: test setting a new key using the multisig?
 
   // transfer ownership back
-  rawData = DharmaKeyRegistryV2.methods.transferOwnership(address).encodeABI()
-  await runTest(
+  rawData = DharmaKeyRegistryV2.methods.transferOwnership(tester.address).encodeABI()
+  await tester.runTest(
     `DharmaKeyRegistryMultisig can get a hash`,
     DharmaKeyRegistryMultisig,
     'getNextHash',
     'call',
-    [rawData, address, executorGasLimit],
+    [rawData, tester.address, executorGasLimit],
     true,
     value => {
       hash = value
@@ -15391,21 +15392,21 @@ module.exports = {test: async function (testingContext) {
   ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig can call execute to transfer ownership back`,
     DharmaKeyRegistryMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigs]
+    [rawData, tester.address, executorGasLimit, ownerSigs]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryV2 EOA can accept ownership transfer from multisig`,
     DharmaKeyRegistryV2,
     'acceptOwnership'
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRegistryV2 owner is now set to EOA`,
     DharmaKeyRegistryV2,
     'owner',
@@ -15413,11 +15414,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner is initially set to an EOA`,
     DharmaUpgradeBeaconControllerManager,
     'owner',
@@ -15425,11 +15426,11 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner can start ownership transfer to multisig`,
     DharmaUpgradeBeaconControllerManager,
     'transferOwnership',
@@ -15438,12 +15439,12 @@ module.exports = {test: async function (testingContext) {
   )
 
   rawData = DharmaUpgradeBeaconControllerManager.methods.acceptOwnership().encodeABI()
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig can get a hash`,
     DharmaUpgradeMultisig,
     'getNextHash',
     'call',
-    [rawData, address, executorGasLimit],
+    [rawData, tester.address, executorGasLimit],
     true,
     value => {
       hash = value
@@ -15456,15 +15457,15 @@ module.exports = {test: async function (testingContext) {
   ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig can call execute to accept ownership`,
     DharmaUpgradeMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigs]
+    [rawData, tester.address, executorGasLimit, ownerSigs]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner is now set to multisig`,
     DharmaUpgradeBeaconControllerManager,
     'owner',
@@ -15479,13 +15480,13 @@ module.exports = {test: async function (testingContext) {
   // TODO: test an upgrade, rollback, etc with the multisig?
 
   // transfer ownership back
-  rawData = DharmaUpgradeBeaconControllerManager.methods.transferOwnership(address).encodeABI()
-  await runTest(
+  rawData = DharmaUpgradeBeaconControllerManager.methods.transferOwnership(tester.address).encodeABI()
+  await tester.runTest(
     `DharmaUpgradeMultisig can get a hash`,
     DharmaUpgradeMultisig,
     'getNextHash',
     'call',
-    [rawData, address, executorGasLimit],
+    [rawData, tester.address, executorGasLimit],
     true,
     value => {
       hash = value
@@ -15497,21 +15498,21 @@ module.exports = {test: async function (testingContext) {
   ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig can call execute to transfer ownership back`,
     DharmaUpgradeMultisig,
     'execute',
     'send',
-    [rawData, address, executorGasLimit, ownerSigs]
+    [rawData, tester.address, executorGasLimit, ownerSigs]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager EOA can accept ownership transfer from multisig`,
     DharmaUpgradeBeaconControllerManager,
     'acceptOwnership'
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner is now set to EOA`,
     DharmaUpgradeBeaconControllerManager,
     'owner',
@@ -15519,12 +15520,12 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     value => {
-      assert.strictEqual(value, address)
+      assert.strictEqual(value, tester.address)
     }
   )
 
   // Transfer smart wallet controller ownership to coverage manager
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController can transfer ownership to manager`,
     DharmaUpgradeBeaconController,
     'transferOwnership',
@@ -15532,7 +15533,7 @@ module.exports = {test: async function (testingContext) {
     [DharmaUpgradeBeaconControllerManagerCoverage.options.address]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when it doesn't own keyring controller`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
@@ -15541,7 +15542,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaKeyRingUpgradeBeaconController can transfer ownership to manager`,
     DharmaKeyRingUpgradeBeaconController,
     'transferOwnership',
@@ -15549,13 +15550,13 @@ module.exports = {test: async function (testingContext) {
     [DharmaUpgradeBeaconControllerManagerCoverage.options.address]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can activate Adharma Contingency`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency'
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can get contingency status when activated`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'contingencyStatus',
@@ -15569,7 +15570,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner can re-arm an active Adharma Contingency`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
@@ -15577,7 +15578,7 @@ module.exports = {test: async function (testingContext) {
     [true]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot activate Adharma Contingency when already active`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
@@ -15586,7 +15587,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager now gets a prior implementation count`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'getTotalPriorImplementations',
@@ -15601,7 +15602,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can get the initial prior implementation`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'getPriorImplementation',
@@ -15621,19 +15622,19 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot call "exitAdharmaContingency" before 48 hours has elapsed`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
     'send',
     [
-      address,
-      address
+      tester.address,
+      tester.address
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can rollback to initial prior implementation`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'rollback',
@@ -15645,7 +15646,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager contingency status is exited after rollback`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'contingencyStatus',
@@ -15659,16 +15660,16 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot rollback to implementation with no index`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'rollback',
     'send',
-    [address, address, 100],
+    [tester.address, tester.address, 100],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner can re-arm an Adharma Contingency`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
@@ -15676,7 +15677,7 @@ module.exports = {test: async function (testingContext) {
     [true]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager contingency status shows armed`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'contingencyStatus',
@@ -15690,7 +15691,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can rollback to initial prior implementation`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'rollback',
@@ -15702,7 +15703,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager contingency status shows no longer armed`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'contingencyStatus',
@@ -15716,7 +15717,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can block rollback to prior implementation`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'blockRollback',
@@ -15728,7 +15729,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot block a blocked rollback`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'blockRollback',
@@ -15741,7 +15742,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot rollback to a blocked rollback`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'rollback',
@@ -15757,7 +15758,7 @@ module.exports = {test: async function (testingContext) {
   // advance time by 90 days
   await advanceTime((60 * 60 * 24 * 90) + 5)
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager deadman switch can arm an Adharma Contingency`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'armAdharmaContingency',
@@ -15765,10 +15766,10 @@ module.exports = {test: async function (testingContext) {
     [true],
     true,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager deadman switch can activate an Adharma Contingency`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'activateAdharmaContingency',
@@ -15776,37 +15777,37 @@ module.exports = {test: async function (testingContext) {
     [],
     true,
     receipt => {},
-    originalAddress
+    tester.originalAddress
   )
 
   // advance time by 2 days
   await advanceTime((60 * 60 * 24 * 2) + 5)
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot call exitAdharmaContingency with null implementation`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
     'send',
     [
       constants.NULL_ADDRESS,
-      address
+      tester.address
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot call exitAdharmaContingency with non-contract implementation`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
     'send',
     [
-      address,
-      address
+      tester.address,
+      tester.address
     ],
     false
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can call exitAdharmaContingency`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'exitAdharmaContingency',
@@ -15817,7 +15818,7 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can have an EOA accept controller ownership`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'agreeToAcceptControllerOwnership',
@@ -15828,14 +15829,14 @@ module.exports = {test: async function (testingContext) {
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can initiate timelock for transferring controller ownership`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'initiateTransferControllerOwnership',
     'send',
     [
       DharmaUpgradeBeaconController.options.address,
-      address,
+      tester.address,
       0
     ]
   )
@@ -15843,18 +15844,18 @@ module.exports = {test: async function (testingContext) {
   // advance time by 4 weeks
   await advanceTime((60 * 60 * 24 * 7 * 4) + 5)
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can transfer controller ownership`,
     DharmaUpgradeBeaconControllerManagerCoverage,
     'transferControllerOwnership',
     'send',
     [
       DharmaUpgradeBeaconController.options.address,
-      address
+      tester.address
     ]
   )
 
-  await runTest(
+  await tester.runTest(
     `DharmaUpgradeBeaconController can get new owner`,
     DharmaUpgradeBeaconController,
     'isOwner',
@@ -15871,7 +15872,7 @@ module.exports = {test: async function (testingContext) {
     `with ${failed} failure${failed === 1 ? '' : 's'}.`
   )
 
-  await longer()
+  await longer();
 
   if (failed > 0) {
     process.exit(1)
