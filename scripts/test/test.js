@@ -55,12 +55,7 @@ const ComptrollerArtifact = require('../../build/contracts/ComptrollerInterface.
 const contractNames = Object.assign({}, constants.CONTRACT_NAMES)
 
 
-module.exports = {test: async function (testingContext) {
-  let passed = 0
-  let failed = 0
-  let gasUsage = {}
-  let counts = {}
-
+async function test(testingContext) {
   const DharmaUpgradeBeaconController = new web3.eth.Contract(
     DharmaUpgradeBeaconControllerArtifact.abi,
     constants.UPGRADE_BEACON_CONTROLLER_ADDRESS
@@ -381,460 +376,7 @@ module.exports = {test: async function (testingContext) {
   const tester = new Tester(testingContext);
   await tester.init();
 
-  // get available addresses and assign them to various roles
-  const addresses = await web3.eth.getAccounts()
-  if (addresses.length < 1) {
-    console.log('cannot find enough addresses to run tests!')
-    process.exit(1)
-  }
-
-  let latestBlock = await web3.eth.getBlock('latest')
-
-  const originalAddress = addresses[0]
-
-  let address = await setupNewDefaultAddress(
-    '0xfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeed'
-  )
-
-  let addressTwo = await setupNewDefaultAddress(
-    '0xf00df00df00df00df00df00df00df00df00df00df00df00df00df00df00df00d'
-  )
-
-  let initialControllerOwner = await setupNewDefaultAddress(
-    '0x58e0348ce225c18ece7f2d6a069afa340365019481903b221481706d291a66bf'
-  )
-
-  const ownerOne = await setupNewDefaultAddress(
-    constants.MOCK_OWNER_PRIVATE_KEYS[0]
-  )
-  const ownerTwo = await setupNewDefaultAddress(
-    constants.MOCK_OWNER_PRIVATE_KEYS[1]
-  )
-  const ownerThree = await setupNewDefaultAddress(
-    constants.MOCK_OWNER_PRIVATE_KEYS[2]
-  )
-  const ownerFour = await setupNewDefaultAddress(
-    constants.MOCK_OWNER_PRIVATE_KEYS[3]
-  )
-  const ownerFive = await setupNewDefaultAddress(
-    constants.MOCK_OWNER_PRIVATE_KEYS[4]
-  )
-
-  const gasLimit = latestBlock.gasLimit
-
   console.log('running tests...')
-
-    // ************************** helper functions **************************** //
-  async function send(
-    title,
-    instance,
-    method,
-    args,
-    from,
-    value,
-    gas,
-    gasPrice,
-    shouldSucceed,
-    assertionCallback
-  ) {
-    const receipt = await instance.methods[method](...args).send({
-      from: from,
-      value: value,
-      gas: gas,
-      gasPrice: gasPrice
-    }).on('confirmation', (confirmationNumber, r) => {
-      confirmations[r.transactionHash] = confirmationNumber
-    }).catch(error => {
-      if (shouldSucceed) {
-        console.error(error)
-      }
-      return {status: false}
-    })
-
-    if (receipt.status !== shouldSucceed) {
-      return false
-    } else if (!shouldSucceed) {
-      return true
-    }
-
-    let assertionsPassed
-    try {
-      assertionCallback(receipt)
-      assertionsPassed = true
-    } catch(error) {
-      assertionsPassed = false
-      console.log(error);
-    }
-
-    return assertionsPassed
-  }
-
-  async function call(
-    title,
-    instance,
-    method,
-    args,
-    from,
-    value,
-    gas,
-    gasPrice,
-    shouldSucceed,
-    assertionCallback
-  ) {
-    let succeeded = true
-    returnValues = await instance.methods[method](...args).call({
-      from: from,
-      value: value,
-      gas: gas,
-      gasPrice: gasPrice
-    }).catch(error => {
-      if (shouldSucceed) {
-        console.error(error)
-      }
-      succeeded = false
-    })
-
-    if (succeeded !== shouldSucceed) {
-      return false
-    } else if (!shouldSucceed) {
-      return true
-    }
-
-    let assertionsPassed
-    try {
-      assertionCallback(returnValues)
-      assertionsPassed = true
-    } catch(error) {
-      assertionsPassed = false
-      console.log(error);
-    }
-
-    return assertionsPassed
-  }
-
-  async function deploy(
-    title,
-    instance,
-    args,
-    from,
-    value,
-    gas,
-    gasPrice,
-    shouldSucceed,
-    assertionCallback
-  ) {
-    let deployData = instance.deploy({arguments: args}).encodeABI()
-    let deployGas = await web3.eth.estimateGas({
-        from: from,
-        data: deployData
-    }).catch(error => {
-      if (shouldSucceed) {
-        console.error(error)
-      }
-      return gasLimit
-    })
-
-    if (deployGas > gasLimit) {
-      console.error(` ✘ ${title}: deployment costs exceed block gas limit!`)
-      process.exit(1)
-    }
-
-    if (typeof(gas) === 'undefined') {
-      gas = deployGas
-    }
-
-    if (deployGas > gas) {
-      console.error(` ✘ ${title}: deployment costs exceed supplied gas.`)
-      process.exit(1)
-    }
-
-    let signed
-    let deployHash
-    let receipt
-    const contract = await instance.deploy({arguments: args}).send({
-      from: from,
-      gas: gas,
-      gasPrice: gasPrice
-    }).on('transactionHash', hash => {
-      deployHash = hash
-    }).on('receipt', r => {
-      receipt = r
-    }).on('confirmation', (confirmationNumber, r) => {
-      confirmations[r.transactionHash] = confirmationNumber
-    }).catch(error => {
-      if (shouldSucceed) {
-        console.error(error)
-      }
-
-      receipt = {status: false}
-    })
-
-    if (receipt.status !== shouldSucceed) {
-      if (contract) {
-        return [false, contract, gas]
-      }
-      return [false, instance, gas]
-    } else if (!shouldSucceed) {
-      if (contract) {
-        return [true, contract, gas]
-      }
-      return [true, instance, gas]
-    }
-
-    assert.ok(receipt.status)
-
-    let assertionsPassed
-    try {
-      assertionCallback(receipt)
-      assertionsPassed = true
-    } catch(error) {
-      assertionsPassed = false
-    }
-
-    if (contract) {
-      return [assertionsPassed, contract, gas]
-    }
-    return [assertionsPassed, instance, gas]
-  }
-
-  async function runTest(
-    title,
-    instance,
-    method,
-    callOrSend,
-    args,
-    shouldSucceed,
-    assertionCallback,
-    from,
-    value,
-    gas
-  ) {
-    if (typeof(callOrSend) === 'undefined') {
-      callOrSend = 'send'
-    }
-    if (typeof(args) === 'undefined') {
-      args = []
-    }
-    if (typeof(shouldSucceed) === 'undefined') {
-      shouldSucceed = true
-    }
-    if (typeof(assertionCallback) === 'undefined') {
-      assertionCallback = (value) => {}
-    }
-    if (typeof(from) === 'undefined') {
-      from = tester.address
-    }
-    if (typeof(value) === 'undefined') {
-      value = 0
-    }
-    if (typeof(gas) === 'undefined' && callOrSend !== 'deploy') {
-      gas = 6009006
-      if (testingContext === 'coverage') {
-        gas = gasLimit - 1
-      }
-    }
-    let ok = false
-    let contract
-    let deployGas
-    if (callOrSend === 'send') {
-      ok = await send(
-        title,
-        instance,
-        method,
-        args,
-        from,
-        value,
-        gas,
-        1,
-        shouldSucceed,
-        assertionCallback
-      )
-    } else if (callOrSend === 'call') {
-      ok = await call(
-        title,
-        instance,
-        method,
-        args,
-        from,
-        value,
-        gas,
-        1,
-        shouldSucceed,
-        assertionCallback
-      )
-    } else if (callOrSend === 'deploy') {
-      const fields = await deploy(
-        title,
-        instance,
-        args,
-        from,
-        value,
-        gas,
-        1,
-        shouldSucceed,
-        assertionCallback
-      )
-      ok = fields[0]
-      contract = fields[1]
-      deployGas = fields[2]
-    } else {
-      console.error('must use call, send, or deploy!')
-      process.exit(1)
-    }
-
-    if (ok) {
-      console.log(
-        ` ✓ ${
-          callOrSend === 'deploy' ? 'successful ' : ''
-        }${title}${
-          callOrSend === 'deploy' ? ` (${deployGas} gas)` : ''
-        }`
-      )
-      passed++
-    } else {
-      console.log(
-        ` ✘ ${
-          callOrSend === 'deploy' ? 'failed ' : ''
-        }${title}${
-          callOrSend === 'deploy' ? ` (${deployGas} gas)` : ''
-        }`
-      )
-      failed++
-    }
-
-    if (contract) {
-      return contract
-    }
-  }
-
-  async function setupNewDefaultAddress(newPrivateKey) {
-    const pubKey = await web3.eth.accounts.privateKeyToAccount(newPrivateKey)
-    await web3.eth.accounts.wallet.add(pubKey)
-
-    await web3.eth.sendTransaction({
-      from: tester.originalAddress,
-      to: pubKey.address,
-      value: 2 * 10 ** 18,
-      gas: '0x5208',
-      gasPrice: '0x4A817C800'
-    })
-
-    return pubKey.address
-  }
-
-  // async function raiseGasLimit(necessaryGas) {
-  //   iterations = 9999
-  //   if (necessaryGas > 8000000) {
-  //     console.error('the gas needed is too high!')
-  //     process.exit(1)
-  //   } else if (typeof necessaryGas === 'undefined') {
-  //     iterations = 20
-  //     necessaryGas = 8000000
-  //   }
-  //
-  //   // bring up gas limit if necessary by doing additional transactions
-  //   var block = await web3.eth.getBlock("latest")
-  //   while (iterations > 0 && block.gasLimit < necessaryGas) {
-  //     await web3.eth.sendTransaction({
-  //       from: tester.originalAddress,
-  //       to: tester.originalAddress,
-  //       value: '0x01',
-  //       gas: '0x5208',
-  //       gasPrice: '0x4A817C800'
-  //     })
-  //     var block = await web3.eth.getBlock("latest")
-  //     iterations--
-  //   }
-  //
-  //   console.log("raising gasLimit, currently at " + block.gasLimit)
-  //   return block.gasLimit
-  // }
-
-  // async function getDeployGas(dataPayload) {
-  //   await web3.eth.estimateGas({
-  //     from: tester.address,
-  //     data: dataPayload
-  //   }).catch(async error => {
-  //     if (
-  //       error.message === (
-  //         'Returned error: gas required exceeds allowance or always failing ' +
-  //         'transaction'
-  //       )
-  //     ) {
-  //       await raiseGasLimit()
-  //       await getDeployGas(dataPayload)
-  //     }
-  //   })
-  //
-  //   deployGas = await web3.eth.estimateGas({
-  //     from: tester.address,
-  //     data: dataPayload
-  //   })
-  //
-  //   return deployGas
-  // }
-
-  function signHashedPrefixedHexString(hashedHexString, account) {
-    const hashedPrefixedMessage = web3.utils.keccak256(
-      // prefix => "\x19Ethereum Signed Message:\n32"
-      "0x19457468657265756d205369676e6564204d6573736167653a0a3332" +
-      hashedHexString.slice(2),
-      {encoding: "hex"}
-    )
-
-    const sig = util.ecsign(
-      util.toBuffer(hashedPrefixedMessage),
-      util.toBuffer(web3.eth.accounts.wallet[account].privateKey)
-    )
-
-    return (
-      util.bufferToHex(sig.r) +
-      util.bufferToHex(sig.s).slice(2) +
-      web3.utils.toHex(sig.v).slice(2)
-    )
-  }
-
-  function signHashedPrefixedHashedHexString(hexString, account) {
-    const hashedPrefixedHashedMessage = web3.utils.keccak256(
-      // prefix => "\x19Ethereum Signed Message:\n32"
-      "0x19457468657265756d205369676e6564204d6573736167653a0a3332" +
-      web3.utils.keccak256(hexString, {encoding: "hex"}).slice(2),
-      {encoding: "hex"}
-    )
-
-    const sig = util.ecsign(
-      util.toBuffer(hashedPrefixedHashedMessage),
-      util.toBuffer(web3.eth.accounts.wallet[account].privateKey)
-    )
-
-    return (
-      util.bufferToHex(sig.r) +
-      util.bufferToHex(sig.s).slice(2) +
-      web3.utils.toHex(sig.v).slice(2)
-    )
-  }
-
-  async function advanceTime(time) {
-    await web3.currentProvider.send(
-      {
-        jsonrpc: '2.0',
-        method: 'evm_increaseTime',
-        params: [time],
-        id: new Date().getTime()
-      },
-      (err, result) => {
-        if (err) {
-          console.error(err)
-        } else {
-          console.log(' ✓ advanced time by', time, 'seconds')
-        }
-      }
-    )
-  }
-
-  // *************************** deploy contracts *************************** //
-  let deployGas
-  let selfAddress
 
   await tester.runTest(
     `DharmaUpgradeBeaconController can transfer owner`,
@@ -906,9 +448,9 @@ module.exports = {test: async function (testingContext) {
     ).slice(2)
   )
 
-  const newKeySignature = signHashedPrefixedHashedHexString(message, tester.address)
+  const newKeySignature = tester.signHashedPrefixedHashedHexString(message, tester.address)
 
-  const badNewKeySignature = signHashedPrefixedHashedHexString('0x12', tester.address)
+  const badNewKeySignature = tester.signHashedPrefixedHashedHexString('0x12', tester.address)
 
   await tester.runTest(
     'Dharma Key Registry V1 cannot set a new global key unless called by owner',
@@ -1050,7 +592,7 @@ module.exports = {test: async function (testingContext) {
     ).slice(2)
   )
 
-  const v2KeySignature = signHashedPrefixedHashedHexString(messageV2, tester.address)
+  const v2KeySignature = tester.signHashedPrefixedHashedHexString(messageV2, tester.address)
 
   await tester.runTest(
     'Dharma Key Registry V2 cannot set a previously used global key',
@@ -1409,8 +951,8 @@ module.exports = {test: async function (testingContext) {
 
   if (!currentSaiCode) {
     console.log(
-      `completed ${passed + failed} test${passed + failed === 1 ? '' : 's'} ` +
-      `with ${failed} failure${failed === 1 ? '' : 's'}.`
+      `completed ${tester.passed + tester.failed} test${tester.passed + tester.failed === 1 ? '' : 's'} ` +
+      `with ${tester.failed} failure${tester.failed === 1 ? '' : 's'}.`
     )
 
     console.log(
@@ -1418,7 +960,7 @@ module.exports = {test: async function (testingContext) {
       'run against a fork of mainnet using `yarn forkStart` and `yarn test`.'
     )
 
-    if (failed > 0) {
+    if (tester.failed > 0) {
       process.exit(1)
     }
 
@@ -1506,7 +1048,7 @@ module.exports = {test: async function (testingContext) {
       from: tester.address,
       to: constants.ETH_WHALE_ADDRESS,
       value: web3.utils.toWei('.2', 'ether'),
-      gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+      gas: (testingContext !== 'coverage') ? '0x5208' : tester.gasLimit - 1,
       gasPrice: 1
     })
     console.log(' ✓ Eth Whale can receive eth if needed')
@@ -1517,7 +1059,7 @@ module.exports = {test: async function (testingContext) {
       from: tester.address,
       to: constants.SAI_WHALE_ADDRESS,
       value: web3.utils.toWei('.1', 'ether'),
-      gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+      gas: (testingContext !== 'coverage') ? '0x5208' : tester.gasLimit - 1,
       gasPrice: 1
     })
     console.log(' ✓ Sai Whale can receive eth if needed')
@@ -1528,7 +1070,7 @@ module.exports = {test: async function (testingContext) {
       from: tester.address,
       to: constants.USDC_WHALE_ADDRESS,
       value: web3.utils.toWei('.1', 'ether'),
-      gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+      gas: (testingContext !== 'coverage') ? '0x5208' : tester.gasLimit - 1,
       gasPrice: 1
     })
     console.log(' ✓ USDC Whale can receive eth if needed')
@@ -1538,7 +1080,7 @@ module.exports = {test: async function (testingContext) {
     from: constants.ETH_WHALE_ADDRESS,
     to: targetWalletAddress,
     value: web3.utils.toWei('.1', 'ether'),
-    gas: (testingContext !== 'coverage') ? '0x5208' : gasLimit - 1,
+    gas: (testingContext !== 'coverage') ? '0x5208' : tester.gasLimit - 1,
     gasPrice: 1
   })
   console.log(' ✓ Eth Whale can deposit eth into the yet-to-be-deployed smart wallet')
@@ -1710,7 +1252,7 @@ module.exports = {test: async function (testingContext) {
     from: constants.ETH_WHALE_ADDRESS,
     to: targetWalletAddress,
     value: web3.utils.toWei('100', 'ether'),
-    gas: (testingContext !== 'coverage') ? '0xffff' : gasLimit - 1,
+    gas: (testingContext !== 'coverage') ? '0xffff' : tester.gasLimit - 1,
     gasPrice: 1
   }).catch(error => {
     console.log(' ✓ Eth Whale can no longer deposit eth into the deployed smart wallet')
@@ -2094,7 +1636,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  let usdcWithdrawalSignature = signHashedPrefixedHexString(
+  let usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
@@ -2152,7 +1694,7 @@ module.exports = {test: async function (testingContext) {
     address.slice(2)                   // recipient
   )
 
-  const saiWithdrawalSignature = signHashedPrefixedHashedHexString(
+  const saiWithdrawalSignature = tester.signHashedPrefixedHashedHexString(
     withdrawalMessage,
     address
   )
@@ -2263,7 +1805,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  let saiWithdrawalSignature = signHashedPrefixedHexString(
+  let saiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
@@ -2869,12 +2411,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  let executeActionSignature = signHashedPrefixedHexString(
+  let executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  let executeActionUserSignature = signHashedPrefixedHexString(
+  let executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -2910,12 +2452,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -2978,12 +2520,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -3133,12 +2675,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  let setUserSigningKeyUserSignature = signHashedPrefixedHexString(
+  let setUserSigningKeyUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
 
-  let setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
+  let setUserSigningKeyDharmaSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
@@ -3206,7 +2748,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  let cancelUserSignature = signHashedPrefixedHexString(
+  let cancelUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -3298,12 +2840,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  let usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  let usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -3345,12 +2887,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -3392,12 +2934,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -3439,12 +2981,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -3522,7 +3064,7 @@ module.exports = {test: async function (testingContext) {
     address.slice(2)                   // recipient
   )
 
-  const saiWithdrawalSignature = signHashedPrefixedHashedHexString(
+  const saiWithdrawalSignature = tester.signHashedPrefixedHashedHexString(
     withdrawalMessage,
     address
   )
@@ -3545,12 +3087,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  saiWithdrawalSignature = signHashedPrefixedHexString(
+  saiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  let saiUserWithdrawalSignature = signHashedPrefixedHexString(
+  let saiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -3589,12 +3131,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  saiWithdrawalSignature = signHashedPrefixedHexString(
+  saiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  saiUserWithdrawalSignature = signHashedPrefixedHexString(
+  saiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -3633,12 +3175,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  saiWithdrawalSignature = signHashedPrefixedHexString(
+  saiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  saiUserWithdrawalSignature = signHashedPrefixedHexString(
+  saiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -3709,12 +3251,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  saiWithdrawalSignature = signHashedPrefixedHexString(
+  saiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  saiUserWithdrawalSignature = signHashedPrefixedHexString(
+  saiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -3795,12 +3337,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  let ethWithdrawalSignature = signHashedPrefixedHexString(
+  let ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  let ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  let ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -3841,12 +3383,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ethWithdrawalSignature = signHashedPrefixedHexString(
+  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -3887,12 +3429,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ethWithdrawalSignature = signHashedPrefixedHexString(
+  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -3973,12 +3515,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ethWithdrawalSignature = signHashedPrefixedHexString(
+  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -4096,7 +3638,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  let cancelSignature = signHashedPrefixedHexString(customActionId, tester.addressTwo)
+  let cancelSignature = tester.signHashedPrefixedHexString(customActionId, tester.addressTwo)
 
   await tester.runTest(
     'V5 UserSmartWallet can cancel using a signature',
@@ -4183,12 +3725,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -4280,12 +3822,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -4564,12 +4106,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -4648,12 +4190,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -4696,12 +4238,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -4742,12 +4284,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -4790,12 +4332,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ethWithdrawalSignature = signHashedPrefixedHexString(
+  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -4877,12 +4419,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -4918,12 +4460,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  saiWithdrawalSignature = signHashedPrefixedHexString(
+  saiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  saiUserWithdrawalSignature = signHashedPrefixedHexString(
+  saiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -4965,12 +4507,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -5016,12 +4558,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -5066,12 +4608,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -5140,12 +4682,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -5185,12 +4727,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -5231,12 +4773,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  saiWithdrawalSignature = signHashedPrefixedHexString(
+  saiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  saiUserWithdrawalSignature = signHashedPrefixedHexString(
+  saiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -5292,7 +4834,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   // advance time by 3 days
-  await advanceTime((60 * 60 * 24 * 3) + 5)
+  await tester.advanceTime((60 * 60 * 24 * 3) + 5)
 
   // recover account
   await tester.runTest(
@@ -5478,7 +5020,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
+  setUserSigningKeyDharmaSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
@@ -5617,7 +5159,7 @@ module.exports = {test: async function (testingContext) {
     from: tester.address,
     to: constants.DAI_WHALE_ADDRESS,
     value: web3.utils.toWei('1', 'ether'),
-    gas: (testingContext !== 'coverage') ? '0xffff' : gasLimit - 1,
+    gas: (testingContext !== 'coverage') ? '0xffff' : tester.gasLimit - 1,
     gasPrice: 1
   })
 
@@ -5689,12 +5231,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -5812,12 +5354,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -5853,12 +5395,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -5921,12 +5463,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -6018,12 +5560,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  setUserSigningKeyUserSignature = signHashedPrefixedHexString(
+  setUserSigningKeyUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
 
-  setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
+  setUserSigningKeyDharmaSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
@@ -6091,12 +5633,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  setUserSigningKeyUserSignature = signHashedPrefixedHexString(
+  setUserSigningKeyUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
 
-  setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
+  setUserSigningKeyDharmaSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
@@ -6164,7 +5706,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  cancelUserSignature = signHashedPrefixedHexString(
+  cancelUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -6256,12 +5798,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -6303,12 +5845,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -6350,12 +5892,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -6397,12 +5939,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -6480,7 +6022,7 @@ module.exports = {test: async function (testingContext) {
     address.slice(2)                   // recipient
   )
 
-  const saiWithdrawalSignature = signHashedPrefixedHashedHexString(
+  const saiWithdrawalSignature = tester.signHashedPrefixedHashedHexString(
     withdrawalMessage,
     address
   )
@@ -6503,12 +6045,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  let daiWithdrawalSignature = signHashedPrefixedHexString(
+  let daiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  let daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  let daiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -6547,12 +6089,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  daiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  daiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -6591,12 +6133,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  daiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  daiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -6667,12 +6209,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  daiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  daiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -6753,12 +6295,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ethWithdrawalSignature = signHashedPrefixedHexString(
+  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -6799,12 +6341,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ethWithdrawalSignature = signHashedPrefixedHexString(
+  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -6845,12 +6387,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ethWithdrawalSignature = signHashedPrefixedHexString(
+  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -6931,12 +6473,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ethWithdrawalSignature = signHashedPrefixedHexString(
+  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -7054,7 +6596,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  cancelSignature = signHashedPrefixedHexString(customActionId, tester.addressTwo)
+  cancelSignature = tester.signHashedPrefixedHexString(customActionId, tester.addressTwo)
 
   await tester.runTest(
     'V6 UserSmartWallet can cancel using a signature',
@@ -7141,12 +6683,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -7238,12 +6780,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -7484,12 +7026,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -7568,12 +7110,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -7616,12 +7158,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -7662,12 +7204,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -7710,12 +7252,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ethWithdrawalSignature = signHashedPrefixedHexString(
+  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -7796,12 +7338,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -7837,12 +7379,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  daiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  daiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -7884,12 +7426,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  daiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  daiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -7931,12 +7473,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -7981,12 +7523,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -8031,12 +7573,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -8105,12 +7647,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -8151,12 +7693,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  let escapeHatchSignature = signHashedPrefixedHexString(
+  let escapeHatchSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  let escapeHatchUserSignature = signHashedPrefixedHexString(
+  let escapeHatchUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -8338,7 +7880,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
+  setUserSigningKeyDharmaSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
@@ -8477,7 +8019,7 @@ module.exports = {test: async function (testingContext) {
     from: tester.address,
     to: constants.DAI_WHALE_ADDRESS,
     value: web3.utils.toWei('1', 'ether'),
-    gas: (testingContext !== 'coverage') ? '0xffff' : gasLimit - 1,
+    gas: (testingContext !== 'coverage') ? '0xffff' : tester.gasLimit - 1,
     gasPrice: 1
   })
 
@@ -8549,12 +8091,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -8627,12 +8169,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -8668,12 +8210,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -8720,12 +8262,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -8785,12 +8327,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  setUserSigningKeyUserSignature = signHashedPrefixedHexString(
+  setUserSigningKeyUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
 
-  setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
+  setUserSigningKeyDharmaSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
@@ -8858,12 +8400,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  setUserSigningKeyUserSignature = signHashedPrefixedHexString(
+  setUserSigningKeyUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
 
-  setUserSigningKeyDharmaSignature = signHashedPrefixedHexString(
+  setUserSigningKeyDharmaSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
@@ -8931,7 +8473,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  cancelUserSignature = signHashedPrefixedHexString(
+  cancelUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -9023,12 +8565,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -9070,12 +8612,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -9117,12 +8659,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -9164,12 +8706,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -9247,7 +8789,7 @@ module.exports = {test: async function (testingContext) {
     address.slice(2)                   // recipient
   )
 
-  const saiWithdrawalSignature = signHashedPrefixedHashedHexString(
+  const saiWithdrawalSignature = tester.signHashedPrefixedHashedHexString(
     withdrawalMessage,
     address
   )
@@ -9270,12 +8812,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  daiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  daiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -9314,12 +8856,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  daiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  daiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -9358,12 +8900,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  daiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  daiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -9434,12 +8976,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  daiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  daiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -9520,12 +9062,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ethWithdrawalSignature = signHashedPrefixedHexString(
+  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -9566,12 +9108,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ethWithdrawalSignature = signHashedPrefixedHexString(
+  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -9612,12 +9154,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ethWithdrawalSignature = signHashedPrefixedHexString(
+  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -9698,12 +9240,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ethWithdrawalSignature = signHashedPrefixedHexString(
+  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -9821,7 +9363,7 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  cancelSignature = signHashedPrefixedHexString(customActionId, tester.addressTwo)
+  cancelSignature = tester.signHashedPrefixedHexString(customActionId, tester.addressTwo)
 
   await tester.runTest(
     'V7 UserSmartWallet can cancel using a signature',
@@ -9908,12 +9450,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10005,12 +9547,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10220,12 +9762,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10304,12 +9846,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10352,12 +9894,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10398,12 +9940,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10446,12 +9988,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ethWithdrawalSignature = signHashedPrefixedHexString(
+  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  ethUserWithdrawalSignature = signHashedPrefixedHexString(
+  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10532,12 +10074,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10573,12 +10115,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  daiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  daiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10620,12 +10162,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  daiWithdrawalSignature = signHashedPrefixedHexString(
+  daiWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  daiUserWithdrawalSignature = signHashedPrefixedHexString(
+  daiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10667,12 +10209,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  usdcWithdrawalSignature = signHashedPrefixedHexString(
+  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  usdcUserWithdrawalSignature = signHashedPrefixedHexString(
+  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10717,12 +10259,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10767,12 +10309,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10841,12 +10383,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  executeActionSignature = signHashedPrefixedHexString(
+  executeActionSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  executeActionUserSignature = signHashedPrefixedHexString(
+  executeActionUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10890,12 +10432,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  escapeHatchSignature = signHashedPrefixedHexString(
+  escapeHatchSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  escapeHatchUserSignature = signHashedPrefixedHexString(
+  escapeHatchUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -10935,12 +10477,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  escapeHatchSignature = signHashedPrefixedHexString(
+  escapeHatchSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  escapeHatchUserSignature = signHashedPrefixedHexString(
+  escapeHatchUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -11031,12 +10573,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  escapeHatchSignature = signHashedPrefixedHexString(
+  escapeHatchSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  escapeHatchUserSignature = signHashedPrefixedHexString(
+  escapeHatchUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -11087,12 +10629,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  escapeHatchSignature = signHashedPrefixedHexString(
+  escapeHatchSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  escapeHatchUserSignature = signHashedPrefixedHexString(
+  escapeHatchUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -11131,12 +10673,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  escapeHatchSignature = signHashedPrefixedHexString(
+  escapeHatchSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.address
   )
 
-  escapeHatchUserSignature = signHashedPrefixedHexString(
+  escapeHatchUserSignature = tester.signHashedPrefixedHexString(
     customActionId,
     tester.addressTwo
   )
@@ -11276,7 +10818,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   // advance time by 3 days
-  await advanceTime((60 * 60 * 24 * 3) + 5)
+  await tester.advanceTime((60 * 60 * 24 * 3) + 5)
 
   // recover account
   await tester.runTest(
@@ -11543,7 +11085,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  const takeAdminActionSignature = signHashedPrefixedHexString(
+  const takeAdminActionSignature = tester.signHashedPrefixedHexString(
     adminActionID,
     tester.address
   )
@@ -11895,9 +11437,9 @@ module.exports = {test: async function (testingContext) {
     ).slice(2)
   )
 
-  const newKeySignatureCoverage = signHashedPrefixedHashedHexString(messageCoverage, tester.addressTwo)
+  const newKeySignatureCoverage = tester.signHashedPrefixedHashedHexString(messageCoverage, tester.addressTwo)
 
-  const badNewKeySignatureCoverage = signHashedPrefixedHashedHexString('0x12', tester.addressTwo)
+  const badNewKeySignatureCoverage = tester.signHashedPrefixedHashedHexString('0x12', tester.addressTwo)
 
   await tester.runTest(
     'Dharma Key Registry V2 cannot set a new global key unless called by owner',
@@ -12138,7 +11680,7 @@ module.exports = {test: async function (testingContext) {
     ).slice(2)
   )
 
-  const v2KeySignatureCoverage = signHashedPrefixedHashedHexString(messageV2Coverage, tester.address)
+  const v2KeySignatureCoverage = tester.signHashedPrefixedHashedHexString(messageV2Coverage, tester.address)
 
   await tester.runTest(
     'Dharma Key Registry V2 cannot set a previously used global key',
@@ -12535,7 +12077,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   // advance time by 3 days
-  await advanceTime((60 * 60 * 24 * 3) + 5)
+  await tester.advanceTime((60 * 60 * 24 * 3) + 5)
 
   await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call recover after timelock completion`,
@@ -12775,7 +12317,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   // advance time by 2 weeks
-  await advanceTime((60 * 60 * 24 * 7 * 2) + 5)
+  await tester.advanceTime((60 * 60 * 24 * 7 * 2) + 5)
 
   await tester.runTest(
     `DharmaAccountRecoveryManagerV2 cannot call disableAccountRecovery after timelock expiration`,
@@ -13184,7 +12726,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   // advance time by 2 weeks
-  await advanceTime((60 * 60 * 24 * 7 * 2) + 5)
+  await tester.advanceTime((60 * 60 * 24 * 7 * 2) + 5)
 
   await tester.runTest(
     `DharmaAccountRecoveryManagerV2 can call modifyTimelockInterval`,
@@ -13325,7 +12867,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   // advance time by 7 days
-  await advanceTime((60 * 60 * 24 * 7) + 5)
+  await tester.advanceTime((60 * 60 * 24 * 7) + 5)
 
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot upgrade an unowned controller`,
@@ -13407,7 +12949,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   // advance time by 4 weeks
-  await advanceTime((60 * 60 * 24 * 7 * 4) + 5)
+  await tester.advanceTime((60 * 60 * 24 * 7 * 4) + 5)
 
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot transfer unowned controller ownership`,
@@ -13581,7 +13123,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   // advance time by 2 days
-  await advanceTime((60 * 60 * 24 * 2) + 5)
+  await tester.advanceTime((60 * 60 * 24 * 2) + 5)
 
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot exit Contingency to null address`,
@@ -13850,7 +13392,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   // advance time by 4 weeks
-  await advanceTime((60 * 60 * 24 * 7 * 4) + 5)
+  await tester.advanceTime((60 * 60 * 24 * 7 * 4) + 5)
 
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can call modifyTimelockInterval`,
@@ -14174,7 +13716,7 @@ module.exports = {test: async function (testingContext) {
     DharmaUpgradeMultisigDeployer,
     '',
     'deploy',
-    [[ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]]
+    [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour, tester.ownerFive]]
   )
 
   const DharmaAccountRecoveryMultisig = await tester.runTest(
@@ -14182,7 +13724,7 @@ module.exports = {test: async function (testingContext) {
     DharmaAccountRecoveryMultisigDeployer,
     '',
     'deploy',
-    [[ownerOne, ownerTwo, ownerThree, ownerFour]]
+    [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour]]
   )
 
   const DharmaAccountRecoveryOperatorMultisig = await tester.runTest(
@@ -14190,7 +13732,7 @@ module.exports = {test: async function (testingContext) {
     DharmaAccountRecoveryOperatorMultisigDeployer,
     '',
     'deploy',
-    [[ownerOne, ownerTwo, ownerThree, ownerFour]]
+    [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour]]
   )
 
   const DharmaKeyRegistryMultisig = await tester.runTest(
@@ -14198,7 +13740,7 @@ module.exports = {test: async function (testingContext) {
     DharmaKeyRegistryMultisigDeployer,
     '',
     'deploy',
-    [[ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]]
+    [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour, tester.ownerFive]]
   )
 
   rawData = '0x'
@@ -14232,7 +13774,7 @@ module.exports = {test: async function (testingContext) {
     true,
     value => {
       assert.deepEqual(
-        value, [ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]
+        value, [tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour, tester.ownerFive]
       )
     }
   )
@@ -14242,7 +13784,7 @@ module.exports = {test: async function (testingContext) {
     DharmaUpgradeMultisig,
     'isOwner',
     'call',
-    [ownerOne],
+    [tester.ownerOne],
     true,
     value => {
       assert.ok(value)
@@ -14320,12 +13862,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
-  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
-  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerOneSig = tester.signHashedPrefixedHexString(hash, tester.ownerOne)
+  ownerTwoSig = tester.signHashedPrefixedHexString(hash, tester.ownerTwo)
+  ownerThreeSig = tester.signHashedPrefixedHexString(hash, tester.ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
   ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2) + ownerThreeSig.slice(2)
-  unownedSig = signHashedPrefixedHexString(hash, tester.address)
+  unownedSig = tester.signHashedPrefixedHexString(hash, tester.address)
   unownedSigs = unownedSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await tester.runTest(
@@ -14423,7 +13965,7 @@ module.exports = {test: async function (testingContext) {
     true,
     value => {
       assert.deepEqual(
-        value, [ownerOne, ownerTwo, ownerThree, ownerFour, ownerFive]
+        value, [tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour, tester.ownerFive]
       )
     }
   )
@@ -14433,7 +13975,7 @@ module.exports = {test: async function (testingContext) {
     DharmaKeyRegistryMultisig,
     'isOwner',
     'call',
-    [ownerOne],
+    [tester.ownerOne],
     true,
     value => {
       assert.ok(value)
@@ -14511,12 +14053,12 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
-  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
-  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerOneSig = tester.signHashedPrefixedHexString(hash, tester.ownerOne)
+  ownerTwoSig = tester.signHashedPrefixedHexString(hash, tester.ownerTwo)
+  ownerThreeSig = tester.signHashedPrefixedHexString(hash, tester.ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
   ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2) + ownerThreeSig.slice(2)
-  unownedSig = signHashedPrefixedHexString(hash, tester.address)
+  unownedSig = tester.signHashedPrefixedHexString(hash, tester.address)
   unownedSigs = unownedSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await tester.runTest(
@@ -14614,7 +14156,7 @@ module.exports = {test: async function (testingContext) {
     true,
     value => {
       assert.deepEqual(
-        value, [ownerOne, ownerTwo, ownerThree, ownerFour]
+        value, [tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour]
       )
     }
   )
@@ -14624,7 +14166,7 @@ module.exports = {test: async function (testingContext) {
     DharmaAccountRecoveryMultisig,
     'isOwner',
     'call',
-    [ownerOne],
+    [tester.ownerOne],
     true,
     value => {
       assert.ok(value)
@@ -14702,20 +14244,20 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
-  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
-  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerOneSig = tester.signHashedPrefixedHexString(hash, tester.ownerOne)
+  ownerTwoSig = tester.signHashedPrefixedHexString(hash, tester.ownerTwo)
+  ownerThreeSig = tester.signHashedPrefixedHexString(hash, tester.ownerThree)
 
   /*
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
   ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2)
-  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSig = tester.signHashedPrefixedHexString(hash, address)
   unownedSigs = unownedSig + ownerTwoSig.slice(2)
   */
 
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
   ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2) + ownerThreeSig.slice(2)
-  unownedSig = signHashedPrefixedHexString(hash, tester.address)
+  unownedSig = tester.signHashedPrefixedHexString(hash, tester.address)
   unownedSigs = unownedSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await tester.runTest(
@@ -14801,7 +14343,7 @@ module.exports = {test: async function (testingContext) {
     true,
     value => {
       assert.deepEqual(
-        value, [ownerOne, ownerTwo, ownerThree, ownerFour]
+        value, [tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour]
       )
     }
   )
@@ -14811,7 +14353,7 @@ module.exports = {test: async function (testingContext) {
     DharmaAccountRecoveryOperatorMultisig,
     'isOwner',
     'call',
-    [ownerOne],
+    [tester.ownerOne],
     true,
     value => {
       assert.ok(value)
@@ -14877,19 +14419,19 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
-  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
+  ownerOneSig = tester.signHashedPrefixedHexString(hash, tester.ownerOne)
+  ownerTwoSig = tester.signHashedPrefixedHexString(hash, tester.ownerTwo)
 
   /*
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
   ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2)
-  unownedSig = signHashedPrefixedHexString(hash, address)
+  unownedSig = tester.signHashedPrefixedHexString(hash, address)
   unownedSigs = unownedSig + ownerTwoSig.slice(2)
   */
 
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2)
   ownerSigsOutOfOrder = ownerTwoSig + ownerOneSig.slice(2)
-  unownedSig = signHashedPrefixedHexString(hash, tester.address)
+  unownedSig = tester.signHashedPrefixedHexString(hash, tester.address)
   unownedSigs = unownedSig + ownerTwoSig.slice(2)
 
   await tester.runTest(
@@ -15026,7 +14568,7 @@ module.exports = {test: async function (testingContext) {
     web3.eth.abi.decodeParameter('address', fallbackEscapeHatch),
     tester.addressTwo
   )
-  passed++
+  tester.passed++
 
   await tester.runTest(
     `DharmaEscapeHatchRegistry can get an escape hatch for a specific smart wallet`,
@@ -15083,7 +14625,7 @@ module.exports = {test: async function (testingContext) {
     web3.eth.abi.decodeParameter('address', fallbackEscapeHatch),
     constants.NULL_ADDRESS
   )
-  passed++
+  tester.passed++
 
   await tester.runTest(
     `DharmaEscapeHatchRegistry will not fire an event when removing an unset escape hatch account`,
@@ -15118,7 +14660,7 @@ module.exports = {test: async function (testingContext) {
     DharmaEscapeHatchRegistry,
     'setEscapeHatch',
     'send',
-    [ownerOne]
+    [tester.ownerOne]
   )
 
   await tester.runTest(
@@ -15130,7 +14672,7 @@ module.exports = {test: async function (testingContext) {
     true,
     value => {
       assert.ok(value.exists)
-      assert.strictEqual(value.escapeHatch, ownerOne)
+      assert.strictEqual(value.escapeHatch, tester.ownerOne)
     }
   )
 
@@ -15139,7 +14681,7 @@ module.exports = {test: async function (testingContext) {
     DharmaEscapeHatchRegistry,
     'setEscapeHatch',
     'send',
-    [ownerOne]
+    [tester.ownerOne]
   )
 
   await tester.runTest(
@@ -15187,7 +14729,7 @@ module.exports = {test: async function (testingContext) {
     web3.eth.abi.decodeParameter('address', fallbackEscapeHatch),
     constants.NULL_ADDRESS
   )
-  passed++
+  tester.passed++
 
   await tester.runTest(
     `DharmaEscapeHatchRegistry confirms escape hatch is removed after disabling for for a specific smart wallet`,
@@ -15208,7 +14750,7 @@ module.exports = {test: async function (testingContext) {
     DharmaEscapeHatchRegistry,
     'setEscapeHatch',
     'send',
-    [ownerTwo],
+    [tester.ownerTwo],
     false
   )
 
@@ -15252,9 +14794,9 @@ module.exports = {test: async function (testingContext) {
   )
 
   // accept ownership
-  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
-  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
-  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerOneSig = tester.signHashedPrefixedHexString(hash, tester.ownerOne)
+  ownerTwoSig = tester.signHashedPrefixedHexString(hash, tester.ownerTwo)
+  ownerThreeSig = tester.signHashedPrefixedHexString(hash, tester.ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await tester.runTest(
@@ -15293,9 +14835,9 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
-  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
-  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerOneSig = tester.signHashedPrefixedHexString(hash, tester.ownerOne)
+  ownerTwoSig = tester.signHashedPrefixedHexString(hash, tester.ownerTwo)
+  ownerThreeSig = tester.signHashedPrefixedHexString(hash, tester.ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await tester.runTest(
@@ -15346,9 +14888,9 @@ module.exports = {test: async function (testingContext) {
   )
 
   // accept ownership
-  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
-  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
-  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerOneSig = tester.signHashedPrefixedHexString(hash, tester.ownerOne)
+  ownerTwoSig = tester.signHashedPrefixedHexString(hash, tester.ownerTwo)
+  ownerThreeSig = tester.signHashedPrefixedHexString(hash, tester.ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await tester.runTest(
@@ -15387,9 +14929,9 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
-  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
-  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerOneSig = tester.signHashedPrefixedHexString(hash, tester.ownerOne)
+  ownerTwoSig = tester.signHashedPrefixedHexString(hash, tester.ownerTwo)
+  ownerThreeSig = tester.signHashedPrefixedHexString(hash, tester.ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await tester.runTest(
@@ -15452,9 +14994,9 @@ module.exports = {test: async function (testingContext) {
   )
 
   // accept ownership
-  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
-  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
-  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerOneSig = tester.signHashedPrefixedHexString(hash, tester.ownerOne)
+  ownerTwoSig = tester.signHashedPrefixedHexString(hash, tester.ownerTwo)
+  ownerThreeSig = tester.signHashedPrefixedHexString(hash, tester.ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await tester.runTest(
@@ -15493,9 +15035,9 @@ module.exports = {test: async function (testingContext) {
     }
   )
 
-  ownerOneSig = signHashedPrefixedHexString(hash, ownerOne)
-  ownerTwoSig = signHashedPrefixedHexString(hash, ownerTwo)
-  ownerThreeSig = signHashedPrefixedHexString(hash, ownerThree)
+  ownerOneSig = tester.signHashedPrefixedHexString(hash, tester.ownerOne)
+  ownerTwoSig = tester.signHashedPrefixedHexString(hash, tester.ownerTwo)
+  ownerThreeSig = tester.signHashedPrefixedHexString(hash, tester.ownerThree)
   ownerSigs = ownerOneSig + ownerTwoSig.slice(2) + ownerThreeSig.slice(2)
 
   await tester.runTest(
@@ -15756,7 +15298,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   // advance time by 90 days
-  await advanceTime((60 * 60 * 24 * 90) + 5)
+  await tester.advanceTime((60 * 60 * 24 * 90) + 5)
 
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager deadman switch can arm an Adharma Contingency`,
@@ -15781,7 +15323,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   // advance time by 2 days
-  await advanceTime((60 * 60 * 24 * 2) + 5)
+  await tester.advanceTime((60 * 60 * 24 * 2) + 5)
 
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager cannot call exitAdharmaContingency with null implementation`,
@@ -15842,7 +15384,7 @@ module.exports = {test: async function (testingContext) {
   )
 
   // advance time by 4 weeks
-  await advanceTime((60 * 60 * 24 * 7 * 4) + 5)
+  await tester.advanceTime((60 * 60 * 24 * 7 * 4) + 5)
 
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager can transfer controller ownership`,
@@ -15868,17 +15410,20 @@ module.exports = {test: async function (testingContext) {
   )
 
   console.log(
-    `completed ${passed + failed} test${passed + failed === 1 ? '' : 's'} ` +
-    `with ${failed} failure${failed === 1 ? '' : 's'}.`
+    `completed ${tester.passed + tester.failed} test${tester.passed + tester.failed === 1 ? '' : 's'} ` +
+    `with ${tester.failed} failure${tester.failed === 1 ? '' : 's'}.`
   )
 
   await longer();
 
-  if (failed > 0) {
+  if (tester.failed > 0) {
     process.exit(1)
   }
 
   // exit.
   return 0
 
-}}
+}
+module.exports = {
+  test,
+};

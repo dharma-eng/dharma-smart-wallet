@@ -1,6 +1,7 @@
 const { web3 } = require("./web3");
 const constants = require("./constants");
 const assert = require("assert");
+const util = require('ethereumjs-util');
 
 const SCALING_FACTOR = web3.utils.toBN("1000000000000000000");
 const ZERO = web3.utils.toBN("0");
@@ -86,8 +87,8 @@ class Tester {
         let block = await web3.eth.getBlock("latest");
         while (iterations > 0 && block.gasLimit < necessaryGas) {
             await web3.eth.sendTransaction({
-                from: originalAddress,
-                to: originalAddress,
+                from: this.originalAddress,
+                to: this.originalAddress,
                 value: "0x01",
                 gas: "0x5208",
                 gasPrice: "0x4A817C800"
