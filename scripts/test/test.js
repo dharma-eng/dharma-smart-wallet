@@ -850,6 +850,7 @@ async function test(testingContext) {
 
   const ethWhaleBalance = await web3.eth.getBalance(constants.ETH_WHALE_ADDRESS)
   const saiWhaleBalance = await web3.eth.getBalance(constants.SAI_WHALE_ADDRESS)
+  const daiWhaleBalance = await web3.eth.getBalance(constants.DAI_WHALE_ADDRESS)
   const usdcWhaleBalance = await web3.eth.getBalance(constants.USDC_WHALE_ADDRESS)
 
   if (ethWhaleBalance === '0') {

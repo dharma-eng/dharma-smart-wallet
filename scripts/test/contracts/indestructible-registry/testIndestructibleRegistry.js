@@ -156,7 +156,7 @@ async function testIndestructibleRegistry(tester, contracts) {
     )
     */
 
-    if (tester.testingContext !== 'coverage') {
+    if (tester.context !== 'coverage') {
         /*
         await tester.runTest(
             'IndestructibleRegistry can register V2 implementation as indestructible',

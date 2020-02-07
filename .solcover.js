@@ -13,6 +13,7 @@ module.exports = {
     'helpers/FactoryFactFinder.sol',
     'helpers/ImmutableCreate2Factory.sol',
     'helpers/IndestructibleRegistry.sol',
+    'helpers/SmartWalletRevertReasonHelperV1.sol',
     'helpers/SmartWalletFactoryV1UserSigningKeyUpdater.sol',
     //'helpers/Timelocker.sol',
     //'helpers/TimelockerV2.sol',
@@ -62,6 +63,8 @@ module.exports = {
     'test/MockAdharmaKeyRingFactory.sol',
     'test/TimelockEdgecaseTester.sol',
     'test/TimelockTwoStepOwnableTestContract.sol',
-    'test/UpgradeBeaconImplementationCheck.sol'
+    'test/UpgradeBeaconImplementationCheck.sol',
+    'upgradeability/token/DharmaDaiUpgradeBeacon.sol',
+    'upgradeability/token/DharmaUSDCUpgradeBeacon.sol'
   ]
 }
