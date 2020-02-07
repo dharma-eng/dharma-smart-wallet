@@ -11,7 +11,6 @@ async function testUpgradeBeaconController(
 	keyRingUpgradeBeaconAddress,
 	badBeaconAddress
 ) {
-
   await tester.runTest(
     `DharmaUpgradeBeaconController initially gets zero for lastImplementation`,
     contract,
