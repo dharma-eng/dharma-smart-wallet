@@ -8,6 +8,7 @@ const { testAccountRecoveryManager } = require("./contracts/account-recovery/tes
 const { testUpgradeBeaconController } = require("./contracts/upgradeability/testUpgradeBeaconController");
 const { testUpgradeBeaconControllerManagerPartOne, testUpgradeBeaconControllerManagerPartTwo } = require("./contracts/upgradeability/testUpgradeBeaconControllerManager");
 const { testKeyRegistryV2 } = require("./contracts/registries/testKeyRegistryV2");
+const { testPerformingUpgrade } = require("./contracts/upgradeability/testPerformingUpgrade");
 
 const AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
 const AdharmaKeyRingImplementationArtifact = require('../../build/contracts/AdharmaKeyRingImplementation.json')
@@ -51,7 +52,6 @@ const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
 const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
 const TimelockEdgecaseTesterArtifact = require('../../build/contracts/TimelockEdgecaseTester.json')
 
-const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
 const MockDharmaKeyRingFactoryArtifact = require('../../build/contracts/MockDharmaKeyRingFactory.json')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
 const ComptrollerArtifact = require('../../build/contracts/ComptrollerInterface.json')
@@ -231,11 +231,6 @@ async function test(testingContext) {
     TimelockEdgecaseTesterArtifact.bytecode
   )
 
-  const MockCodeCheckDeployer = new web3.eth.Contract(
-    MockCodeCheckArtifact.abi
-  )
-  MockCodeCheckDeployer.options.data = MockCodeCheckArtifact.bytecode
-
   const DharmaUpgradeBeaconControllerDeployer = new web3.eth.Contract(
     DharmaUpgradeBeaconControllerArtifact.abi
   )
@@ -376,7 +371,6 @@ async function test(testingContext) {
     DharmaEscapeHatchRegistryArtifact.bytecode
   )
 
-
   const tester = new Tester(testingContext);
   await tester.init();
 
@@ -388,13 +382,6 @@ async function test(testingContext) {
     'transferOwnership',
     'send',
     [tester.address]
-  )
-
-  const MockCodeCheck = await tester.runTest(
-    `MockCodeCheck contract deployment`,
-    MockCodeCheckDeployer,
-    '',
-    'deploy'
   )
 
   await tester.runTest(
@@ -943,7 +930,7 @@ async function test(testingContext) {
   let currentSaiCode;
   await tester.runTest(
     'Checking for required external contracts...',
-    MockCodeCheck,
+    tester.MockCodeCheck,
     'code',
     'call',
     [constants.SAI_MAINNET_ADDRESS],
@@ -1888,266 +1875,44 @@ async function test(testingContext) {
     false
   )
 
-  let originalNonce
+  let originalNonce;
   await tester.runTest(
-    'UserSmartWallet can get the nonce prior to upgrade',
+    'UserSmartWallet nonce can be retrieved',
     UserSmartWallet,
     'getNonce',
     'call',
     [],
     true,
     value => {
-      originalNonce = value
+      originalNonce = value;
     }
   )
 
-  await tester.runTest(
-    'Dharma Upgrade Beacon Controller can upgrade to V1 implementation',
-    DharmaUpgradeBeaconController,
-    'upgrade',
-    'send',
-    [
+  await testPerformingUpgrade(
+      tester,
+      DharmaSmartWalletImplementationV1, // new implementation
+      UserSmartWallet,
+      DharmaUpgradeBeaconController,
       DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV1.options.address
-    ],
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.upgradeBeacon,
-          DharmaUpgradeBeacon.options.address
-        )
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.oldImplementation,
-          DharmaSmartWalletImplementationV0.options.address
-        )
-        /* TODO
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
-          constants.EMPTY_HASH
-        )
-        */
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.newImplementation,
-          DharmaSmartWalletImplementationV1.options.address
-        )
-        /* TODO
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.newImplementationCodeHash,
-          ...
-        )
-        */
-      }
-    }
+      1
   )
 
-  const UpgradeBeaconImplementationCheckV1 = await tester.runTest(
-    `UpgradeBeaconImplementationCheck deployment`,
-    UpgradeBeaconImplementationCheckDeployer,
-    '',
-    'deploy',
-    [
+  await testPerformingUpgrade(
+      tester,
+      DharmaSmartWalletImplementationV2, // new implementation
+      UserSmartWallet,
+      DharmaUpgradeBeaconController,
       DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV1.options.address
-    ]
+      2
   )
 
-  await tester.runTest(
-    'DharmaUpgradeBeacon has the implementation set',
-    DharmaUpgradeBeaconController,
-    'getImplementation',
-    'call',
-    [DharmaUpgradeBeacon.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, DharmaSmartWalletImplementationV1.options.address)
-    }
-  )
-
-  await tester.runTest(
-    'Dharma Upgrade Beacon Controller can upgrade to V2 implementation',
-    DharmaUpgradeBeaconController,
-    'upgrade',
-    'send',
-    [
+  await testPerformingUpgrade(
+      tester,
+      DharmaSmartWalletImplementationV5, // new implementation
+      UserSmartWallet,
+      DharmaUpgradeBeaconController,
       DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV2.options.address
-    ],
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.upgradeBeacon,
-          DharmaUpgradeBeacon.options.address
-        )
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.oldImplementation,
-          DharmaSmartWalletImplementationV1.options.address
-        )
-        /* TODO
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
-          constants.EMPTY_HASH
-        )
-        */
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.newImplementation,
-          DharmaSmartWalletImplementationV2.options.address
-        )
-        /* TODO
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.newImplementationCodeHash,
-          ...
-        )
-        */
-      }
-    }
-  )
-
-  const UpgradeBeaconImplementationCheckV2 = await tester.runTest(
-    `UpgradeBeaconImplementationCheck deployment`,
-    UpgradeBeaconImplementationCheckDeployer,
-    '',
-    'deploy',
-    [
-      DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV2.options.address
-    ]
-  )
-
-  await tester.runTest(
-    'DharmaUpgradeBeacon has the implementation set',
-    DharmaUpgradeBeaconController,
-    'getImplementation',
-    'call',
-    [DharmaUpgradeBeacon.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, DharmaSmartWalletImplementationV2.options.address)
-    }
-  )
-
-  await tester.runTest(
-    'V2 user smart wallet can be called and still has original dharma key set',
-    UserSmartWallet,
-    'getUserSigningKey',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, tester.address)
-    }
-  )
-
-  await tester.runTest(
-    'V2 UserSmartWallet can get the new version (2)',
-    UserSmartWallet,
-    'getVersion',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, '2')
-    }
-  )
-
-  await tester.runTest(
-    'Dharma Upgrade Beacon Controller can upgrade to V5 implementation',
-    DharmaUpgradeBeaconController,
-    'upgrade',
-    'send',
-    [
-      DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV5.options.address
-    ],
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.upgradeBeacon,
-          DharmaUpgradeBeacon.options.address
-        )
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.oldImplementation,
-          DharmaSmartWalletImplementationV2.options.address
-        )
-        /* TODO
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
-          constants.EMPTY_HASH
-        )
-        */
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.newImplementation,
-          DharmaSmartWalletImplementationV5.options.address
-        )
-        /* TODO
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.newImplementationCodeHash,
-          ...
-        )
-        */
-      }
-    }
-  )
-
-  await tester.runTest(
-    'DharmaUpgradeBeacon has the implementation set',
-    DharmaUpgradeBeaconController,
-    'getImplementation',
-    'call',
-    [DharmaUpgradeBeacon.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, DharmaSmartWalletImplementationV5.options.address)
-    }
-  )
-
-  const UpgradeBeaconImplementationCheckV5 = await tester.runTest(
-    `UpgradeBeaconImplementationCheck deployment`,
-    UpgradeBeaconImplementationCheckDeployer,
-    '',
-    'deploy',
-    [
-      DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV5.options.address
-    ]
-  )
-
-  await tester.runTest(
-    'V5 user smart wallet can be called and still has original dharma key set',
-    UserSmartWalletV5,
-    'getUserSigningKey',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, tester.address)
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get the new version (5)',
-    UserSmartWalletV5,
-    'getVersion',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, '5')
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet nonce is still set to value from before upgrade',
-    UserSmartWalletV5,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, originalNonce)
-    }
+      5
   )
 
   await tester.runTest(
@@ -4869,107 +4634,14 @@ async function test(testingContext) {
     }
   )
 
-  // XXXXX
 
-
-
-  await tester.runTest(
-    'Dharma Upgrade Beacon Controller can upgrade to V6 implementation',
-    DharmaUpgradeBeaconController,
-    'upgrade',
-    'send',
-    [
+  await testPerformingUpgrade(
+      tester,
+      DharmaSmartWalletImplementationV6, // new implementation
+      UserSmartWallet,
+      DharmaUpgradeBeaconController,
       DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV6.options.address
-    ],
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.upgradeBeacon,
-          DharmaUpgradeBeacon.options.address
-        )
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.oldImplementation,
-          DharmaSmartWalletImplementationV5.options.address
-        )
-        /* TODO
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
-          constants.EMPTY_HASH
-        )
-        */
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.newImplementation,
-          DharmaSmartWalletImplementationV6.options.address
-        )
-        /* TODO
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.newImplementationCodeHash,
-          ...
-        )
-        */
-      }
-    }
-  )
-
-  await tester.runTest(
-    'DharmaUpgradeBeacon has the implementation set',
-    DharmaUpgradeBeaconController,
-    'getImplementation',
-    'call',
-    [DharmaUpgradeBeacon.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, DharmaSmartWalletImplementationV6.options.address)
-    }
-  )
-
-  const UpgradeBeaconImplementationCheckV6 = await tester.runTest(
-    `UpgradeBeaconImplementationCheck deployment`,
-    UpgradeBeaconImplementationCheckDeployer,
-    '',
-    'deploy',
-    [
-      DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV6.options.address
-    ]
-  )
-
-  await tester.runTest(
-    'V6 user smart wallet can be called and still has the same dharma key set',
-    UserSmartWalletV6,
-    'getUserSigningKey',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, tester.originalAddress)
-    }
-  )
-
-  await tester.runTest(
-    'V6 UserSmartWallet can get the new version (6)',
-    UserSmartWalletV6,
-    'getVersion',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, '6')
-    }
-  )
-
-  await tester.runTest(
-    'V6 UserSmartWallet nonce is still set to value from before upgrade',
-    UserSmartWalletV6,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, originalNonce)
-    }
+      6
   )
 
   await tester.runTest(
@@ -7707,20 +7379,6 @@ async function test(testingContext) {
     tester.addressTwo
   )
 
-  // YYYYY
-
-  await tester.runTest(
-    'UserSmartWalletV6 can get the nonce prior to upgrade',
-    UserSmartWalletV6,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      originalNonce = value
-    }
-  )
-
   await tester.runTest(
     'UserSmartWalletV6 can check the user signing key prior to upgrade',
     UserSmartWalletV6,
@@ -7734,102 +7392,24 @@ async function test(testingContext) {
   )
 
   await tester.runTest(
-    'Dharma Upgrade Beacon Controller can upgrade to V7 implementation',
-    DharmaUpgradeBeaconController,
-    'upgrade',
-    'send',
-    [
-      DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV7.options.address
-    ],
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.upgradeBeacon,
-          DharmaUpgradeBeacon.options.address
-        )
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.oldImplementation,
-          DharmaSmartWalletImplementationV6.options.address
-        )
-        /* TODO
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.oldImplementationCodeHash,
-          constants.EMPTY_HASH
-        )
-        */
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.newImplementation,
-          DharmaSmartWalletImplementationV7.options.address
-        )
-        /* TODO
-        assert.strictEqual(
-          receipt.events.Upgraded.returnValues.newImplementationCodeHash,
-          ...
-        )
-        */
-      }
-    }
-  )
-
-  await tester.runTest(
-    'DharmaUpgradeBeacon has the implementation set',
-    DharmaUpgradeBeaconController,
-    'getImplementation',
-    'call',
-    [DharmaUpgradeBeacon.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, DharmaSmartWalletImplementationV7.options.address)
-    }
-  )
-
-  const UpgradeBeaconImplementationCheckV7 = await tester.runTest(
-    `UpgradeBeaconImplementationCheck deployment`,
-    UpgradeBeaconImplementationCheckDeployer,
-    '',
-    'deploy',
-    [
-      DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV7.options.address
-    ]
-  )
-
-  await tester.runTest(
-    'V7 user smart wallet can be called and still has the same dharma key set',
-    UserSmartWalletV7,
-    'getUserSigningKey',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, tester.addressTwo)
-    }
-  )
-
-  await tester.runTest(
-    'V7 UserSmartWallet can get the new version (7)',
-    UserSmartWalletV7,
-    'getVersion',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, '7')
-    }
-  )
-
-  await tester.runTest(
-    'V7 UserSmartWallet nonce is still set to value from before upgrade',
-    UserSmartWalletV7,
+    'UserSmartWallet nonce can be retrieved',
+    UserSmartWallet,
     'getNonce',
     'call',
     [],
     true,
     value => {
-      assert.strictEqual(value, originalNonce)
+      originalNonce = value;
     }
+  )
+
+  await testPerformingUpgrade(
+      tester,
+      DharmaSmartWalletImplementationV7, // new implementation
+      UserSmartWallet,
+      DharmaUpgradeBeaconController,
+      DharmaUpgradeBeacon.options.address,
+      7
   )
 
   await tester.runTest(

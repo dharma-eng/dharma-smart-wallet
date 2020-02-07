@@ -3,6 +3,9 @@ const constants = require("./constants");
 const assert = require("assert");
 const util = require('ethereumjs-util');
 
+const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
+const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
+
 const SCALING_FACTOR = web3.utils.toBN("1000000000000000000");
 const ZERO = web3.utils.toBN("0");
 const ONE = web3.utils.toBN("1");
@@ -14,6 +17,16 @@ class Tester {
         this.context = testingContext;
         this.failed = 0;
         this.passed = 0;
+
+        const UpgradeBeaconImplementationCheckDeployer = new web3.eth.Contract(
+            UpgradeBeaconImplementationCheckArtifact.abi
+        );
+        UpgradeBeaconImplementationCheckDeployer.options.data = (
+            UpgradeBeaconImplementationCheckArtifact.bytecode
+        );
+        this.UpgradeBeaconImplementationCheckDeployer = (
+            UpgradeBeaconImplementationCheckDeployer
+        );
     }
 
     async init() {
@@ -53,6 +66,48 @@ class Tester {
         );
 
         this.gasLimit = latestBlock.gasLimit
+
+        const MockCodeCheckDeployer = new web3.eth.Contract(
+            MockCodeCheckArtifact.abi
+        );
+        MockCodeCheckDeployer.options.data = MockCodeCheckArtifact.bytecode;
+
+        this.MockCodeCheck = await this.runTest(
+            `MockCodeCheck contract deployment`,
+            MockCodeCheckDeployer,
+            '',
+            'deploy'
+        )
+
+        await this.runTest(
+            'Deployed MockCodeCheck code is correct',
+            this.MockCodeCheck,
+            'code',
+            'call',
+            [this.MockCodeCheck.options.address],
+            true,
+            value => {
+              assert.strictEqual(value, MockCodeCheckArtifact.deployedBytecode)
+            }
+        )
+
+        await this.runTest(
+            'Deployed MockCodeCheck has correct extcodehash',
+            this.MockCodeCheck,
+            'hash',
+            'call',
+            [this.MockCodeCheck.options.address],
+            true,
+            value => {
+              assert.strictEqual(
+                value,
+                web3.utils.keccak256(
+                  MockCodeCheckArtifact.deployedBytecode,
+                  {encoding: 'hex'}
+                )
+              )
+            }
+        )
     }
 
     async setupNewDefaultAddress(newPrivateKey) {
