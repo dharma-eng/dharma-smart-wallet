@@ -871,14 +871,24 @@ async function test(testingContext) {
       ImmutableCreate2Factory
   );
 
-
+  
   // RevertReasonHelper
+  const revertReasonHelperRuntimeCode = swapMetadataHash(
+      SmartWalletRevertReasonHelperV1Artifact.deployedBytecode,
+      constants.REVERT_REASON_HELPER_METADATA
+  );
+
+  const revertReasonHelperCreationCode = swapMetadataHash(
+      SmartWalletRevertReasonHelperV1Artifact.bytecode,
+      constants.REVERT_REASON_HELPER_METADATA
+  );
+
   await tester.checkAndDeploy(
       "RevertReasonHelper",
       constants.REVERT_REASON_HELPER_ADDRESS,
       constants.NULL_BYTES_32,
-      SmartWalletRevertReasonHelperV1Artifact.deployedBytecode,
-      SmartWalletRevertReasonHelperV1Artifact.bytecode,
+      revertReasonHelperRuntimeCode,
+      revertReasonHelperCreationCode,
       MockCodeCheck,
       ImmutableCreate2Factory
   );
@@ -1923,7 +1933,7 @@ async function test(testingContext) {
   )
 
   if (tester.failed > 0) {
-    // process.exit(1)
+    process.exit(1)
   }
 
   // exit.
