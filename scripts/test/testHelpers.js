@@ -3,14 +3,8 @@ const constants = require("./constants");
 const assert = require("assert");
 const util = require('ethereumjs-util');
 
-const artifact = require('../../build/contracts/MockCodeCheck.json')
-const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
-
-const SCALING_FACTOR = web3.utils.toBN("1000000000000000000");
-const ZERO = web3.utils.toBN("0");
-const ONE = web3.utils.toBN("1");
-const NINE = web3.utils.toBN("9");
-const TEN = web3.utils.toBN("10");
+const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json');
+const IERC20Artifact = require('../../build/contracts/IERC20.json');
 
 class Tester {
     constructor(testingContext) {
@@ -29,6 +23,7 @@ class Tester {
         );
 
         this.contracts = {};
+
     }
 
     async init() {
@@ -67,9 +62,11 @@ class Tester {
             constants.MOCK_OWNER_PRIVATE_KEYS[4]
         );
 
-        this.gasLimit = latestBlock.gasLimit
+        this.gasLimit = latestBlock.gasLimit;
 
+        await this.setupDeployedContracts();
     }
+
     async getOrdeploy(name, artifact) {
         if (Object.keys(this.contracts).includes(name)) {
             return this.contracts[name];
@@ -860,6 +857,33 @@ class Tester {
                 assert.strictEqual(value, runtimeCode)
             }
         );
+    }
+
+    async setupDeployedContracts() {
+        this.SAI = new web3.eth.Contract(
+            IERC20Artifact.abi, constants.SAI_MAINNET_ADDRESS
+        );
+
+        this.DAI = new web3.eth.Contract(
+            IERC20Artifact.abi, constants.DAI_MAINNET_ADDRESS
+        );
+
+        this.USDC = new web3.eth.Contract(
+            IERC20Artifact.abi, constants.USDC_MAINNET_ADDRESS
+        );
+
+        this.CSAI = new web3.eth.Contract(
+            IERC20Artifact.abi, constants.CSAI_MAINNET_ADDRESS
+        );
+
+        this.CDAI = new web3.eth.Contract(
+            IERC20Artifact.abi, constants.CDAI_MAINNET_ADDRESS
+        );
+
+        this.CUSDC = new web3.eth.Contract(
+            IERC20Artifact.abi, constants.CUSDC_MAINNET_ADDRESS
+        );
+
     }
 }
 

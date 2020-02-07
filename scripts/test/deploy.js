@@ -1309,7 +1309,7 @@ async function test(testingContext) {
 
   await testDharmaKeyRegistryMultisigDeployer(tester, DharmaKeyRegistryMultisigDeployer);
 
-//
+
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager contract deployment fails before indestructible registration`,
     DharmaUpgradeBeaconControllerManagerCoverageDeployer,

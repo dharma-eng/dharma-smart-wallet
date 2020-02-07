@@ -124,30 +124,6 @@ async function test(testingContext) {
     constants.CSAI_MAINNET_ADDRESS
   )
 
-  const SAI = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.SAI_MAINNET_ADDRESS
-  )
-
-  const DAI = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.DAI_MAINNET_ADDRESS
-  )
-
-  const USDC = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.USDC_MAINNET_ADDRESS
-  )
-
-  const CSAI = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.CSAI_MAINNET_ADDRESS
-  )
-
-  const CDAI = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.CDAI_MAINNET_ADDRESS
-  )
-
-  const CUSDC = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.CUSDC_MAINNET_ADDRESS
-  )
-
   const BadBeaconDeployer = new web3.eth.Contract(BadBeaconArtifact.abi)
   BadBeaconDeployer.options.data = BadBeaconArtifact.bytecode
 
@@ -1081,7 +1057,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Sai Whale can deposit sai into the yet-to-be-deployed smart wallet',
-    SAI,
+    tester.SAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -1107,7 +1083,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the yet-to-be-deployed smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -1254,7 +1230,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Sai Whale can deposit sai into the deployed smart wallet',
-    SAI,
+    tester.SAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -1280,7 +1256,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the deployed smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -2036,7 +2012,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Sai Whale can deposit sai into the V5 smart wallet',
-    SAI,
+    tester.SAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -2062,7 +2038,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the V5 smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -2143,7 +2119,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Sai Whale can deposit sai into the V5 smart wallet again',
-    SAI,
+    tester.SAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -2214,8 +2190,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      SAI.options.address,
-      SAI.methods.approve(CSAI.options.address, 0).encodeABI(),
+      tester.SAI.options.address,
+      tester.SAI.methods.approve(tester.CSAI.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -2240,8 +2216,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      SAI.options.address,
-      SAI.methods.approve(CSAI.options.address, 0).encodeABI(),
+      tester.SAI.options.address,
+      tester.SAI.methods.approve(tester.CSAI.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -2282,8 +2258,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      SAI.options.address,
-      SAI.methods.approve(CSAI.options.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.SAI.options.address,
+      tester.SAI.methods.approve(tester.CSAI.options.address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -2308,8 +2284,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      SAI.options.address,
-      SAI.methods.approve(CSAI.options.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.SAI.options.address,
+      tester.SAI.methods.approve(tester.CSAI.options.address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -3487,8 +3463,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      USDC.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.options.address,
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -3514,7 +3490,7 @@ async function test(testingContext) {
     'send',
     [
       tester.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -3529,7 +3505,7 @@ async function test(testingContext) {
     'send',
     [
       UserSmartWalletV5.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -3543,8 +3519,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      USDC.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.options.address,
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -3557,7 +3533,7 @@ async function test(testingContext) {
     'getNextGenericAtomicBatchActionID',
     'call',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       0
     ],
     true,
@@ -3584,7 +3560,7 @@ async function test(testingContext) {
     'getGenericAtomicBatchActionID',
     'call',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       currentNonce,
       0
     ],
@@ -3610,7 +3586,7 @@ async function test(testingContext) {
     'executeActionWithAtomicBatchCalls',
     'send',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -3619,7 +3595,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the deployed smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -3778,7 +3754,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the yet-to-be-blacklisted smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetBlacklistAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -4181,8 +4157,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      SAI.options.address,
-      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.SAI.options.address,
+      tester.SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -4207,8 +4183,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      SAI.options.address,
-      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.SAI.options.address,
+      tester.SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -4317,8 +4293,8 @@ async function test(testingContext) {
     'call',
     [
       [{
-        to: SAI.options.address,
-        data: SAI.methods.transfer(
+        to: tester.SAI.options.address,
+        data: tester.SAI.methods.transfer(
           tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
@@ -4347,8 +4323,8 @@ async function test(testingContext) {
     'send',
     [
       [{
-        to: SAI.options.address,
-        data: SAI.methods.transfer(
+        to: tester.SAI.options.address,
+        data: tester.SAI.methods.transfer(
           tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
@@ -4408,7 +4384,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Sai Whale can deposit sai into the smart wallet',
-    SAI,
+    tester.SAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -4444,8 +4420,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      CSAI.options.address,
-      CSAI.methods.transfer(tester.address, web3.utils.toWei('1', 'mwei')).encodeABI(),
+      tester.CSAI.options.address,
+      tester.CSAI.methods.transfer(tester.address, web3.utils.toWei('1', 'mwei')).encodeABI(),
       0
     ],
     true,
@@ -4470,8 +4446,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      CSAI.options.address,
-      CSAI.methods.transfer(tester.address, web3.utils.toWei('1', 'mwei')).encodeABI(),
+      tester.CSAI.options.address,
+      tester.CSAI.methods.transfer(tester.address, web3.utils.toWei('1', 'mwei')).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -4734,7 +4710,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'cSai can be sent to V6 UserSmartWallet',
-    CSAI,
+    tester.CSAI,
     'transfer',
     'send',
     [UserSmartWalletV6.options.address, web3.utils.toWei('0.5', 'mwei')]
@@ -4844,7 +4820,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dai Whale can deposit Dai into the V6 smart wallet',
-    DAI,
+    tester.DAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -4870,7 +4846,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the V6 smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -4900,8 +4876,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -4926,8 +4902,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -4993,7 +4969,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dai Whale can deposit dai into the V6 smart wallet',
-    DAI,
+    tester.DAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -5064,8 +5040,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -5090,8 +5066,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -5132,8 +5108,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -5158,8 +5134,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -6352,8 +6328,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      USDC.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.options.address,
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -6379,7 +6355,7 @@ async function test(testingContext) {
     'send',
     [
       tester.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -6394,7 +6370,7 @@ async function test(testingContext) {
     'send',
     [
       UserSmartWalletV6.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -6408,8 +6384,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      USDC.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.options.address,
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -6422,7 +6398,7 @@ async function test(testingContext) {
     'getNextGenericAtomicBatchActionID',
     'call',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       0
     ],
     true,
@@ -6449,7 +6425,7 @@ async function test(testingContext) {
     'getGenericAtomicBatchActionID',
     'call',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       currentNonce,
       0
     ],
@@ -6475,7 +6451,7 @@ async function test(testingContext) {
     'executeActionWithAtomicBatchCalls',
     'send',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -6484,7 +6460,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the deployed smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -6605,7 +6581,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the yet-to-be-blacklisted smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetBlacklistAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -7007,8 +6983,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      SAI.options.address,
-      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.SAI.options.address,
+      tester.SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -7033,8 +7009,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      SAI.options.address,
-      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.SAI.options.address,
+      tester.SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -7189,8 +7165,8 @@ async function test(testingContext) {
     'call',
     [
       [{
-        to: DAI.options.address,
-        data: DAI.methods.transfer(
+        to: tester.DAI.options.address,
+        data: tester.DAI.methods.transfer(
           tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
@@ -7219,8 +7195,8 @@ async function test(testingContext) {
     'send',
     [
       [{
-        to: DAI.options.address,
-        data: DAI.methods.transfer(
+        to: tester.DAI.options.address,
+        data: tester.DAI.methods.transfer(
           tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
@@ -7280,7 +7256,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dai Whale can deposit dai into the smart wallet',
-    DAI,
+    tester.DAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -7502,7 +7478,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'cSai can be sent to V7 UserSmartWallet',
-    CSAI,
+    tester.CSAI,
     'transfer',
     'send',
     [UserSmartWalletV7.options.address, web3.utils.toWei('0.5', 'mwei')]
@@ -7612,7 +7588,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dai Whale can deposit Dai into the V7 smart wallet',
-    DAI,
+    tester.DAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -7638,7 +7614,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the V7 smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -7668,8 +7644,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -7694,8 +7670,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -7716,7 +7692,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dai Whale can deposit dai into the V7 smart wallet',
-    DAI,
+    tester.DAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -7787,8 +7763,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -7813,8 +7789,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -7839,8 +7815,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -7865,8 +7841,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -9027,8 +9003,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      USDC.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.options.address,
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -9054,7 +9030,7 @@ async function test(testingContext) {
     'send',
     [
       tester.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -9069,7 +9045,7 @@ async function test(testingContext) {
     'send',
     [
       UserSmartWalletV7.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -9083,8 +9059,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      USDC.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.options.address,
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -9097,7 +9073,7 @@ async function test(testingContext) {
     'getNextGenericAtomicBatchActionID',
     'call',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       0
     ],
     true,
@@ -9124,7 +9100,7 @@ async function test(testingContext) {
     'getGenericAtomicBatchActionID',
     'call',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       currentNonce,
       0
     ],
@@ -9150,7 +9126,7 @@ async function test(testingContext) {
     'executeActionWithAtomicBatchCalls',
     'send',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -9159,7 +9135,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the deployed smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -9249,7 +9225,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the yet-to-be-blacklisted smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetBlacklistAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -9651,8 +9627,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      SAI.options.address,
-      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.SAI.options.address,
+      tester.SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -9677,8 +9653,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      SAI.options.address,
-      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.SAI.options.address,
+      tester.SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -9833,8 +9809,8 @@ async function test(testingContext) {
     'call',
     [
       [{
-        to: DAI.options.address,
-        data: DAI.methods.transfer(
+        to: tester.DAI.options.address,
+        data: tester.DAI.methods.transfer(
           tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
@@ -9863,8 +9839,8 @@ async function test(testingContext) {
     'send',
     [
       [{
-        to: DAI.options.address,
-        data: DAI.methods.transfer(
+        to: tester.DAI.options.address,
+        data: tester.DAI.methods.transfer(
           tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
@@ -9924,7 +9900,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dai Whale can deposit dai into the smart wallet',
-    DAI,
+    tester.DAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -10316,7 +10292,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'cSai can be sent to V7 UserSmartWallet',
-    CSAI,
+    tester.CSAI,
     'transfer',
     'send',
     [UserSmartWalletV7.options.address, web3.utils.toWei('0.5', 'mwei')]
@@ -10324,7 +10300,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Sai Whale can deposit sai into the V7 user smart wallet',
-    SAI,
+    tester.SAI,
     'transfer',
     'send',
     [UserSmartWalletV7.options.address, web3.utils.toWei('1', 'ether')],
