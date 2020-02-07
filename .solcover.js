@@ -1,7 +1,7 @@
 module.exports = {
   norpc: true,
   testCommand: 'node --max-old-space-size=4096 ./scripts/test/testCoverage.js',
-  compileCommand: 'node --max-old-space-size=4096 ../node_modules/.bin/truffle compile',
+  compileCommand: 'node --max-old-space-size=8192 ../node_modules/.bin/truffle compile',
   copyPackages: ['web3'],
   skipFiles: [
     'account-recovery/DharmaAccountRecoveryManager.sol',
@@ -29,7 +29,7 @@ module.exports = {
     'implementations/smart-wallet/DharmaSmartWalletImplementationV6.sol',
     //'implementations/smart-wallet/DharmaSmartWalletImplementationV7.sol'
     'implementations/smart-wallet/DharmaSmartWalletImplementationVX.sol',
-    'implementations/token/DharmaDaiImplementationV1.sol',
+    'implementations/token/MockDharmaDaiImplementationV1.sol',
     'implementations/token/DharmaDaiInitializer.sol',
     'implementations/token/DharmaTokenHelpers.sol',
     'implementations/token/DharmaTokenOverrides.sol',
@@ -52,6 +52,8 @@ module.exports = {
     'openzeppelin-upgradeability/upgradeability/ProxyAdmin.sol',
     'openzeppelin-upgradeability/upgradeability/UpgradeabilityProxy.sol',
     'openzeppelin-upgradeability/utils/Address.sol',
+    'proxies/token/DharmaDai.sol',
+    'proxies/token/DharmaUSDC.sol',
     'registries/DharmaKeyRegistryV1.sol',
     'test/BadBeacon.sol',
     'test/BadBeaconTwo.sol',

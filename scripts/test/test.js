@@ -20,15 +20,11 @@ const DharmaKeyRingUpgradeBeaconArtifact = require('../../build/contracts/Dharma
 const DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
 
 const DharmaAccountRecoveryManagerV2Artifact = require('../../build/contracts/DharmaAccountRecoveryManagerV2.json')
-const DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
+//const DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
 const DharmaKeyRegistryV2Artifact = require('../../build/contracts/DharmaKeyRegistryV2.json')
 const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
 const DharmaSmartWalletFactoryV2Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV2.json')
 
-const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
-const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
-const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV2.json')
-const DharmaSmartWalletImplementationV5Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV5.json')
 const DharmaSmartWalletImplementationV6Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV6.json')
 const DharmaSmartWalletImplementationV7Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV7.json')
 
@@ -54,7 +50,7 @@ const TimelockEdgecaseTesterArtifact = require('../../build/contracts/TimelockEd
 
 const MockDharmaKeyRingFactoryArtifact = require('../../build/contracts/MockDharmaKeyRingFactory.json')
 const IERC20Artifact = require('../../build/contracts/IERC20.json')
-const ComptrollerArtifact = require('../../build/contracts/ComptrollerInterface.json')
+//const ComptrollerArtifact = require('../../build/contracts/ComptrollerInterface.json')
 
 const contractNames = Object.assign({}, constants.CONTRACT_NAMES)
 
@@ -85,10 +81,12 @@ async function test(testingContext) {
     constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS
   )
 
+  /*
   const DharmaKeyRegistryV1 = new web3.eth.Contract(
     DharmaKeyRegistryV1Artifact.abi,
     constants.KEY_REGISTRY_ADDRESS
   )
+  */
 
   const DharmaKeyRegistryV2 = new web3.eth.Contract(
     DharmaKeyRegistryV2Artifact.abi,
@@ -106,7 +104,7 @@ async function test(testingContext) {
   )
 
   const Comptroller = new web3.eth.Contract(
-    ComptrollerArtifact.abi,
+    constants.COMPTROLLER_ABI,
     constants.COMPTROLLER_MAINNET_ADDRESS
   )
 
@@ -121,6 +119,41 @@ async function test(testingContext) {
       "type": "function"
     }],
     constants.CSAI_MAINNET_ADDRESS
+  )
+
+  const FIAT_TOKEN = new web3.eth.Contract(
+    [
+      {
+        "constant": true, "inputs": [], "name": "blacklister",
+        "outputs": [{"name": "", "type": "address"}], "payable": false,
+        "stateMutability": "view", "type": "function"
+      }, {
+        "constant": false, "inputs": [{"name": "_account", "type": "address"}],
+        "name": "unBlacklist", "outputs": [], "payable": false,
+        "stateMutability": "nonpayable", "type": "function"
+      }, {
+        "constant": false, "inputs": [{"name": "_account", "type": "address"}],
+        "name": "blacklist", "outputs": [], "payable": false,
+        "stateMutability": "nonpayable", "type": "function"
+      }, {
+        "constant": true, "inputs": [{"name": "_account", "type": "address"}],
+        "name": "isBlacklisted", "outputs": [{"name": "", "type": "bool"}],
+        "payable": false, "stateMutability": "view", "type": "function"
+      }, {
+        "constant": false, "inputs": [],
+        "name": "pause", "outputs": [], "payable": false,
+        "stateMutability": "nonpayable", "type": "function"
+      }, {
+        "constant": false, "inputs": [],
+        "name": "unpause", "outputs": [], "payable": false,
+        "stateMutability": "nonpayable", "type": "function"
+      }, {
+        "constant": true, "inputs": [], "name": "pauser",
+        "outputs": [{"name": "", "type": "address"}], "payable": false,
+        "stateMutability": "view", "type": "function"
+      }
+    ],
+    constants.USDC_MAINNET_ADDRESS
   )
 
   const SAI = new web3.eth.Contract(
@@ -159,34 +192,6 @@ async function test(testingContext) {
   )
   AdharmaSmartWalletImplementationDeployer.options.data = (
     AdharmaSmartWalletImplementationArtifact.bytecode
-  )
-
-  const DharmaSmartWalletImplementationV0Deployer = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV0Artifact.abi
-  )
-  DharmaSmartWalletImplementationV0Deployer.options.data = (
-    DharmaSmartWalletImplementationV0Artifact.bytecode
-  )
-
-  const DharmaSmartWalletImplementationV1Deployer = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV1Artifact.abi
-  )
-  DharmaSmartWalletImplementationV1Deployer.options.data = (
-    DharmaSmartWalletImplementationV1Artifact.bytecode
-  )
-
-  const DharmaSmartWalletImplementationV2Deployer = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV2Artifact.abi
-  )
-  DharmaSmartWalletImplementationV2Deployer.options.data = (
-    DharmaSmartWalletImplementationV2Artifact.bytecode
-  )
-
-  const DharmaSmartWalletImplementationV5Deployer = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV5Artifact.abi
-  )
-  DharmaSmartWalletImplementationV5Deployer.options.data = (
-    DharmaSmartWalletImplementationV5Artifact.bytecode
   )
 
   const DharmaSmartWalletImplementationV6Deployer = new web3.eth.Contract(
@@ -385,186 +390,7 @@ async function test(testingContext) {
   )
 
   await tester.runTest(
-    'Dharma Key Registry V1 gets the initial global key correctly',
-    DharmaKeyRegistryV1,
-    'getGlobalKey',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, tester.address)
-    }
-  )
-
-  await tester.runTest(
-    'Dharma Key Registry V1 attempt to get an unset specific key throws',
-    DharmaKeyRegistryV1,
-    'getSpecificKey',
-    'call',
-    [tester.address],
-    false
-  )
-
-  await tester.runTest(
-    'Dharma Key Registry V1 gets the global key when requesting unset key',
-    DharmaKeyRegistryV1,
-    'getKey',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, tester.address)
-    }
-  )
-
-  await tester.runTest(
-    'Dharma Key Registry V1 cannot set a new empty global key',
-    DharmaKeyRegistryV1,
-    'setGlobalKey',
-    'send',
-    [
-      constants.NULL_ADDRESS,
-      '0x'
-    ],
-    false,
-    receipt => {},
-    tester.originalAddress
-  )
-
-  const message = (
-    DharmaKeyRegistryV1.options.address +
-    tester.address.slice(2) +
-    web3.utils.asciiToHex(
-      "This signature demonstrates that the supplied signing key is valid."
-    ).slice(2)
-  )
-
-  const newKeySignature = tester.signHashedPrefixedHashedHexString(message, tester.address)
-
-  const badNewKeySignature = tester.signHashedPrefixedHashedHexString('0x12', tester.address)
-
-  await tester.runTest(
-    'Dharma Key Registry V1 cannot set a new global key unless called by owner',
-    DharmaKeyRegistryV1,
-    'setGlobalKey',
-    'send',
-    [
-      tester.address,
-      newKeySignature
-    ],
-    false,
-    receipt => {},
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'Dharma Key Registry V1 cannot set a new global key with a bad signature',
-    DharmaKeyRegistryV1,
-    'setGlobalKey',
-    'send',
-    [
-      tester.address,
-      badNewKeySignature
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'Dharma Key Registry V1 can set a new global key correctly',
-    DharmaKeyRegistryV1,
-    'setGlobalKey',
-    'send',
-    [
-      tester.address,
-      newKeySignature
-    ]
-  )
-
-  await tester.runTest(
-    'Dharma Key Registry V1 gets the new global key correctly',
-    DharmaKeyRegistryV1,
-    'getGlobalKey',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, tester.address)
-    }
-  )
-
-  await tester.runTest(
-    'Dharma Key Registry V1 cannot set a new specific key unless called by owner',
-    DharmaKeyRegistryV1,
-    'setSpecificKey',
-    'send',
-    [
-      tester.address,
-      DharmaKeyRegistryV1.options.address
-    ],
-    false,
-    receipt => {},
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'Dharma Key Registry V1 can set a new specific key',
-    DharmaKeyRegistryV1,
-    'setSpecificKey',
-    'send',
-    [
-      tester.address,
-      DharmaKeyRegistryV1.options.address
-    ]
-  )
-
-  await tester.runTest(
-    'Dharma Key Registry V1 gets the new specific key correctly',
-    DharmaKeyRegistryV1,
-    'getSpecificKey',
-    'call',
-    [tester.address],
-    true,
-    value => {
-      assert.strictEqual(value, DharmaKeyRegistryV1.options.address)
-    }
-  )
-
-  await tester.runTest(
-    'Dharma Key Registry V1 gets the specific key when requesting set key',
-    DharmaKeyRegistryV1,
-    'getKey',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, DharmaKeyRegistryV1.options.address)
-    }
-  )
-
-  await tester.runTest(
-    'Dharma Key Registry V1 can set a new owner',
-    DharmaKeyRegistryV1,
-    'transferOwnership',
-    'send',
-    [
-      tester.address
-    ]
-  )
-
-  await tester.runTest(
-    'Dharma Key Registry V1 gets the new owner',
-    DharmaKeyRegistryV1,
-    'owner',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, tester.address)
-    }
-  )
-
-  await tester.runTest(
-    'Dharma Key Registry V2 gets the new global key correctly',
+    'Dharma Key Registry V2 gets the initial global key correctly',
     DharmaKeyRegistryV2,
     'getGlobalKey',
     'call',
@@ -607,34 +433,6 @@ async function test(testingContext) {
   const BadBeaconTwo = await tester.runTest(
     `Mock Bad Beacon Two contract deployment`,
     BadBeaconTwoDeployer,
-    '',
-    'deploy'
-  )
-
-  const DharmaSmartWalletImplementationV0 = await tester.runTest(
-    `DharmaSmartWalletImplementationV0 contract deployment`,
-    DharmaSmartWalletImplementationV0Deployer,
-    '',
-    'deploy'
-  )
-
-  const DharmaSmartWalletImplementationV1 = await tester.runTest(
-    `DharmaSmartWalletImplementationV1 contract deployment`,
-    DharmaSmartWalletImplementationV1Deployer,
-    '',
-    'deploy'
-  )
-
-  const DharmaSmartWalletImplementationV2 = await tester.runTest(
-    `DharmaSmartWalletImplementationV2 contract deployment`,
-    DharmaSmartWalletImplementationV2Deployer,
-    '',
-    'deploy'
-  )
-
-  const DharmaSmartWalletImplementationV5 = await tester.runTest(
-    `DharmaSmartWalletImplementationV5 contract deployment`,
-    DharmaSmartWalletImplementationV5Deployer,
     '',
     'deploy'
   )
@@ -691,7 +489,7 @@ async function test(testingContext) {
     'send',
     [
       BadBeacon.options.address,
-      DharmaSmartWalletImplementationV0.options.address
+      DharmaSmartWalletImplementationV6.options.address
     ],
     false
   )
@@ -703,7 +501,7 @@ async function test(testingContext) {
     'send',
     [
       BadBeaconTwo.options.address,
-      DharmaSmartWalletImplementationV0.options.address
+      DharmaSmartWalletImplementationV6.options.address
     ],
     false
   )
@@ -715,7 +513,7 @@ async function test(testingContext) {
     'send',
     [
       DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV0.options.address
+      DharmaSmartWalletImplementationV6.options.address
     ],
     false,
     receipt => {},
@@ -729,7 +527,7 @@ async function test(testingContext) {
     'send',
     [
       DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV0.options.address
+      DharmaSmartWalletImplementationV6.options.address
     ],
     true,
     receipt => {
@@ -748,7 +546,7 @@ async function test(testingContext) {
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.newImplementation,
-          DharmaSmartWalletImplementationV0.options.address
+          DharmaSmartWalletImplementationV6.options.address
         )
         /* TODO
         assert.strictEqual(
@@ -779,7 +577,7 @@ async function test(testingContext) {
     'send',
     [
       DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV0.options.address
+      DharmaSmartWalletImplementationV6.options.address
     ],
     true,
     receipt => {
@@ -790,7 +588,7 @@ async function test(testingContext) {
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.oldImplementation,
-          DharmaSmartWalletImplementationV0.options.address
+          DharmaSmartWalletImplementationV6.options.address
         )
         /* TODO
         assert.strictEqual(
@@ -800,7 +598,7 @@ async function test(testingContext) {
         */
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.newImplementation,
-          DharmaSmartWalletImplementationV0.options.address
+          DharmaSmartWalletImplementationV6.options.address
         )
         /* TODO
         assert.strictEqual(
@@ -819,7 +617,7 @@ async function test(testingContext) {
     'deploy',
     [
       DharmaUpgradeBeacon.options.address,
-      DharmaSmartWalletImplementationV0.options.address
+      DharmaSmartWalletImplementationV6.options.address
     ]
   )
 
@@ -831,7 +629,7 @@ async function test(testingContext) {
     [DharmaUpgradeBeacon.options.address],
     true,
     value => {
-      assert.strictEqual(value, DharmaSmartWalletImplementationV0.options.address)
+      assert.strictEqual(value, DharmaSmartWalletImplementationV6.options.address)
     }
   )
 
@@ -911,19 +709,19 @@ async function test(testingContext) {
   )
 
   const DharmaSmartWalletImplementationTest = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV0Artifact.abi,
+    DharmaSmartWalletImplementationV6Artifact.abi,
     DharmaSmartWalletNoFactoryNoConstructor.options.address
   )
 
   await tester.runTest(
     'test passes',
     DharmaSmartWalletImplementationTest,
-    'test',
+    'getVersion',
     'call',
     [],
     true,
     value => {
-      assert.ok(value)
+      assert.ok(value.length > 0)
     }
   )
 
@@ -977,19 +775,19 @@ async function test(testingContext) {
   )
 
   const DharmaSmartWalletImplementationTestWithConstructor = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV0Artifact.abi,
+    DharmaSmartWalletImplementationV6Artifact.abi,
     DharmaSmartWalletNoFactory.options.address
   )
 
   await tester.runTest(
     'test passes',
     DharmaSmartWalletImplementationTestWithConstructor,
-    'test',
+    'getVersion',
     'call',
     [],
     true,
     value => {
-      assert.ok(value)
+      assert.ok(value.length > 0)
     }
   )
 
@@ -1027,6 +825,26 @@ async function test(testingContext) {
     }
   )
 
+  const UserSmartWalletV6 = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV6Artifact.abi,
+    targetWalletAddress
+  )
+
+  const UserSmartWalletV7 = new web3.eth.Contract(
+    DharmaSmartWalletImplementationV7Artifact.abi,
+    targetWalletAddress
+  )
+
+  await testPerformingUpgrade(
+      tester,
+      DharmaSmartWalletImplementationV6, // new implementation
+      UserSmartWalletV6,
+      DharmaUpgradeBeaconController,
+      DharmaUpgradeBeacon.options.address,
+      6,
+      true
+  )
+
   contractNames[DharmaSmartWalletFactoryV1.options.address] = 'Smart Wallet Factory'
   contractNames[targetWalletAddress] = 'Smart Wallet'
 
@@ -1056,6 +874,17 @@ async function test(testingContext) {
     console.log(' ✓ Sai Whale can receive eth if needed')
   }
 
+  if (daiWhaleBalance === '0') {
+    await web3.eth.sendTransaction({
+      from: tester.address,
+      to: constants.DAI_WHALE_ADDRESS,
+      value: web3.utils.toWei('.1', 'ether'),
+      gas: (testingContext !== 'coverage') ? '0x5208' : tester.gasLimit - 1,
+      gasPrice: 1
+    })
+    console.log(' ✓ Dai Whale can receive eth if needed')
+  }
+
   if (usdcWhaleBalance === '0') {
     await web3.eth.sendTransaction({
       from: tester.address,
@@ -1077,8 +906,8 @@ async function test(testingContext) {
   console.log(' ✓ Eth Whale can deposit eth into the yet-to-be-deployed smart wallet')
 
   await tester.runTest(
-    'Sai Whale can deposit sai into the yet-to-be-deployed smart wallet',
-    SAI,
+    'Dai Whale can deposit dai into the yet-to-be-deployed smart wallet',
+    DAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -1087,7 +916,7 @@ async function test(testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Transfer.returnValues.from,
-          constants.SAI_WHALE_ADDRESS
+          constants.DAI_WHALE_ADDRESS
         )
         assert.strictEqual(
           receipt.events.Transfer.returnValues.to,
@@ -1099,7 +928,7 @@ async function test(testingContext) {
         )
       }
     },
-    constants.SAI_WHALE_ADDRESS
+    constants.DAI_WHALE_ADDRESS
   )
 
   await tester.runTest(
@@ -1167,22 +996,22 @@ async function test(testingContext) {
         assert.strictEqual(events[0].eventName, 'NewUserSigningKey')
         assert.strictEqual(events[0].returnValues.userSigningKey, tester.address)
 
-        assert.strictEqual(events[1].address, 'SAI')
+        assert.strictEqual(events[1].address, 'DAI')
         assert.strictEqual(events[1].eventName, 'Approval')
         assert.strictEqual(events[1].returnValues.value, constants.FULL_APPROVAL)
 
-        assert.strictEqual(events[2].address, 'CSAI')
+        assert.strictEqual(events[2].address, 'CDAI')
         assert.strictEqual(events[2].eventName, 'AccrueInterest')
 
-        assert.strictEqual(events[3].address, 'SAI')
+        assert.strictEqual(events[3].address, 'DAI')
         assert.strictEqual(events[3].eventName, 'Transfer')
         assert.strictEqual(events[3].returnValues.value, web3.utils.toWei('100', 'ether'))
 
-        assert.strictEqual(events[4].address, 'CSAI')
+        assert.strictEqual(events[4].address, 'CDAI')
         assert.strictEqual(events[4].eventName, 'Mint')
         assert.strictEqual(events[4].returnValues.mintTokens, web3.utils.toWei('100', 'ether'))  
 
-        assert.strictEqual(events[5].address, 'CSAI')
+        assert.strictEqual(events[5].address, 'CDAI')
         assert.strictEqual(events[5].eventName, 'Transfer')
 
         assert.strictEqual(events[6].address, 'USDC')
@@ -1206,26 +1035,6 @@ async function test(testingContext) {
     }
   )
 
-  const UserSmartWallet = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV0Artifact.abi,
-    targetWalletAddress
-  )
-
-  const UserSmartWalletV5 = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV5Artifact.abi,
-    targetWalletAddress
-  )
-
-  const UserSmartWalletV6 = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV6Artifact.abi,
-    targetWalletAddress
-  )
-
-  const UserSmartWalletV7 = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV7Artifact.abi,
-    targetWalletAddress
-  )
-
   await tester.runTest(
     'DharmaSmartWalletFactoryV1 gets a new smart wallet address with same key',
     DharmaSmartWalletFactoryV1,
@@ -1239,3409 +1048,17 @@ async function test(testingContext) {
     }
   )
 
-  await web3.eth.sendTransaction({
-    from: constants.ETH_WHALE_ADDRESS,
-    to: targetWalletAddress,
-    value: web3.utils.toWei('100', 'ether'),
-    gas: (testingContext !== 'coverage') ? '0xffff' : tester.gasLimit - 1,
-    gasPrice: 1
-  }).catch(error => {
-    console.log(' ✓ Eth Whale can no longer deposit eth into the deployed smart wallet')
-  })
-
+  let originalNonce = 0
   await tester.runTest(
-    'Sai Whale can deposit sai into the deployed smart wallet',
-    SAI,
-    'transfer',
-    'send',
-    [targetWalletAddress, web3.utils.toWei('100', 'ether')],
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.from,
-          constants.SAI_WHALE_ADDRESS
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.to,
-          targetWalletAddress
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.value,
-          web3.utils.toWei('100', 'ether')
-        )
-      }
-    },
-    constants.SAI_WHALE_ADDRESS
-  )
-
-  await tester.runTest(
-    'USDC Whale can deposit usdc into the deployed smart wallet',
-    USDC,
-    'transfer',
-    'send',
-    [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.from,
-          constants.USDC_WHALE_ADDRESS
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.to,
-          targetWalletAddress
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.value,
-          web3.utils.toWei('100', 'lovelace')
-        )
-      }
-    },
-    constants.USDC_WHALE_ADDRESS
-  )
-
-  await tester.runTest(
-    'new user smart wallet can trigger repayAndDeposit to deposit all new funds',
-    UserSmartWallet,
-    'repayAndDeposit',
-    'send',
-    [],
-    true,
-    receipt => {
-      //console.log(receipt.status, receipt.gasUsed)
-      if (testingContext !== 'coverage') {
-        let events = []
-        Object.values(receipt.events).forEach((value) => {
-          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
-          const decoded = web3.eth.abi.decodeLog(
-            log.abi, value.raw.data, value.raw.topics
-          )
-          events.push({
-            address: contractNames[value.address],
-            eventName: log.name,
-            returnValues: decoded
-          })
-        })
-     
-        assert.strictEqual(events[0].address, 'CSAI')
-        assert.strictEqual(events[0].eventName, 'AccrueInterest')
-
-        assert.strictEqual(events[1].address, 'SAI')
-        assert.strictEqual(events[1].eventName, 'Transfer')
-        assert.strictEqual(events[1].returnValues.value, web3.utils.toWei('100', 'ether'))
-
-        assert.strictEqual(events[2].address, 'CSAI')
-        assert.strictEqual(events[2].eventName, 'Mint')
-        assert.strictEqual(events[2].returnValues.mintTokens, web3.utils.toWei('100', 'ether'))
-
-        assert.strictEqual(events[3].address, 'CSAI')
-        assert.strictEqual(events[3].eventName, 'Transfer')
-
-        assert.strictEqual(events[4].address, 'CUSDC')
-        assert.strictEqual(events[4].eventName, 'AccrueInterest')
-
-        assert.strictEqual(events[5].address, 'USDC')
-        assert.strictEqual(events[5].eventName, 'Transfer')
-        assert.strictEqual(events[5].returnValues.value, web3.utils.toWei('100', 'lovelace'))
-
-        assert.strictEqual(events[6].address, 'CUSDC')
-        assert.strictEqual(events[6].eventName, 'Mint')
-        assert.strictEqual(events[6].returnValues.mintTokens, web3.utils.toWei('100', 'lovelace'))
-
-        assert.strictEqual(events[7].address, 'CUSDC')
-        assert.strictEqual(events[7].eventName, 'Transfer')
-      }
-    }
-  )
-
-  await tester.runTest(
-    'new user smart wallet can trigger repayAndDeposit even with no funds',
-    UserSmartWallet,
-    'repayAndDeposit',
-    'send',
-    [],
-    true,
-    receipt => {
-      //console.log(receipt.status, receipt.gasUsed)
-      if (testingContext !== 'coverage') {
-        let events = []
-        Object.values(receipt.events).forEach((value) => {
-          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
-          const decoded = web3.eth.abi.decodeLog(
-            log.abi, value.raw.data, value.raw.topics
-          )        
-          events.push({
-            address: contractNames[value.address],
-            eventName: log.name,
-            returnValues: decoded
-          })
-        })
-     
-        assert.strictEqual(events.length, 0)
-      }
-    }
-  )
-
-  await tester.runTest(
-    'test passes',
-    UserSmartWallet,
-    'test',
-    'call',
-    [],
-    true,
-    value => {
-      assert.ok(value)
-    }
-  )
-
-  // TODO: wrap in a contract to validate revert reason
-  await tester.runTest(
-    'revert test with revert reason passes',
-    UserSmartWallet,
-    'testRevert',
-    'call',
-    [],
-    false // set this to true to verify that the revert reason is displayed
-  )
-
-  await tester.runTest(
-    'new user smart wallet can be called and has the correct dharma key set',
-    UserSmartWallet,
-    'getUserSigningKey',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, tester.address)
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet can get the version (0)',
-    UserSmartWallet,
-    'getVersion',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, '0')
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet nonce is initially set to 0',
-    UserSmartWallet,
+    'UserSmartWalletV6 nonce can be retrieved and starts at zero',
+    UserSmartWalletV6,
     'getNonce',
     'call',
     [],
     true,
     value => {
-      assert.strictEqual(value, '0')
+      assert.strictEqual(value, originalNonce.toString());
     }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet can get balances',
-    UserSmartWallet,
-    'getBalances',
-    'call',
-    [],
-    true,
-    value => {
-      //console.log(value)
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet secondary can call to withdraw sai',
-    UserSmartWallet,
-    'withdrawDai',
-    'send',
-    [
-      '1000000000000000000',
-      tester.address,
-      0,
-      '0x',
-      '0x'
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-      if (testingContext !== 'coverage') {
-        //console.log(receipt.events)
-      }
-      //console.log(receipt.events.ExternalError.returnValues)
-      //console.log(receipt.events.ExternalError)
-      /*
-      console.log(Object.values(receipt.events).map(value => {
-        return (
-          value.raw
-        )
-      }))
-      */
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet nonce is now set to 1',
-    UserSmartWallet,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, '1')
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet secondary can call to withdraw usdc',
-    UserSmartWallet,
-    'withdrawUSDC',
-    'send',
-    [
-      1,
-      tester.address,
-      0,
-      '0x',
-      '0x'
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet nonce is now set to 2',
-    UserSmartWallet,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, '2')
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet secondary can call to cancel',
-    UserSmartWallet,
-    'cancel',
-    'send',
-    [
-      0,
-     '0x'
-    ]
-  )
-
-  await tester.runTest(
-    'UserSmartWallet nonce is now set to 3',
-    UserSmartWallet,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, '3')
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet secondary can call to set userSigningKey',
-    UserSmartWallet,
-    'setUserSigningKey',
-    'send',
-    [
-      tester.address,
-      0,
-      '0x',
-      '0x'
-    ]
-  )
-
-  await tester.runTest(
-    'UserSmartWallet nonce is now set to 4',
-    UserSmartWallet,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, '4')
-    }
-  )
-
-  let customActionId
-  await tester.runTest(
-    'UserSmartWallet can get next custom action ID',
-    UserSmartWallet,
-    'getNextCustomActionID',
-    'call',
-    [
-      4, // SAIWithdrawal,
-      constants.FULL_APPROVAL,
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet can get custom action ID 4 and it matches next action ID',
-    UserSmartWallet,
-    'getCustomActionID',
-    'call',
-    [
-      4, // SAIWithdrawal,
-      constants.FULL_APPROVAL,
-      tester.address,
-      4,
-      0
-    ],
-    true,
-    value => {
-      assert.strictEqual(value, customActionId)
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWallet,
-    'getNextCustomActionID',
-    'call',
-    [
-      5, // USDCWithdrawal,
-      constants.FULL_APPROVAL,
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  let usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  await tester.runTest(
-    'UserSmartWallet relay cannot call with bad signature to withdraw USDC',
-    UserSmartWallet,
-    'withdrawUSDC',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      tester.address,
-      0,
-      '0x',
-      '0xffffffff' + usdcWithdrawalSignature.slice(10)
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'UserSmartWallet relay can call with signature to withdraw USDC',
-    UserSmartWallet,
-    'withdrawUSDC',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      tester.address,
-      0,
-      '0x',
-      usdcWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt.events)
-    },
-    tester.originalAddress
-  )
-
-  /* TODO: get this working manually
-  const withdrawalMessage = (
-    UserSmartWallet.options.address +  // smart wallet address
-    constants.NULL_BYTES_32.slice(2) + // smart wallet version
-    address.slice(2) +                 // user dharma key
-    address.slice(2) +                 // dharma key registry key
-    '5'.padStart(64, '0') +            // nonce
-    constants.NULL_BYTES_32.slice(2) + // minimum gas
-    '04' +                             // action type
-    'f'.padStart(64, 'f') +            // amount
-    address.slice(2)                   // recipient
-  )
-
-  const saiWithdrawalSignature = tester.signHashedPrefixedHashedHexString(
-    withdrawalMessage,
-    address
-  )
-  */
-
-  await tester.runTest(
-    'UserSmartWallet cannot withdraw too much sai',
-    UserSmartWallet,
-    'withdrawDai',
-    'send',
-    [
-      '100000000000000000000000000000000000000',
-      tester.address,
-      0,
-      '0x',
-      '0x'
-    ],
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        //console.log(receipt.events)
-      }
-      // TODO: verify logs
-      //console.log(receipt.events.ExternalError.returnValues)
-      //console.log(receipt.events.ExternalError)
-      /*
-      console.log(Object.values(receipt.events).map(value => {
-        return (
-          value.raw
-        )
-      }))
-      */
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet cannot withdraw too much usdc',
-    UserSmartWallet,
-    'withdrawUSDC',
-    'send',
-    [
-      '100000000000000000000000000000000',
-      tester.address,
-      0,
-      '0x',
-      '0x'
-    ],
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        //console.log(receipt.events)
-      }
-      // TODO: verify logs
-      //console.log(receipt.events.ExternalError.returnValues)
-      //console.log(receipt.events.ExternalError)
-      /*
-      console.log(Object.values(receipt.events).map(value => {
-        return (
-          value.raw
-        )
-      }))
-      */
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet cannot withdraw too little sai',
-    UserSmartWallet,
-    'withdrawDai',
-    'send',
-    [
-      '1',
-      tester.address,
-      0,
-      '0x',
-      '0x'
-    ],
-    true,
-    receipt => {
-      //console.log(receipt.events.ExternalError)
-      // TODO: verify logs
-      //console.log(receipt.events.ExternalError.returnValues)
-      //console.log(receipt.events.ExternalError)
-      /*
-      console.log(Object.values(receipt.events).map(value => {
-        return (
-          value.raw
-        )
-      }))
-      */
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet can get a Sai withdrawal custom action ID',
-    UserSmartWallet,
-    'getNextCustomActionID',
-    'call',
-    [
-      10, // SaiWithdrawal,
-      constants.FULL_APPROVAL,
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  let saiWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  await tester.runTest(
-    'UserSmartWallet relay cannot call with bad signature to withdraw sai',
-    UserSmartWallet,
-    'withdrawDai',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      tester.address,
-      0,
-      '0x',
-      '0xffffffff' + saiWithdrawalSignature.slice(10)
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'UserSmartWallet relay can call with signature to withdraw sai',
-    UserSmartWallet,
-    'withdrawDai',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      tester.address,
-      0,
-      '0x',
-      saiWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'UserSmartWallet calls revert if insufficient action gas is supplied',
-    UserSmartWallet,
-    'cancel',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-     '0x'
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'UserSmartWallet calls succeed if sufficient non-zero action gas supplied',
-    UserSmartWallet,
-    'cancel',
-    'send',
-    [
-      '1',
-     '0x'
-    ]
-  )
-
-  await tester.runTest(
-    'UserSmartWallet calls to atomic methods revert',
-    UserSmartWallet,
-    '_withdrawDaiAtomic',
-    'send',
-    [
-      '1',
-     tester.address
-    ],
-    false
-  )
-
-  let originalNonce;
-  await tester.runTest(
-    'UserSmartWallet nonce can be retrieved',
-    UserSmartWallet,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      originalNonce = value;
-    }
-  )
-
-  await testPerformingUpgrade(
-      tester,
-      DharmaSmartWalletImplementationV1, // new implementation
-      UserSmartWallet,
-      DharmaUpgradeBeaconController,
-      DharmaUpgradeBeacon.options.address,
-      1
-  )
-
-  await testPerformingUpgrade(
-      tester,
-      DharmaSmartWalletImplementationV2, // new implementation
-      UserSmartWallet,
-      DharmaUpgradeBeaconController,
-      DharmaUpgradeBeacon.options.address,
-      2
-  )
-
-  await testPerformingUpgrade(
-      tester,
-      DharmaSmartWalletImplementationV5, // new implementation
-      UserSmartWallet,
-      DharmaUpgradeBeaconController,
-      DharmaUpgradeBeacon.options.address,
-      5
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get balances',
-    UserSmartWalletV5,
-    'getBalances',
-    'call',
-    [],
-    true,
-    value => {
-      //console.log(value)
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet secondary can call to cancel',
-    UserSmartWalletV5,
-    'cancel',
-    'send',
-    [
-      0,
-     '0x'
-    ]
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet nonce is now set to original + 1',
-    UserSmartWalletV5,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, (parseInt(originalNonce) + 1).toString())
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get next custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      4, // SAIWithdrawal,
-      constants.FULL_APPROVAL,
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get custom action ID and it matches next action ID',
-    UserSmartWalletV5,
-    'getCustomActionID',
-    'call',
-    [
-      4, // SAIWithdrawal,
-      constants.FULL_APPROVAL,
-      tester.address,
-      parseInt(originalNonce) + 1,
-      0
-    ],
-    true,
-    value => {
-      assert.strictEqual(value, customActionId)
-    }
-  )
-
-  let genericActionID
-  await tester.runTest(
-    'V5 UserSmartWallet can get next generic action ID',
-    UserSmartWalletV5,
-    'getNextGenericActionID',
-    'call',
-    [
-      tester.address,
-      '0x',
-      0
-    ],
-    true,
-    value => {
-      genericActionID = value
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get generic action ID and it matches next action ID',
-    UserSmartWalletV5,
-    'getGenericActionID',
-    'call',
-    [
-      tester.address,
-      '0x',
-      parseInt(originalNonce) + 1,
-      0
-    ],
-    true,
-    value => {
-      assert.strictEqual(value, genericActionID)
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet calls to atomic methods revert',
-    UserSmartWalletV5,
-    '_withdrawSaiAtomic',
-    'send',
-    [
-      '1',
-     tester.address
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'Sai Whale can deposit sai into the V5 smart wallet',
-    SAI,
-    'transfer',
-    'send',
-    [targetWalletAddress, web3.utils.toWei('100', 'ether')],
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.from,
-          constants.SAI_WHALE_ADDRESS
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.to,
-          targetWalletAddress
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.value,
-          web3.utils.toWei('100', 'ether')
-        )
-      }
-    },
-    constants.SAI_WHALE_ADDRESS
-  )
-
-  await tester.runTest(
-    'USDC Whale can deposit usdc into the V5 smart wallet',
-    USDC,
-    'transfer',
-    'send',
-    [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.from,
-          constants.USDC_WHALE_ADDRESS
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.to,
-          targetWalletAddress
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.value,
-          web3.utils.toWei('100', 'lovelace')
-        )
-      }
-    },
-    constants.USDC_WHALE_ADDRESS
-  )
-
-  await tester.runTest(
-    'V5 user smart wallet can trigger repayAndDeposit to deposit all new funds',
-    UserSmartWalletV5,
-    'repayAndDeposit',
-    'send',
-    [],
-    true,
-    receipt => {
-      //console.log(receipt.status, receipt.gasUsed)
-      if (testingContext !== 'coverage') {
-        let events = []
-        Object.values(receipt.events).forEach((value) => {
-          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
-          const decoded = web3.eth.abi.decodeLog(
-            log.abi, value.raw.data, value.raw.topics
-          )        
-          events.push({
-            address: contractNames[value.address],
-            eventName: log.name,
-            returnValues: decoded
-          })
-        })
-     
-        assert.strictEqual(events[0].address, 'CSAI')
-        assert.strictEqual(events[0].eventName, 'AccrueInterest')
-
-        assert.strictEqual(events[1].address, 'SAI')
-        assert.strictEqual(events[1].eventName, 'Transfer')
-        //assert.strictEqual(events[1].returnValues.value, web3.utils.toWei('100', 'ether'))
-
-        assert.strictEqual(events[2].address, 'CSAI')
-        assert.strictEqual(events[2].eventName, 'Mint')
-        //assert.strictEqual(events[2].returnValues.mintTokens, web3.utils.toWei('100', 'ether'))
-
-
-        assert.strictEqual(events[3].address, 'CSAI')
-        assert.strictEqual(events[3].eventName, 'Transfer')
-
-        assert.strictEqual(events[4].address, 'CUSDC')
-        assert.strictEqual(events[4].eventName, 'AccrueInterest')
-
-        assert.strictEqual(events[5].address, 'USDC')
-        assert.strictEqual(events[5].eventName, 'Transfer')
-        //assert.strictEqual(events[5].returnValues.value, web3.utils.toWei('100', 'lovelace'))
-
-        assert.strictEqual(events[6].address, 'CUSDC')
-        assert.strictEqual(events[6].eventName, 'Mint')
-        //assert.strictEqual(events[6].returnValues.mintTokens, web3.utils.toWei('100', 'lovelace'))
-
-        assert.strictEqual(events[7].address, 'CUSDC')
-        assert.strictEqual(events[7].eventName, 'Transfer')
-      }
-    }
-  )
-
-  await tester.runTest(
-    'Sai Whale can deposit sai into the V5 smart wallet again',
-    SAI,
-    'transfer',
-    'send',
-    [targetWalletAddress, web3.utils.toWei('100', 'ether')],
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.from,
-          constants.SAI_WHALE_ADDRESS
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.to,
-          targetWalletAddress
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.value,
-          web3.utils.toWei('100', 'ether')
-        )
-      }
-    },
-    constants.SAI_WHALE_ADDRESS
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV5,
-    'getNextGenericActionID',
-    'call',
-    [
-      constants.ESCAPE_HATCH_REGISTRY_ADDRESS,
-      '0x',
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  let executeActionSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  let executeActionUserSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet cannot call executeAction and target Escape Hatch Registry',
-    UserSmartWalletV5,
-    'executeAction',
-    'send',
-    [
-      constants.ESCAPE_HATCH_REGISTRY_ADDRESS,
-      '0x',
-      0,
-      executeActionUserSignature,
-      executeActionSignature
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV5,
-    'getNextGenericActionID',
-    'call',
-    [
-      SAI.options.address,
-      SAI.methods.approve(CSAI.options.address, 0).encodeABI(),
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  executeActionSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  executeActionUserSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can call executeAction',
-    UserSmartWalletV5,
-    'executeAction',
-    'send',
-    [
-      SAI.options.address,
-      SAI.methods.approve(CSAI.options.address, 0).encodeABI(),
-      0,
-      executeActionUserSignature,
-      executeActionSignature
-    ]
-  )
-
-  await tester.runTest(
-    'V5 user smart wallet repayAndDeposit cannot deposit without approval',
-    UserSmartWalletV5,
-    'repayAndDeposit',
-    'send',
-    [],
-    true,
-    receipt => {
-      //console.log(receipt.status, receipt.gasUsed)
-      if (testingContext !== 'coverage') {
-        let events = []
-        Object.values(receipt.events).forEach((value) => {
-          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
-          const decoded = web3.eth.abi.decodeLog(
-            log.abi, value.raw.data, value.raw.topics
-          )        
-          events.push({
-            address: contractNames[value.address],
-            eventName: log.name,
-            returnValues: decoded
-          })
-        })
-     
-        // TODO: verify
-      }
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV5,
-    'getNextGenericActionID',
-    'call',
-    [
-      SAI.options.address,
-      SAI.methods.approve(CSAI.options.address, constants.FULL_APPROVAL).encodeABI(),
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  executeActionSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  executeActionUserSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can call executeAction',
-    UserSmartWalletV5,
-    'executeAction',
-    'send',
-    [
-      SAI.options.address,
-      SAI.methods.approve(CSAI.options.address, constants.FULL_APPROVAL).encodeABI(),
-      0,
-      executeActionUserSignature,
-      executeActionSignature
-    ]
-  )
-
-  await tester.runTest(
-    'V5 user smart wallet repayAndDeposit can deposit with approval added back',
-    UserSmartWalletV5,
-    'repayAndDeposit',
-    'send',
-    [],
-    true,
-    receipt => {
-      //console.log(receipt.status, receipt.gasUsed)
-      if (testingContext !== 'coverage') {
-        let events = []
-        Object.values(receipt.events).forEach((value) => {
-          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
-          const decoded = web3.eth.abi.decodeLog(
-            log.abi, value.raw.data, value.raw.topics
-          )        
-          events.push({
-            address: contractNames[value.address],
-            eventName: log.name,
-            returnValues: decoded
-          })
-        })
-     
-        // TODO: verify
-      }
-    }
-  )
-
-  await tester.runTest(
-    'V5 user smart wallet can trigger repayAndDeposit even with no funds',
-    UserSmartWalletV5,
-    'repayAndDeposit',
-    'send',
-    [],
-    true,
-    receipt => {
-      //console.log(receipt.status, receipt.gasUsed)
-      if (testingContext !== 'coverage') {
-        let events = []
-        Object.values(receipt.events).forEach((value) => {
-          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
-          const decoded = web3.eth.abi.decodeLog(
-            log.abi, value.raw.data, value.raw.topics
-          )        
-          events.push({
-            address: contractNames[value.address],
-            eventName: log.name,
-            returnValues: decoded
-          })
-        })
-     
-        assert.strictEqual(events.length, 0)
-      }
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet secondary cannot set an empty user userSigningKey',
-    UserSmartWalletV5,
-    'setUserSigningKey',
-    'send',
-    [
-      constants.NULL_ADDRESS,
-      0,
-      '0x',
-      '0x'
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet secondary can set a custom user userSigningKey',
-    UserSmartWalletV5,
-    'setUserSigningKey',
-    'send',
-    [
-      tester.addressTwo,
-      0,
-      '0x',
-      '0x'
-    ]
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get next custom action ID to set a user signing key',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      1, // SetUserSigningKey,
-      constants.FULL_APPROVAL, // This value shouldn't matter
-      tester.addressTwo,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  let currentNonce
-  await tester.runTest(
-    'UserSmartWallet can get the nonce',
-    UserSmartWalletV5,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      currentNonce = value
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get custom action ID and it matches next action ID',
-    UserSmartWalletV5,
-    'getCustomActionID',
-    'call',
-    [
-      1, // SetUserSigningKey,
-      0, // Note that this value differs from above
-      tester.addressTwo,
-      currentNonce,
-      0
-    ],
-    true,
-    value => {
-      assert.strictEqual(value, customActionId)
-    }
-  )
-
-  let setUserSigningKeyUserSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  let setUserSigningKeyDharmaSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can set a new user signing key with signatures',
-    UserSmartWalletV5,
-    'setUserSigningKey',
-    'send',
-    [
-      tester.addressTwo,
-      0,
-      setUserSigningKeyUserSignature,
-      setUserSigningKeyDharmaSignature
-    ],
-    true,
-    receipt => {},
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get next custom action ID to cancel',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      0, // Cancel
-      constants.FULL_APPROVAL, // This value shouldn't matter
-      tester.originalAddress,  // This value shouldn't matter either
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet can get the nonce',
-    UserSmartWalletV5,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      currentNonce = value
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get custom action ID and it matches next action ID',
-    UserSmartWalletV5,
-    'getCustomActionID',
-    'call',
-    [
-      0, // Cancel
-      0, // Note that this value differs from above
-      tester.addressTwo, // This one too
-      currentNonce,
-      0
-    ],
-    true,
-    value => {
-      assert.strictEqual(value, customActionId)
-    }
-  )
-
-  let cancelUserSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet secondary can cancel using a signature',
-    UserSmartWalletV5,
-    'cancel',
-    'send',
-    [
-      0,
-      cancelUserSignature
-    ],
-    true,
-    receipt => {},
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'UserSmartWallet nonce is incremented after cancelling',
-    UserSmartWalletV5,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(parseInt(value), parseInt(currentNonce) + 1)
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet secondary cannot call to withdraw sai without primary',
-    UserSmartWalletV5,
-    'withdrawSai',
-    'send',
-    [
-      '1000000000000000000',
-      tester.address,
-      0,
-      '0x',
-      '0x'
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet secondary cannot call to withdraw usdc without primary',
-    UserSmartWalletV5,
-    'withdrawUSDC',
-    'send',
-    [
-      1,
-      tester.address,
-      0,
-      '0x',
-      '0x'
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet secondary can no longer call to set userSigningKey without primary',
-    UserSmartWalletV5,
-    'setUserSigningKey',
-    'send',
-    [
-      tester.address,
-      0,
-      '0x',
-      '0x'
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      5, // USDCWithdrawal,
-      '1', // dust
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  let usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot withdraw "dust" USDC',
-    UserSmartWalletV5,
-    'withdrawUSDC',
-    'send',
-    [
-      '1',
-      tester.address,
-      0,
-      usdcUserWithdrawalSignature,
-      usdcWithdrawalSignature
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      5, // USDCWithdrawal,
-      '100000',
-      constants.NULL_ADDRESS, // bad recipient
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot withdraw USDC to null address',
-    UserSmartWalletV5,
-    'withdrawUSDC',
-    'send',
-    [
-      '100000',
-      constants.NULL_ADDRESS,
-      0,
-      usdcUserWithdrawalSignature,
-      usdcWithdrawalSignature
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      5, // USDCWithdrawal,
-      '100000',
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay can call with two signatures to withdraw USDC',
-    UserSmartWalletV5,
-    'withdrawUSDC',
-    'send',
-    [
-      '100000',
-      tester.address,
-      0,
-      usdcUserWithdrawalSignature,
-      usdcWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      5, // USDCWithdrawal,
-      constants.FULL_APPROVAL,
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot call with bad signature to withdraw USDC',
-    UserSmartWalletV5,
-    'withdrawUSDC',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      tester.address,
-      0,
-      usdcUserWithdrawalSignature,
-      '0xffffffff' + usdcWithdrawalSignature.slice(10)
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet cannot call with bad user signature to withdraw USDC',
-    UserSmartWalletV5,
-    'withdrawUSDC',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      tester.address,
-      0,
-      '0xffffffff' + usdcUserWithdrawalSignature.slice(10),
-      usdcWithdrawalSignature
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay can call with two signatures to withdraw max USDC',
-    UserSmartWalletV5,
-    'withdrawUSDC',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      tester.address,
-      0,
-      usdcUserWithdrawalSignature,
-      usdcWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  /* TODO: get this working manually
-  const withdrawalMessage = (
-    UserSmartWallet.options.address +  // smart wallet address
-    constants.NULL_BYTES_32.slice(2) + // smart wallet version
-    address.slice(2) +                 // user dharma key
-    address.slice(2) +                 // dharma key registry key
-    '5'.padStart(64, '0') +            // nonce
-    constants.NULL_BYTES_32.slice(2) + // minimum gas
-    '04' +                             // action type
-    'f'.padStart(64, 'f') +            // amount
-    address.slice(2)                   // recipient
-  )
-
-  const saiWithdrawalSignature = tester.signHashedPrefixedHashedHexString(
-    withdrawalMessage,
-    address
-  )
-  */
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      4, // SaiWithdrawal,
-      '1',
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  saiWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  let saiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot withdraw "dust" sai',
-    UserSmartWalletV5,
-    'withdrawDai',
-    'send',
-    [
-      '1',
-      tester.address,
-      0,
-      saiUserWithdrawalSignature,
-      saiWithdrawalSignature
-    ],
-    false,
-    receipt => {},
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      4, // SaiWithdrawal,
-      '1000000000000000',
-      constants.NULL_ADDRESS,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  saiWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  saiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot withdraw sai to null address',
-    UserSmartWalletV5,
-    'withdrawDai',
-    'send',
-    [
-      '1000000000000000',
-      constants.NULL_ADDRESS,
-      0,
-      saiUserWithdrawalSignature,
-      saiWithdrawalSignature
-    ],
-    false,
-    receipt => {},
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      4, // SaiWithdrawal,
-      '1000000000000000',
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  saiWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  saiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay can call with signature to withdraw sai',
-    UserSmartWalletV5,
-    'withdrawDai',
-    'send',
-    [
-      '1000000000000000',
-      tester.address,
-      0,
-      saiUserWithdrawalSignature,
-      saiWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt.events)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet cannot get a non-custom "custom" next action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      2, // Generic,
-      constants.FULL_APPROVAL,
-      tester.address,
-      0
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet cannot get a non-custom "custom" action ID',
-    UserSmartWalletV5,
-    'getCustomActionID',
-    'call',
-    [
-      2, // Generic,
-      constants.FULL_APPROVAL,
-      tester.address,
-      0,
-      0
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      4, // SaiWithdrawal,
-      constants.FULL_APPROVAL,
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  saiWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  saiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot call with bad signature to withdraw sai',
-    UserSmartWalletV5,
-    'withdrawDai',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      tester.address,
-      0,
-      saiUserWithdrawalSignature,
-      '0xffffffff' + saiWithdrawalSignature.slice(10)
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot call with bad user signature to withdraw sai',
-    UserSmartWalletV5,
-    'withdrawDai',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      tester.address,
-      0,
-      '0xffffffff' + saiUserWithdrawalSignature.slice(10),
-      saiWithdrawalSignature
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay can call with signature to withdraw sai',
-    UserSmartWalletV5,
-    'withdrawDai',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      tester.address,
-      0,
-      saiUserWithdrawalSignature,
-      saiWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      6, // ETHWithdrawal,
-      '0', // no amount
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  let ethWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  let ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot to withdraw ether with no amount',
-    UserSmartWalletV5,
-    'withdrawEther',
-    'send',
-    [
-      '0',
-      tester.address,
-      0,
-      ethUserWithdrawalSignature,
-      ethWithdrawalSignature
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      6, // ETHWithdrawal,
-      '1',
-      constants.NULL_ADDRESS, // no recipient
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot to withdraw ether with no recipient',
-    UserSmartWalletV5,
-    'withdrawEther',
-    'send',
-    [
-      '1',
-      constants.NULL_ADDRESS,
-      0,
-      ethUserWithdrawalSignature,
-      ethWithdrawalSignature
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      6, // ETHWithdrawal,
-      '1',
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot call with bad signature to withdraw eth',
-    UserSmartWalletV5,
-    'withdrawEther',
-    'send',
-    [
-      '1',
-      tester.address,
-      0,
-      ethUserWithdrawalSignature,
-      '0xffffffff' + ethWithdrawalSignature.slice(10)
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
-    UserSmartWalletV5,
-    'withdrawEther',
-    'send',
-    [
-      '1',
-      tester.address,
-      0,
-      '0xffffffff' + ethUserWithdrawalSignature.slice(10),
-      ethWithdrawalSignature
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay can call with signature to withdraw ether',
-    UserSmartWalletV5,
-    'withdrawEther',
-    'send',
-    [
-      '1',
-      tester.address,
-      0,
-      ethUserWithdrawalSignature,
-      ethWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      6, // ETHWithdrawal,
-      '1',
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot call with bad signature to withdraw eth',
-    UserSmartWalletV5,
-    'withdrawEther',
-    'send',
-    [
-      '1',
-      tester.address,
-      0,
-      ethUserWithdrawalSignature,
-      '0xffffffff' + ethWithdrawalSignature.slice(10)
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot call with bad user signature to withdraw eth',
-    UserSmartWalletV5,
-    'withdrawEther',
-    'send',
-    [
-      '1',
-      tester.address,
-      0,
-      '0xffffffff' + ethUserWithdrawalSignature.slice(10),
-      ethWithdrawalSignature
-    ],
-    false,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay can call with signature to withdraw ether',
-    UserSmartWalletV5,
-    'withdrawEther',
-    'send',
-    [
-      '1',
-      tester.address,
-      0,
-      ethUserWithdrawalSignature,
-      ethWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet cancel reverts with bad signature',
-    UserSmartWalletV5,
-    'cancel',
-    'send',
-    [
-      0,
-     '0x'
-    ],
-    false,
-    receipt => {},
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet calls revert if insufficient action gas is supplied',
-    UserSmartWalletV5,
-    'cancel',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-     '0x'
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet calls succeed if sufficient non-zero action gas supplied',
-    UserSmartWalletV5,
-    'cancel',
-    'send',
-    [
-      '1',
-     '0x'
-    ]
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a cancel custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      0, // Cancel,
-      '0',
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  let cancelSignature = tester.signHashedPrefixedHexString(customActionId, tester.addressTwo)
-
-  await tester.runTest(
-    'V5 UserSmartWallet can cancel using a signature',
-    UserSmartWalletV5,
-    'cancel',
-    'send',
-    [
-      '0',
-      cancelSignature
-    ],
-    true,
-    receipt => {},
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet calls to atomic methods revert',
-    UserSmartWalletV5,
-    '_withdrawSaiAtomic',
-    'send',
-    [
-      '1',
-     tester.address
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet calls to recover from random address revert',
-    UserSmartWalletV5,
-    'recover',
-    'send',
-    [
-     tester.address
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'DharmaSmartWalletFactoryV1 can deploy a V5 smart wallet using a Dharma Key',
-    DharmaSmartWalletFactoryV1,
-    'newSmartWallet',
-    'send',
-    [tester.addressTwo],
-    true,
-    receipt => {
-      //console.log(receipt.status, receipt.gasUsed)
-      if (testingContext !== 'coverage') {
-        let events = []
-        Object.values(receipt.events).forEach((value) => {
-          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
-          const decoded = web3.eth.abi.decodeLog(
-            log.abi, value.raw.data, value.raw.topics
-          )        
-          events.push({
-            address: contractNames[value.address],
-            eventName: log.name,
-            returnValues: decoded
-          })
-        })
-
-        assert.strictEqual(events[0].eventName, 'NewUserSigningKey')
-        assert.strictEqual(events[0].returnValues.userSigningKey, tester.addressTwo)
-        //console.log(events)
-
-        // TODO: test more events
-      }
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV5,
-    'getNextGenericActionID',
-    'call',
-    [
-      USDC.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  executeActionSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  executeActionUserSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet cannot call executeAction and target a non-contract',
-    UserSmartWalletV5,
-    'executeAction',
-    'send',
-    [
-      tester.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
-      0,
-      executeActionUserSignature,
-      executeActionSignature
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet cannot call executeAction and target itself',
-    UserSmartWalletV5,
-    'executeAction',
-    'send',
-    [
-      UserSmartWalletV5.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
-      0,
-      executeActionUserSignature,
-      executeActionSignature
-    ],
-    false
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can call executeAction',
-    UserSmartWalletV5,
-    'executeAction',
-    'send',
-    [
-      USDC.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
-      0,
-      executeActionUserSignature,
-      executeActionSignature
-    ]
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get the next generic batch action ID',
-    UserSmartWalletV5,
-    'getNextGenericAtomicBatchActionID',
-    'call',
-    [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWallet can get the nonce',
-    UserSmartWalletV5,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      currentNonce = value
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet generic batch action ID with nonce matches next ID',
-    UserSmartWalletV5,
-    'getGenericAtomicBatchActionID',
-    'call',
-    [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
-      currentNonce,
-      0
-    ],
-    true,
-    value => {
-      assert.strictEqual(value, customActionId)
-    }
-  )
-
-  executeActionSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  executeActionUserSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can call executeActionWithAtomicBatchCalls',
-    UserSmartWalletV5,
-    'executeActionWithAtomicBatchCalls',
-    'send',
-    [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
-      0,
-      executeActionUserSignature,
-      executeActionSignature
-    ]
-  )
-
-  await tester.runTest(
-    'USDC Whale can deposit usdc into the deployed smart wallet',
-    USDC,
-    'transfer',
-    'send',
-    [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.from,
-          constants.USDC_WHALE_ADDRESS
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.to,
-          targetWalletAddress
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.value,
-          web3.utils.toWei('100', 'lovelace')
-        )
-      }
-    },
-    constants.USDC_WHALE_ADDRESS
-  )
-
-  await tester.runTest(
-    'new user smart wallet can trigger repayAndDeposit to deposit all new funds',
-    UserSmartWalletV5,
-    'repayAndDeposit',
-    'send',
-    [],
-    true,
-    receipt => {
-      //console.log(receipt.status, receipt.gasUsed)
-      if (testingContext !== 'coverage') {
-        let events = []
-        Object.values(receipt.events).forEach((value) => {
-          const log = constants.EVENT_DETAILS[value.raw.topics[0]]
-          const decoded = web3.eth.abi.decodeLog(
-            log.abi, value.raw.data, value.raw.topics
-          )
-          events.push({
-            address: contractNames[value.address],
-            eventName: log.name,
-            returnValues: decoded
-          })
-        })
-        assert.strictEqual(events[0].address, 'USDC')
-        assert.strictEqual(events[0].eventName, 'Approval')
-        assert.strictEqual(events[0].returnValues.value, constants.FULL_APPROVAL)
-
-        assert.strictEqual(events[1].address, 'CUSDC')
-        assert.strictEqual(events[1].eventName, 'AccrueInterest')
-
-        assert.strictEqual(events[2].address, 'USDC')
-        assert.strictEqual(events[2].eventName, 'Transfer')
-        assert.strictEqual(events[2].returnValues.value, web3.utils.toWei('100', 'lovelace'))
-
-        assert.strictEqual(events[3].address, 'CUSDC')
-        assert.strictEqual(events[3].eventName, 'Mint')
-        assert.strictEqual(events[3].returnValues.mintTokens, web3.utils.toWei('100', 'lovelace'))
-
-        assert.strictEqual(events[4].address, 'CUSDC')
-        assert.strictEqual(events[4].eventName, 'Transfer')
-      }
-    }
-  )
-
-  const FIAT_TOKEN = new web3.eth.Contract(
-    [
-      {
-        "constant": true, "inputs": [], "name": "blacklister",
-        "outputs": [{"name": "", "type": "address"}], "payable": false,
-        "stateMutability": "view", "type": "function"
-      }, {
-        "constant": false, "inputs": [{"name": "_account", "type": "address"}],
-        "name": "unBlacklist", "outputs": [], "payable": false,
-        "stateMutability": "nonpayable", "type": "function"
-      }, {
-        "constant": false, "inputs": [{"name": "_account", "type": "address"}],
-        "name": "blacklist", "outputs": [], "payable": false,
-        "stateMutability": "nonpayable", "type": "function"
-      }, {
-        "constant": true, "inputs": [{"name": "_account", "type": "address"}],
-        "name": "isBlacklisted", "outputs": [{"name": "", "type": "bool"}],
-        "payable": false, "stateMutability": "view", "type": "function"
-      }, {
-        "constant": false, "inputs": [],
-        "name": "pause", "outputs": [], "payable": false,
-        "stateMutability": "nonpayable", "type": "function"
-      }, {
-        "constant": false, "inputs": [],
-        "name": "unpause", "outputs": [], "payable": false,
-        "stateMutability": "nonpayable", "type": "function"
-      }, {
-        "constant": true, "inputs": [], "name": "pauser",
-        "outputs": [{"name": "", "type": "address"}], "payable": false,
-        "stateMutability": "view", "type": "function"
-      }
-    ],
-    constants.USDC_MAINNET_ADDRESS
-  )
-
-  let blacklister
-  await tester.runTest(
-    'Check blacklister address',
-    FIAT_TOKEN,
-    'blacklister',
-    'call',
-    [],
-    true,
-    value => {
-      blacklister = value
-    }
-  )
-
-  let pausear
-  await tester.runTest(
-    'Check pauser address',
-    FIAT_TOKEN,
-    'pauser',
-    'call',
-    [],
-    true,
-    value => {
-      pauser = value
-    }
-  )
-
-  await tester.runTest(
-    'blacklist mock address',
-    FIAT_TOKEN,
-    'blacklist',
-    'send',
-    [constants.MOCK_USDC_BLACKLISTED_ADDRESS],
-    true,
-    receipt => {},
-    blacklister
-  )
-
-  let targetBlacklistAddress;
-  await tester.runTest(
-    'DharmaSmartWalletFactoryV1 can get a new smart wallet address ahead of time',
-    DharmaSmartWalletFactoryV1,
-    'getNextSmartWallet',
-    'call',
-    [constants.MOCK_USDC_BLACKLISTED_ADDRESS],
-    true,
-    value => {
-      targetBlacklistAddress = value
-    }
-  )
-
-  const BlacklistedUserSmartWalletV5 = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV5Artifact.abi,
-    targetBlacklistAddress
-  )
-
-  await tester.runTest(
-    'USDC Whale can deposit usdc into the yet-to-be-blacklisted smart wallet',
-    USDC,
-    'transfer',
-    'send',
-    [targetBlacklistAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.from,
-          constants.USDC_WHALE_ADDRESS
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.to,
-          targetBlacklistAddress
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.value,
-          web3.utils.toWei('100', 'lovelace')
-        )
-      }
-    },
-    constants.USDC_WHALE_ADDRESS
-  )
-
-  await tester.runTest(
-    'blacklist counterfactual deployment address',
-    FIAT_TOKEN,
-    'blacklist',
-    'send',
-    [targetBlacklistAddress],
-    true,
-    receipt => {},
-    blacklister
-  )
-
-  await tester.runTest(
-    'DharmaSmartWalletFactoryV1 can deploy to a blacklisted address',
-    DharmaSmartWalletFactoryV1,
-    'newSmartWallet',
-    'send',
-    [constants.MOCK_USDC_BLACKLISTED_ADDRESS],
-    true,
-    receipt => {
-      // TODO: verify
-      //console.log(receipt.events)
-    }
-  )
-
-  await tester.runTest(
-    'blacklisted smart wallet will not approve USDC during repayAndDeposit',
-    BlacklistedUserSmartWalletV5,
-    'repayAndDeposit',
-    'send',
-    [],
-    true,
-    receipt => {    
-      // TODO: verify
-      //console.log(receipt.events)
-    }
-  )
-
-  await tester.runTest(
-    'un-blacklist counterfactual deployment address',
-    FIAT_TOKEN,
-    'unBlacklist',
-    'send',
-    [targetBlacklistAddress],
-    true,
-    receipt => {},
-    blacklister
-  )
-
-  await tester.runTest(
-    'pause USDC',
-    FIAT_TOKEN,
-    'pause',
-    'send',
-    [],
-    true,
-    receipt => {},
-    pauser
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      5, // USDCWithdrawal,
-      constants.FULL_APPROVAL,
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet attempt to withdraw max USDC when paused causes ExternalError',
-    UserSmartWalletV5,
-    'withdrawUSDC',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      tester.address,
-      0,
-      usdcUserWithdrawalSignature,
-      usdcWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'smart wallet will not approve USDC when paused during repayAndDeposit',
-    BlacklistedUserSmartWalletV5,
-    'repayAndDeposit',
-    'send',
-    [],
-    true,
-    receipt => {    
-      // TODO: verify
-      //console.log(receipt.events)
-    }
-  )
-
-  await tester.runTest(
-    'unpause USDC',
-    FIAT_TOKEN,
-    'unpause',
-    'send',
-    [],
-    true,
-    receipt => {},
-    pauser
-  )
-
-  await tester.runTest(
-    'unblacklisted, unpaused smart wallet approves USDC during repayAndDeposit',
-    BlacklistedUserSmartWalletV5,
-    'repayAndDeposit',
-    'send',
-    [],
-    true,
-    receipt => {    
-      // TODO: verify
-      //console.log(receipt.events)
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
-    UserSmartWallet,
-    'getNextCustomActionID',
-    'call',
-    [
-      5, // USDCWithdrawal,
-      web3.utils.toWei('50', 'lovelace'),
-      constants.MOCK_USDC_BLACKLISTED_ADDRESS,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay call to withdraw USDC to blacklisted address',
-    UserSmartWallet,
-    'withdrawUSDC',
-    'send',
-    [
-      web3.utils.toWei('50', 'lovelace'),
-      constants.MOCK_USDC_BLACKLISTED_ADDRESS,
-      0,
-      usdcUserWithdrawalSignature,
-      usdcWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt.events[0])
-      //console.log(receipt.events.ExternalError)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWallet,
-    'getNextCustomActionID',
-    'call',
-    [
-      5, // USDCWithdrawal,
-      constants.FULL_APPROVAL,
-      UserSmartWallet.options.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay call to withdraw USDC to itself',
-    UserSmartWallet,
-    'withdrawUSDC',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      UserSmartWallet.options.address,
-      0,
-      usdcUserWithdrawalSignature,
-      usdcWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
-    UserSmartWallet,
-    'getNextCustomActionID',
-    'call',
-    [
-      5, // USDCWithdrawal,
-      constants.FULL_APPROVAL,
-      constants.MOCK_USDC_BLACKLISTED_ADDRESS,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay call to withdraw USDC to blacklisted address',
-    UserSmartWallet,
-    'withdrawUSDC',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      constants.MOCK_USDC_BLACKLISTED_ADDRESS,
-      0,
-      usdcUserWithdrawalSignature,
-      usdcWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt.events[0])
-      //console.log(receipt.events.ExternalError)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a Ether withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      6, // ETHWithdrawal,
-      '1',
-      targetWalletAddress,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  ethWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  ethUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot withdraw eth to a non-payable account',
-    UserSmartWalletV5,
-    'withdrawEther',
-    'send',
-    [
-      '1',
-      targetWalletAddress,
-      0,
-      ethUserWithdrawalSignature,
-      ethWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  let targetWalletAddressTwo;
-  await tester.runTest(
-    'DharmaSmartWalletFactoryV1 can get a new smart wallet address ahead of time',
-    DharmaSmartWalletFactoryV1,
-    'getNextSmartWallet',
-    'call',
-    [targetWalletAddress],
-    true,
-    value => {
-      // TODO: verify against expected value
-      targetWalletAddressTwo = value
-    }
-  )
-
-  await tester.runTest(
-    'DharmaSmartWalletFactoryV1 can deploy a V5 smart wallet using a contract key',
-    DharmaSmartWalletFactoryV1,
-    'newSmartWallet',
-    'send',
-    [targetWalletAddress]
-  )
-
-  const UserSmartWalletV5Two = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV5Artifact.abi,
-    targetWalletAddressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet cancel reverts with bad contract signature',
-    UserSmartWalletV5Two,
-    'cancel',
-    'send',
-    [
-      0,
-     '0x'
-    ],
-    false,
-    receipt => {},
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV5,
-    'getNextGenericActionID',
-    'call',
-    [
-      SAI.options.address,
-      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  executeActionSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  executeActionUserSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can call executeAction',
-    UserSmartWalletV5,
-    'executeAction',
-    'send',
-    [
-      SAI.options.address,
-      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
-      0,
-      executeActionUserSignature,
-      executeActionSignature
-    ]
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
-    UserSmartWallet,
-    'getNextCustomActionID',
-    'call',
-    [
-      4, // SaiWithdrawal,
-      '100000000000000000000000000000000000000', // too much
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  saiWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  saiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot withdraw too much sai',
-    UserSmartWallet,
-    'withdrawDai',
-    'send',
-    [
-      '100000000000000000000000000000000000000', // too much
-      tester.address,
-      0,
-      saiUserWithdrawalSignature,
-      saiWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt.events)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWallet,
-    'getNextCustomActionID',
-    'call',
-    [
-      5, // USDCWithdrawal,
-      '100000000000000000000000000000000000000', // too much
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  usdcWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  usdcUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay can call with two signatures to withdraw USDC',
-    UserSmartWallet,
-    'withdrawUSDC',
-    'send',
-    [
-      '100000000000000000000000000000000000000', // too much
-      tester.address,
-      0,
-      usdcUserWithdrawalSignature,
-      usdcWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get next generic batch action ID',
-    UserSmartWalletV5,
-    'getNextGenericAtomicBatchActionID',
-    'call',
-    [
-      [{
-        to: SAI.options.address,
-        data: SAI.methods.transfer(
-          tester.address, '100000000000000000000000000000'
-        ).encodeABI()
-      }],
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  executeActionSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  executeActionUserSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet bad executeActionWithAtomicBatchCalls emits CallFailure',
-    UserSmartWalletV5,
-    'executeActionWithAtomicBatchCalls',
-    'send',
-    [
-      [{
-        to: SAI.options.address,
-        data: SAI.methods.transfer(
-          tester.address, '100000000000000000000000000000'
-        ).encodeABI()
-      }],
-      0,
-      executeActionUserSignature,
-      executeActionSignature
-    ],
-    true,
-    receipt => {
-      //console.log(receipt)
-    }
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV5,
-    'getNextGenericActionID',
-    'call',
-    [
-      Comptroller.options.address,
-      Comptroller.methods.enterMarkets(
-        [constants.CSAI_MAINNET_ADDRESS]
-      ).encodeABI(),
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  executeActionSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  executeActionUserSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can call executeAction to enter sai market',
-    UserSmartWalletV5,
-    'executeAction',
-    'send',
-    [
-      Comptroller.options.address,
-      Comptroller.methods.enterMarkets(
-        [constants.CSAI_MAINNET_ADDRESS]
-      ).encodeABI(),
-      0,
-      executeActionUserSignature,
-      executeActionSignature
-    ]
-  )
-
-  await tester.runTest(
-    'Sai Whale can deposit sai into the smart wallet',
-    SAI,
-    'transfer',
-    'send',
-    [targetWalletAddress, web3.utils.toWei('100', 'ether')],
-    true,
-    receipt => {
-      if (testingContext !== 'coverage') {
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.from,
-          constants.SAI_WHALE_ADDRESS
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.to,
-          targetWalletAddress
-        )
-        assert.strictEqual(
-          receipt.events.Transfer.returnValues.value,
-          web3.utils.toWei('100', 'ether')
-        )
-      }
-    },
-    constants.SAI_WHALE_ADDRESS
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can trigger repayAndDeposit to deposit all new funds',
-    UserSmartWalletV5,
-    'repayAndDeposit'
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV5,
-    'getNextGenericActionID',
-    'call',
-    [
-      CSAI.options.address,
-      CSAI.methods.transfer(tester.address, web3.utils.toWei('1', 'mwei')).encodeABI(),
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  executeActionSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  executeActionUserSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can call executeAction to transfer cSai',
-    UserSmartWalletV5,
-    'executeAction',
-    'send',
-    [
-      CSAI.options.address,
-      CSAI.methods.transfer(tester.address, web3.utils.toWei('1', 'mwei')).encodeABI(),
-      0,
-      executeActionUserSignature,
-      executeActionSignature
-    ],
-    true,
-    receipt => {
-      //console.log(receipt.events)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a generic action ID',
-    UserSmartWalletV5,
-    'getNextGenericActionID',
-    'call',
-    [
-      CSAI_BORROW.options.address,
-      CSAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  executeActionSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  executeActionUserSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can call executeAction to perform a borrow',
-    UserSmartWalletV5,
-    'executeAction',
-    'send',
-    [
-      CSAI_BORROW.options.address,
-      CSAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
-      0,
-      executeActionUserSignature,
-      executeActionSignature
-    ],
-    true,
-    receipt => {
-      //console.log(receipt.events)
-    },
-    tester.originalAddress
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet can get a Sai withdrawal custom action ID',
-    UserSmartWalletV5,
-    'getNextCustomActionID',
-    'call',
-    [
-      4, // SaiWithdrawal,
-      constants.FULL_APPROVAL,
-      tester.address,
-      0
-    ],
-    true,
-    value => {
-      customActionId = value
-    }
-  )
-
-  saiWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.address
-  )
-
-  saiUserWithdrawalSignature = tester.signHashedPrefixedHexString(
-    customActionId,
-    tester.addressTwo
-  )
-
-  await tester.runTest(
-    'V5 UserSmartWallet relay cannot withdraw max sai with an outstanding borrow',
-    UserSmartWalletV5,
-    'withdrawDai',
-    'send',
-    [
-      constants.FULL_APPROVAL,
-      tester.address,
-      0,
-      saiUserWithdrawalSignature,
-      saiWithdrawalSignature
-    ],
-    true,
-    receipt => {
-      // TODO: verify logs
-      //console.log(receipt.events)
-    },
-    tester.originalAddress
-  )
-
-  // Initiate account recovery
-  await tester.runTest(
-    'smart wallet account recovery can be initiated',
-    DharmaAccountRecoveryManagerV2,
-    'initiateAccountRecovery',
-    'send',
-    [
-      UserSmartWalletV5.options.address,
-      tester.originalAddress,
-      0 // extraTime in seconds
-    ],
-    true,
-    receipt => {    
-      // TODO: verify
-      //console.log(receipt.events)
-    }
-  )
-
-  await tester.runTest(
-    'smart wallet account recovery cannot be performed right away',
-    DharmaAccountRecoveryManagerV2,
-    'recover',
-    'send',
-    [
-      UserSmartWalletV5.options.address,
-      tester.originalAddress
-    ],
-    false
-  )
-
-  // advance time by 3 days
-  await tester.advanceTime((60 * 60 * 24 * 3) + 5)
-
-  // recover account
-  await tester.runTest(
-    'smart wallet account recovery can be performed after three days',
-    DharmaAccountRecoveryManagerV2,
-    'recover',
-    'send',
-    [
-      UserSmartWalletV5.options.address,
-      tester.originalAddress
-    ],
-    true,
-    receipt => {    
-      // TODO: verify
-      //console.log(receipt.events)
-    }
-  )
-
-  await tester.runTest(
-    'UserSmartWalletV5 can get the nonce prior to upgrade',
-    UserSmartWalletV5,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      originalNonce = value
-    }
-  )
-
-
-  await testPerformingUpgrade(
-      tester,
-      DharmaSmartWalletImplementationV6, // new implementation
-      UserSmartWallet,
-      DharmaUpgradeBeaconController,
-      DharmaUpgradeBeacon.options.address,
-      6
   )
 
   await tester.runTest(
@@ -4711,10 +1128,7 @@ async function test(testingContext) {
       0,
       '0x',
       setUserSigningKeyDharmaSignature
-    ],
-    true,
-    receipt => {},
-    tester.originalAddress
+    ]
   )
 
   await tester.runTest(
@@ -5784,8 +2198,8 @@ async function test(testingContext) {
       '1000000000000000',
       constants.NULL_ADDRESS,
       0,
-      saiUserWithdrawalSignature,
-      saiWithdrawalSignature
+      daiUserWithdrawalSignature,
+      daiWithdrawalSignature
     ],
     false,
     receipt => {},
@@ -6771,7 +3185,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V6 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV6,
     'getNextCustomActionID',
     'call',
     [
@@ -6798,7 +3212,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V6 UserSmartWallet relay call to withdraw USDC to blacklisted address',
-    UserSmartWallet,
+    UserSmartWalletV6,
     'withdrawUSDC',
     'send',
     [
@@ -6819,13 +3233,13 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V6 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV6,
     'getNextCustomActionID',
     'call',
     [
       5, // USDCWithdrawal,
       constants.FULL_APPROVAL,
-      UserSmartWallet.options.address,
+      UserSmartWalletV6.options.address,
       0
     ],
     true,
@@ -6846,12 +3260,12 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V6 UserSmartWallet relay call to withdraw USDC to itself',
-    UserSmartWallet,
+    UserSmartWalletV6,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      UserSmartWallet.options.address,
+      UserSmartWalletV6.options.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -6865,7 +3279,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V6 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV6,
     'getNextCustomActionID',
     'call',
     [
@@ -6892,7 +3306,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V6 UserSmartWallet relay call to withdraw USDC to blacklisted address',
-    UserSmartWallet,
+    UserSmartWalletV6,
     'withdrawUSDC',
     'send',
     [
@@ -7040,7 +3454,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V6 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV6,
     'getNextCustomActionID',
     'call',
     [
@@ -7067,7 +3481,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V6 UserSmartWallet relay cannot withdraw to the null address',
-    UserSmartWallet,
+    UserSmartWalletV6,
     'withdrawDai',
     'send',
     [
@@ -7087,7 +3501,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V6 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV6,
     'getNextCustomActionID',
     'call',
     [
@@ -7114,7 +3528,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V6 UserSmartWallet relay cannot withdraw too much dai',
-    UserSmartWallet,
+    UserSmartWalletV6,
     'withdrawDai',
     'send',
     [
@@ -7134,7 +3548,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V6 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV6,
     'getNextCustomActionID',
     'call',
     [
@@ -7161,7 +3575,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V6 UserSmartWallet relay can call with two signatures to withdraw USDC',
-    UserSmartWallet,
+    UserSmartWalletV6,
     'withdrawUSDC',
     'send',
     [
@@ -7392,8 +3806,8 @@ async function test(testingContext) {
   )
 
   await tester.runTest(
-    'UserSmartWallet nonce can be retrieved',
-    UserSmartWallet,
+    'UserSmartWalletV6 nonce can be retrieved',
+    UserSmartWalletV6,
     'getNonce',
     'call',
     [],
@@ -7406,7 +3820,7 @@ async function test(testingContext) {
   await testPerformingUpgrade(
       tester,
       DharmaSmartWalletImplementationV7, // new implementation
-      UserSmartWallet,
+      UserSmartWalletV7,
       DharmaUpgradeBeaconController,
       DharmaUpgradeBeacon.options.address,
       7
@@ -8459,8 +4873,8 @@ async function test(testingContext) {
       '1000000000000000',
       constants.NULL_ADDRESS,
       0,
-      saiUserWithdrawalSignature,
-      saiWithdrawalSignature
+      daiUserWithdrawalSignature,
+      daiWithdrawalSignature
     ],
     false,
     receipt => {},
@@ -9415,7 +5829,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V7 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV7,
     'getNextCustomActionID',
     'call',
     [
@@ -9442,7 +5856,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V7 UserSmartWallet relay call to withdraw USDC to blacklisted address',
-    UserSmartWallet,
+    UserSmartWalletV7,
     'withdrawUSDC',
     'send',
     [
@@ -9463,13 +5877,13 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V7 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV7,
     'getNextCustomActionID',
     'call',
     [
       5, // USDCWithdrawal,
       constants.FULL_APPROVAL,
-      UserSmartWallet.options.address,
+      UserSmartWalletV7.options.address,
       0
     ],
     true,
@@ -9490,12 +5904,12 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V7 UserSmartWallet relay call to withdraw USDC to itself',
-    UserSmartWallet,
+    UserSmartWalletV7,
     'withdrawUSDC',
     'send',
     [
       constants.FULL_APPROVAL,
-      UserSmartWallet.options.address,
+      UserSmartWalletV7.options.address,
       0,
       usdcUserWithdrawalSignature,
       usdcWithdrawalSignature
@@ -9509,7 +5923,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V7 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV7,
     'getNextCustomActionID',
     'call',
     [
@@ -9536,7 +5950,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V7 UserSmartWallet relay call to withdraw USDC to blacklisted address',
-    UserSmartWallet,
+    UserSmartWalletV7,
     'withdrawUSDC',
     'send',
     [
@@ -9684,7 +6098,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V7 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV7,
     'getNextCustomActionID',
     'call',
     [
@@ -9711,7 +6125,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V7 UserSmartWallet relay cannot withdraw to the null address',
-    UserSmartWallet,
+    UserSmartWalletV7,
     'withdrawDai',
     'send',
     [
@@ -9731,7 +6145,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V7 UserSmartWallet can get a Dai withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV7,
     'getNextCustomActionID',
     'call',
     [
@@ -9758,7 +6172,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V7 UserSmartWallet relay cannot withdraw too much dai',
-    UserSmartWallet,
+    UserSmartWalletV7,
     'withdrawDai',
     'send',
     [
@@ -9778,7 +6192,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V7 UserSmartWallet can get a USDC withdrawal custom action ID',
-    UserSmartWallet,
+    UserSmartWalletV7,
     'getNextCustomActionID',
     'call',
     [
@@ -9805,7 +6219,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'V7 UserSmartWallet relay can call with two signatures to withdraw USDC',
-    UserSmartWallet,
+    UserSmartWalletV7,
     'withdrawUSDC',
     'send',
     [

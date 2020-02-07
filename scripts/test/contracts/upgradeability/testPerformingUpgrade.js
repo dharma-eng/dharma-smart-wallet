@@ -7,7 +7,8 @@ async function testPerformingUpgrade(
 	userSmartWalletContract,
 	upgradeBeaconControllerContract,
 	upgradeBeaconAddress,
-	newImplementationVersion
+	newImplementationVersion,
+  initial = false
 ) {
   let nonce;
   let userSigningKey;
@@ -15,29 +16,31 @@ async function testPerformingUpgrade(
   let oldImplementationCodeHash;
   let newImplementationCodeHash;
 
-  await tester.runTest(
-    'User Smart Wallet can check the user signing key prior to upgrade',
-    userSmartWalletContract,
-    'getUserSigningKey',
-    'call',
-    [],
-    true,
-    value => {
-      userSigningKey = value
-    }
-  )
+  if (!initial) {
+    await tester.runTest(
+      'User Smart Wallet can check the user signing key prior to upgrade',
+      userSmartWalletContract,
+      'getUserSigningKey',
+      'call',
+      [],
+      true,
+      value => {
+        userSigningKey = value
+      }
+    )
 
-  await tester.runTest(
-    'User Smart Wallet can get the nonce prior to upgrade',
-    userSmartWalletContract,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      nonce = value
-    }
-  )
+    await tester.runTest(
+      'User Smart Wallet can get the nonce prior to upgrade',
+      userSmartWalletContract,
+      'getNonce',
+      'call',
+      [],
+      true,
+      value => {
+        nonce = value
+      }
+    )
+  }
 
   await tester.runTest(
     'DharmaUpgradeBeacon current implementation can be retrieved',
@@ -135,41 +138,43 @@ async function testPerformingUpgrade(
     ]
   )
 
-  await tester.runTest(
-    `V${newImplementationVersion.toString()} user smart wallet still has the same user signing key set`,
-    userSmartWalletContract,
-    'getUserSigningKey',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, userSigningKey)
-    }
-  )
+  if (!initial) {
+    await tester.runTest(
+      `V${newImplementationVersion.toString()} User Smart Wallet can get the new version (${newImplementationVersion.toString()})`,
+      userSmartWalletContract,
+      'getVersion',
+      'call',
+      [],
+      true,
+      value => {
+        assert.strictEqual(value, newImplementationVersion.toString())
+      }
+    )
+      
+    await tester.runTest(
+      `V${newImplementationVersion.toString()} user smart wallet still has the same user signing key set`,
+      userSmartWalletContract,
+      'getUserSigningKey',
+      'call',
+      [],
+      true,
+      value => {
+        assert.strictEqual(value, userSigningKey)
+      }
+    )
 
-  await tester.runTest(
-    `V${newImplementationVersion.toString()} User Smart Wallet can get the new version (${newImplementationVersion.toString()})`,
-    userSmartWalletContract,
-    'getVersion',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, newImplementationVersion.toString())
-    }
-  )
-
-  await tester.runTest(
-    `V${newImplementationVersion.toString()} User Smart Wallet nonce is still set to value from before upgrade`,
-    userSmartWalletContract,
-    'getNonce',
-    'call',
-    [],
-    true,
-    value => {
-      assert.strictEqual(value, nonce)
-    }
-  )
+    await tester.runTest(
+      `V${newImplementationVersion.toString()} User Smart Wallet nonce is still set to value from before upgrade`,
+      userSmartWalletContract,
+      'getNonce',
+      'call',
+      [],
+      true,
+      value => {
+        assert.strictEqual(value, nonce)
+      }
+    )
+  }
 }
 
 module.exports = {

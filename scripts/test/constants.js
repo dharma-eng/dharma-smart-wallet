@@ -455,6 +455,60 @@ module.exports = Object.freeze({
     '0x00000000001876eB1444c986fD502e618c587430': 'DDAI',
     '0x0000000000946A7848C50C8f0AE1BB2792602Cb7': 'DUSDC' 
   },
+  COMPTROLLER_ABI: [
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "account",
+          "type": "address"
+        }
+      ],
+      "name": "getAccountLiquidity",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "err",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "liquidity",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "shortfall",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "internalType": "address[]",
+          "name": "cTokens",
+          "type": "address[]"
+        }
+      ],
+      "name": "enterMarkets",
+      "outputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "errs",
+          "type": "uint256[]"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
   EVENT_DETAILS: {
     // keccak256 of NewUserSigningKey(address) -> userSigningKey
     '0x7083aac3cab97f1219cedd0ab328a5b138a10b0fc72dd9348f1dc50199b21fda': {
