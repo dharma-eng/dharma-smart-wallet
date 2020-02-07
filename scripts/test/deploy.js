@@ -14,7 +14,7 @@ let DharmaUpgradeBeaconArtifact;
 let DharmaUpgradeBeaconControllerArtifact;
 let DharmaUpgradeBeaconEnvoyArtifact;
 let DharmaKeyRingUpgradeBeaconArtifact;
-let DharmaKeyRegistryV1Artifact;
+//let DharmaKeyRegistryV1Artifact;
 let DharmaKeyRegistryV2Artifact;
 let DharmaAccountRecoveryManagerV2Artifact;
 let DharmaSmartWalletFactoryV1Artifact;
@@ -45,12 +45,12 @@ const DharmaAccountRecoveryOperatorMultisigArtifact = require('../../build/contr
 const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaKeyRegistryMultisig.json')
 const DharmaTestingMultisigArtifact = require('../../build/contracts/DharmaTestingMultisig.json')
 
-const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
-const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
-const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV2.json')
+//const DharmaSmartWalletImplementationV0Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV0.json')
+//const DharmaSmartWalletImplementationV1Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV1.json')
+//const DharmaSmartWalletImplementationV2Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV2.json')
 //const DharmaSmartWalletImplementationV3Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV3.json')
 //const DharmaSmartWalletImplementationV4Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV4.json')
-const DharmaSmartWalletImplementationV5Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV5.json')
+//const DharmaSmartWalletImplementationV5Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV5.json')
 const DharmaSmartWalletImplementationV6Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV6.json')
 const DharmaSmartWalletImplementationV7Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV7.json')
 
@@ -79,7 +79,7 @@ async function test(testingContext) {
     DharmaKeyRingUpgradeBeaconArtifact = require('../../../build/contracts/DharmaKeyRingUpgradeBeacon.json')
     DharmaDaiUpgradeBeaconArtifact = require('../../../build/contracts/DharmaDaiUpgradeBeacon.json')
     DharmaUSDCUpgradeBeaconArtifact = require('../../../build/contracts/DharmaUSDCUpgradeBeacon.json')
-    DharmaKeyRegistryV1Artifact = require('../../../build/contracts/DharmaKeyRegistryV1.json')
+    //DharmaKeyRegistryV1Artifact = require('../../../build/contracts/DharmaKeyRegistryV1.json')
     DharmaKeyRegistryV2Artifact = require('../../../build/contracts/DharmaKeyRegistryV2.json')
     DharmaSmartWalletFactoryV1Artifact = require('../../../build/contracts/DharmaSmartWalletFactoryV1.json')
     DharmaKeyRingFactoryV2Artifact = require('../../../build/contracts/DharmaKeyRingFactoryV2.json')
@@ -101,7 +101,7 @@ async function test(testingContext) {
     DharmaKeyRingUpgradeBeaconArtifact = require('../../build/contracts/DharmaKeyRingUpgradeBeacon.json')
     DharmaDaiUpgradeBeaconArtifact = require('../../build/contracts/DharmaDaiUpgradeBeacon.json')
     DharmaUSDCUpgradeBeaconArtifact = require('../../build/contracts/DharmaUSDCUpgradeBeacon.json')
-    DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
+    //DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
     DharmaKeyRegistryV2Artifact = require('../../build/contracts/DharmaKeyRegistryV2.json')
     DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
     DharmaKeyRingFactoryV2Artifact = require('../../build/contracts/DharmaKeyRingFactoryV2.json')
@@ -157,10 +157,12 @@ async function test(testingContext) {
     constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS
   )
 
+  /*
   const DharmaKeyRegistryV1 = new web3.eth.Contract(
     DharmaKeyRegistryV1Artifact.abi,
     constants.KEY_REGISTRY_ADDRESS
   )
+  */
 
   const DharmaKeyRegistryV2 = new web3.eth.Contract(
     DharmaKeyRegistryV2Artifact.abi,
@@ -306,12 +308,14 @@ async function test(testingContext) {
     UpgradeBeaconProxyV1Artifact.bytecode
   )
 
+  /*
   const DharmaKeyRegistryV1Deployer = new web3.eth.Contract(
     DharmaKeyRegistryV1Artifact.abi
   )
   DharmaKeyRegistryV1Deployer.options.data = (
     DharmaKeyRegistryV1Artifact.bytecode
   )
+  */
 
   const DharmaKeyRegistryV2Deployer = new web3.eth.Contract(
     DharmaKeyRegistryV2Artifact.abi
@@ -342,11 +346,11 @@ async function test(testingContext) {
       AdharmaKeyRingImplementationArtifact
   );
 
-
   const DharmaAccountRecoveryManagerV2Deployer = newContractAndSwapMetadataHash(
       DharmaAccountRecoveryManagerV2Artifact
   );
 
+  /*
   const DharmaSmartWalletImplementationV0Deployer = newContractAndSwapMetadataHash(
       DharmaSmartWalletImplementationV0Artifact
   );
@@ -359,7 +363,6 @@ async function test(testingContext) {
       DharmaSmartWalletImplementationV2Artifact
   );
 
-  /*
   const DharmaSmartWalletImplementationV3Deployer = new web3.eth.Contract(
     DharmaSmartWalletImplementationV3Artifact.abi
   )
@@ -379,11 +382,11 @@ async function test(testingContext) {
       ['0000000000000000000000000000000000000000000000000000000000000000']
     )
   )
-  */
 
   const DharmaSmartWalletImplementationV5Deployer = newContractAndSwapMetadataHash(
       DharmaSmartWalletImplementationV5Artifact
   );
+  */
 
   const DharmaSmartWalletImplementationV6Deployer = newContractAndSwapMetadataHash(
       DharmaSmartWalletImplementationV6Artifact
@@ -782,6 +785,7 @@ async function test(testingContext) {
 
 
   // KeyRegistry
+  /*
   const keyRegistryRuntimeCode = swapMetadataHash(
       DharmaKeyRegistryV1Artifact.deployedBytecode,
       constants.KEY_REGISTRY_METADATA
@@ -801,6 +805,7 @@ async function test(testingContext) {
       MockCodeCheck,
       ImmutableCreate2Factory
   );
+  */
 
 
   // KeyRegistryV2
@@ -870,6 +875,7 @@ async function test(testingContext) {
 
 
   // Dharma Smart Wallet Implementations
+  /*
   const DharmaSmartWalletImplementationV0 = await tester.runTest(
     `DharmaSmartWalletImplementationV0 contract deployment`,
     DharmaSmartWalletImplementationV0Deployer,
@@ -891,7 +897,6 @@ async function test(testingContext) {
     'deploy'
   )
 
-  /*
   const DharmaSmartWalletImplementationV3 = await runTest(
     `DharmaSmartWalletImplementationV3 contract deployment`,
     DharmaSmartWalletImplementationV3Deployer,
@@ -905,7 +910,6 @@ async function test(testingContext) {
     '',
     'deploy'
   )
-  */
 
   const DharmaSmartWalletImplementationV5 = await tester.runTest(
     `DharmaSmartWalletImplementationV5 contract deployment`,
@@ -913,6 +917,7 @@ async function test(testingContext) {
     '',
     'deploy'
   )
+  */
 
   const DharmaSmartWalletImplementationV6 = await tester.runTest(
     `DharmaSmartWalletImplementationV6 contract deployment`,
@@ -1406,10 +1411,6 @@ async function test(testingContext) {
 
 
   const testIndestructibleRegistryContracts = {
-    DharmaSmartWalletImplementationV0,
-    DharmaSmartWalletImplementationV1,
-    DharmaSmartWalletImplementationV2,
-    DharmaSmartWalletImplementationV5,
     DharmaSmartWalletImplementationV6,
     DharmaSmartWalletImplementationV7,
     DharmaKeyRingImplementationV1,

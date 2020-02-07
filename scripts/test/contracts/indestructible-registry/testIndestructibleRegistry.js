@@ -5,10 +5,6 @@ const IndestructibleRegistryArtifact = require('../../../../build/contracts/Inde
 
 async function testIndestructibleRegistry(tester, contracts) {
     const {
-        DharmaSmartWalletImplementationV0,
-        DharmaSmartWalletImplementationV1,
-        DharmaSmartWalletImplementationV2,
-        DharmaSmartWalletImplementationV5,
         DharmaSmartWalletImplementationV6,
         DharmaSmartWalletImplementationV7,
         DharmaKeyRingImplementationV1,
@@ -74,13 +70,14 @@ async function testIndestructibleRegistry(tester, contracts) {
     )
 
     await tester.runTest(
-        'IndestructibleRegistry can register the account recovery manager as indestructible',
+        'IndestructibleRegistry can register the account recovery manager V2 as indestructible',
         IndestructibleRegistry,
         'registerAsIndestructible',
         'send',
         [constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS]
     )
 
+    /*
     await tester.runTest(
         'IndestructibleRegistry can register DharmaKeyRegistryV1 as indestructible',
         IndestructibleRegistry,
@@ -88,6 +85,7 @@ async function testIndestructibleRegistry(tester, contracts) {
         'send',
         [constants.KEY_REGISTRY_ADDRESS]
     )
+    */
 
     await tester.runTest(
         'IndestructibleRegistry can register DharmaKeyRegistryV2 as indestructible',
@@ -130,6 +128,7 @@ async function testIndestructibleRegistry(tester, contracts) {
         [constants.ADHARMA_KEY_RING_IMPLEMENTATION_ADDRESS]
     )
 
+    /*
     await tester.runTest(
         'IndestructibleRegistry can register V0 implementation as indestructible',
         IndestructibleRegistry,
@@ -138,7 +137,6 @@ async function testIndestructibleRegistry(tester, contracts) {
         [DharmaSmartWalletImplementationV0.options.address]
     )
 
-    /*
     await runTest(
       'IndestructibleRegistry can register V0 key ring implementation as indestructible',
       IndestructibleRegistry,
@@ -148,6 +146,7 @@ async function testIndestructibleRegistry(tester, contracts) {
     )
     */
 
+    /*
     await tester.runTest(
         'IndestructibleRegistry can register V1 implementation as indestructible',
         IndestructibleRegistry,
@@ -155,8 +154,10 @@ async function testIndestructibleRegistry(tester, contracts) {
         'send',
         [DharmaSmartWalletImplementationV1.options.address]
     )
+    */
 
-    if (tester.testingContext !== 'coverage') {
+    if (tester.context !== 'coverage') {
+        /*
         await tester.runTest(
             'IndestructibleRegistry can register V2 implementation as indestructible',
             IndestructibleRegistry,
@@ -165,7 +166,6 @@ async function testIndestructibleRegistry(tester, contracts) {
             [DharmaSmartWalletImplementationV2.options.address]
         )
 
-        /*
         await runTest(
           'IndestructibleRegistry can register V3 implementation as indestructible',
           IndestructibleRegistry,
@@ -181,7 +181,7 @@ async function testIndestructibleRegistry(tester, contracts) {
           'send',
           [DharmaSmartWalletImplementationV4.options.address]
         )
-        */
+
 
         await tester.runTest(
             'IndestructibleRegistry can register V5 implementation as indestructible',
@@ -190,6 +190,7 @@ async function testIndestructibleRegistry(tester, contracts) {
             'send',
             [DharmaSmartWalletImplementationV5.options.address]
         )
+        */
 
         await tester.runTest(
             'IndestructibleRegistry can register V6 implementation as indestructible',

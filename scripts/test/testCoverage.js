@@ -1,6 +1,3 @@
-var Web3 = require('web3')
-web3Provider = new Web3('ws://localhost:8555')
-
 // import tests
 var deployMockExternal = require('./deployMockExternal.js')
 var deploy = require('./deploy.js')
@@ -13,7 +10,7 @@ async function runTests() {
   await deployMockExternal.test(context);
   await deploy.test(context);
   await test.test(context);
-
+  
   process.exit(0)
 }
 
