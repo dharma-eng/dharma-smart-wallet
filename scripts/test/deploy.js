@@ -66,7 +66,7 @@ const ImmutableCreate2FactoryArtifact = require('../../build/contracts/Immutable
 const IndestructibleRegistryArtifact = require('../../build/contracts/IndestructibleRegistry.json')
 const CodeHashCacheArtifact = require('../../build/contracts/CodeHashCache.json')
 
-module.exports = {test: async function (testingContext) {
+async function test(testingContext) {
   if (testingContext === 'coverage') {
     DharmaUpgradeBeaconEnvoyArtifact = require('../../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
     DharmaUpgradeBeaconControllerArtifact = require('../../../build/contracts/DharmaUpgradeBeaconController.json')
@@ -708,6 +708,7 @@ module.exports = {test: async function (testingContext) {
       ImmutableCreate2Factory
   );
 
+
   // UpgradeBeaconController
   const upgradeBeaconControllerRuntimeCode = swapMetadataHash(
       DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
@@ -730,493 +731,182 @@ module.exports = {test: async function (testingContext) {
   );
 
 
-  let currentKeyRingUpgradeBeaconControllerCode;
-  await tester.runTest(
-    'Checking Key Ring Upgrade Beacon Controller runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS],
-    true,
-    value => {
-      currentKeyRingUpgradeBeaconControllerCode = value;
-    }
-  )
-
-  if (
-    currentKeyRingUpgradeBeaconControllerCode !== swapMetadataHash(
+  // KeyRingUpgradeBeaconController
+  const keyRingUpgradeBeaconControllerRuntimeCode = swapMetadataHash(
       DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
       constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaKeyRingUpgradeBeaconController contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_SALT,
-        swapMetadataHash(
-          DharmaUpgradeBeaconControllerArtifact.bytecode,
-          constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaKeyRingUpgradeBeaconController contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_SALT,
-        swapMetadataHash(
-          DharmaUpgradeBeaconControllerArtifact.bytecode,
-          constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_METADATA
-        )
-      ]
-    )
-  }
+  const keyRingUpgradeBeaconControllerCreationCode = swapMetadataHash(
+      DharmaUpgradeBeaconControllerArtifact.bytecode,
+      constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed Key Ring Upgrade Beacon Controller code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [DharmaKeyRingUpgradeBeaconController.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
-        constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "KeyRingUpgradeBeaconController",
+      constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS,
+      constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_SALT,
+      keyRingUpgradeBeaconControllerRuntimeCode,
+      keyRingUpgradeBeaconControllerCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
   await tester.runTest(
     `DharmaUpgradeBeaconController contract deployment`,
     DharmaUpgradeBeaconControllerDeployer,
     '',
     'deploy'
-  )
+  );
 
-  const FailedUpgradeBeaconProxy = await tester.runTest(
+  await tester.runTest(
     `failure when deploying UpgradeBeaconProxyV1 contract using an undeployed beacon`,
     UpgradeBeaconProxyV1Deployer,
     '',
     'deploy',
     ["0x"],
     false
-  )
+  );
 
-  let currentUpgradeBeaconCode;
-  await tester.runTest(
-    'Checking Upgrade Beacon runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.UPGRADE_BEACON_ADDRESS],
-    true,
-    value => {
-      currentUpgradeBeaconCode = value;
-    }
-  )
 
-  if (
-    currentUpgradeBeaconCode !== swapMetadataHash(
+  // UpgradeBeacon
+  const upgradeBeaconRuntimeCode = swapMetadataHash(
       DharmaUpgradeBeaconArtifact.deployedBytecode,
       constants.UPGRADE_BEACON_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaUpgradeBeacon contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.UPGRADE_BEACON_SALT,
-        swapMetadataHash(
-          DharmaUpgradeBeaconArtifact.bytecode,
-          constants.UPGRADE_BEACON_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.UPGRADE_BEACON_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaUpgradeBeacon contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.UPGRADE_BEACON_SALT,
-        swapMetadataHash(
-          DharmaUpgradeBeaconArtifact.bytecode,
-          constants.UPGRADE_BEACON_METADATA
-        )
-      ]
-    )
-  }
+  const upgradeBeaconCreationCode = swapMetadataHash(
+      DharmaUpgradeBeaconArtifact.bytecode,
+      constants.UPGRADE_BEACON_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed Upgrade Beacon code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [DharmaUpgradeBeacon.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaUpgradeBeaconArtifact.deployedBytecode,
-        constants.UPGRADE_BEACON_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "UpgradeBeacon",
+      constants.UPGRADE_BEACON_ADDRESS,
+      constants.UPGRADE_BEACON_SALT,
+      upgradeBeaconRuntimeCode,
+      upgradeBeaconCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
+
 
   await tester.runTest(
     `DharmaUpgradeBeacon contract deployment`,
     DharmaUpgradeBeaconDeployer,
     '',
     'deploy'
-  )
+  );
 
-  let currentKeyRingUpgradeBeaconCode;
-  await tester.runTest(
-    'Checking Upgrade Beacon runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.KEY_RING_UPGRADE_BEACON_ADDRESS],
-    true,
-    value => {
-      currentKeyRingUpgradeBeaconCode = value;
-    }
-  )
 
-  if (
-    currentKeyRingUpgradeBeaconCode !== swapMetadataHash(
+  // KeyRingUpgradeBeacon
+  const keyRingUpgradeBeaconRuntimeCode = swapMetadataHash(
       DharmaKeyRingUpgradeBeaconArtifact.deployedBytecode,
       constants.KEY_RING_UPGRADE_BEACON_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaKeyRingUpgradeBeacon contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.KEY_RING_UPGRADE_BEACON_SALT,
-        swapMetadataHash(
-          DharmaKeyRingUpgradeBeaconArtifact.bytecode,
-          constants.KEY_RING_UPGRADE_BEACON_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.KEY_RING_UPGRADE_BEACON_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaUpgradeBeacon contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.KEY_RING_UPGRADE_BEACON_SALT,
-        swapMetadataHash(
-          DharmaKeyRingUpgradeBeaconArtifact.bytecode,
-          constants.KEY_RING_UPGRADE_BEACON_METADATA
-        )
-      ]
-    )
-  }
+  const keyRingUpgradeBeaconCreationCode = swapMetadataHash(
+      DharmaKeyRingUpgradeBeaconArtifact.bytecode,
+      constants.KEY_RING_UPGRADE_BEACON_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed Key Ring Upgrade Beacon code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [DharmaKeyRingUpgradeBeacon.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaKeyRingUpgradeBeaconArtifact.deployedBytecode,
-        constants.KEY_RING_UPGRADE_BEACON_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "KeyRingUpgradeBeacon",
+      constants.KEY_RING_UPGRADE_BEACON_ADDRESS,
+      constants.KEY_RING_UPGRADE_BEACON_SALT,
+      keyRingUpgradeBeaconRuntimeCode,
+      keyRingUpgradeBeaconCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
   await tester.runTest(
     `DharmaKeyRingUpgradeBeacon contract deployment`,
     DharmaKeyRingUpgradeBeaconDeployer,
     '',
     'deploy'
-  )
+  );
 
-  let currentKeyRegistryCode;
-  await tester.runTest(
-    'Checking Key Registry runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.KEY_REGISTRY_ADDRESS],
-    true,
-    value => {
-      currentKeyRegistryCode = value;
-    }
-  )
 
-  if (
-    currentKeyRegistryCode !== swapMetadataHash(
+  // KeyRegistry
+  const keyRegistryRuntimeCode = swapMetadataHash(
       DharmaKeyRegistryV1Artifact.deployedBytecode,
       constants.KEY_REGISTRY_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaKeyRegistryV1 Code contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.KEY_REGISTRY_SALT,
-        swapMetadataHash(
-          DharmaKeyRegistryV1Artifact.bytecode,
-          constants.KEY_REGISTRY_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.KEY_REGISTRY_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaKeyRegistryV1 contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.KEY_REGISTRY_SALT,
-        swapMetadataHash(
-          DharmaKeyRegistryV1Artifact.bytecode,
-          constants.KEY_REGISTRY_METADATA
-        )
-      ]
-    )
-  }
+  const keyRegistryCreationCode = swapMetadataHash(
+      DharmaKeyRegistryV1Artifact.bytecode,
+      constants.KEY_REGISTRY_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed Key Registry code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [DharmaKeyRegistryV1.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaKeyRegistryV1Artifact.deployedBytecode,
-        constants.KEY_REGISTRY_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "KeyRegistry",
+      constants.KEY_REGISTRY_ADDRESS,
+      constants.KEY_REGISTRY_SALT,
+      keyRegistryRuntimeCode,
+      keyRegistryCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
-  let currentKeyRegistryV2Code;
-  await tester.runTest(
-    'Checking Key Registry V2 runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.KEY_REGISTRY_V2_ADDRESS],
-    true,
-    value => {
-      currentKeyRegistryV2Code = value;
-    }
-  )
 
-  if (
-    currentKeyRegistryV2Code !== swapMetadataHash(
+  // KeyRegistryV2
+  const keyRegistryV2RuntimeCode = swapMetadataHash(
       DharmaKeyRegistryV2Artifact.deployedBytecode,
       constants.KEY_REGISTRY_V2_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaKeyRegistryV2 Code contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.KEY_REGISTRY_V2_SALT,
-        swapMetadataHash(
-          DharmaKeyRegistryV2Artifact.bytecode,
-          constants.KEY_REGISTRY_V2_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.KEY_REGISTRY_V2_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaKeyRegistryV2 contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.KEY_REGISTRY_V2_SALT,
-        swapMetadataHash(
-          DharmaKeyRegistryV2Artifact.bytecode,
-          constants.KEY_REGISTRY_V2_METADATA
-        )
-      ]
-    )
-  }
+  const keyRegistryV2CreationCode = swapMetadataHash(
+      DharmaKeyRegistryV2Artifact.bytecode,
+      constants.KEY_REGISTRY_V2_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed Key Registry code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [DharmaKeyRegistryV2.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaKeyRegistryV2Artifact.deployedBytecode,
-        constants.KEY_REGISTRY_V2_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "KeyRegistryV2",
+      constants.KEY_REGISTRY_V2_ADDRESS,
+      constants.KEY_REGISTRY_V2_SALT,
+      keyRegistryV2RuntimeCode,
+      keyRegistryV2CreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
-  let currentRevertReasonHelperCode;
-  await tester.runTest(
-    'Checking Revert Reason Helper runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.REVERT_REASON_HELPER_ADDRESS],
-    true,
-    value => {
-      currentRevertReasonHelperCode = value;
-    }
-  )
 
-  if (
-    currentRevertReasonHelperCode !== SmartWalletRevertReasonHelperV1Artifact.deployedBytecode
-  ) {
-    await tester.runTest(
-      `SmartWalletRevertReasonHelperV1 Code contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.NULL_BYTES_32,
-        SmartWalletRevertReasonHelperV1Artifact.bytecode
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.REVERT_REASON_HELPER_ADDRESS)
-      }
-    )
+  // RevertReasonHelper
+  await tester.checkAndDeploy(
+      "RevertReasonHelper",
+      constants.REVERT_REASON_HELPER_ADDRESS,
+      constants.NULL_BYTES_32,
+      SmartWalletRevertReasonHelperV1Artifact.deployedBytecode,
+      SmartWalletRevertReasonHelperV1Artifact.bytecode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
-    await tester.runTest(
-      `SmartWalletRevertReasonHelperV1 contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.NULL_BYTES_32,
-        SmartWalletRevertReasonHelperV1Artifact.bytecode
-      ]
-    )
-  }
 
-  await tester.runTest(
-    'Deployed Revert Reason Helper code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [SmartWalletRevertReasonHelperV1.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, SmartWalletRevertReasonHelperV1Artifact.deployedBytecode)
-    }
-  )
-
-  let currentEscapeHatchRegistryCode;
-  await tester.runTest(
-    'Checking Escape Hatch Registry runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.ESCAPE_HATCH_REGISTRY_ADDRESS],
-    true,
-    value => {
-      currentEscapeHatchRegistryCode = value;
-    }
-  )
-
-  if (
-    currentEscapeHatchRegistryCode !== swapMetadataHash(
+  // EscapeHatchRegistry
+  const escapeHatchRegistryRuntimeCode = swapMetadataHash(
       DharmaEscapeHatchRegistryArtifact.deployedBytecode,
       constants.ESCAPE_HATCH_REGISTRY_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaEscapeHatchRegistry Code contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.ESCAPE_HATCH_REGISTRY_SALT,
-        swapMetadataHash(
-          DharmaEscapeHatchRegistryArtifact.bytecode,
-          constants.ESCAPE_HATCH_REGISTRY_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.ESCAPE_HATCH_REGISTRY_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaEscapeHatchRegistry contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.ESCAPE_HATCH_REGISTRY_SALT,
-        swapMetadataHash(
-          DharmaEscapeHatchRegistryArtifact.bytecode,
-          constants.ESCAPE_HATCH_REGISTRY_METADATA
-        )
-      ]
-    )
-  }
+  const escapeHatchRegistryCreationCode = swapMetadataHash(
+      DharmaEscapeHatchRegistryArtifact.bytecode,
+      constants.ESCAPE_HATCH_REGISTRY_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed Escape Hatch Registry code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [DharmaEscapeHatchRegistry.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaEscapeHatchRegistryArtifact.deployedBytecode,
-        constants.ESCAPE_HATCH_REGISTRY_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "EscapeHatchRegistry",
+      constants.ESCAPE_HATCH_REGISTRY_ADDRESS,
+      constants.ESCAPE_HATCH_REGISTRY_SALT,
+      escapeHatchRegistryRuntimeCode,
+      escapeHatchRegistryCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
+
+  // Dharma Smart Wallet Implementations
   const DharmaSmartWalletImplementationV0 = await tester.runTest(
     `DharmaSmartWalletImplementationV0 contract deployment`,
     DharmaSmartWalletImplementationV0Deployer,
@@ -1284,6 +974,7 @@ module.exports = {test: async function (testingContext) {
   )
   */
 
+  // Dharma Key Ring Implementations
   const DharmaKeyRingImplementationV1 = await tester.runTest(
     `DharmaKeyRingImplementationV1 contract deployment`,
     DharmaKeyRingImplementationV1Deployer,
@@ -1300,146 +991,56 @@ module.exports = {test: async function (testingContext) {
   )
   */
 
-  let currentAccountRecoveryManagerCode;
-  await tester.runTest(
-    'Checking Account Recovery Manager runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS],
-    true,
-    value => {
-      currentAccountRecoveryManagerCode = value;
-    }
-  )
 
-  if (
-    currentAccountRecoveryManagerCode !== swapMetadataHash(
+  // AccountRecoveryManager
+  const accountRecoveryManagerRuntimeCode = swapMetadataHash(
       DharmaAccountRecoveryManagerV2Artifact.deployedBytecode,
       constants.ACCOUNT_RECOVERY_MANAGER_V2_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaAccountRecoveryManagerV2 contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.ACCOUNT_RECOVERY_MANAGER_V2_SALT,
-        swapMetadataHash(
-          DharmaAccountRecoveryManagerV2Artifact.bytecode,
-          constants.ACCOUNT_RECOVERY_MANAGER_V2_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaAccountRecoveryManagerV2 contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.ACCOUNT_RECOVERY_MANAGER_V2_SALT,
-        swapMetadataHash(
-          DharmaAccountRecoveryManagerV2Artifact.bytecode,
-          constants.ACCOUNT_RECOVERY_MANAGER_V2_METADATA
-        )
-      ]
-    )
-  }
+  const accountRecoveryManagerCreationCode = swapMetadataHash(
+      DharmaAccountRecoveryManagerV2Artifact.bytecode,
+      constants.ACCOUNT_RECOVERY_MANAGER_V2_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed Account Recovery Manager code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [DharmaAccountRecoveryManagerV2.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaAccountRecoveryManagerV2Artifact.deployedBytecode,
-        constants.ACCOUNT_RECOVERY_MANAGER_V2_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "AccountRecoveryManager",
+      constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS,
+      constants.ACCOUNT_RECOVERY_MANAGER_V2_SALT,
+      accountRecoveryManagerRuntimeCode,
+      accountRecoveryManagerCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
   await tester.runTest(
     `DharmaAccountRecoveryManagerV2 contract deployment`,
     DharmaAccountRecoveryManagerV2Deployer,
     '',
     'deploy'
-  )
+  );
 
-  let currentFactoryCode;
-  await tester.runTest(
-    'Checking Factory runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.FACTORY_ADDRESS],
-    true,
-    value => {
-      currentFactoryCode = value;
-    }
-  )
 
-  if (
-    currentFactoryCode !== swapMetadataHash(
+  // DharmaSmartWalletFactory
+  const dharmaSmartWalletFactoryRuntimeCode = swapMetadataHash(
       DharmaSmartWalletFactoryV1Artifact.deployedBytecode,
       constants.FACTORY_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaSmartWalletFactoryV1 Code contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.FACTORY_SALT,
-        swapMetadataHash(
-          DharmaSmartWalletFactoryV1Artifact.bytecode,
-          constants.FACTORY_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.FACTORY_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaSmartWalletFactoryV1 contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.FACTORY_SALT,
-        swapMetadataHash(
-          DharmaSmartWalletFactoryV1Artifact.bytecode,
-          constants.FACTORY_METADATA
-        )
-      ]
-    )
-  }
+  const dharmaSmartWalletFactoryCreationCode = swapMetadataHash(
+      DharmaSmartWalletFactoryV1Artifact.bytecode,
+      constants.FACTORY_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed FactoryV1 code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [DharmaSmartWalletFactoryV1.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaSmartWalletFactoryV1Artifact.deployedBytecode,
-        constants.FACTORY_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "DharmaSmartWalletFactory",
+      constants.FACTORY_ADDRESS,
+      constants.FACTORY_SALT,
+      dharmaSmartWalletFactoryRuntimeCode,
+      dharmaSmartWalletFactoryCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
   await tester.runTest(
     `DharmaSmartWalletFactoryV1 contract deployment`,
@@ -1447,74 +1048,29 @@ module.exports = {test: async function (testingContext) {
     '',
     'deploy',
     []
-  )
+  );
 
-  let currentKeyRingFactoryCode;
-  await tester.runTest(
-    'Checking Key Ring Factory runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.KEY_RING_FACTORY_V2_ADDRESS],
-    true,
-    value => {
-      currentKeyRingFactoryCode = value;
-    }
-  )
 
-  if (
-    currentKeyRingFactoryCode !== swapMetadataHash(
+  // KeyRingFactory
+  const keyRingFactoryRuntimeCode = swapMetadataHash(
       DharmaKeyRingFactoryV2Artifact.deployedBytecode,
       constants.KEY_RING_FACTORY_V2_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaKeyRingFactoryV2 Code contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.KEY_RING_FACTORY_V2_SALT,
-        swapMetadataHash(
-          DharmaKeyRingFactoryV2Artifact.bytecode,
-          constants.KEY_RING_FACTORY_V2_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.KEY_RING_FACTORY_V2_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaKeyRingFactoryV2 contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.KEY_RING_FACTORY_V2_SALT,
-        swapMetadataHash(
-          DharmaKeyRingFactoryV2Artifact.bytecode,
-          constants.KEY_RING_FACTORY_V2_METADATA
-        )
-      ]
-    )
-  }
+  const keyRingFactoryCreationCode = swapMetadataHash(
+      DharmaKeyRingFactoryV2Artifact.bytecode,
+      constants.KEY_RING_FACTORY_V2_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed KeyRingFactoryV2 code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [DharmaKeyRingFactoryV2.options.address],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaKeyRingFactoryV2Artifact.deployedBytecode,
-        constants.KEY_RING_FACTORY_V2_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "KeyRingFactory",
+      constants.KEY_RING_FACTORY_V2_ADDRESS,
+      constants.KEY_RING_FACTORY_V2_SALT,
+      keyRingFactoryRuntimeCode,
+      keyRingFactoryCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
   await tester.runTest(
     `DharmaKeyRingFactoryV2 contract deployment`,
@@ -1522,477 +1078,158 @@ module.exports = {test: async function (testingContext) {
     '',
     'deploy',
     []
-  )
+  );
 
-  let currentAdharmaSmartWalletImplementationCode;
-  await tester.runTest(
-    'Checking Adharma smart wallet implementation runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS],
-    true,
-    value => {
-      currentAdharmaSmartWalletImplementationCode = value;
-    }
-  )
-
-  if (
-    currentAdharmaSmartWalletImplementationCode !== swapMetadataHash(
+  // AdharmaSmartWalletImplementation
+  const adharmaSmartWalletImplementationRuntimeCode = swapMetadataHash(
       AdharmaSmartWalletImplementationArtifact.deployedBytecode,
       constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `AdharmaSmartWalletImplementation contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_SALT,
-        swapMetadataHash(
-          AdharmaSmartWalletImplementationArtifact.bytecode,
-          constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `AdharmaSmartWalletImplementation contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_SALT,
-        swapMetadataHash(
-          AdharmaSmartWalletImplementationArtifact.bytecode,
-          constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_METADATA
-        )
-      ]
-    )
-  }
+  const adharmaSmartWalletImplementationCreationCode = swapMetadataHash(
+      AdharmaSmartWalletImplementationArtifact.bytecode,
+      constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed AdharmaSmartWalletImplementation code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        AdharmaSmartWalletImplementationArtifact.deployedBytecode,
-        constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "AdharmaSmartWalletImplementation",
+      constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS,
+      constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_SALT,
+      adharmaSmartWalletImplementationRuntimeCode,
+      adharmaSmartWalletImplementationCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
 
-  let currentDharmaDaiUpgradeBeaconControllerCode;
-  await tester.runTest(
-    'Checking Dharma Dai Upgrade Beacon Controller runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_ADDRESS],
-    true,
-    value => {
-      currentDharmaDaiUpgradeBeaconControllerCode = value;
-    }
-  )
-
-  if (
-    currentDharmaDaiUpgradeBeaconControllerCode !== swapMetadataHash(
+  // DharmaDaiUpgrageBeaconController
+  const dharmaDaiUpgradeBeaconControllerRuntimeCode = swapMetadataHash(
       DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
       constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaDaiUpgradeBeaconController contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_SALT,
-        swapMetadataHash(
-          DharmaUpgradeBeaconControllerArtifact.bytecode,
-          constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaDaiUpgradeBeaconController contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_SALT,
-        swapMetadataHash(
-          DharmaUpgradeBeaconControllerArtifact.bytecode,
-          constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_METADATA
-        )
-      ]
-    )
-  }
+  const dharmaDaiUpgradeBeaconControllerCreationCode = swapMetadataHash(
+      DharmaUpgradeBeaconControllerArtifact.bytecode,
+      constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed DharmaDaiUpgradeBeaconController code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_ADDRESS],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
-        constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "DharmaDaiUpgrageBeaconController",
+      constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_ADDRESS,
+      constants.DHARMA_DAI_UPGRADE_BEACON_CONTROLLER_SALT,
+      dharmaDaiUpgradeBeaconControllerRuntimeCode,
+      dharmaDaiUpgradeBeaconControllerCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
-  let currentDharmaUSDCUpgradeBeaconControllerCode;
-  await tester.runTest(
-    'Checking Dharma USDC Upgrade Beacon Controller runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_ADDRESS],
-    true,
-    value => {
-      currentDharmaUSDCUpgradeBeaconControllerCode = value;
-    }
-  )
 
-  if (
-    currentDharmaUSDCUpgradeBeaconControllerCode !== swapMetadataHash(
+  // DharmaUSDCUpgrageBeaconController
+  const dharmaUSDCUpgradeBeaconControllerRuntimeCode = swapMetadataHash(
       DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
       constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaUSDCUpgradeBeaconController contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_SALT,
-        swapMetadataHash(
-          DharmaUpgradeBeaconControllerArtifact.bytecode,
-          constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaUSDCUpgradeBeaconController contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_SALT,
-        swapMetadataHash(
-          DharmaUpgradeBeaconControllerArtifact.bytecode,
-          constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_METADATA
-        )
-      ]
-    )
-  }
+  const dharmaUSDCUpgradeBeaconControllerCreationCode = swapMetadataHash(
+      DharmaUpgradeBeaconControllerArtifact.bytecode,
+      constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed DharmaUSDCUpgradeBeaconController code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_ADDRESS],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaUpgradeBeaconControllerArtifact.deployedBytecode,
-        constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "DharmaUSDCUpgrageBeaconController",
+      constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_ADDRESS,
+      constants.DHARMA_USDC_UPGRADE_BEACON_CONTROLLER_SALT,
+      dharmaUSDCUpgradeBeaconControllerRuntimeCode,
+      dharmaUSDCUpgradeBeaconControllerCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
-  let currentDharmaDaiUpgradeBeaconCode;
-  await tester.runTest(
-    'Checking Dharma Dai Upgrade Beacon Controller runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.DHARMA_DAI_UPGRADE_BEACON_ADDRESS],
-    true,
-    value => {
-      currentDharmaDaiUpgradeBeaconCode = value;
-    }
-  )
-
-  if (
-    currentDharmaDaiUpgradeBeaconCode !== swapMetadataHash(
+  // DharmaUSDCUpgrageBeacon
+  const dharmaDaiUpgradeBeaconRuntimeCode = swapMetadataHash(
       DharmaDaiUpgradeBeaconArtifact.deployedBytecode,
       constants.DHARMA_DAI_UPGRADE_BEACON_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaDaiUpgradeBeacon contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.DHARMA_DAI_UPGRADE_BEACON_SALT,
-        swapMetadataHash(
-          DharmaDaiUpgradeBeaconArtifact.bytecode,
-          constants.DHARMA_DAI_UPGRADE_BEACON_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.DHARMA_DAI_UPGRADE_BEACON_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaDaiUpgradeBeacon contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.DHARMA_DAI_UPGRADE_BEACON_SALT,
-        swapMetadataHash(
-          DharmaDaiUpgradeBeaconArtifact.bytecode,
-          constants.DHARMA_DAI_UPGRADE_BEACON_METADATA
-        )
-      ]
-    )
-  }
+  const dharmaDaiUpgradeBeaconCreationCode = swapMetadataHash(
+      DharmaDaiUpgradeBeaconArtifact.bytecode,
+      constants.DHARMA_DAI_UPGRADE_BEACON_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed DharmaDaiUpgradeBeacon code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.DHARMA_DAI_UPGRADE_BEACON_ADDRESS],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaDaiUpgradeBeaconArtifact.deployedBytecode,
-        constants.DHARMA_DAI_UPGRADE_BEACON_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "DharmaDaiUpgrageBeacon",
+      constants.DHARMA_DAI_UPGRADE_BEACON_ADDRESS,
+      constants.DHARMA_DAI_UPGRADE_BEACON_SALT,
+      dharmaDaiUpgradeBeaconRuntimeCode,
+      dharmaDaiUpgradeBeaconCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
-  let currentDharmaUSDCUpgradeBeaconCode;
-  await tester.runTest(
-    'Checking Dharma USDC Upgrade Beacon Controller runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.DHARMA_USDC_UPGRADE_BEACON_ADDRESS],
-    true,
-    value => {
-      currentDharmaUSDCUpgradeBeaconCode = value;
-    }
-  )
-
-  if (
-    currentDharmaUSDCUpgradeBeaconCode !== swapMetadataHash(
+  // DharmaUSDCUpgrageBeacon
+  const dharmaUSDCUpgradeBeaconRuntimeCode = swapMetadataHash(
       DharmaUSDCUpgradeBeaconArtifact.deployedBytecode,
       constants.DHARMA_USDC_UPGRADE_BEACON_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaUSDCUpgradeBeacon contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.DHARMA_USDC_UPGRADE_BEACON_SALT,
-        swapMetadataHash(
-          DharmaUSDCUpgradeBeaconArtifact.bytecode,
-          constants.DHARMA_USDC_UPGRADE_BEACON_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.DHARMA_USDC_UPGRADE_BEACON_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaUSDCUpgradeBeacon contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.DHARMA_USDC_UPGRADE_BEACON_SALT,
-        swapMetadataHash(
-          DharmaUSDCUpgradeBeaconArtifact.bytecode,
-          constants.DHARMA_USDC_UPGRADE_BEACON_METADATA
-        )
-      ]
-    )
-  }
+  const dharmaUSDCUpgradeBeaconCreationCode = swapMetadataHash(
+      DharmaUSDCUpgradeBeaconArtifact.bytecode,
+      constants.DHARMA_USDC_UPGRADE_BEACON_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed DharmaUSDCUpgradeBeacon code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.DHARMA_USDC_UPGRADE_BEACON_ADDRESS],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaUSDCUpgradeBeaconArtifact.deployedBytecode,
-        constants.DHARMA_USDC_UPGRADE_BEACON_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "DharmaUSDCUpgrageBeacon",
+      constants.DHARMA_USDC_UPGRADE_BEACON_ADDRESS,
+      constants.DHARMA_USDC_UPGRADE_BEACON_SALT,
+      dharmaUSDCUpgradeBeaconRuntimeCode,
+      dharmaUSDCUpgradeBeaconCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
-  let currentDharmaDaiCode;
-  await tester.runTest(
-    'Checking Dharma Dai Upgrade Beacon Controller runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.DHARMA_DAI_ADDRESS],
-    true,
-    value => {
-      currentDharmaDaiCode = value;
-    }
-  )
 
-  if (
-    currentDharmaDaiCode !== swapMetadataHash(
+  // DharmaDai
+  const dharmaDaiRuntimeCode = swapMetadataHash(
       DharmaDaiArtifact.deployedBytecode,
       constants.DHARMA_DAI_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaDai contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.DHARMA_DAI_SALT,
-        swapMetadataHash(
-          DharmaDaiArtifact.bytecode,
-          constants.DHARMA_DAI_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.DHARMA_DAI_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaDai contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.DHARMA_DAI_SALT,
-        swapMetadataHash(
-          DharmaDaiArtifact.bytecode,
-          constants.DHARMA_DAI_METADATA
-        )
-      ]
-    )
-  }
+  const dharmaDaiCreationCode = swapMetadataHash(
+      DharmaDaiArtifact.bytecode,
+      constants.DHARMA_DAI_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed DharmaDai code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.DHARMA_DAI_ADDRESS],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaDaiArtifact.deployedBytecode,
-        constants.DHARMA_DAI_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "DharmaDai",
+      constants.DHARMA_DAI_ADDRESS,
+      constants.DHARMA_DAI_SALT,
+      dharmaDaiRuntimeCode,
+      dharmaDaiCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
 
-  let currentDharmaUSDCCode;
-  await tester.runTest(
-    'Checking Dharma USDC Upgrade Beacon Controller runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.DHARMA_USDC_ADDRESS],
-    true,
-    value => {
-      currentDharmaUSDCCode = value;
-    }
-  )
-
-  if (
-    currentDharmaUSDCCode !== swapMetadataHash(
+  // DharmaUSDC
+  const dharmaUSDCRuntimeCode = swapMetadataHash(
       DharmaUSDCArtifact.deployedBytecode,
       constants.DHARMA_USDC_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaUSDC contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.DHARMA_USDC_SALT,
-        swapMetadataHash(
-          DharmaUSDCArtifact.bytecode,
-          constants.DHARMA_USDC_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.DHARMA_USDC_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaUSDC contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.DHARMA_USDC_SALT,
-        swapMetadataHash(
-          DharmaUSDCArtifact.bytecode,
-          constants.DHARMA_USDC_METADATA
-        )
-      ]
-    )
-  }
+  const dharmaUSDCCreationCode = swapMetadataHash(
+      DharmaUSDCArtifact.bytecode,
+      constants.DHARMA_USDC_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed DharmaUSDC code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.DHARMA_USDC_ADDRESS],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaUSDCArtifact.deployedBytecode,
-        constants.DHARMA_USDC_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "DharmaDai",
+      constants.DHARMA_USDC_ADDRESS,
+      constants.DHARMA_USDC_SALT,
+      dharmaUSDCRuntimeCode,
+      dharmaUSDCCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
+
 
   const DharmaDaiInitializerImplementation = await tester.runTest(
     `DharmaDaiInitializer contract deployment`,
@@ -2073,72 +1310,28 @@ module.exports = {test: async function (testingContext) {
     'deploy'
   )
 
-  let currentAdharmaKeyRingImplementationCode;
-  await tester.runTest(
-    'Checking Adharma key ring implementation runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.ADHARMA_KEY_RING_IMPLEMENTATION_ADDRESS],
-    true,
-    value => {
-      currentAdharmaKeyRingImplementationCode = value;
-    }
-  )
 
-  if (
-    currentAdharmaKeyRingImplementationCode !== swapMetadataHash(
+  // ADharmaKeyRingImplementation
+  const adharmaKeyRingImplementationRuntimeCode = swapMetadataHash(
       AdharmaKeyRingImplementationArtifact.deployedBytecode,
       constants.ADHARMA_KEY_RING_IMPLEMENTATION_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `AdharmaKeyRingImplementation contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.ADHARMA_KEY_RING_IMPLEMENTATION_SALT,
-        swapMetadataHash(
-          AdharmaKeyRingImplementationArtifact.bytecode,
-          constants.ADHARMA_KEY_RING_IMPLEMENTATION_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.ADHARMA_KEY_RING_IMPLEMENTATION_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `AdharmaKeyRingImplementation contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.ADHARMA_KEY_RING_IMPLEMENTATION_SALT,
-        swapMetadataHash(
-          AdharmaKeyRingImplementationArtifact.bytecode,
-          constants.ADHARMA_KEY_RING_IMPLEMENTATION_METADATA
-        )
-      ]
-    )
-  }
+  const adharmaKeyRingImplementationCreationCode = swapMetadataHash(
+      AdharmaKeyRingImplementationArtifact.bytecode,
+      constants.ADHARMA_KEY_RING_IMPLEMENTATION_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed AdharmaSmartWalletImplementation code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.ADHARMA_KEY_RING_IMPLEMENTATION_ADDRESS],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        AdharmaKeyRingImplementationArtifact.deployedBytecode,
-        constants.ADHARMA_KEY_RING_IMPLEMENTATION_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "DharmaDai",
+      constants.ADHARMA_KEY_RING_IMPLEMENTATION_ADDRESS,
+      constants.ADHARMA_KEY_RING_IMPLEMENTATION_SALT,
+      adharmaKeyRingImplementationRuntimeCode,
+      adharmaKeyRingImplementationCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
+
 
   await tester.runTest(
     `AdharmaKeyRingImplementation contract deployment`,
@@ -2241,7 +1434,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  const DharmaAccountRecoveryMultisig = await tester.runTest(
+  await tester.runTest(
     `DharmaAccountRecoveryMultisig contract deployment`,
     DharmaAccountRecoveryMultisigDeployer,
     '',
@@ -2296,7 +1489,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  const DharmaKeyRegistryMultisig = await tester.runTest(
+  await tester.runTest(
     `DharmaKeyRegistryMultisig contract deployment`,
     DharmaKeyRegistryMultisigDeployer,
     '',
@@ -2592,72 +1785,27 @@ module.exports = {test: async function (testingContext) {
     [constants.FACTORY_ADDRESS]
   )
 
-  let currentUpgradeBeaconControllerManagerCode;
-  await tester.runTest(
-    'Checking Upgrade Beacon Controller Manager runtime code',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS],
-    true,
-    value => {
-      currentUpgradeBeaconControllerManagerCode = value;
-    }
-  )
-
-  if (
-    currentUpgradeBeaconControllerManagerCode !== swapMetadataHash(
+  // UpgradeBeaconControllerManager
+  const upgradeBeaconControllerManagerRuntimeCode = swapMetadataHash(
       DharmaUpgradeBeaconControllerManagerArtifact.deployedBytecode,
       constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
-    )
-  ) {
-    await tester.runTest(
-      `DharmaUpgradeBeaconControllerManager contract address check through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'findCreate2Address',
-      'call',
-      [
-        constants.UPGRADE_BEACON_CONTROLLER_MANAGER_SALT,
-        swapMetadataHash(
-          DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
-          constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
-        )
-      ],
-      true,
-      value => {
-        assert.strictEqual(value, constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS)
-      }
-    )
+  );
 
-    await tester.runTest(
-      `DharmaUpgradeBeaconControllerManager contract deployment through immutable create2 factory`,
-      ImmutableCreate2Factory,
-      'safeCreate2',
-      'send',
-      [
-        constants.UPGRADE_BEACON_CONTROLLER_MANAGER_SALT,
-        swapMetadataHash(
-          DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
-          constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
-        )
-      ]
-    )
-  }
+  const upgradeBeaconControllerManagerCreationCode = swapMetadataHash(
+      DharmaUpgradeBeaconControllerManagerArtifact.bytecode,
+      constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
+  );
 
-  await tester.runTest(
-    'Deployed DharmaUpgradeBeaconControllerManager code is correct',
-    MockCodeCheck,
-    'code',
-    'call',
-    [constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS],
-    true,
-    value => {
-      assert.strictEqual(value, swapMetadataHash(
-        DharmaUpgradeBeaconControllerManagerArtifact.deployedBytecode,
-        constants.UPGRADE_BEACON_CONTROLLER_MANAGER_METADATA
-      ))
-    }
-  )
+  await tester.checkAndDeploy(
+      "UpgradeBeaconControllerManager",
+      constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS,
+      constants.UPGRADE_BEACON_CONTROLLER_MANAGER_SALT,
+      upgradeBeaconControllerManagerRuntimeCode,
+      upgradeBeaconControllerManagerCreationCode,
+      MockCodeCheck,
+      ImmutableCreate2Factory
+  );
+
 
   await tester.runTest(
     'IndestructibleRegistry can register the upgrade beacon controller manager as indestructible',
@@ -2714,7 +1862,7 @@ module.exports = {test: async function (testingContext) {
     false
   )
 
-  const DharmaUpgradeMultisig = await tester.runTest(
+  await tester.runTest(
     `DharmaUpgradeMultisig contract deployment`,
     DharmaUpgradeMultisigDeployer,
     '',
@@ -2781,4 +1929,8 @@ module.exports = {test: async function (testingContext) {
   // exit.
   return 0
 
-}}
+}
+
+module.exports = {
+    test,
+};
