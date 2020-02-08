@@ -13,369 +13,15 @@ const { testPerformingUpgrade } = require("./contracts/upgradeability/testPerfor
 const AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
 const AdharmaKeyRingImplementationArtifact = require('../../build/contracts/AdharmaKeyRingImplementation.json')
 
-const DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
-const DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
-const DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
-const DharmaKeyRingUpgradeBeaconArtifact = require('../../build/contracts/DharmaKeyRingUpgradeBeacon.json')
-const DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
-
-const DharmaAccountRecoveryManagerV2Artifact = require('../../build/contracts/DharmaAccountRecoveryManagerV2.json')
-//const DharmaKeyRegistryV1Artifact = require('../../build/contracts/DharmaKeyRegistryV1.json')
-const DharmaKeyRegistryV2Artifact = require('../../build/contracts/DharmaKeyRegistryV2.json')
-const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
-const DharmaSmartWalletFactoryV2Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV2.json')
-
 const DharmaSmartWalletImplementationV6Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV6.json')
 const DharmaSmartWalletImplementationV7Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV7.json')
 
 const DharmaKeyRingImplementationV1Artifact = require('../../build/contracts/DharmaKeyRingImplementationV1.json')
-const DharmaKeyRingFactoryV1Artifact = require('../../build/contracts/DharmaKeyRingFactoryV1.json')
-const DharmaKeyRingFactoryV2Artifact = require('../../build/contracts/DharmaKeyRingFactoryV2.json')
-const DharmaKeyRingFactoryV3Artifact = require('../../build/contracts/DharmaKeyRingFactoryV3.json')
-
-const UpgradeBeaconProxyV1Artifact = require('../../build/contracts/UpgradeBeaconProxyV1.json')
-const KeyRingUpgradeBeaconProxyV1Artifact = require('../../build/contracts/KeyRingUpgradeBeaconProxyV1.json')
-
-const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
-const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
-const DharmaAccountRecoveryOperatorMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryOperatorMultisig.json')
-const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaKeyRegistryMultisig.json')
-
-const DharmaEscapeHatchRegistryArtifact = require('../../build/contracts/DharmaEscapeHatchRegistry.json')
-
-const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
-const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
-const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
-const TimelockEdgecaseTesterArtifact = require('../../build/contracts/TimelockEdgecaseTester.json')
-
-const MockDharmaKeyRingFactoryArtifact = require('../../build/contracts/MockDharmaKeyRingFactory.json')
-const IERC20Artifact = require('../../build/contracts/IERC20.json')
-//const ComptrollerArtifact = require('../../build/contracts/ComptrollerInterface.json')
 
 const contractNames = Object.assign({}, constants.CONTRACT_NAMES)
 
 
 async function test(testingContext) {
-  const DharmaUpgradeBeaconController = new web3.eth.Contract(
-    DharmaUpgradeBeaconControllerArtifact.abi,
-    constants.UPGRADE_BEACON_CONTROLLER_ADDRESS
-  )
-
-  const DharmaUpgradeBeacon = new web3.eth.Contract(
-    DharmaUpgradeBeaconArtifact.abi,
-    constants.UPGRADE_BEACON_ADDRESS
-  )
-
-  const DharmaKeyRingUpgradeBeaconController = new web3.eth.Contract(
-    DharmaUpgradeBeaconControllerArtifact.abi,
-    constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS
-  )
-
-  const DharmaKeyRingUpgradeBeacon = new web3.eth.Contract(
-    DharmaKeyRingUpgradeBeaconArtifact.abi,
-    constants.KEY_RING_UPGRADE_BEACON_ADDRESS
-  )
-
-  const DharmaAccountRecoveryManagerV2 = new web3.eth.Contract(
-    DharmaAccountRecoveryManagerV2Artifact.abi,
-    constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS
-  )
-
-  /*
-  const DharmaKeyRegistryV1 = new web3.eth.Contract(
-    DharmaKeyRegistryV1Artifact.abi,
-    constants.KEY_REGISTRY_ADDRESS
-  )
-  */
-
-  const DharmaKeyRegistryV2 = new web3.eth.Contract(
-    DharmaKeyRegistryV2Artifact.abi,
-    constants.KEY_REGISTRY_V2_ADDRESS
-  )
-
-  const DharmaUpgradeBeaconControllerManager = new web3.eth.Contract(
-    DharmaUpgradeBeaconControllerManagerArtifact.abi,
-    constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS
-  )
-
-  const DharmaSmartWalletFactoryV1OnChain = new web3.eth.Contract(
-    DharmaSmartWalletFactoryV1Artifact.abi,
-    constants.FACTORY_ADDRESS
-  )
-
-  const Comptroller = new web3.eth.Contract(
-    constants.COMPTROLLER_ABI,
-    constants.COMPTROLLER_MAINNET_ADDRESS
-  )
-
-  const CSAI_BORROW = new web3.eth.Contract(
-    [{
-      "constant": false,
-      "inputs": [{"name": "borrowAmount", "type": "uint256"}],
-      "name": "borrow",
-      "outputs": [{"name": "", "type": "uint256"}],
-      "payable": false,
-      "stateMutability": "nonpayable",
-      "type": "function"
-    }],
-    constants.CSAI_MAINNET_ADDRESS
-  )
-
-  const FIAT_TOKEN = new web3.eth.Contract(
-    [
-      {
-        "constant": true, "inputs": [], "name": "blacklister",
-        "outputs": [{"name": "", "type": "address"}], "payable": false,
-        "stateMutability": "view", "type": "function"
-      }, {
-        "constant": false, "inputs": [{"name": "_account", "type": "address"}],
-        "name": "unBlacklist", "outputs": [], "payable": false,
-        "stateMutability": "nonpayable", "type": "function"
-      }, {
-        "constant": false, "inputs": [{"name": "_account", "type": "address"}],
-        "name": "blacklist", "outputs": [], "payable": false,
-        "stateMutability": "nonpayable", "type": "function"
-      }, {
-        "constant": true, "inputs": [{"name": "_account", "type": "address"}],
-        "name": "isBlacklisted", "outputs": [{"name": "", "type": "bool"}],
-        "payable": false, "stateMutability": "view", "type": "function"
-      }, {
-        "constant": false, "inputs": [],
-        "name": "pause", "outputs": [], "payable": false,
-        "stateMutability": "nonpayable", "type": "function"
-      }, {
-        "constant": false, "inputs": [],
-        "name": "unpause", "outputs": [], "payable": false,
-        "stateMutability": "nonpayable", "type": "function"
-      }, {
-        "constant": true, "inputs": [], "name": "pauser",
-        "outputs": [{"name": "", "type": "address"}], "payable": false,
-        "stateMutability": "view", "type": "function"
-      }
-    ],
-    constants.USDC_MAINNET_ADDRESS
-  )
-
-  const SAI = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.SAI_MAINNET_ADDRESS
-  )
-
-  const DAI = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.DAI_MAINNET_ADDRESS
-  )
-
-  const USDC = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.USDC_MAINNET_ADDRESS
-  )
-
-  const CSAI = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.CSAI_MAINNET_ADDRESS
-  )
-
-  const CDAI = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.CDAI_MAINNET_ADDRESS
-  )
-
-  const CUSDC = new web3.eth.Contract(
-    IERC20Artifact.abi, constants.CUSDC_MAINNET_ADDRESS
-  )
-
-  const BadBeaconDeployer = new web3.eth.Contract(BadBeaconArtifact.abi)
-  BadBeaconDeployer.options.data = BadBeaconArtifact.bytecode
-
-  const BadBeaconTwoDeployer = new web3.eth.Contract(BadBeaconTwoArtifact.abi)
-  BadBeaconTwoDeployer.options.data = BadBeaconTwoArtifact.bytecode
-
-
-  const AdharmaSmartWalletImplementationDeployer = new web3.eth.Contract(
-    AdharmaSmartWalletImplementationArtifact.abi
-  )
-  AdharmaSmartWalletImplementationDeployer.options.data = (
-    AdharmaSmartWalletImplementationArtifact.bytecode
-  )
-
-  const DharmaSmartWalletImplementationV6Deployer = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV6Artifact.abi
-  )
-  DharmaSmartWalletImplementationV6Deployer.options.data = (
-    DharmaSmartWalletImplementationV6Artifact.bytecode
-  )
-
-  const DharmaSmartWalletImplementationV7Deployer = new web3.eth.Contract(
-    DharmaSmartWalletImplementationV7Artifact.abi
-  )
-  DharmaSmartWalletImplementationV7Deployer.options.data = (
-    DharmaSmartWalletImplementationV7Artifact.bytecode
-  )
-
-  const AdharmaKeyRingImplementationDeployer = new web3.eth.Contract(
-    AdharmaKeyRingImplementationArtifact.abi
-  )
-  AdharmaKeyRingImplementationDeployer.options.data = (
-    AdharmaKeyRingImplementationArtifact.bytecode
-  )
-
-  const DharmaKeyRingImplementationV1Deployer = new web3.eth.Contract(
-    DharmaKeyRingImplementationV1Artifact.abi
-  )
-  DharmaKeyRingImplementationV1Deployer.options.data = (
-    DharmaKeyRingImplementationV1Artifact.bytecode
-  )
-
-  const UpgradeBeaconImplementationCheckDeployer = new web3.eth.Contract(
-    UpgradeBeaconImplementationCheckArtifact.abi
-  )
-  UpgradeBeaconImplementationCheckDeployer.options.data = (
-    UpgradeBeaconImplementationCheckArtifact.bytecode
-  )
-
-  const TimelockEdgecaseTesterDeployer = new web3.eth.Contract(
-    TimelockEdgecaseTesterArtifact.abi
-  )
-  TimelockEdgecaseTesterDeployer.options.data = (
-    TimelockEdgecaseTesterArtifact.bytecode
-  )
-
-  const DharmaUpgradeBeaconControllerDeployer = new web3.eth.Contract(
-    DharmaUpgradeBeaconControllerArtifact.abi
-  )
-  DharmaUpgradeBeaconControllerDeployer.options.data = (
-    DharmaUpgradeBeaconControllerArtifact.bytecode
-  )
-
-  const DharmaUpgradeBeaconDeployer = new web3.eth.Contract(
-    DharmaUpgradeBeaconArtifact.abi
-  )
-  DharmaUpgradeBeaconDeployer.options.data = (
-    DharmaUpgradeBeaconArtifact.bytecode
-  )
-
-  const DharmaKeyRingUpgradeBeaconDeployer = new web3.eth.Contract(
-    DharmaKeyRingUpgradeBeaconArtifact.abi
-  )
-  DharmaKeyRingUpgradeBeaconDeployer.options.data = (
-    DharmaKeyRingUpgradeBeaconArtifact.bytecode
-  )
-
-  const DharmaUpgradeBeaconEnvoyDeployer = new web3.eth.Contract(
-    DharmaUpgradeBeaconEnvoyArtifact.abi
-  )
-  DharmaUpgradeBeaconEnvoyDeployer.options.data = (
-    DharmaUpgradeBeaconEnvoyArtifact.bytecode
-  )
-
-  const DharmaUpgradeBeaconControllerManagerDeployer = new web3.eth.Contract(
-    DharmaUpgradeBeaconControllerManagerArtifact.abi
-  )
-  DharmaUpgradeBeaconControllerManagerDeployer.options.data = (
-    DharmaUpgradeBeaconControllerManagerArtifact.bytecode
-  )
-
-  const UpgradeBeaconProxyV1Deployer = new web3.eth.Contract(
-    UpgradeBeaconProxyV1Artifact.abi
-  )
-  UpgradeBeaconProxyV1Deployer.options.data = (
-    UpgradeBeaconProxyV1Artifact.bytecode
-  )
-
-  const KeyRingUpgradeBeaconProxyV1Deployer = new web3.eth.Contract(
-    KeyRingUpgradeBeaconProxyV1Artifact.abi
-  )
-  KeyRingUpgradeBeaconProxyV1Deployer.options.data = (
-    KeyRingUpgradeBeaconProxyV1Artifact.bytecode
-  )
-
-  const DharmaKeyRegistryV2Deployer = new web3.eth.Contract(
-    DharmaKeyRegistryV2Artifact.abi
-  )
-  DharmaKeyRegistryV2Deployer.options.data = (
-    DharmaKeyRegistryV2Artifact.bytecode
-  )
-
-  const DharmaSmartWalletFactoryV1Deployer = new web3.eth.Contract(
-    DharmaSmartWalletFactoryV1Artifact.abi
-  )
-  DharmaSmartWalletFactoryV1Deployer.options.data = (
-    DharmaSmartWalletFactoryV1Artifact.bytecode
-  )
-
-  const DharmaSmartWalletFactoryV2Deployer = new web3.eth.Contract(
-    DharmaSmartWalletFactoryV2Artifact.abi
-  )
-  DharmaSmartWalletFactoryV2Deployer.options.data = (
-    DharmaSmartWalletFactoryV2Artifact.bytecode
-  )
-
-  const DharmaKeyRingFactoryV1Deployer = new web3.eth.Contract(
-    DharmaKeyRingFactoryV1Artifact.abi
-  )
-  DharmaKeyRingFactoryV1Deployer.options.data = (
-    DharmaKeyRingFactoryV1Artifact.bytecode
-  )
-
-  const DharmaKeyRingFactoryV2Deployer = new web3.eth.Contract(
-    DharmaKeyRingFactoryV2Artifact.abi
-  )
-  DharmaKeyRingFactoryV2Deployer.options.data = (
-    DharmaKeyRingFactoryV2Artifact.bytecode
-  )
-
-  const DharmaKeyRingFactoryV3Deployer = new web3.eth.Contract(
-    DharmaKeyRingFactoryV3Artifact.abi
-  )
-  DharmaKeyRingFactoryV3Deployer.options.data = (
-    DharmaKeyRingFactoryV3Artifact.bytecode
-  )
-
-  const MockDharmaKeyRingFactoryDeployer = new web3.eth.Contract(
-    MockDharmaKeyRingFactoryArtifact.abi
-  )
-  MockDharmaKeyRingFactoryDeployer.options.data = (
-    MockDharmaKeyRingFactoryArtifact.bytecode
-  )
-
-  const DharmaAccountRecoveryManagerV2Deployer = new web3.eth.Contract(
-    DharmaAccountRecoveryManagerV2Artifact.abi
-  )
-  DharmaAccountRecoveryManagerV2Deployer.options.data = (
-    DharmaAccountRecoveryManagerV2Artifact.bytecode
-  )
-
-  const DharmaUpgradeMultisigDeployer = new web3.eth.Contract(
-    DharmaUpgradeMultisigArtifact.abi
-  )
-  DharmaUpgradeMultisigDeployer.options.data = (
-    DharmaUpgradeMultisigArtifact.bytecode
-  )
-
-  const DharmaAccountRecoveryMultisigDeployer = new web3.eth.Contract(
-    DharmaAccountRecoveryMultisigArtifact.abi
-  )
-  DharmaAccountRecoveryMultisigDeployer.options.data = (
-    DharmaAccountRecoveryMultisigArtifact.bytecode
-  )
-
-  const DharmaAccountRecoveryOperatorMultisigDeployer = new web3.eth.Contract(
-    DharmaAccountRecoveryOperatorMultisigArtifact.abi
-  )
-  DharmaAccountRecoveryOperatorMultisigDeployer.options.data = (
-    DharmaAccountRecoveryOperatorMultisigArtifact.bytecode
-  )
-
-  const DharmaKeyRegistryMultisigDeployer = new web3.eth.Contract(
-    DharmaKeyRegistryMultisigArtifact.abi
-  )
-  DharmaKeyRegistryMultisigDeployer.options.data = (
-    DharmaKeyRegistryMultisigArtifact.bytecode
-  )
-
-  const DharmaEscapeHatchRegistryDeployer = new web3.eth.Contract(
-    DharmaEscapeHatchRegistryArtifact.abi
-  )
-  DharmaEscapeHatchRegistryDeployer.options.data = (
-    DharmaEscapeHatchRegistryArtifact.bytecode
-  )
-
   const tester = new Tester(testingContext);
   await tester.init();
 
@@ -383,7 +29,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     `DharmaUpgradeBeaconController can transfer owner`,
-    DharmaUpgradeBeaconController,
+    tester.DharmaUpgradeBeaconController,
     'transferOwnership',
     'send',
     [tester.address]
@@ -391,7 +37,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dharma Key Registry V2 gets the initial global key correctly',
-    DharmaKeyRegistryV2,
+    tester.DharmaKeyRegistryV2,
     'getGlobalKey',
     'call',
     [],
@@ -402,7 +48,7 @@ async function test(testingContext) {
   )
 
   const messageV2 = (
-    DharmaKeyRegistryV2.options.address +
+    tester.DharmaKeyRegistryV2.options.address +
     tester.address.slice(2) +
     web3.utils.asciiToHex(
       "This signature demonstrates that the supplied signing key is valid."
@@ -413,7 +59,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dharma Key Registry V2 cannot set a previously used global key',
-    DharmaKeyRegistryV2,
+    tester.DharmaKeyRegistryV2,
     'setGlobalKey',
     'send',
     [
@@ -425,46 +71,46 @@ async function test(testingContext) {
 
   const BadBeacon = await tester.runTest(
     `Mock Bad Beacon contract deployment`,
-    BadBeaconDeployer,
+    tester.BadBeaconDeployer,
     '',
     'deploy'
   )
 
   const BadBeaconTwo = await tester.runTest(
     `Mock Bad Beacon Two contract deployment`,
-    BadBeaconTwoDeployer,
+    tester.BadBeaconTwoDeployer,
     '',
     'deploy'
   )
 
   const DharmaSmartWalletImplementationV6 = await tester.runTest(
     `DharmaSmartWalletImplementationV6 contract deployment`,
-    DharmaSmartWalletImplementationV6Deployer,
+    tester.DharmaSmartWalletImplementationV6Deployer,
     '',
     'deploy'
   )
 
   const DharmaSmartWalletImplementationV7 = await tester.runTest(
     `DharmaSmartWalletImplementationV7 contract deployment`,
-    DharmaSmartWalletImplementationV7Deployer,
+    tester.DharmaSmartWalletImplementationV7Deployer,
     '',
     'deploy'
   )
 
   const DharmaKeyRingImplementationV1 = await tester.runTest(
     `DharmaKeyRingImplementationV1 contract deployment`,
-    DharmaKeyRingImplementationV1Deployer,
+    tester.DharmaKeyRingImplementationV1Deployer,
     '',
     'deploy'
   )
 
   await tester.runTest(
     'Dharma Upgrade Beacon Controller cannot set null address as implementation',
-    DharmaUpgradeBeaconController,
+    tester.DharmaUpgradeBeaconController,
     'upgrade',
     'send',
     [
-      DharmaUpgradeBeacon.options.address,
+      tester.DharmaUpgradeBeacon.options.address,
       constants.NULL_ADDRESS
     ],
     false
@@ -472,11 +118,11 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dharma Upgrade Beacon Controller cannot set non-contract as implementation',
-    DharmaUpgradeBeaconController,
+    tester.DharmaUpgradeBeaconController,
     'upgrade',
     'send',
     [
-      DharmaUpgradeBeacon.options.address,
+      tester.DharmaUpgradeBeacon.options.address,
       tester.address
     ],
     false
@@ -484,7 +130,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dharma Upgrade Beacon Controller cannot support a "bad" beacon that throws',
-    DharmaUpgradeBeaconController,
+    tester.DharmaUpgradeBeaconController,
     'upgrade',
     'send',
     [
@@ -496,7 +142,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dharma Upgrade Beacon Controller cannot upgrade a non-upgradeable beacon',
-    DharmaUpgradeBeaconController,
+    tester.DharmaUpgradeBeaconController,
     'upgrade',
     'send',
     [
@@ -508,11 +154,11 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dharma Upgrade Beacon Controller is inaccessible from a non-owner',
-    DharmaUpgradeBeaconController,
+    tester.DharmaUpgradeBeaconController,
     'upgrade',
     'send',
     [
-      DharmaUpgradeBeacon.options.address,
+      tester.DharmaUpgradeBeacon.options.address,
       DharmaSmartWalletImplementationV6.options.address
     ],
     false,
@@ -522,11 +168,11 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dharma Upgrade Beacon Controller can set initial upgrade beacon implementation',
-    DharmaUpgradeBeaconController,
+    tester.DharmaUpgradeBeaconController,
     'upgrade',
     'send',
     [
-      DharmaUpgradeBeacon.options.address,
+      tester.DharmaUpgradeBeacon.options.address,
       DharmaSmartWalletImplementationV6.options.address
     ],
     true,
@@ -534,7 +180,7 @@ async function test(testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.upgradeBeacon,
-          DharmaUpgradeBeacon.options.address
+          tester.DharmaUpgradeBeacon.options.address
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.oldImplementation,
@@ -560,11 +206,11 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dharma Upgrade Beacon Controller cannot clear upgrade beacon implementation',
-    DharmaUpgradeBeaconController,
+    tester.DharmaUpgradeBeaconController,
     'upgrade',
     'send',
     [
-      DharmaUpgradeBeacon.options.address,
+      tester.DharmaUpgradeBeacon.options.address,
       constants.NULL_ADDRESS
     ],
     false
@@ -572,11 +218,11 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dharma Upgrade Beacon Controller can reset upgrade beacon implementation',
-    DharmaUpgradeBeaconController,
+    tester.DharmaUpgradeBeaconController,
     'upgrade',
     'send',
     [
-      DharmaUpgradeBeacon.options.address,
+      tester.DharmaUpgradeBeacon.options.address,
       DharmaSmartWalletImplementationV6.options.address
     ],
     true,
@@ -584,7 +230,7 @@ async function test(testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.upgradeBeacon,
-          DharmaUpgradeBeacon.options.address
+          tester.DharmaUpgradeBeacon.options.address
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.oldImplementation,
@@ -612,21 +258,21 @@ async function test(testingContext) {
 
   const UpgradeBeaconImplementationCheck = await tester.runTest(
     `UpgradeBeaconImplementationCheck deployment`,
-    UpgradeBeaconImplementationCheckDeployer,
+    tester.UpgradeBeaconImplementationCheckDeployer,
     '',
     'deploy',
     [
-      DharmaUpgradeBeacon.options.address,
+      tester.DharmaUpgradeBeacon.options.address,
       DharmaSmartWalletImplementationV6.options.address
     ]
   )
 
   await tester.runTest(
     'DharmaUpgradeBeacon has the implementation set',
-    DharmaUpgradeBeaconController,
+    tester.DharmaUpgradeBeaconController,
     'getImplementation',
     'call',
-    [DharmaUpgradeBeacon.options.address],
+    [tester.DharmaUpgradeBeacon.options.address],
     true,
     value => {
       assert.strictEqual(value, DharmaSmartWalletImplementationV6.options.address)
@@ -635,11 +281,11 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dharma Key Ring Upgrade Beacon Controller can set initial key ring upgrade beacon implementation',
-    DharmaKeyRingUpgradeBeaconController,
+    tester.DharmaKeyRingUpgradeBeaconController,
     'upgrade',
     'send',
     [
-      DharmaKeyRingUpgradeBeacon.options.address,
+      tester.DharmaKeyRingUpgradeBeacon.options.address,
       DharmaKeyRingImplementationV1.options.address
     ],
     true,
@@ -647,7 +293,7 @@ async function test(testingContext) {
       if (testingContext !== 'coverage') {
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.upgradeBeacon,
-          DharmaKeyRingUpgradeBeacon.options.address
+          tester.DharmaKeyRingUpgradeBeacon.options.address
         )
         assert.strictEqual(
           receipt.events.Upgraded.returnValues.oldImplementation,
@@ -673,21 +319,21 @@ async function test(testingContext) {
 
   const KeyRingUpgradeBeaconImplementationCheck = await tester.runTest(
     `KeyRingUpgradeBeaconImplementationCheck deployment`,
-    UpgradeBeaconImplementationCheckDeployer,
+    tester.UpgradeBeaconImplementationCheckDeployer,
     '',
     'deploy',
     [
-      DharmaKeyRingUpgradeBeacon.options.address,
+      tester.DharmaKeyRingUpgradeBeacon.options.address,
       DharmaKeyRingImplementationV1.options.address
     ]
   )
 
   await tester.runTest(
     'DharmaKeyRingUpgradeBeacon has the implementation set',
-    DharmaKeyRingUpgradeBeaconController,
+    tester.DharmaKeyRingUpgradeBeaconController,
     'getImplementation',
     'call',
-    [DharmaKeyRingUpgradeBeacon.options.address],
+    [tester.DharmaKeyRingUpgradeBeacon.options.address],
     true,
     value => {
       assert.strictEqual(value, DharmaKeyRingImplementationV1.options.address)
@@ -697,7 +343,7 @@ async function test(testingContext) {
   const DharmaSmartWalletNoFactoryNoConstructorDeployer = new web3.eth.Contract([])
   DharmaSmartWalletNoFactoryNoConstructorDeployer.options.data = (
     '0x600b5981380380925939f359595959365960205959596e' +
-    DharmaUpgradeBeacon.options.address.slice(12).toLowerCase() + 
+    tester.DharmaUpgradeBeacon.options.address.slice(12).toLowerCase() +
     '5afa1551368280375af43d3d93803e602e57fd5bf3'
   )
 
@@ -760,9 +406,9 @@ async function test(testingContext) {
   const DharmaSmartWalletNoFactoryDeployer = new web3.eth.Contract([])
   DharmaSmartWalletNoFactoryDeployer.options.data = (
     '0x595959596076380359602059595973' +
-    DharmaUpgradeBeacon.options.address.slice(2).toLowerCase() +
+    tester.DharmaUpgradeBeacon.options.address.slice(2).toLowerCase() +
     '5afa155182607683395af46038573d903d81803efd5b60356041819339f3595959593659602059595973' +
-    DharmaUpgradeBeacon.options.address.slice(2).toLowerCase() + 
+    tester.DharmaUpgradeBeacon.options.address.slice(2).toLowerCase() +
     '5afa1551368280375af43d3d93803e603357fd5bf3' +
     'c4d66de80000000000000000000000009999999999999999999999999999999999999999'
   )
@@ -805,7 +451,7 @@ async function test(testingContext) {
 
   const DharmaSmartWalletFactoryV1 = await tester.runTest(
     `DharmaSmartWalletFactoryV1 contract deployment`,
-    DharmaSmartWalletFactoryV1Deployer,
+    tester.DharmaSmartWalletFactoryV1Deployer,
     '',
     'deploy',
     []
@@ -839,8 +485,8 @@ async function test(testingContext) {
       tester,
       DharmaSmartWalletImplementationV6, // new implementation
       UserSmartWalletV6,
-      DharmaUpgradeBeaconController,
-      DharmaUpgradeBeacon.options.address,
+      tester.DharmaUpgradeBeaconController,
+      tester.DharmaUpgradeBeacon.options.address,
       6,
       true
   )
@@ -908,7 +554,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dai Whale can deposit dai into the yet-to-be-deployed smart wallet',
-    DAI,
+    tester.DAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -934,7 +580,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the yet-to-be-deployed smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -1146,7 +792,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'cSai can be sent to V6 UserSmartWallet',
-    CSAI,
+    tester.CSAI,
     'transfer',
     'send',
     [UserSmartWalletV6.options.address, web3.utils.toWei('0.5', 'mwei')]
@@ -1256,7 +902,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dai Whale can deposit Dai into the V6 smart wallet',
-    DAI,
+    tester.DAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -1282,7 +928,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the V6 smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -1312,8 +958,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -1338,8 +984,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -1405,7 +1051,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dai Whale can deposit dai into the V6 smart wallet',
-    DAI,
+    tester.DAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -1476,8 +1122,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -1502,8 +1148,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -1544,8 +1190,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -1570,8 +1216,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -2764,8 +2410,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      USDC.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.options.address,
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -2791,7 +2437,7 @@ async function test(testingContext) {
     'send',
     [
       tester.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -2806,7 +2452,7 @@ async function test(testingContext) {
     'send',
     [
       UserSmartWalletV6.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -2820,8 +2466,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      USDC.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.options.address,
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -2834,7 +2480,7 @@ async function test(testingContext) {
     'getNextGenericAtomicBatchActionID',
     'call',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       0
     ],
     true,
@@ -2861,7 +2507,7 @@ async function test(testingContext) {
     'getGenericAtomicBatchActionID',
     'call',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       currentNonce,
       0
     ],
@@ -2887,7 +2533,7 @@ async function test(testingContext) {
     'executeActionWithAtomicBatchCalls',
     'send',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -2896,7 +2542,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the deployed smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -2965,7 +2611,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Check blacklister address',
-    FIAT_TOKEN,
+    tester.FIAT_TOKEN,
     'blacklister',
     'call',
     [],
@@ -2977,7 +2623,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Check pauser address',
-    FIAT_TOKEN,
+    tester.FIAT_TOKEN,
     'pauser',
     'call',
     [],
@@ -2989,7 +2635,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'blacklist mock address',
-    FIAT_TOKEN,
+    tester.FIAT_TOKEN,
     'blacklist',
     'send',
     [constants.MOCK_USDC_BLACKLISTED_ADDRESS],
@@ -3017,7 +2663,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the yet-to-be-blacklisted smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetBlacklistAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -3043,7 +2689,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'blacklist counterfactual deployment address',
-    FIAT_TOKEN,
+    tester.FIAT_TOKEN,
     'blacklist',
     'send',
     [targetBlacklistAddress],
@@ -3080,7 +2726,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'un-blacklist counterfactual deployment address',
-    FIAT_TOKEN,
+    tester.FIAT_TOKEN,
     'unBlacklist',
     'send',
     [targetBlacklistAddress],
@@ -3091,7 +2737,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'pause USDC',
-    FIAT_TOKEN,
+    tester.FIAT_TOKEN,
     'pause',
     'send',
     [],
@@ -3162,7 +2808,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'unpause USDC',
-    FIAT_TOKEN,
+    tester.FIAT_TOKEN,
     'unpause',
     'send',
     [],
@@ -3419,8 +3065,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      SAI.options.address,
-      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.SAI.options.address,
+      tester.SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -3445,8 +3091,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      SAI.options.address,
-      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.SAI.options.address,
+      tester.SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -3601,8 +3247,8 @@ async function test(testingContext) {
     'call',
     [
       [{
-        to: DAI.options.address,
-        data: DAI.methods.transfer(
+        to: tester.DAI.options.address,
+        data: tester.DAI.methods.transfer(
           tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
@@ -3631,8 +3277,8 @@ async function test(testingContext) {
     'send',
     [
       [{
-        to: DAI.options.address,
-        data: DAI.methods.transfer(
+        to: tester.DAI.options.address,
+        data: tester.DAI.methods.transfer(
           tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
@@ -3652,8 +3298,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      Comptroller.options.address,
-      Comptroller.methods.enterMarkets(
+      tester.Comptroller.options.address,
+      tester.Comptroller.methods.enterMarkets(
         [constants.CDAI_MAINNET_ADDRESS]
       ).encodeABI(),
       0
@@ -3680,8 +3326,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      Comptroller.options.address,
-      Comptroller.methods.enterMarkets(
+      tester.Comptroller.options.address,
+      tester.Comptroller.methods.enterMarkets(
         [constants.CDAI_MAINNET_ADDRESS]
       ).encodeABI(),
       0,
@@ -3692,7 +3338,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dai Whale can deposit dai into the smart wallet',
-    DAI,
+    tester.DAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -3728,8 +3374,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      CSAI_BORROW.options.address,
-      CSAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
+      tester.CSAI_BORROW.options.address,
+      tester.CSAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
       0
     ],
     true,
@@ -3754,8 +3400,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      CSAI_BORROW.options.address,
-      CSAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
+      tester.CSAI_BORROW.options.address,
+      tester.CSAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -3822,8 +3468,8 @@ async function test(testingContext) {
       tester,
       DharmaSmartWalletImplementationV7, // new implementation
       UserSmartWalletV7,
-      DharmaUpgradeBeaconController,
-      DharmaUpgradeBeacon.options.address,
+      tester.DharmaUpgradeBeaconController,
+      tester.DharmaUpgradeBeacon.options.address,
       7
   )
 
@@ -3914,7 +3560,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'cSai can be sent to V7 UserSmartWallet',
-    CSAI,
+    tester.CSAI,
     'transfer',
     'send',
     [UserSmartWalletV7.options.address, web3.utils.toWei('0.5', 'mwei')]
@@ -4024,7 +3670,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dai Whale can deposit Dai into the V7 smart wallet',
-    DAI,
+    tester.DAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -4050,7 +3696,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the V7 smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -4080,8 +3726,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -4106,8 +3752,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -4128,7 +3774,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dai Whale can deposit dai into the V7 smart wallet',
-    DAI,
+    tester.DAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -4199,8 +3845,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -4225,8 +3871,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, 0).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -4251,8 +3897,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -4277,8 +3923,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      DAI.options.address,
-      DAI.methods.approve(CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.DAI.options.address,
+      tester.DAI.methods.approve(tester.CDAI.options.address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -5439,8 +5085,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      USDC.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.options.address,
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0
     ],
     true,
@@ -5466,7 +5112,7 @@ async function test(testingContext) {
     'send',
     [
       tester.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -5481,7 +5127,7 @@ async function test(testingContext) {
     'send',
     [
       UserSmartWalletV7.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -5495,8 +5141,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      USDC.options.address,
-      USDC.methods.approve(CUSDC.options.address, 0).encodeABI(),
+      tester.USDC.options.address,
+      tester.USDC.methods.approve(tester.CUSDC.options.address, 0).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -5509,7 +5155,7 @@ async function test(testingContext) {
     'getNextGenericAtomicBatchActionID',
     'call',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       0
     ],
     true,
@@ -5536,7 +5182,7 @@ async function test(testingContext) {
     'getGenericAtomicBatchActionID',
     'call',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       currentNonce,
       0
     ],
@@ -5562,7 +5208,7 @@ async function test(testingContext) {
     'executeActionWithAtomicBatchCalls',
     'send',
     [
-      [{to: SAI.options.address, data: SAI.methods.totalSupply().encodeABI()}],
+      [{to: tester.SAI.options.address, data: tester.SAI.methods.totalSupply().encodeABI()}],
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -5571,7 +5217,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the deployed smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -5609,7 +5255,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Check blacklister address',
-    FIAT_TOKEN,
+    tester.FIAT_TOKEN,
     'blacklister',
     'call',
     [],
@@ -5621,7 +5267,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Check pauser address',
-    FIAT_TOKEN,
+    tester.FIAT_TOKEN,
     'pauser',
     'call',
     [],
@@ -5633,7 +5279,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'blacklist mock address',
-    FIAT_TOKEN,
+    tester.FIAT_TOKEN,
     'blacklist',
     'send',
     [constants.MOCK_USDC_BLACKLISTED_ADDRESS],
@@ -5661,7 +5307,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'USDC Whale can deposit usdc into the yet-to-be-blacklisted smart wallet',
-    USDC,
+    tester.USDC,
     'transfer',
     'send',
     [targetBlacklistAddress, web3.utils.toWei('100', 'lovelace')], // six decimals
@@ -5687,7 +5333,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'blacklist counterfactual deployment address',
-    FIAT_TOKEN,
+    tester.FIAT_TOKEN,
     'blacklist',
     'send',
     [targetBlacklistAddress],
@@ -5724,7 +5370,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'un-blacklist counterfactual deployment address',
-    FIAT_TOKEN,
+    tester.FIAT_TOKEN,
     'unBlacklist',
     'send',
     [targetBlacklistAddress],
@@ -5735,7 +5381,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'pause USDC',
-    FIAT_TOKEN,
+    tester.FIAT_TOKEN,
     'pause',
     'send',
     [],
@@ -5806,7 +5452,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'unpause USDC',
-    FIAT_TOKEN,
+    tester.FIAT_TOKEN,
     'unpause',
     'send',
     [],
@@ -6063,8 +5709,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      SAI.options.address,
-      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.SAI.options.address,
+      tester.SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0
     ],
     true,
@@ -6089,8 +5735,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      SAI.options.address,
-      SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
+      tester.SAI.options.address,
+      tester.SAI.methods.transfer(tester.address, constants.FULL_APPROVAL).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -6245,8 +5891,8 @@ async function test(testingContext) {
     'call',
     [
       [{
-        to: DAI.options.address,
-        data: DAI.methods.transfer(
+        to: tester.DAI.options.address,
+        data: tester.DAI.methods.transfer(
           tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
@@ -6275,8 +5921,8 @@ async function test(testingContext) {
     'send',
     [
       [{
-        to: DAI.options.address,
-        data: DAI.methods.transfer(
+        to: tester.DAI.options.address,
+        data: tester.DAI.methods.transfer(
           tester.address, '100000000000000000000000000000'
         ).encodeABI()
       }],
@@ -6296,8 +5942,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      Comptroller.options.address,
-      Comptroller.methods.enterMarkets(
+      tester.Comptroller.options.address,
+      tester.Comptroller.methods.enterMarkets(
         [constants.CDAI_MAINNET_ADDRESS]
       ).encodeABI(),
       0
@@ -6324,8 +5970,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      Comptroller.options.address,
-      Comptroller.methods.enterMarkets(
+      tester.Comptroller.options.address,
+      tester.Comptroller.methods.enterMarkets(
         [constants.CDAI_MAINNET_ADDRESS]
       ).encodeABI(),
       0,
@@ -6336,7 +5982,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dai Whale can deposit dai into the smart wallet',
-    DAI,
+    tester.DAI,
     'transfer',
     'send',
     [targetWalletAddress, web3.utils.toWei('100', 'ether')],
@@ -6372,8 +6018,8 @@ async function test(testingContext) {
     'getNextGenericActionID',
     'call',
     [
-      CSAI_BORROW.options.address,
-      CSAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
+      tester.CSAI_BORROW.options.address,
+      tester.CSAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
       0
     ],
     true,
@@ -6398,8 +6044,8 @@ async function test(testingContext) {
     'executeAction',
     'send',
     [
-      CSAI_BORROW.options.address,
-      CSAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
+      tester.CSAI_BORROW.options.address,
+      tester.CSAI_BORROW.methods.borrow(web3.utils.toWei('.01', 'ether')).encodeABI(),
       0,
       executeActionUserSignature,
       executeActionSignature
@@ -6728,7 +6374,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'cSai can be sent to V7 UserSmartWallet',
-    CSAI,
+    tester.CSAI,
     'transfer',
     'send',
     [UserSmartWalletV7.options.address, web3.utils.toWei('0.5', 'mwei')]
@@ -6736,7 +6382,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Sai Whale can deposit sai into the V7 user smart wallet',
-    SAI,
+    tester.SAI,
     'transfer',
     'send',
     [UserSmartWalletV7.options.address, web3.utils.toWei('1', 'ether')],
@@ -6789,7 +6435,7 @@ async function test(testingContext) {
   // Initiate account recovery
   await tester.runTest(
     'smart wallet account recovery can be initiated',
-    DharmaAccountRecoveryManagerV2,
+    tester.DharmaAccountRecoveryManagerV2,
     'initiateAccountRecovery',
     'send',
     [
@@ -6806,7 +6452,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     'smart wallet account recovery cannot be performed right away',
-    DharmaAccountRecoveryManagerV2,
+    tester.DharmaAccountRecoveryManagerV2,
     'recover',
     'send',
     [
@@ -6822,7 +6468,7 @@ async function test(testingContext) {
   // recover account
   await tester.runTest(
     'smart wallet account recovery can be performed after three days',
-    DharmaAccountRecoveryManagerV2,
+    tester.DharmaAccountRecoveryManagerV2,
     'recover',
     'send',
     [
@@ -6841,35 +6487,35 @@ async function test(testingContext) {
   // COVERAGE TESTING - deployments
   const DharmaUpgradeBeaconControllerManagerCoverage = await tester.runTest(
     `DharmaUpgradeBeaconControllerManager contract deployment`,
-    DharmaUpgradeBeaconControllerManagerDeployer,
+    tester.DharmaUpgradeBeaconControllerManagerDeployer,
     '',
     'deploy'
   )
 
   const DharmaUpgradeBeaconControllerCoverage = await tester.runTest(
     `DharmaUpgradeBeaconController contract deployment`,
-    DharmaUpgradeBeaconControllerDeployer,
+    tester.DharmaUpgradeBeaconControllerDeployer,
     '',
     'deploy'
   )
 
   const DharmaUpgradeBeaconCoverage = await tester.runTest(
     `DharmaUpgradeBeacon (smart wallet) contract deployment`,
-    DharmaUpgradeBeaconDeployer,
+    tester.DharmaUpgradeBeaconDeployer,
     '',
     'deploy'
   )
 
   const DharmaKeyRingUpgradeBeaconCoverage = await tester.runTest(
     `DharmaKeyRingUpgradeBeacon contract deployment`,
-    DharmaKeyRingUpgradeBeaconDeployer,
+    tester.DharmaKeyRingUpgradeBeaconDeployer,
     '',
     'deploy'
   )
 
   const DharmaUpgradeBeaconEnvoy = await tester.runTest(
     `DharmaUpgradeBeaconEnvoy contract deployment`,
-    DharmaUpgradeBeaconEnvoyDeployer,
+    tester.DharmaUpgradeBeaconEnvoyDeployer,
     '',
     'deploy'
   )
@@ -6877,8 +6523,8 @@ async function test(testingContext) {
   await testUpgradeBeaconController(
       tester,
       DharmaUpgradeBeaconControllerCoverage, // controller manager
-      DharmaUpgradeBeaconController, // smart wallet controller contract
-      DharmaKeyRingUpgradeBeaconController, // key ring controller contract
+      tester.DharmaUpgradeBeaconController, // smart wallet controller contract
+      tester.DharmaKeyRingUpgradeBeaconController, // key ring controller contract
       DharmaUpgradeBeaconEnvoy, // envoy contract
       DharmaUpgradeBeaconCoverage.options.address, // owned smart wallet beacon
       DharmaKeyRingUpgradeBeaconCoverage.options.address, // owned key ring beacon
@@ -6887,28 +6533,28 @@ async function test(testingContext) {
 
   const DharmaKeyRegistryV2Coverage = await tester.runTest(
     `DharmaKeyRegistryV2 contract deployment`,
-    DharmaKeyRegistryV2Deployer,
+    tester.DharmaKeyRegistryV2Deployer,
     '',
     'deploy'
   )
 
   const AdharmaSmartWalletImplementation = await tester.runTest(
     `AdharmaSmartWalletImplementation contract deployment`,
-    AdharmaSmartWalletImplementationDeployer,
+    tester.AdharmaSmartWalletImplementationDeployer,
     '',
     'deploy'
   )
 
   const AdharmaKeyRingImplementation = await tester.runTest(
     `AdharmaKeyRingImplementation contract deployment`,
-    AdharmaKeyRingImplementationDeployer,
+    tester.AdharmaKeyRingImplementationDeployer,
     '',
     'deploy'
   )
 
   const DharmaSmartWalletFactoryV1Coverage = await tester.runTest(
     `DharmaSmartWalletFactoryV1 contract deployment`,
-    DharmaSmartWalletFactoryV1Deployer,
+    tester.DharmaSmartWalletFactoryV1Deployer,
     '',
     'deploy',
     []
@@ -6916,7 +6562,7 @@ async function test(testingContext) {
 
   const DharmaKeyRingFactoryV1 = await tester.runTest(
     `DharmaKeyRingFactoryV1 contract deployment`,
-    DharmaKeyRingFactoryV1Deployer,
+    tester.DharmaKeyRingFactoryV1Deployer,
     '',
     'deploy',
     []
@@ -6924,7 +6570,7 @@ async function test(testingContext) {
 
   const DharmaKeyRingFactoryV2 = await tester.runTest(
     `DharmaKeyRingFactoryV2 contract deployment`,
-    DharmaKeyRingFactoryV2Deployer,
+    tester.DharmaKeyRingFactoryV2Deployer,
     '',
     'deploy',
     []
@@ -7271,7 +6917,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     `UpgradeBeaconProxyV1 contract deployment fails with no init data`,
-    UpgradeBeaconProxyV1Deployer,
+    tester.UpgradeBeaconProxyV1Deployer,
     '',
     'deploy',
     ['0x'],
@@ -7280,7 +6926,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     `KeyRingUpgradeBeaconProxyV1 contract deployment fails with no init data`,
-    KeyRingUpgradeBeaconProxyV1Deployer,
+    tester.KeyRingUpgradeBeaconProxyV1Deployer,
     '',
     'deploy',
     ['0x'],
@@ -7289,7 +6935,7 @@ async function test(testingContext) {
 
   const UpgradeBeaconProxyV1 = await tester.runTest(
     `UpgradeBeaconProxyV1 contract deployment (direct)`,
-    UpgradeBeaconProxyV1Deployer,
+    tester.UpgradeBeaconProxyV1Deployer,
     '',
     'deploy',
     [web3.eth.abi.encodeFunctionCall({
@@ -7321,7 +6967,7 @@ async function test(testingContext) {
 
   const KeyRingUpgradeBeaconProxyV1 = await tester.runTest(
     `KeyRingUpgradeBeaconProxyV1 contract deployment (direct)`,
-    KeyRingUpgradeBeaconProxyV1Deployer,
+    tester.KeyRingUpgradeBeaconProxyV1Deployer,
     '',
     'deploy',
     [web3.eth.abi.encodeFunctionCall({
@@ -7386,12 +7032,12 @@ async function test(testingContext) {
   */
 
   await testKeyRegistryV2(
-      tester, DharmaKeyRegistryV2Coverage, DharmaKeyRegistryV2.options.address
+      tester, DharmaKeyRegistryV2Coverage, tester.DharmaKeyRegistryV2.options.address
   )
 
   const DharmaAccountRecoveryManagerV2Coverage = await tester.runTest(
     `DharmaAccountRecoveryManagerV2 contract deployment`,
-    DharmaAccountRecoveryManagerV2Deployer,
+    tester.DharmaAccountRecoveryManagerV2Deployer,
     '',
     'deploy'
   )
@@ -7409,7 +7055,7 @@ async function test(testingContext) {
 
   const MockDharmaKeyRingFactory = await tester.runTest(
     `MockDharmaKeyRingFactory contract deployment`,
-    MockDharmaKeyRingFactoryDeployer,
+    tester.MockDharmaKeyRingFactoryDeployer,
     '',
     'deploy',
     []
@@ -7462,22 +7108,22 @@ async function test(testingContext) {
 
   await tester.runTest(
     'Dharma Upgrade Beacon Controller can upgrade to AdharmaSmartWalletImplementation',
-    DharmaUpgradeBeaconController,
+    tester.DharmaUpgradeBeaconController,
     'upgrade',
     'send',
     [
-      DharmaUpgradeBeacon.options.address,
+      tester.DharmaUpgradeBeacon.options.address,
       AdharmaSmartWalletImplementation.options.address
     ]
   )
 
   await tester.runTest(
     'Dharma Key Ring Upgrade Beacon Controller can upgrade to AdharmaKeyRingImplementation',
-    DharmaKeyRingUpgradeBeaconController,
+    tester.DharmaKeyRingUpgradeBeaconController,
     'upgrade',
     'send',
     [
-      DharmaKeyRingUpgradeBeacon.options.address,
+      tester.DharmaKeyRingUpgradeBeacon.options.address,
       AdharmaKeyRingImplementation.options.address
     ]
   )
@@ -7674,7 +7320,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     `TimelockEdgecaseTester contract deployment edge case 1`,
-    TimelockEdgecaseTesterDeployer,
+    tester.TimelockEdgecaseTesterDeployer,
     '',
     'deploy',
     [0],
@@ -7683,7 +7329,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     `TimelockEdgecaseTester contract deployment edge case 2`,
-    TimelockEdgecaseTesterDeployer,
+    tester.TimelockEdgecaseTesterDeployer,
     '',
     'deploy',
     [1],
@@ -7692,7 +7338,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     `TimelockEdgecaseTester contract deployment edge case 3`,
-    TimelockEdgecaseTesterDeployer,
+    tester.TimelockEdgecaseTesterDeployer,
     '',
     'deploy',
     [2],
@@ -7701,7 +7347,7 @@ async function test(testingContext) {
 
   const DharmaUpgradeMultisig = await tester.runTest(
     `DharmaUpgradeMultisig contract deployment`,
-    DharmaUpgradeMultisigDeployer,
+    tester.DharmaUpgradeMultisigDeployer,
     '',
     'deploy',
     [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour, tester.ownerFive]]
@@ -7709,7 +7355,7 @@ async function test(testingContext) {
 
   const DharmaAccountRecoveryMultisig = await tester.runTest(
     `DharmaAccountRecoveryMultisig contract deployment`,
-    DharmaAccountRecoveryMultisigDeployer,
+    tester.DharmaAccountRecoveryMultisigDeployer,
     '',
     'deploy',
     [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour]]
@@ -7717,7 +7363,7 @@ async function test(testingContext) {
 
   const DharmaAccountRecoveryOperatorMultisig = await tester.runTest(
     `DharmaAccountRecoveryOperatorMultisig contract deployment`,
-    DharmaAccountRecoveryOperatorMultisigDeployer,
+    tester.DharmaAccountRecoveryOperatorMultisigDeployer,
     '',
     'deploy',
     [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour]]
@@ -7725,7 +7371,7 @@ async function test(testingContext) {
 
   const DharmaKeyRegistryMultisig = await tester.runTest(
     `DharmaKeyRegistryMultisig contract deployment`,
-    DharmaKeyRegistryMultisigDeployer,
+    tester.DharmaKeyRegistryMultisigDeployer,
     '',
     'deploy',
     [[tester.ownerOne, tester.ownerTwo, tester.ownerThree, tester.ownerFour, tester.ownerFive]]
@@ -8495,7 +8141,7 @@ async function test(testingContext) {
 
   const DharmaEscapeHatchRegistry = await tester.runTest(
     `DharmaEscapeHatchRegistry contract deployment`,
-    DharmaEscapeHatchRegistryDeployer,
+    tester.DharmaEscapeHatchRegistryDeployer,
     '',
     'deploy'
   )
@@ -8762,13 +8408,13 @@ async function test(testingContext) {
 
   await tester.runTest(
     `DharmaAccountRecoveryManagerV2 owner can start ownership transfer to multisig`,
-    DharmaAccountRecoveryManagerV2,
+    tester.DharmaAccountRecoveryManagerV2,
     'transferOwnership',
     'send',
     [DharmaAccountRecoveryMultisig.options.address]
   )
 
-  rawData = DharmaAccountRecoveryManagerV2.methods.acceptOwnership().encodeABI()
+  rawData = tester.DharmaAccountRecoveryManagerV2.methods.acceptOwnership().encodeABI()
   await tester.runTest(
     `DharmaAccountRecoveryMultisig can get a hash`,
     DharmaAccountRecoveryMultisig,
@@ -8797,7 +8443,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     `DharmaAccountRecoveryManagerV2 owner is now set to multisig`,
-    DharmaAccountRecoveryManagerV2,
+    tester.DharmaAccountRecoveryManagerV2,
     'owner',
     'call',
     [],
@@ -8810,7 +8456,7 @@ async function test(testingContext) {
   // TODO: test account recovery using the multisig?
 
   // transfer ownership back
-  rawData = DharmaAccountRecoveryManagerV2.methods.transferOwnership(tester.address).encodeABI()
+  rawData = tester.DharmaAccountRecoveryManagerV2.methods.transferOwnership(tester.address).encodeABI()
   await tester.runTest(
     `DharmaAccountRecoveryMultisig can get a hash`,
     DharmaAccountRecoveryMultisig,
@@ -8838,13 +8484,13 @@ async function test(testingContext) {
 
   await tester.runTest(
     `DharmaAccountRecoveryManagerV2 EOA can accept ownership transfer from multisig`,
-    DharmaAccountRecoveryManagerV2,
+    tester.DharmaAccountRecoveryManagerV2,
     'acceptOwnership'
   )
 
   await tester.runTest(
     `DharmaAccountRecoveryManagerV2 owner is now set to EOA`,
-    DharmaAccountRecoveryManagerV2,
+    tester.DharmaAccountRecoveryManagerV2,
     'owner',
     'call',
     [],
@@ -8856,13 +8502,13 @@ async function test(testingContext) {
 
   await tester.runTest(
     `DharmaKeyRegistryV2 owner can start ownership transfer to multisig`,
-    DharmaKeyRegistryV2,
+    tester.DharmaKeyRegistryV2,
     'transferOwnership',
     'send',
     [DharmaKeyRegistryMultisig.options.address]
   )
 
-  rawData = DharmaKeyRegistryV2.methods.acceptOwnership().encodeABI()
+  rawData = tester.DharmaKeyRegistryV2.methods.acceptOwnership().encodeABI()
   await tester.runTest(
     `DharmaKeyRegistryMultisig can get a hash`,
     DharmaKeyRegistryMultisig,
@@ -8891,7 +8537,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     `DharmaKeyRegistryV2 owner is now set to multisig`,
-    DharmaKeyRegistryV2,
+    tester.DharmaKeyRegistryV2,
     'owner',
     'call',
     [],
@@ -8904,7 +8550,7 @@ async function test(testingContext) {
   // TODO: test setting a new key using the multisig?
 
   // transfer ownership back
-  rawData = DharmaKeyRegistryV2.methods.transferOwnership(tester.address).encodeABI()
+  rawData = tester.DharmaKeyRegistryV2.methods.transferOwnership(tester.address).encodeABI()
   await tester.runTest(
     `DharmaKeyRegistryMultisig can get a hash`,
     DharmaKeyRegistryMultisig,
@@ -8932,13 +8578,13 @@ async function test(testingContext) {
 
   await tester.runTest(
     `DharmaKeyRegistryV2 EOA can accept ownership transfer from multisig`,
-    DharmaKeyRegistryV2,
+    tester.DharmaKeyRegistryV2,
     'acceptOwnership'
   )
 
   await tester.runTest(
     `DharmaKeyRegistryV2 owner is now set to EOA`,
-    DharmaKeyRegistryV2,
+    tester.DharmaKeyRegistryV2,
     'owner',
     'call',
     [],
@@ -8950,7 +8596,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner is initially set to an EOA`,
-    DharmaUpgradeBeaconControllerManager,
+    tester.DharmaUpgradeBeaconControllerManager,
     'owner',
     'call',
     [],
@@ -8962,13 +8608,13 @@ async function test(testingContext) {
 
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner can start ownership transfer to multisig`,
-    DharmaUpgradeBeaconControllerManager,
+    tester.DharmaUpgradeBeaconControllerManager,
     'transferOwnership',
     'send',
     [DharmaUpgradeMultisig.options.address]
   )
 
-  rawData = DharmaUpgradeBeaconControllerManager.methods.acceptOwnership().encodeABI()
+  rawData = tester.DharmaUpgradeBeaconControllerManager.methods.acceptOwnership().encodeABI()
   await tester.runTest(
     `DharmaUpgradeMultisig can get a hash`,
     DharmaUpgradeMultisig,
@@ -8997,7 +8643,7 @@ async function test(testingContext) {
 
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner is now set to multisig`,
-    DharmaUpgradeBeaconControllerManager,
+    tester.DharmaUpgradeBeaconControllerManager,
     'owner',
     'call',
     [],
@@ -9010,7 +8656,7 @@ async function test(testingContext) {
   // TODO: test an upgrade, rollback, etc with the multisig?
 
   // transfer ownership back
-  rawData = DharmaUpgradeBeaconControllerManager.methods.transferOwnership(tester.address).encodeABI()
+  rawData = tester.DharmaUpgradeBeaconControllerManager.methods.transferOwnership(tester.address).encodeABI()
   await tester.runTest(
     `DharmaUpgradeMultisig can get a hash`,
     DharmaUpgradeMultisig,
@@ -9038,13 +8684,13 @@ async function test(testingContext) {
 
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager EOA can accept ownership transfer from multisig`,
-    DharmaUpgradeBeaconControllerManager,
+    tester.DharmaUpgradeBeaconControllerManager,
     'acceptOwnership'
   )
 
   await tester.runTest(
     `DharmaUpgradeBeaconControllerManager owner is now set to EOA`,
-    DharmaUpgradeBeaconControllerManager,
+    tester.DharmaUpgradeBeaconControllerManager,
     'owner',
     'call',
     [],
@@ -9057,9 +8703,9 @@ async function test(testingContext) {
   await testUpgradeBeaconControllerManagerPartTwo(
       tester,
       DharmaUpgradeBeaconControllerManagerCoverage,
-      DharmaUpgradeBeaconController,
-      DharmaKeyRingUpgradeBeaconController,
-      DharmaUpgradeBeacon.options.address,
+      tester.DharmaUpgradeBeaconController,
+      tester.DharmaKeyRingUpgradeBeaconController,
+      tester.DharmaUpgradeBeacon.options.address,
       AdharmaSmartWalletImplementation.options.address,
       DharmaSmartWalletImplementationV7.options.address,
       DharmaKeyRingImplementationV1.options.address

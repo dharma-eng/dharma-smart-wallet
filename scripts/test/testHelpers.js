@@ -4,13 +4,46 @@ const assert = require("assert");
 const util = require('ethereumjs-util');
 
 const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
-const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
 
-const SCALING_FACTOR = web3.utils.toBN("1000000000000000000");
-const ZERO = web3.utils.toBN("0");
-const ONE = web3.utils.toBN("1");
-const NINE = web3.utils.toBN("9");
-const TEN = web3.utils.toBN("10");
+const AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
+const AdharmaKeyRingImplementationArtifact = require('../../build/contracts/AdharmaKeyRingImplementation.json')
+
+const DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
+const DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
+const DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
+const DharmaKeyRingUpgradeBeaconArtifact = require('../../build/contracts/DharmaKeyRingUpgradeBeacon.json')
+const DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
+
+const DharmaAccountRecoveryManagerV2Artifact = require('../../build/contracts/DharmaAccountRecoveryManagerV2.json')
+const DharmaKeyRegistryV2Artifact = require('../../build/contracts/DharmaKeyRegistryV2.json')
+const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
+const DharmaSmartWalletFactoryV2Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV2.json')
+
+const DharmaSmartWalletImplementationV6Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV6.json')
+const DharmaSmartWalletImplementationV7Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV7.json')
+
+const DharmaKeyRingImplementationV1Artifact = require('../../build/contracts/DharmaKeyRingImplementationV1.json')
+const DharmaKeyRingFactoryV1Artifact = require('../../build/contracts/DharmaKeyRingFactoryV1.json')
+const DharmaKeyRingFactoryV2Artifact = require('../../build/contracts/DharmaKeyRingFactoryV2.json')
+const DharmaKeyRingFactoryV3Artifact = require('../../build/contracts/DharmaKeyRingFactoryV3.json')
+
+const UpgradeBeaconProxyV1Artifact = require('../../build/contracts/UpgradeBeaconProxyV1.json')
+const KeyRingUpgradeBeaconProxyV1Artifact = require('../../build/contracts/KeyRingUpgradeBeaconProxyV1.json')
+
+const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
+const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
+const DharmaAccountRecoveryOperatorMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryOperatorMultisig.json')
+const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaKeyRegistryMultisig.json')
+
+const DharmaEscapeHatchRegistryArtifact = require('../../build/contracts/DharmaEscapeHatchRegistry.json')
+
+const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
+const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
+const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
+const TimelockEdgecaseTesterArtifact = require('../../build/contracts/TimelockEdgecaseTester.json')
+
+const MockDharmaKeyRingFactoryArtifact = require('../../build/contracts/MockDharmaKeyRingFactory.json')
+const IERC20Artifact = require('../../build/contracts/IERC20.json')
 
 class Tester {
     constructor(testingContext) {
@@ -108,6 +141,8 @@ class Tester {
               )
             }
         )
+
+        await this.setupDeployedContracst();
     }
 
     async setupNewDefaultAddress(newPrivateKey) {
@@ -848,6 +883,328 @@ class Tester {
                 assert.strictEqual(value, runtimeCode)
             }
         );
+    }
+
+    async setupDeployedContracst() {
+        this.DharmaUpgradeBeaconController = new web3.eth.Contract(
+            DharmaUpgradeBeaconControllerArtifact.abi,
+            constants.UPGRADE_BEACON_CONTROLLER_ADDRESS
+        )
+        this.DharmaUpgradeBeacon = new web3.eth.Contract(
+            DharmaUpgradeBeaconArtifact.abi,
+            constants.UPGRADE_BEACON_ADDRESS
+        )
+        this.DharmaKeyRingUpgradeBeaconController = new web3.eth.Contract(
+            DharmaUpgradeBeaconControllerArtifact.abi,
+            constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS
+        )
+
+        this.DharmaKeyRingUpgradeBeacon = new web3.eth.Contract(
+            DharmaKeyRingUpgradeBeaconArtifact.abi,
+            constants.KEY_RING_UPGRADE_BEACON_ADDRESS
+        )
+
+        this.DharmaAccountRecoveryManagerV2 = new web3.eth.Contract(
+            DharmaAccountRecoveryManagerV2Artifact.abi,
+            constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS
+        )
+
+        /*
+        const DharmaKeyRegistryV1 = new web3.eth.Contract(
+          DharmaKeyRegistryV1Artifact.abi,
+          constants.KEY_REGISTRY_ADDRESS
+        )
+        */
+
+        this.DharmaKeyRegistryV2 = new web3.eth.Contract(
+            DharmaKeyRegistryV2Artifact.abi,
+            constants.KEY_REGISTRY_V2_ADDRESS
+        )
+
+        this.DharmaUpgradeBeaconControllerManager = new web3.eth.Contract(
+            DharmaUpgradeBeaconControllerManagerArtifact.abi,
+            constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS
+        )
+
+        this.DharmaSmartWalletFactoryV1OnChain = new web3.eth.Contract(
+            DharmaSmartWalletFactoryV1Artifact.abi,
+            constants.FACTORY_ADDRESS
+        )
+
+        this.Comptroller = new web3.eth.Contract(
+            constants.COMPTROLLER_ABI,
+            constants.COMPTROLLER_MAINNET_ADDRESS
+        )
+
+        this.CSAI_BORROW = new web3.eth.Contract(
+            [{
+                "constant": false,
+                "inputs": [{"name": "borrowAmount", "type": "uint256"}],
+                "name": "borrow",
+                "outputs": [{"name": "", "type": "uint256"}],
+                "payable": false,
+                "stateMutability": "nonpayable",
+                "type": "function"
+            }],
+            constants.CSAI_MAINNET_ADDRESS
+        )
+
+        this.FIAT_TOKEN = new web3.eth.Contract(
+            [
+                {
+                    "constant": true, "inputs": [], "name": "blacklister",
+                    "outputs": [{"name": "", "type": "address"}], "payable": false,
+                    "stateMutability": "view", "type": "function"
+                }, {
+                "constant": false, "inputs": [{"name": "_account", "type": "address"}],
+                "name": "unBlacklist", "outputs": [], "payable": false,
+                "stateMutability": "nonpayable", "type": "function"
+            }, {
+                "constant": false, "inputs": [{"name": "_account", "type": "address"}],
+                "name": "blacklist", "outputs": [], "payable": false,
+                "stateMutability": "nonpayable", "type": "function"
+            }, {
+                "constant": true, "inputs": [{"name": "_account", "type": "address"}],
+                "name": "isBlacklisted", "outputs": [{"name": "", "type": "bool"}],
+                "payable": false, "stateMutability": "view", "type": "function"
+            }, {
+                "constant": false, "inputs": [],
+                "name": "pause", "outputs": [], "payable": false,
+                "stateMutability": "nonpayable", "type": "function"
+            }, {
+                "constant": false, "inputs": [],
+                "name": "unpause", "outputs": [], "payable": false,
+                "stateMutability": "nonpayable", "type": "function"
+            }, {
+                "constant": true, "inputs": [], "name": "pauser",
+                "outputs": [{"name": "", "type": "address"}], "payable": false,
+                "stateMutability": "view", "type": "function"
+            }
+            ],
+            constants.USDC_MAINNET_ADDRESS
+        )
+
+        this.SAI = new web3.eth.Contract(
+            IERC20Artifact.abi, constants.SAI_MAINNET_ADDRESS
+        )
+
+        this.DAI = new web3.eth.Contract(
+            IERC20Artifact.abi, constants.DAI_MAINNET_ADDRESS
+        )
+
+        this.USDC = new web3.eth.Contract(
+            IERC20Artifact.abi, constants.USDC_MAINNET_ADDRESS
+        )
+
+        this.CSAI = new web3.eth.Contract(
+            IERC20Artifact.abi, constants.CSAI_MAINNET_ADDRESS
+        )
+
+        this.CDAI = new web3.eth.Contract(
+            IERC20Artifact.abi, constants.CDAI_MAINNET_ADDRESS
+        )
+
+        this.CUSDC = new web3.eth.Contract(
+            IERC20Artifact.abi, constants.CUSDC_MAINNET_ADDRESS
+        )
+
+        this.BadBeaconDeployer = new web3.eth.Contract(BadBeaconArtifact.abi)
+        this.BadBeaconDeployer.options.data = BadBeaconArtifact.bytecode
+
+        this.BadBeaconTwoDeployer = new web3.eth.Contract(BadBeaconTwoArtifact.abi)
+        this.BadBeaconTwoDeployer.options.data = BadBeaconTwoArtifact.bytecode
+
+
+        this.AdharmaSmartWalletImplementationDeployer = new web3.eth.Contract(
+            AdharmaSmartWalletImplementationArtifact.abi
+        )
+        this.AdharmaSmartWalletImplementationDeployer.options.data = (
+            AdharmaSmartWalletImplementationArtifact.bytecode
+        )
+
+        this.DharmaSmartWalletImplementationV6Deployer = new web3.eth.Contract(
+            DharmaSmartWalletImplementationV6Artifact.abi
+        )
+        this.DharmaSmartWalletImplementationV6Deployer.options.data = (
+            DharmaSmartWalletImplementationV6Artifact.bytecode
+        )
+
+        this.DharmaSmartWalletImplementationV7Deployer = new web3.eth.Contract(
+            DharmaSmartWalletImplementationV7Artifact.abi
+        )
+        this.DharmaSmartWalletImplementationV7Deployer.options.data = (
+            DharmaSmartWalletImplementationV7Artifact.bytecode
+        )
+
+        this.AdharmaKeyRingImplementationDeployer = new web3.eth.Contract(
+            AdharmaKeyRingImplementationArtifact.abi
+        )
+        this.AdharmaKeyRingImplementationDeployer.options.data = (
+            AdharmaKeyRingImplementationArtifact.bytecode
+        )
+
+        this.DharmaKeyRingImplementationV1Deployer = new web3.eth.Contract(
+            DharmaKeyRingImplementationV1Artifact.abi
+        )
+        this.DharmaKeyRingImplementationV1Deployer.options.data = (
+            DharmaKeyRingImplementationV1Artifact.bytecode
+        )
+
+        this.UpgradeBeaconImplementationCheckDeployer = new web3.eth.Contract(
+            UpgradeBeaconImplementationCheckArtifact.abi
+        )
+        this.UpgradeBeaconImplementationCheckDeployer.options.data = (
+            UpgradeBeaconImplementationCheckArtifact.bytecode
+        )
+
+        this.TimelockEdgecaseTesterDeployer = new web3.eth.Contract(
+            TimelockEdgecaseTesterArtifact.abi
+        )
+        this.TimelockEdgecaseTesterDeployer.options.data = (
+            TimelockEdgecaseTesterArtifact.bytecode
+        )
+
+        this.DharmaUpgradeBeaconControllerDeployer = new web3.eth.Contract(
+            DharmaUpgradeBeaconControllerArtifact.abi
+        )
+        this.DharmaUpgradeBeaconControllerDeployer.options.data = (
+            DharmaUpgradeBeaconControllerArtifact.bytecode
+        )
+
+        this.DharmaUpgradeBeaconDeployer = new web3.eth.Contract(
+            DharmaUpgradeBeaconArtifact.abi
+        )
+        this.DharmaUpgradeBeaconDeployer.options.data = (
+            DharmaUpgradeBeaconArtifact.bytecode
+        )
+
+        this.DharmaKeyRingUpgradeBeaconDeployer = new web3.eth.Contract(
+            DharmaKeyRingUpgradeBeaconArtifact.abi
+        )
+        this.DharmaKeyRingUpgradeBeaconDeployer.options.data = (
+            DharmaKeyRingUpgradeBeaconArtifact.bytecode
+        )
+
+        this.DharmaUpgradeBeaconEnvoyDeployer = new web3.eth.Contract(
+            DharmaUpgradeBeaconEnvoyArtifact.abi
+        )
+        this.DharmaUpgradeBeaconEnvoyDeployer.options.data = (
+            DharmaUpgradeBeaconEnvoyArtifact.bytecode
+        )
+
+        this.DharmaUpgradeBeaconControllerManagerDeployer = new web3.eth.Contract(
+            DharmaUpgradeBeaconControllerManagerArtifact.abi
+        )
+        this.DharmaUpgradeBeaconControllerManagerDeployer.options.data = (
+            DharmaUpgradeBeaconControllerManagerArtifact.bytecode
+        )
+
+        this.UpgradeBeaconProxyV1Deployer = new web3.eth.Contract(
+            UpgradeBeaconProxyV1Artifact.abi
+        )
+        this.UpgradeBeaconProxyV1Deployer.options.data = (
+            UpgradeBeaconProxyV1Artifact.bytecode
+        )
+
+        this.KeyRingUpgradeBeaconProxyV1Deployer = new web3.eth.Contract(
+            KeyRingUpgradeBeaconProxyV1Artifact.abi
+        )
+        this.KeyRingUpgradeBeaconProxyV1Deployer.options.data = (
+            KeyRingUpgradeBeaconProxyV1Artifact.bytecode
+        )
+
+        this.DharmaKeyRegistryV2Deployer = new web3.eth.Contract(
+            DharmaKeyRegistryV2Artifact.abi
+        )
+        this.DharmaKeyRegistryV2Deployer.options.data = (
+            DharmaKeyRegistryV2Artifact.bytecode
+        )
+
+        this.DharmaSmartWalletFactoryV1Deployer = new web3.eth.Contract(
+            DharmaSmartWalletFactoryV1Artifact.abi
+        )
+        this.DharmaSmartWalletFactoryV1Deployer.options.data = (
+            DharmaSmartWalletFactoryV1Artifact.bytecode
+        )
+
+        this.DharmaSmartWalletFactoryV2Deployer = new web3.eth.Contract(
+            DharmaSmartWalletFactoryV2Artifact.abi
+        )
+        this.DharmaSmartWalletFactoryV2Deployer.options.data = (
+            DharmaSmartWalletFactoryV2Artifact.bytecode
+        )
+
+        this.DharmaKeyRingFactoryV1Deployer = new web3.eth.Contract(
+            DharmaKeyRingFactoryV1Artifact.abi
+        )
+        this.DharmaKeyRingFactoryV1Deployer.options.data = (
+            DharmaKeyRingFactoryV1Artifact.bytecode
+        )
+
+        this.DharmaKeyRingFactoryV2Deployer = new web3.eth.Contract(
+            DharmaKeyRingFactoryV2Artifact.abi
+        )
+        this.DharmaKeyRingFactoryV2Deployer.options.data = (
+            DharmaKeyRingFactoryV2Artifact.bytecode
+        )
+
+        this.DharmaKeyRingFactoryV3Deployer = new web3.eth.Contract(
+            DharmaKeyRingFactoryV3Artifact.abi
+        )
+        this.DharmaKeyRingFactoryV3Deployer.options.data = (
+            DharmaKeyRingFactoryV3Artifact.bytecode
+        )
+
+        this.MockDharmaKeyRingFactoryDeployer = new web3.eth.Contract(
+            MockDharmaKeyRingFactoryArtifact.abi
+        )
+        this.MockDharmaKeyRingFactoryDeployer.options.data = (
+            MockDharmaKeyRingFactoryArtifact.bytecode
+        )
+
+        this.DharmaAccountRecoveryManagerV2Deployer = new web3.eth.Contract(
+            DharmaAccountRecoveryManagerV2Artifact.abi
+        )
+        this.DharmaAccountRecoveryManagerV2Deployer.options.data = (
+            DharmaAccountRecoveryManagerV2Artifact.bytecode
+        )
+
+        this.DharmaUpgradeMultisigDeployer = new web3.eth.Contract(
+            DharmaUpgradeMultisigArtifact.abi
+        )
+        this.DharmaUpgradeMultisigDeployer.options.data = (
+            DharmaUpgradeMultisigArtifact.bytecode
+        )
+
+        this.DharmaAccountRecoveryMultisigDeployer = new web3.eth.Contract(
+            DharmaAccountRecoveryMultisigArtifact.abi
+        )
+        this.DharmaAccountRecoveryMultisigDeployer.options.data = (
+            DharmaAccountRecoveryMultisigArtifact.bytecode
+        )
+
+        this.DharmaAccountRecoveryOperatorMultisigDeployer = new web3.eth.Contract(
+            DharmaAccountRecoveryOperatorMultisigArtifact.abi
+        )
+        this.DharmaAccountRecoveryOperatorMultisigDeployer.options.data = (
+            DharmaAccountRecoveryOperatorMultisigArtifact.bytecode
+        )
+
+        this.DharmaKeyRegistryMultisigDeployer = new web3.eth.Contract(
+            DharmaKeyRegistryMultisigArtifact.abi
+        )
+        this.DharmaKeyRegistryMultisigDeployer.options.data = (
+            DharmaKeyRegistryMultisigArtifact.bytecode
+        )
+
+        this.DharmaEscapeHatchRegistryDeployer = new web3.eth.Contract(
+            DharmaEscapeHatchRegistryArtifact.abi
+        )
+        this.DharmaEscapeHatchRegistryDeployer.options.data = (
+            DharmaEscapeHatchRegistryArtifact.bytecode
+        )
+
+
     }
 }
 
