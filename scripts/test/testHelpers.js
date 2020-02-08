@@ -1,49 +1,49 @@
 const { web3 } = require("./web3");
 const constants = require("./constants");
 const assert = require("assert");
-const util = require('ethereumjs-util');
+const util = require("ethereumjs-util");
 
-const MockCodeCheckArtifact = require('../../build/contracts/MockCodeCheck.json')
+const MockCodeCheckArtifact = require("../../build/contracts/MockCodeCheck.json");
 
-const AdharmaSmartWalletImplementationArtifact = require('../../build/contracts/AdharmaSmartWalletImplementation.json')
-const AdharmaKeyRingImplementationArtifact = require('../../build/contracts/AdharmaKeyRingImplementation.json')
+const AdharmaSmartWalletImplementationArtifact = require("../../build/contracts/AdharmaSmartWalletImplementation.json");
+const AdharmaKeyRingImplementationArtifact = require("../../build/contracts/AdharmaKeyRingImplementation.json");
 
-const DharmaUpgradeBeaconControllerManagerArtifact = require('../../build/contracts/DharmaUpgradeBeaconControllerManager.json')
-const DharmaUpgradeBeaconControllerArtifact = require('../../build/contracts/DharmaUpgradeBeaconController.json')
-const DharmaUpgradeBeaconArtifact = require('../../build/contracts/DharmaUpgradeBeacon.json')
-const DharmaKeyRingUpgradeBeaconArtifact = require('../../build/contracts/DharmaKeyRingUpgradeBeacon.json')
-const DharmaUpgradeBeaconEnvoyArtifact = require('../../build/contracts/DharmaUpgradeBeaconEnvoy.json')
+const DharmaUpgradeBeaconControllerManagerArtifact = require("../../build/contracts/DharmaUpgradeBeaconControllerManager.json");
+const DharmaUpgradeBeaconControllerArtifact = require("../../build/contracts/DharmaUpgradeBeaconController.json");
+const DharmaUpgradeBeaconArtifact = require("../../build/contracts/DharmaUpgradeBeacon.json");
+const DharmaKeyRingUpgradeBeaconArtifact = require("../../build/contracts/DharmaKeyRingUpgradeBeacon.json");
+const DharmaUpgradeBeaconEnvoyArtifact = require("../../build/contracts/DharmaUpgradeBeaconEnvoy.json");
 
-const DharmaAccountRecoveryManagerV2Artifact = require('../../build/contracts/DharmaAccountRecoveryManagerV2.json')
-const DharmaKeyRegistryV2Artifact = require('../../build/contracts/DharmaKeyRegistryV2.json')
-const DharmaSmartWalletFactoryV1Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV1.json')
-const DharmaSmartWalletFactoryV2Artifact = require('../../build/contracts/DharmaSmartWalletFactoryV2.json')
+const DharmaAccountRecoveryManagerV2Artifact = require("../../build/contracts/DharmaAccountRecoveryManagerV2.json");
+const DharmaKeyRegistryV2Artifact = require("../../build/contracts/DharmaKeyRegistryV2.json");
+const DharmaSmartWalletFactoryV1Artifact = require("../../build/contracts/DharmaSmartWalletFactoryV1.json");
+const DharmaSmartWalletFactoryV2Artifact = require("../../build/contracts/DharmaSmartWalletFactoryV2.json");
 
-const DharmaSmartWalletImplementationV6Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV6.json')
-const DharmaSmartWalletImplementationV7Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV7.json')
+const DharmaSmartWalletImplementationV6Artifact = require("../../build/contracts/DharmaSmartWalletImplementationV6.json");
+const DharmaSmartWalletImplementationV7Artifact = require("../../build/contracts/DharmaSmartWalletImplementationV7.json");
 
-const DharmaKeyRingImplementationV1Artifact = require('../../build/contracts/DharmaKeyRingImplementationV1.json')
-const DharmaKeyRingFactoryV1Artifact = require('../../build/contracts/DharmaKeyRingFactoryV1.json')
-const DharmaKeyRingFactoryV2Artifact = require('../../build/contracts/DharmaKeyRingFactoryV2.json')
-const DharmaKeyRingFactoryV3Artifact = require('../../build/contracts/DharmaKeyRingFactoryV3.json')
+const DharmaKeyRingImplementationV1Artifact = require("../../build/contracts/DharmaKeyRingImplementationV1.json");
+const DharmaKeyRingFactoryV1Artifact = require("../../build/contracts/DharmaKeyRingFactoryV1.json");
+const DharmaKeyRingFactoryV2Artifact = require("../../build/contracts/DharmaKeyRingFactoryV2.json");
+const DharmaKeyRingFactoryV3Artifact = require("../../build/contracts/DharmaKeyRingFactoryV3.json");
 
-const UpgradeBeaconProxyV1Artifact = require('../../build/contracts/UpgradeBeaconProxyV1.json')
-const KeyRingUpgradeBeaconProxyV1Artifact = require('../../build/contracts/KeyRingUpgradeBeaconProxyV1.json')
+const UpgradeBeaconProxyV1Artifact = require("../../build/contracts/UpgradeBeaconProxyV1.json");
+const KeyRingUpgradeBeaconProxyV1Artifact = require("../../build/contracts/KeyRingUpgradeBeaconProxyV1.json");
 
-const DharmaUpgradeMultisigArtifact = require('../../build/contracts/DharmaUpgradeMultisig.json')
-const DharmaAccountRecoveryMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryMultisig.json')
-const DharmaAccountRecoveryOperatorMultisigArtifact = require('../../build/contracts/DharmaAccountRecoveryOperatorMultisig.json')
-const DharmaKeyRegistryMultisigArtifact = require('../../build/contracts/DharmaKeyRegistryMultisig.json')
+const DharmaUpgradeMultisigArtifact = require("../../build/contracts/DharmaUpgradeMultisig.json");
+const DharmaAccountRecoveryMultisigArtifact = require("../../build/contracts/DharmaAccountRecoveryMultisig.json");
+const DharmaAccountRecoveryOperatorMultisigArtifact = require("../../build/contracts/DharmaAccountRecoveryOperatorMultisig.json");
+const DharmaKeyRegistryMultisigArtifact = require("../../build/contracts/DharmaKeyRegistryMultisig.json");
 
-const DharmaEscapeHatchRegistryArtifact = require('../../build/contracts/DharmaEscapeHatchRegistry.json')
+const DharmaEscapeHatchRegistryArtifact = require("../../build/contracts/DharmaEscapeHatchRegistry.json");
 
-const UpgradeBeaconImplementationCheckArtifact = require('../../build/contracts/UpgradeBeaconImplementationCheck.json')
-const BadBeaconArtifact = require('../../build/contracts/BadBeacon.json')
-const BadBeaconTwoArtifact = require('../../build/contracts/BadBeaconTwo.json')
-const TimelockEdgecaseTesterArtifact = require('../../build/contracts/TimelockEdgecaseTester.json')
+const UpgradeBeaconImplementationCheckArtifact = require("../../build/contracts/UpgradeBeaconImplementationCheck.json");
+const BadBeaconArtifact = require("../../build/contracts/BadBeacon.json");
+const BadBeaconTwoArtifact = require("../../build/contracts/BadBeaconTwo.json");
+const TimelockEdgecaseTesterArtifact = require("../../build/contracts/TimelockEdgecaseTester.json");
 
-const MockDharmaKeyRingFactoryArtifact = require('../../build/contracts/MockDharmaKeyRingFactory.json')
-const IERC20Artifact = require('../../build/contracts/IERC20.json')
+const MockDharmaKeyRingFactoryArtifact = require("../../build/contracts/MockDharmaKeyRingFactory.json");
+const IERC20Artifact = require("../../build/contracts/IERC20.json");
 
 class Tester {
     constructor(testingContext) {
@@ -54,32 +54,29 @@ class Tester {
         const UpgradeBeaconImplementationCheckDeployer = new web3.eth.Contract(
             UpgradeBeaconImplementationCheckArtifact.abi
         );
-        UpgradeBeaconImplementationCheckDeployer.options.data = (
-            UpgradeBeaconImplementationCheckArtifact.bytecode
-        );
-        this.UpgradeBeaconImplementationCheckDeployer = (
-            UpgradeBeaconImplementationCheckDeployer
-        );
+        UpgradeBeaconImplementationCheckDeployer.options.data =
+            UpgradeBeaconImplementationCheckArtifact.bytecode;
+        this.UpgradeBeaconImplementationCheckDeployer = UpgradeBeaconImplementationCheckDeployer;
     }
 
     async init() {
         // get available addresses and assign them to various roles
         const addresses = await web3.eth.getAccounts();
         if (addresses.length < 1) {
-            console.log('cannot find enough addresses to run tests!');
-            process.exit(1)
+            console.log("cannot find enough addresses to run tests!");
+            process.exit(1);
         }
 
-        let latestBlock = await web3.eth.getBlock('latest');
+        let latestBlock = await web3.eth.getBlock("latest");
 
         this.originalAddress = addresses[0];
 
         this.address = await this.setupNewDefaultAddress(
-            '0xfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeed'
+            "0xfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeedfeed"
         );
 
         this.addressTwo = await this.setupNewDefaultAddress(
-            '0xf00df00df00df00df00df00df00df00df00df00df00df00df00df00df00df00d'
+            "0xf00df00df00df00df00df00df00df00df00df00df00df00df00df00df00df00d"
         );
 
         this.ownerOne = await this.setupNewDefaultAddress(
@@ -98,7 +95,7 @@ class Tester {
             constants.MOCK_OWNER_PRIVATE_KEYS[4]
         );
 
-        this.gasLimit = latestBlock.gasLimit
+        this.gasLimit = latestBlock.gasLimit;
 
         const MockCodeCheckDeployer = new web3.eth.Contract(
             MockCodeCheckArtifact.abi
@@ -108,39 +105,42 @@ class Tester {
         this.MockCodeCheck = await this.runTest(
             `MockCodeCheck contract deployment`,
             MockCodeCheckDeployer,
-            '',
-            'deploy'
-        )
+            "",
+            "deploy"
+        );
 
         await this.runTest(
-            'Deployed MockCodeCheck code is correct',
+            "Deployed MockCodeCheck code is correct",
             this.MockCodeCheck,
-            'code',
-            'call',
+            "code",
+            "call",
             [this.MockCodeCheck.options.address],
             true,
             value => {
-              assert.strictEqual(value, MockCodeCheckArtifact.deployedBytecode)
+                assert.strictEqual(
+                    value,
+                    MockCodeCheckArtifact.deployedBytecode
+                );
             }
-        )
+        );
 
         await this.runTest(
-            'Deployed MockCodeCheck has correct extcodehash',
+            "Deployed MockCodeCheck has correct extcodehash",
             this.MockCodeCheck,
-            'hash',
-            'call',
+            "hash",
+            "call",
             [this.MockCodeCheck.options.address],
             true,
             value => {
-              assert.strictEqual(
-                value,
-                web3.utils.keccak256(
-                  MockCodeCheckArtifact.deployedBytecode,
-                  {encoding: 'hex'}
-                )
-              )
+                assert.strictEqual(
+                    value,
+                    web3.utils.keccak256(
+                        MockCodeCheckArtifact.deployedBytecode,
+                        { encoding: "hex" }
+                    )
+                );
             }
-        )
+        );
 
         await this.setupDeployedContracst();
     }
@@ -201,7 +201,7 @@ class Tester {
                 if (
                     error.message ===
                     "Returned error: gas required exceeds allowance or always failing " +
-                    "transaction"
+                        "transaction"
                 ) {
                     await this.raiseGasLimit();
                     await this.getDeployGas(dataPayload);
@@ -384,7 +384,7 @@ class Tester {
                 web3.utils.keccak256(
                     // prefix => "\x19Ethereum Signed Message:\n32"
                     "0x19457468657265756d205369676e6564204d6573736167653a0a3332" +
-                    hashedHexString.slice(2),
+                        hashedHexString.slice(2),
                     { encoding: "hex" }
                 )
             ),
@@ -404,9 +404,9 @@ class Tester {
                 web3.utils.keccak256(
                     // prefix => "\x19Ethereum Signed Message:\n32"
                     "0x19457468657265756d205369676e6564204d6573736167653a0a3332" +
-                    web3.utils
-                        .keccak256(hexString, { encoding: "hex" })
-                        .slice(2),
+                        web3.utils
+                            .keccak256(hexString, { encoding: "hex" })
+                            .slice(2),
                     { encoding: "hex" }
                 )
             ),
@@ -748,18 +748,18 @@ class Tester {
             console.log(
                 ` ✓ ${
                     callOrSendOrDeploy === "deploy" ? "successful " : ""
-                    }${title}${
+                }${title}${
                     callOrSendOrDeploy === "deploy" ? ` (${deployGas} gas)` : ""
-                    }`
+                }`
             );
             this.passed++;
         } else {
             console.log(
                 ` ✘ ${
                     callOrSendOrDeploy === "deploy" ? "failed " : ""
-                    }${title}${
+                }${title}${
                     callOrSendOrDeploy === "deploy" ? ` (${deployGas} gas)` : ""
-                    }`
+                }`
             );
             this.failed++;
         }
@@ -822,7 +822,6 @@ class Tester {
             .filter(value => value !== null);
     }
 
-
     async checkAndDeploy(
         name,
         address,
@@ -836,8 +835,8 @@ class Tester {
         await this.runTest(
             `Checking ${name} runtime code`,
             mockCodeCheck,
-            'code',
-            'call',
+            "code",
+            "call",
             [address],
             true,
             value => {
@@ -845,29 +844,24 @@ class Tester {
             }
         );
 
-        if (
-            currentCode !== runtimeCode
-        ) {
+        if (currentCode !== runtimeCode) {
             await this.runTest(
                 `${name} contract address check through immutable create2 factory`,
                 create2Factory,
-                'findCreate2Address',
-                'call',
-                [
-                    salt,
-                    creationCode
-                ],
+                "findCreate2Address",
+                "call",
+                [salt, creationCode],
                 true,
                 value => {
-                    assert.strictEqual(value, address)
+                    assert.strictEqual(value, address);
                 }
             );
 
             await this.runTest(
                 `${name} contract deployment through immutable create2 factory`,
                 create2Factory,
-                'safeCreate2',
-                'send',
+                "safeCreate2",
+                "send",
                 [salt, creationCode]
             );
         }
@@ -875,12 +869,12 @@ class Tester {
         await this.runTest(
             `Deployed ${name} code is correct`,
             mockCodeCheck,
-            'code',
-            'call',
+            "code",
+            "call",
             [address],
             true,
             value => {
-                assert.strictEqual(value, runtimeCode)
+                assert.strictEqual(value, runtimeCode);
             }
         );
     }
@@ -889,25 +883,25 @@ class Tester {
         this.DharmaUpgradeBeaconController = new web3.eth.Contract(
             DharmaUpgradeBeaconControllerArtifact.abi,
             constants.UPGRADE_BEACON_CONTROLLER_ADDRESS
-        )
+        );
         this.DharmaUpgradeBeacon = new web3.eth.Contract(
             DharmaUpgradeBeaconArtifact.abi,
             constants.UPGRADE_BEACON_ADDRESS
-        )
+        );
         this.DharmaKeyRingUpgradeBeaconController = new web3.eth.Contract(
             DharmaUpgradeBeaconControllerArtifact.abi,
             constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS
-        )
+        );
 
         this.DharmaKeyRingUpgradeBeacon = new web3.eth.Contract(
             DharmaKeyRingUpgradeBeaconArtifact.abi,
             constants.KEY_RING_UPGRADE_BEACON_ADDRESS
-        )
+        );
 
         this.DharmaAccountRecoveryManagerV2 = new web3.eth.Contract(
             DharmaAccountRecoveryManagerV2Artifact.abi,
             constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS
-        )
+        );
 
         /*
         const DharmaKeyRegistryV1 = new web3.eth.Contract(
@@ -919,292 +913,306 @@ class Tester {
         this.DharmaKeyRegistryV2 = new web3.eth.Contract(
             DharmaKeyRegistryV2Artifact.abi,
             constants.KEY_REGISTRY_V2_ADDRESS
-        )
+        );
 
         this.DharmaUpgradeBeaconControllerManager = new web3.eth.Contract(
             DharmaUpgradeBeaconControllerManagerArtifact.abi,
             constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS
-        )
+        );
 
         this.DharmaSmartWalletFactoryV1OnChain = new web3.eth.Contract(
             DharmaSmartWalletFactoryV1Artifact.abi,
             constants.FACTORY_ADDRESS
-        )
+        );
 
         this.Comptroller = new web3.eth.Contract(
             constants.COMPTROLLER_ABI,
             constants.COMPTROLLER_MAINNET_ADDRESS
-        )
+        );
 
         this.CSAI_BORROW = new web3.eth.Contract(
-            [{
-                "constant": false,
-                "inputs": [{"name": "borrowAmount", "type": "uint256"}],
-                "name": "borrow",
-                "outputs": [{"name": "", "type": "uint256"}],
-                "payable": false,
-                "stateMutability": "nonpayable",
-                "type": "function"
-            }],
+            [
+                {
+                    constant: false,
+                    inputs: [{ name: "borrowAmount", type: "uint256" }],
+                    name: "borrow",
+                    outputs: [{ name: "", type: "uint256" }],
+                    payable: false,
+                    stateMutability: "nonpayable",
+                    type: "function"
+                }
+            ],
             constants.CSAI_MAINNET_ADDRESS
-        )
+        );
 
         this.FIAT_TOKEN = new web3.eth.Contract(
             [
                 {
-                    "constant": true, "inputs": [], "name": "blacklister",
-                    "outputs": [{"name": "", "type": "address"}], "payable": false,
-                    "stateMutability": "view", "type": "function"
-                }, {
-                "constant": false, "inputs": [{"name": "_account", "type": "address"}],
-                "name": "unBlacklist", "outputs": [], "payable": false,
-                "stateMutability": "nonpayable", "type": "function"
-            }, {
-                "constant": false, "inputs": [{"name": "_account", "type": "address"}],
-                "name": "blacklist", "outputs": [], "payable": false,
-                "stateMutability": "nonpayable", "type": "function"
-            }, {
-                "constant": true, "inputs": [{"name": "_account", "type": "address"}],
-                "name": "isBlacklisted", "outputs": [{"name": "", "type": "bool"}],
-                "payable": false, "stateMutability": "view", "type": "function"
-            }, {
-                "constant": false, "inputs": [],
-                "name": "pause", "outputs": [], "payable": false,
-                "stateMutability": "nonpayable", "type": "function"
-            }, {
-                "constant": false, "inputs": [],
-                "name": "unpause", "outputs": [], "payable": false,
-                "stateMutability": "nonpayable", "type": "function"
-            }, {
-                "constant": true, "inputs": [], "name": "pauser",
-                "outputs": [{"name": "", "type": "address"}], "payable": false,
-                "stateMutability": "view", "type": "function"
-            }
+                    constant: true,
+                    inputs: [],
+                    name: "blacklister",
+                    outputs: [{ name: "", type: "address" }],
+                    payable: false,
+                    stateMutability: "view",
+                    type: "function"
+                },
+                {
+                    constant: false,
+                    inputs: [{ name: "_account", type: "address" }],
+                    name: "unBlacklist",
+                    outputs: [],
+                    payable: false,
+                    stateMutability: "nonpayable",
+                    type: "function"
+                },
+                {
+                    constant: false,
+                    inputs: [{ name: "_account", type: "address" }],
+                    name: "blacklist",
+                    outputs: [],
+                    payable: false,
+                    stateMutability: "nonpayable",
+                    type: "function"
+                },
+                {
+                    constant: true,
+                    inputs: [{ name: "_account", type: "address" }],
+                    name: "isBlacklisted",
+                    outputs: [{ name: "", type: "bool" }],
+                    payable: false,
+                    stateMutability: "view",
+                    type: "function"
+                },
+                {
+                    constant: false,
+                    inputs: [],
+                    name: "pause",
+                    outputs: [],
+                    payable: false,
+                    stateMutability: "nonpayable",
+                    type: "function"
+                },
+                {
+                    constant: false,
+                    inputs: [],
+                    name: "unpause",
+                    outputs: [],
+                    payable: false,
+                    stateMutability: "nonpayable",
+                    type: "function"
+                },
+                {
+                    constant: true,
+                    inputs: [],
+                    name: "pauser",
+                    outputs: [{ name: "", type: "address" }],
+                    payable: false,
+                    stateMutability: "view",
+                    type: "function"
+                }
             ],
             constants.USDC_MAINNET_ADDRESS
-        )
+        );
 
         this.SAI = new web3.eth.Contract(
-            IERC20Artifact.abi, constants.SAI_MAINNET_ADDRESS
-        )
+            IERC20Artifact.abi,
+            constants.SAI_MAINNET_ADDRESS
+        );
 
         this.DAI = new web3.eth.Contract(
-            IERC20Artifact.abi, constants.DAI_MAINNET_ADDRESS
-        )
+            IERC20Artifact.abi,
+            constants.DAI_MAINNET_ADDRESS
+        );
 
         this.USDC = new web3.eth.Contract(
-            IERC20Artifact.abi, constants.USDC_MAINNET_ADDRESS
-        )
+            IERC20Artifact.abi,
+            constants.USDC_MAINNET_ADDRESS
+        );
 
         this.CSAI = new web3.eth.Contract(
-            IERC20Artifact.abi, constants.CSAI_MAINNET_ADDRESS
-        )
+            IERC20Artifact.abi,
+            constants.CSAI_MAINNET_ADDRESS
+        );
 
         this.CDAI = new web3.eth.Contract(
-            IERC20Artifact.abi, constants.CDAI_MAINNET_ADDRESS
-        )
+            IERC20Artifact.abi,
+            constants.CDAI_MAINNET_ADDRESS
+        );
 
         this.CUSDC = new web3.eth.Contract(
-            IERC20Artifact.abi, constants.CUSDC_MAINNET_ADDRESS
-        )
+            IERC20Artifact.abi,
+            constants.CUSDC_MAINNET_ADDRESS
+        );
 
-        this.BadBeaconDeployer = new web3.eth.Contract(BadBeaconArtifact.abi)
-        this.BadBeaconDeployer.options.data = BadBeaconArtifact.bytecode
+        this.BadBeaconDeployer = new web3.eth.Contract(BadBeaconArtifact.abi);
+        this.BadBeaconDeployer.options.data = BadBeaconArtifact.bytecode;
 
-        this.BadBeaconTwoDeployer = new web3.eth.Contract(BadBeaconTwoArtifact.abi)
-        this.BadBeaconTwoDeployer.options.data = BadBeaconTwoArtifact.bytecode
-
+        this.BadBeaconTwoDeployer = new web3.eth.Contract(
+            BadBeaconTwoArtifact.abi
+        );
+        this.BadBeaconTwoDeployer.options.data = BadBeaconTwoArtifact.bytecode;
 
         this.AdharmaSmartWalletImplementationDeployer = new web3.eth.Contract(
             AdharmaSmartWalletImplementationArtifact.abi
-        )
-        this.AdharmaSmartWalletImplementationDeployer.options.data = (
-            AdharmaSmartWalletImplementationArtifact.bytecode
-        )
+        );
+        this.AdharmaSmartWalletImplementationDeployer.options.data =
+            AdharmaSmartWalletImplementationArtifact.bytecode;
 
         this.DharmaSmartWalletImplementationV6Deployer = new web3.eth.Contract(
             DharmaSmartWalletImplementationV6Artifact.abi
-        )
-        this.DharmaSmartWalletImplementationV6Deployer.options.data = (
-            DharmaSmartWalletImplementationV6Artifact.bytecode
-        )
+        );
+        this.DharmaSmartWalletImplementationV6Deployer.options.data =
+            DharmaSmartWalletImplementationV6Artifact.bytecode;
 
         this.DharmaSmartWalletImplementationV7Deployer = new web3.eth.Contract(
             DharmaSmartWalletImplementationV7Artifact.abi
-        )
-        this.DharmaSmartWalletImplementationV7Deployer.options.data = (
-            DharmaSmartWalletImplementationV7Artifact.bytecode
-        )
+        );
+        this.DharmaSmartWalletImplementationV7Deployer.options.data =
+            DharmaSmartWalletImplementationV7Artifact.bytecode;
 
         this.AdharmaKeyRingImplementationDeployer = new web3.eth.Contract(
             AdharmaKeyRingImplementationArtifact.abi
-        )
-        this.AdharmaKeyRingImplementationDeployer.options.data = (
-            AdharmaKeyRingImplementationArtifact.bytecode
-        )
+        );
+        this.AdharmaKeyRingImplementationDeployer.options.data =
+            AdharmaKeyRingImplementationArtifact.bytecode;
 
         this.DharmaKeyRingImplementationV1Deployer = new web3.eth.Contract(
             DharmaKeyRingImplementationV1Artifact.abi
-        )
-        this.DharmaKeyRingImplementationV1Deployer.options.data = (
-            DharmaKeyRingImplementationV1Artifact.bytecode
-        )
+        );
+        this.DharmaKeyRingImplementationV1Deployer.options.data =
+            DharmaKeyRingImplementationV1Artifact.bytecode;
 
         this.UpgradeBeaconImplementationCheckDeployer = new web3.eth.Contract(
             UpgradeBeaconImplementationCheckArtifact.abi
-        )
-        this.UpgradeBeaconImplementationCheckDeployer.options.data = (
-            UpgradeBeaconImplementationCheckArtifact.bytecode
-        )
+        );
+        this.UpgradeBeaconImplementationCheckDeployer.options.data =
+            UpgradeBeaconImplementationCheckArtifact.bytecode;
 
         this.TimelockEdgecaseTesterDeployer = new web3.eth.Contract(
             TimelockEdgecaseTesterArtifact.abi
-        )
-        this.TimelockEdgecaseTesterDeployer.options.data = (
-            TimelockEdgecaseTesterArtifact.bytecode
-        )
+        );
+        this.TimelockEdgecaseTesterDeployer.options.data =
+            TimelockEdgecaseTesterArtifact.bytecode;
 
         this.DharmaUpgradeBeaconControllerDeployer = new web3.eth.Contract(
             DharmaUpgradeBeaconControllerArtifact.abi
-        )
-        this.DharmaUpgradeBeaconControllerDeployer.options.data = (
-            DharmaUpgradeBeaconControllerArtifact.bytecode
-        )
+        );
+        this.DharmaUpgradeBeaconControllerDeployer.options.data =
+            DharmaUpgradeBeaconControllerArtifact.bytecode;
 
         this.DharmaUpgradeBeaconDeployer = new web3.eth.Contract(
             DharmaUpgradeBeaconArtifact.abi
-        )
-        this.DharmaUpgradeBeaconDeployer.options.data = (
-            DharmaUpgradeBeaconArtifact.bytecode
-        )
+        );
+        this.DharmaUpgradeBeaconDeployer.options.data =
+            DharmaUpgradeBeaconArtifact.bytecode;
 
         this.DharmaKeyRingUpgradeBeaconDeployer = new web3.eth.Contract(
             DharmaKeyRingUpgradeBeaconArtifact.abi
-        )
-        this.DharmaKeyRingUpgradeBeaconDeployer.options.data = (
-            DharmaKeyRingUpgradeBeaconArtifact.bytecode
-        )
+        );
+        this.DharmaKeyRingUpgradeBeaconDeployer.options.data =
+            DharmaKeyRingUpgradeBeaconArtifact.bytecode;
 
         this.DharmaUpgradeBeaconEnvoyDeployer = new web3.eth.Contract(
             DharmaUpgradeBeaconEnvoyArtifact.abi
-        )
-        this.DharmaUpgradeBeaconEnvoyDeployer.options.data = (
-            DharmaUpgradeBeaconEnvoyArtifact.bytecode
-        )
+        );
+        this.DharmaUpgradeBeaconEnvoyDeployer.options.data =
+            DharmaUpgradeBeaconEnvoyArtifact.bytecode;
 
         this.DharmaUpgradeBeaconControllerManagerDeployer = new web3.eth.Contract(
             DharmaUpgradeBeaconControllerManagerArtifact.abi
-        )
-        this.DharmaUpgradeBeaconControllerManagerDeployer.options.data = (
-            DharmaUpgradeBeaconControllerManagerArtifact.bytecode
-        )
+        );
+        this.DharmaUpgradeBeaconControllerManagerDeployer.options.data =
+            DharmaUpgradeBeaconControllerManagerArtifact.bytecode;
 
         this.UpgradeBeaconProxyV1Deployer = new web3.eth.Contract(
             UpgradeBeaconProxyV1Artifact.abi
-        )
-        this.UpgradeBeaconProxyV1Deployer.options.data = (
-            UpgradeBeaconProxyV1Artifact.bytecode
-        )
+        );
+        this.UpgradeBeaconProxyV1Deployer.options.data =
+            UpgradeBeaconProxyV1Artifact.bytecode;
 
         this.KeyRingUpgradeBeaconProxyV1Deployer = new web3.eth.Contract(
             KeyRingUpgradeBeaconProxyV1Artifact.abi
-        )
-        this.KeyRingUpgradeBeaconProxyV1Deployer.options.data = (
-            KeyRingUpgradeBeaconProxyV1Artifact.bytecode
-        )
+        );
+        this.KeyRingUpgradeBeaconProxyV1Deployer.options.data =
+            KeyRingUpgradeBeaconProxyV1Artifact.bytecode;
 
         this.DharmaKeyRegistryV2Deployer = new web3.eth.Contract(
             DharmaKeyRegistryV2Artifact.abi
-        )
-        this.DharmaKeyRegistryV2Deployer.options.data = (
-            DharmaKeyRegistryV2Artifact.bytecode
-        )
+        );
+        this.DharmaKeyRegistryV2Deployer.options.data =
+            DharmaKeyRegistryV2Artifact.bytecode;
 
         this.DharmaSmartWalletFactoryV1Deployer = new web3.eth.Contract(
             DharmaSmartWalletFactoryV1Artifact.abi
-        )
-        this.DharmaSmartWalletFactoryV1Deployer.options.data = (
-            DharmaSmartWalletFactoryV1Artifact.bytecode
-        )
+        );
+        this.DharmaSmartWalletFactoryV1Deployer.options.data =
+            DharmaSmartWalletFactoryV1Artifact.bytecode;
 
         this.DharmaSmartWalletFactoryV2Deployer = new web3.eth.Contract(
             DharmaSmartWalletFactoryV2Artifact.abi
-        )
-        this.DharmaSmartWalletFactoryV2Deployer.options.data = (
-            DharmaSmartWalletFactoryV2Artifact.bytecode
-        )
+        );
+        this.DharmaSmartWalletFactoryV2Deployer.options.data =
+            DharmaSmartWalletFactoryV2Artifact.bytecode;
 
         this.DharmaKeyRingFactoryV1Deployer = new web3.eth.Contract(
             DharmaKeyRingFactoryV1Artifact.abi
-        )
-        this.DharmaKeyRingFactoryV1Deployer.options.data = (
-            DharmaKeyRingFactoryV1Artifact.bytecode
-        )
+        );
+        this.DharmaKeyRingFactoryV1Deployer.options.data =
+            DharmaKeyRingFactoryV1Artifact.bytecode;
 
         this.DharmaKeyRingFactoryV2Deployer = new web3.eth.Contract(
             DharmaKeyRingFactoryV2Artifact.abi
-        )
-        this.DharmaKeyRingFactoryV2Deployer.options.data = (
-            DharmaKeyRingFactoryV2Artifact.bytecode
-        )
+        );
+        this.DharmaKeyRingFactoryV2Deployer.options.data =
+            DharmaKeyRingFactoryV2Artifact.bytecode;
 
         this.DharmaKeyRingFactoryV3Deployer = new web3.eth.Contract(
             DharmaKeyRingFactoryV3Artifact.abi
-        )
-        this.DharmaKeyRingFactoryV3Deployer.options.data = (
-            DharmaKeyRingFactoryV3Artifact.bytecode
-        )
+        );
+        this.DharmaKeyRingFactoryV3Deployer.options.data =
+            DharmaKeyRingFactoryV3Artifact.bytecode;
 
         this.MockDharmaKeyRingFactoryDeployer = new web3.eth.Contract(
             MockDharmaKeyRingFactoryArtifact.abi
-        )
-        this.MockDharmaKeyRingFactoryDeployer.options.data = (
-            MockDharmaKeyRingFactoryArtifact.bytecode
-        )
+        );
+        this.MockDharmaKeyRingFactoryDeployer.options.data =
+            MockDharmaKeyRingFactoryArtifact.bytecode;
 
         this.DharmaAccountRecoveryManagerV2Deployer = new web3.eth.Contract(
             DharmaAccountRecoveryManagerV2Artifact.abi
-        )
-        this.DharmaAccountRecoveryManagerV2Deployer.options.data = (
-            DharmaAccountRecoveryManagerV2Artifact.bytecode
-        )
+        );
+        this.DharmaAccountRecoveryManagerV2Deployer.options.data =
+            DharmaAccountRecoveryManagerV2Artifact.bytecode;
 
         this.DharmaUpgradeMultisigDeployer = new web3.eth.Contract(
             DharmaUpgradeMultisigArtifact.abi
-        )
-        this.DharmaUpgradeMultisigDeployer.options.data = (
-            DharmaUpgradeMultisigArtifact.bytecode
-        )
+        );
+        this.DharmaUpgradeMultisigDeployer.options.data =
+            DharmaUpgradeMultisigArtifact.bytecode;
 
         this.DharmaAccountRecoveryMultisigDeployer = new web3.eth.Contract(
             DharmaAccountRecoveryMultisigArtifact.abi
-        )
-        this.DharmaAccountRecoveryMultisigDeployer.options.data = (
-            DharmaAccountRecoveryMultisigArtifact.bytecode
-        )
+        );
+        this.DharmaAccountRecoveryMultisigDeployer.options.data =
+            DharmaAccountRecoveryMultisigArtifact.bytecode;
 
         this.DharmaAccountRecoveryOperatorMultisigDeployer = new web3.eth.Contract(
             DharmaAccountRecoveryOperatorMultisigArtifact.abi
-        )
-        this.DharmaAccountRecoveryOperatorMultisigDeployer.options.data = (
-            DharmaAccountRecoveryOperatorMultisigArtifact.bytecode
-        )
+        );
+        this.DharmaAccountRecoveryOperatorMultisigDeployer.options.data =
+            DharmaAccountRecoveryOperatorMultisigArtifact.bytecode;
 
         this.DharmaKeyRegistryMultisigDeployer = new web3.eth.Contract(
             DharmaKeyRegistryMultisigArtifact.abi
-        )
-        this.DharmaKeyRegistryMultisigDeployer.options.data = (
-            DharmaKeyRegistryMultisigArtifact.bytecode
-        )
+        );
+        this.DharmaKeyRegistryMultisigDeployer.options.data =
+            DharmaKeyRegistryMultisigArtifact.bytecode;
 
         this.DharmaEscapeHatchRegistryDeployer = new web3.eth.Contract(
             DharmaEscapeHatchRegistryArtifact.abi
-        )
-        this.DharmaEscapeHatchRegistryDeployer.options.data = (
-            DharmaEscapeHatchRegistryArtifact.bytecode
-        )
-
-
+        );
+        this.DharmaEscapeHatchRegistryDeployer.options.data =
+            DharmaEscapeHatchRegistryArtifact.bytecode;
     }
 }
 
@@ -1212,49 +1220,49 @@ function swapMetadataHash(bytecode, newMetadataHashes) {
     const totalBzzrs = bytecode.split(constants.METADATA_IDENTIFIER).length - 1;
 
     if (totalBzzrs !== newMetadataHashes.length) {
-        throw("number of metadata hashes to replace must match provided number.");
+        throw "number of metadata hashes to replace must match provided number.";
     }
 
     let startingPoint = bytecode.length - 1;
 
     for (let i = 0; i < totalBzzrs; i++) {
-        let replacement = constants.METADATA_IDENTIFIER + newMetadataHashes.slice(i)[0];
+        let replacement =
+            constants.METADATA_IDENTIFIER + newMetadataHashes.slice(i)[0];
         let lastIndex = bytecode.lastIndexOf(
-            constants.METADATA_IDENTIFIER, startingPoint
+            constants.METADATA_IDENTIFIER,
+            startingPoint
         );
-        bytecode = (
-            bytecode.slice(0, lastIndex) + replacement + bytecode.slice(
-                lastIndex + replacement.length, bytecode.length
-            )
-        );
+        bytecode =
+            bytecode.slice(0, lastIndex) +
+            replacement +
+            bytecode.slice(lastIndex + replacement.length, bytecode.length);
         startingPoint = lastIndex - 1;
     }
     return bytecode;
 }
 
 function newContractAndSwapMetadataHash(artifact) {
-    const contract = new web3.eth.Contract(
-        artifact.abi
-    );
+    const contract = new web3.eth.Contract(artifact.abi);
 
-    contract.options.data = (
-        swapMetadataHash(
-            artifact.bytecode,
-            ['0000000000000000000000000000000000000000000000000000000000000000']
-        )
-    );
+    contract.options.data = swapMetadataHash(artifact.bytecode, [
+        "0000000000000000000000000000000000000000000000000000000000000000"
+    ]);
 
     return contract;
 }
 
 // used to wait for more confirmations
 function longer() {
-    return new Promise(resolve => {setTimeout(() => {resolve()}, 500)})
+    return new Promise(resolve => {
+        setTimeout(() => {
+            resolve();
+        }, 500);
+    });
 }
 
 module.exports = {
     Tester,
     swapMetadataHash,
     newContractAndSwapMetadataHash,
-    longer,
+    longer
 };

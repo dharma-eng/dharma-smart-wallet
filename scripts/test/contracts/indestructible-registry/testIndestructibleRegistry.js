@@ -1,81 +1,81 @@
 const constants = require("../../constants");
 const { newContractAndSwapMetadataHash } = require("../../testHelpers");
 
-const IndestructibleRegistryArtifact = require('../../../../build/contracts/IndestructibleRegistry.json');
+const IndestructibleRegistryArtifact = require("../../../../build/contracts/IndestructibleRegistry.json");
 
 async function testIndestructibleRegistry(tester, contracts) {
     const {
         DharmaSmartWalletImplementationV6,
         DharmaSmartWalletImplementationV7,
-        DharmaKeyRingImplementationV1,
+        DharmaKeyRingImplementationV1
     } = contracts;
 
-    const IndestructibleRegistryDeployer =  newContractAndSwapMetadataHash(
+    const IndestructibleRegistryDeployer = newContractAndSwapMetadataHash(
         IndestructibleRegistryArtifact
     );
 
     const IndestructibleRegistry = await tester.runTest(
         `IndestructibleRegistry contract deployment`,
         IndestructibleRegistryDeployer,
-        '',
-        'deploy'
-    )
+        "",
+        "deploy"
+    );
 
     await tester.runTest(
-        'IndestructibleRegistry can register itself as indestructible',
+        "IndestructibleRegistry can register itself as indestructible",
         IndestructibleRegistry,
-        'registerAsIndestructible',
-        'send',
+        "registerAsIndestructible",
+        "send",
         [IndestructibleRegistry.options.address]
-    )
+    );
 
     await tester.runTest(
-        'IndestructibleRegistry can register the upgrade beacon as indestructible',
+        "IndestructibleRegistry can register the upgrade beacon as indestructible",
         IndestructibleRegistry,
-        'registerAsIndestructible',
-        'send',
+        "registerAsIndestructible",
+        "send",
         [constants.UPGRADE_BEACON_ADDRESS]
-    )
+    );
 
     await tester.runTest(
-        'IndestructibleRegistry can register the upgrade beacon controller as indestructible',
+        "IndestructibleRegistry can register the upgrade beacon controller as indestructible",
         IndestructibleRegistry,
-        'registerAsIndestructible',
-        'send',
+        "registerAsIndestructible",
+        "send",
         [constants.UPGRADE_BEACON_CONTROLLER_ADDRESS]
-    )
+    );
 
     await tester.runTest(
-        'IndestructibleRegistry can register the key ring upgrade beacon as indestructible',
+        "IndestructibleRegistry can register the key ring upgrade beacon as indestructible",
         IndestructibleRegistry,
-        'registerAsIndestructible',
-        'send',
+        "registerAsIndestructible",
+        "send",
         [constants.KEY_RING_UPGRADE_BEACON_ADDRESS]
-    )
+    );
 
     await tester.runTest(
-        'IndestructibleRegistry can register the key ring upgrade beacon controller as indestructible',
+        "IndestructibleRegistry can register the key ring upgrade beacon controller as indestructible",
         IndestructibleRegistry,
-        'registerAsIndestructible',
-        'send',
+        "registerAsIndestructible",
+        "send",
         [constants.KEY_RING_UPGRADE_BEACON_CONTROLLER_ADDRESS]
-    )
+    );
 
     await tester.runTest(
-        'IndestructibleRegistry can register the upgrade beacon envoy as indestructible',
+        "IndestructibleRegistry can register the upgrade beacon envoy as indestructible",
         IndestructibleRegistry,
-        'registerAsIndestructible',
-        'send',
+        "registerAsIndestructible",
+        "send",
         [constants.UPGRADE_BEACON_ENVOY_ADDRESS]
-    )
+    );
 
     await tester.runTest(
-        'IndestructibleRegistry can register the account recovery manager V2 as indestructible',
+        "IndestructibleRegistry can register the account recovery manager V2 as indestructible",
         IndestructibleRegistry,
-        'registerAsIndestructible',
-        'send',
+        "registerAsIndestructible",
+        "send",
         [constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS]
-    )
+    );
 
     /*
     await tester.runTest(
@@ -88,45 +88,45 @@ async function testIndestructibleRegistry(tester, contracts) {
     */
 
     await tester.runTest(
-        'IndestructibleRegistry can register DharmaKeyRegistryV2 as indestructible',
+        "IndestructibleRegistry can register DharmaKeyRegistryV2 as indestructible",
         IndestructibleRegistry,
-        'registerAsIndestructible',
-        'send',
+        "registerAsIndestructible",
+        "send",
         [constants.KEY_REGISTRY_V2_ADDRESS]
-    )
+    );
 
     await tester.runTest(
-        'IndestructibleRegistry can register DharmaEscapeHatchRegistry as indestructible',
+        "IndestructibleRegistry can register DharmaEscapeHatchRegistry as indestructible",
         IndestructibleRegistry,
-        'registerAsIndestructible',
-        'send',
+        "registerAsIndestructible",
+        "send",
         [constants.ESCAPE_HATCH_REGISTRY_ADDRESS]
-    )
+    );
 
     await tester.runTest(
-        'WARNING: IndestructibleRegistry CANNOT register the smart wallet factory as indestructible (even though it is in fact NOT destructible)',
+        "WARNING: IndestructibleRegistry CANNOT register the smart wallet factory as indestructible (even though it is in fact NOT destructible)",
         IndestructibleRegistry,
-        'registerAsIndestructible',
-        'send',
+        "registerAsIndestructible",
+        "send",
         [constants.FACTORY_ADDRESS],
         false
-    )
+    );
 
     await tester.runTest(
-        'IndestructibleRegistry can register the Adharma smart wallet implementation as indestructible',
+        "IndestructibleRegistry can register the Adharma smart wallet implementation as indestructible",
         IndestructibleRegistry,
-        'registerAsIndestructible',
-        'send',
+        "registerAsIndestructible",
+        "send",
         [constants.ADHARMA_SMART_WALLET_IMPLEMENTATION_ADDRESS]
-    )
+    );
 
     await tester.runTest(
-        'IndestructibleRegistry can register the Adharma key ring implementation as indestructible',
+        "IndestructibleRegistry can register the Adharma key ring implementation as indestructible",
         IndestructibleRegistry,
-        'registerAsIndestructible',
-        'send',
+        "registerAsIndestructible",
+        "send",
         [constants.ADHARMA_KEY_RING_IMPLEMENTATION_ADDRESS]
-    )
+    );
 
     /*
     await tester.runTest(
@@ -156,7 +156,7 @@ async function testIndestructibleRegistry(tester, contracts) {
     )
     */
 
-    if (tester.context !== 'coverage') {
+    if (tester.context !== "coverage") {
         /*
         await tester.runTest(
             'IndestructibleRegistry can register V2 implementation as indestructible',
@@ -193,28 +193,28 @@ async function testIndestructibleRegistry(tester, contracts) {
         */
 
         await tester.runTest(
-            'IndestructibleRegistry can register V6 implementation as indestructible',
+            "IndestructibleRegistry can register V6 implementation as indestructible",
             IndestructibleRegistry,
-            'registerAsIndestructible',
-            'send',
+            "registerAsIndestructible",
+            "send",
             [DharmaSmartWalletImplementationV6.options.address]
-        )
+        );
 
         await tester.runTest(
-            'IndestructibleRegistry can register V7 implementation as indestructible',
+            "IndestructibleRegistry can register V7 implementation as indestructible",
             IndestructibleRegistry,
-            'registerAsIndestructible',
-            'send',
+            "registerAsIndestructible",
+            "send",
             [DharmaSmartWalletImplementationV7.options.address]
-        )
+        );
 
         await tester.runTest(
-            'IndestructibleRegistry can register V1 key ring implementation as indestructible',
+            "IndestructibleRegistry can register V1 key ring implementation as indestructible",
             IndestructibleRegistry,
-            'registerAsIndestructible',
-            'send',
+            "registerAsIndestructible",
+            "send",
             [DharmaKeyRingImplementationV1.options.address]
-        )
+        );
     }
 
     /*
@@ -228,15 +228,14 @@ async function testIndestructibleRegistry(tester, contracts) {
     */
 
     await tester.runTest(
-        'IndestructibleRegistry can register the upgrade beacon controller manager as indestructible',
+        "IndestructibleRegistry can register the upgrade beacon controller manager as indestructible",
         IndestructibleRegistry,
-        'registerAsIndestructible',
-        'send',
+        "registerAsIndestructible",
+        "send",
         [constants.UPGRADE_BEACON_CONTROLLER_MANAGER_ADDRESS]
-    )
+    );
 }
 
 module.exports = {
-    testIndestructibleRegistry,
-}
-
+    testIndestructibleRegistry
+};
