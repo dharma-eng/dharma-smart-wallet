@@ -842,19 +842,6 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V6 UserSmartWallet relay can trigger cSai to cDai migration before cDai approval",
-        UserSmartWalletV6,
-        "migrateCSaiToCDai",
-        "send",
-        [],
-        true,
-        receipt => {
-            // TODO: verify logs
-        },
-        tester.originalAddress
-    );
-
-    await tester.runTest(
         "V6 UserSmartWallet can get next custom action ID",
         UserSmartWalletV6,
         "getNextCustomActionID",
@@ -3618,27 +3605,6 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "cSai can be sent to V7 UserSmartWallet",
-        tester.CSAI,
-        "transfer",
-        "send",
-        [UserSmartWalletV7.options.address, web3.utils.toWei("0.5", "mwei")]
-    );
-
-    await tester.runTest(
-        "V7 UserSmartWallet relay can trigger cSai to dDai migration before dDai approval",
-        UserSmartWalletV7,
-        "migrateCSaiToDDai",
-        "send",
-        [],
-        true,
-        receipt => {
-            // TODO: verify logs
-        },
-        tester.originalAddress
-    );
-
-    await tester.runTest(
         "V7 UserSmartWallet can get next custom action ID",
         UserSmartWalletV7,
         "getNextCustomActionID",
@@ -6390,20 +6356,15 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can trigger sai to dai migration as a no-op",
-        UserSmartWalletV7,
-        "migrateSaiToDai",
+        "cSai can be sent to V7 UserSmartWallet",
+        tester.CSAI,
+        "transfer",
         "send",
-        [],
-        true,
-        receipt => {
-            // TODO: verify logs
-        },
-        tester.originalAddress
+        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "mwei")]
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can trigger cSai to dDai migration as a no-op",
+        "V7 UserSmartWallet relay can trigger cSai to dDai migration",
         UserSmartWalletV7,
         "migrateCSaiToDDai",
         "send",
@@ -6416,11 +6377,92 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "cSai can be sent to V7 UserSmartWallet",
-        tester.CSAI,
+        "V7 UserSmartWallet relay can trigger cSai to dDai migration again (no-op)",
+        UserSmartWalletV7,
+        "migrateCSaiToDDai",
+        "send",
+        [],
+        true,
+        receipt => {
+            // TODO: verify logs
+        },
+        tester.originalAddress
+    );
+
+    await tester.runTest(
+        "cDai can be sent to V7 UserSmartWallet",
+        tester.CDAI,
         "transfer",
         "send",
-        [UserSmartWalletV7.options.address, web3.utils.toWei("0.5", "mwei")]
+        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "mwei")]
+    );
+
+    await tester.runTest(
+        "V7 UserSmartWallet relay can trigger cDai to dDai migration",
+        UserSmartWalletV7,
+        "migrateCDaiToDDai",
+        "send",
+        [],
+        true,
+        receipt => {
+            // TODO: verify logs
+        },
+        tester.originalAddress
+    );
+
+    await tester.runTest(
+        "cDai can be sent to V7 UserSmartWallet again",
+        tester.CDAI,
+        "transfer",
+        "send",
+        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "mwei")]
+    );
+
+    await tester.runTest(
+        "V7 UserSmartWallet relay can trigger cDai to dDai migration again",
+        UserSmartWalletV7,
+        "migrateCDaiToDDai",
+        "send",
+        [],
+        true,
+        receipt => {
+            // TODO: verify logs
+        },
+        tester.originalAddress
+    );
+
+    await tester.runTest(
+        "cUSDC can be sent to V7 UserSmartWallet",
+        tester.CUSDC,
+        "transfer",
+        "send",
+        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "lovelace")]
+    );
+
+    await tester.runTest(
+        "V7 UserSmartWallet relay can trigger cUSDC to dUSDC migration",
+        UserSmartWalletV7,
+        "migrateCUSDCToDUSDC",
+        "send",
+        [],
+        true,
+        receipt => {
+            // TODO: verify logs
+        },
+        tester.originalAddress
+    );
+
+    await tester.runTest(
+        "V7 UserSmartWallet relay can trigger cUSDC to dUSDC migration again (no-op)",
+        UserSmartWalletV7,
+        "migrateCUSDCToDUSDC",
+        "send",
+        [],
+        true,
+        receipt => {
+            // TODO: verify logs
+        },
+        tester.originalAddress
     );
 
     await tester.runTest(
@@ -6450,6 +6492,58 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
+        "Dai Whale can deposit dai into the V7 user smart wallet",
+        tester.DAI,
+        "transfer",
+        "send",
+        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "ether")],
+        true,
+        receipt => {
+            if (testingContext !== "coverage") {
+                assert.strictEqual(
+                    receipt.events.Transfer.returnValues.from,
+                    constants.DAI_WHALE_ADDRESS
+                );
+                assert.strictEqual(
+                    receipt.events.Transfer.returnValues.to,
+                    UserSmartWalletV7.options.address
+                );
+                assert.strictEqual(
+                    receipt.events.Transfer.returnValues.value,
+                    web3.utils.toWei("1", "ether")
+                );
+            }
+        },
+        constants.DAI_WHALE_ADDRESS
+    );
+
+    await tester.runTest(
+        "USDC Whale can deposit usdc into the V7 user smart wallet",
+        tester.USDC,
+        "transfer",
+        "send",
+        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "lovelace")],
+        true,
+        receipt => {
+            if (testingContext !== "coverage") {
+                assert.strictEqual(
+                    receipt.events.Transfer.returnValues.from,
+                    constants.USDC_WHALE_ADDRESS
+                );
+                assert.strictEqual(
+                    receipt.events.Transfer.returnValues.to,
+                    UserSmartWalletV7.options.address
+                );
+                assert.strictEqual(
+                    receipt.events.Transfer.returnValues.value,
+                    web3.utils.toWei("1", "lovelace")
+                );
+            }
+        },
+        constants.USDC_WHALE_ADDRESS
+    );
+
+    await tester.runTest(
         "V7 UserSmartWallet relay can trigger sai to dai migration",
         UserSmartWalletV7,
         "migrateSaiToDai",
@@ -6463,9 +6557,9 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can trigger cSai to dDai migration",
+        "V7 UserSmartWallet relay can trigger sai to dai migration again (no-op)",
         UserSmartWalletV7,
-        "migrateCSaiToDDai",
+        "migrateSaiToDai",
         "send",
         [],
         true,
@@ -6474,6 +6568,7 @@ async function test(testingContext) {
         },
         tester.originalAddress
     );
+
 
     // Initiate account recovery
     await tester.runTest(
