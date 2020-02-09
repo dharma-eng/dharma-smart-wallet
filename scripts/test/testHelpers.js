@@ -44,6 +44,8 @@ const TimelockEdgecaseTesterArtifact = require("../../build/contracts/TimelockEd
 
 const MockDharmaKeyRingFactoryArtifact = require("../../build/contracts/MockDharmaKeyRingFactory.json");
 const IERC20Artifact = require("../../build/contracts/IERC20.json");
+const CTokenInterfaceArtifact = require("../../build/contracts/CTokenInterface.json");
+const BalanceCheckerArtifact = require("../../build/contracts/BalanceChecker.json");
 
 class Tester {
     constructor(testingContext) {
@@ -96,6 +98,18 @@ class Tester {
         );
 
         this.gasLimit = latestBlock.gasLimit;
+
+        const BalanceCheckerDeployer = new web3.eth.Contract(
+            BalanceCheckerArtifact.abi
+        );
+        BalanceCheckerDeployer.options.data = BalanceCheckerArtifact.bytecode;
+
+        this.BalanceChecker = await this.runTest(
+            `BalanceChecker contract deployment`,
+            BalanceCheckerDeployer,
+            "",
+            "deploy"
+        );
 
         const MockCodeCheckDeployer = new web3.eth.Contract(
             MockCodeCheckArtifact.abi
@@ -769,6 +783,37 @@ class Tester {
         }
     }
 
+    async getBalances(account) {
+        const balances = await this.BalanceChecker.methods.getBalances(account)
+            .call()
+            .catch(error => {
+                console.error(error);
+                process.exit(1);
+            });
+
+        return {
+          account,
+          dDai: parseFloat(web3.utils.fromWei(balances.dDaiBalance, 'gwei')) * 10,
+          dUSDC: parseFloat(web3.utils.fromWei(balances.dUSDCBalance, 'gwei')) * 10,
+          dai: parseFloat(web3.utils.fromWei(balances.daiBalance, 'ether')),
+          usdc: parseFloat(web3.utils.fromWei(balances.usdcBalance, 'mwei')),
+          sai: parseFloat(web3.utils.fromWei(balances.saiBalance, 'ether')),
+          cSai: parseFloat(web3.utils.fromWei(balances.cSaiBalance, 'gwei')) * 10,
+          cDai: parseFloat(web3.utils.fromWei(balances.cDaiBalance, 'gwei')) * 10,
+          cUSDC: parseFloat(web3.utils.fromWei(balances.cUSDCBalance, 'gwei')) * 10,
+          ether: parseFloat(web3.utils.fromWei(balances.etherBalance, 'ether')),
+          dDaiRaw: balances.dDaiBalance,
+          dUSDCRaw: balances.dUSDCBalance,
+          daiRaw: balances.daiBalance,
+          usdcRaw: balances.usdcBalance,
+          saiRaw: balances.saiBalance,
+          cSaiRaw: balances.cSaiBalance,
+          cDaiRaw: balances.cDaiBalance,
+          cUSDCRaw: balances.cUSDCBalance,
+          etherRaw: balances.etherBalance
+        };
+    }
+
     getEvents(receipt, contractNames) {
         const { events } = receipt;
 
@@ -1031,6 +1076,11 @@ class Tester {
 
         this.CSAI = new web3.eth.Contract(
             IERC20Artifact.abi,
+            constants.CSAI_MAINNET_ADDRESS
+        );
+
+        this.CSAI_MINT = new web3.eth.Contract(
+            CTokenInterfaceArtifact.abi,
             constants.CSAI_MAINNET_ADDRESS
         );
 

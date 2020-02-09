@@ -6210,6 +6210,8 @@ async function test(testingContext) {
         tester.address
     );
 
+
+
     await tester.runTest(
         "V7 UserSmartWallet escape hatch account can call escape again",
         UserSmartWalletV7,
@@ -6356,12 +6358,31 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
+        "grant allowance in order to mint cSai",
+        tester.SAI,
+        "approve",
+        "send",
+        [tester.CSAI.options.address, web3.utils.toWei('100', 'ether')]
+    );
+
+    await tester.runTest(
+        "mint cSai",
+        tester.CSAI_MINT,
+        "mint",
+        "send",
+        [web3.utils.toWei('100', 'ether')]
+    );
+
+    await tester.runTest(
         "cSai can be sent to V7 UserSmartWallet",
         tester.CSAI,
         "transfer",
         "send",
-        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "mwei")]
+        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "gwei")]
     );
+
+    const walletBalance = await tester.getBalances(UserSmartWalletV7.options.address);
+    assert.strictEqual(walletBalance.cSai, 10.0);
 
     await tester.runTest(
         "V7 UserSmartWallet relay can trigger cSai to dDai migration",
@@ -6810,7 +6831,7 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        `KeyRingInstance can does not verify a bad signature`,
+        `KeyRingInstance does not verify a bad signature`,
         KeyRingInstance,
         "isValidSignature",
         "call",
