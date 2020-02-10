@@ -31,6 +31,8 @@ const DharmaKeyRingImplementationV1Artifact = require("../../build/contracts/Dha
 
 const contractNames = Object.assign({}, constants.CONTRACT_NAMES);
 
+const ONE = web3.utils.toBN("1");
+
 async function test(testingContext) {
     const tester = new Tester(testingContext);
     await tester.init();
@@ -5693,7 +5695,7 @@ async function test(testingContext) {
         [
             6, // ETHWithdrawal,
             "1",
-            targetWalletAddress,
+            tester.address,
             0
         ],
         true,
@@ -5712,24 +5714,57 @@ async function test(testingContext) {
         tester.addressTwo
     );
 
-    await tester.runTest(
-        "V7 UserSmartWallet relay cannot withdraw eth to a non-payable account",
-        UserSmartWalletV7,
-        "withdrawEther",
-        "send",
+    const preETHwithdrawalBalance = {
+        etherRaw: "99999999999999996"
+    };
+
+    const postETHWithdrawalBalance = {
+        etherRaw: "99999999999999995"
+    };
+
+    const recipientETHBalance = (await tester.getBalances(tester.address))
+        .etherRaw;
+
+    const preETHWithdrawalRecipientBalance = {
+        etherRaw: recipientETHBalance
+    };
+
+    const recipientBalance = web3.utils.toBN(recipientETHBalance).add(ONE);
+
+    const postETHWithdrawalRecipientBalance = {
+        etherRaw: recipientBalance.toString()
+    };
+
+    await tester.withBalanceCheck(
+        UserSmartWalletV7.options.address,
+        preETHwithdrawalBalance,
+        postETHWithdrawalBalance,
+        tester.withBalanceCheck,
         [
-            "1",
-            targetWalletAddress,
-            0,
-            ethUserWithdrawalSignature,
-            ethWithdrawalSignature
-        ],
-        true,
-        receipt => {
-            // TODO: verify logs
-            //console.log(receipt)
-        },
-        tester.originalAddress
+            tester.address,
+            preETHWithdrawalRecipientBalance,
+            postETHWithdrawalRecipientBalance,
+            tester.runTest,
+            [
+                "V7 UserSmartWallet relay can call with two signatures to withdraw ETH",
+                UserSmartWalletV7,
+                "withdrawEther",
+                "send",
+                [
+                    "1",
+                    tester.address,
+                    0,
+                    ethUserWithdrawalSignature,
+                    ethWithdrawalSignature
+                ],
+                true,
+                receipt => {
+                    // TODO: verify logs
+                    //console.log(receipt)
+                },
+                tester.originalAddress
+            ]
+        ]
     );
 
     await tester.runTest(
@@ -6671,7 +6706,7 @@ async function test(testingContext) {
         [UserSmartWalletV7.options.address, tester.addressTwo],
         true,
         value => {
-            assert.strictEqual(value, '0');
+            assert.strictEqual(value, "0");
         }
     );
 
@@ -6685,7 +6720,12 @@ async function test(testingContext) {
             "0x2d657fa5", // `modifyAllowanceViaMetaTransaction`
             web3.eth.abi.encodeParameters(
                 ["address", "address", "uint256", "bool"],
-                [UserSmartWalletV7.options.address, tester.addressTwo, '1', true]
+                [
+                    UserSmartWalletV7.options.address,
+                    tester.addressTwo,
+                    "1",
+                    true
+                ]
             ),
             0, // No expiration
             constants.NULL_BYTES_32 // no salt
@@ -6707,8 +6747,10 @@ async function test(testingContext) {
         tester.addressTwo
     );
 
-    const messageHashBadSignature = '0xaaaaaaaa' + messageHashSignature.slice(10)
-    const messageHashBadUserSignature = '0xaaaaaaaa' + messageHashUserSignature.slice(10)
+    const messageHashBadSignature =
+        "0xaaaaaaaa" + messageHashSignature.slice(10);
+    const messageHashBadUserSignature =
+        "0xaaaaaaaa" + messageHashUserSignature.slice(10);
 
     await tester.runTest(
         `dUSDC allowance is not modifiable via meta-transaction with bad signature length`,
@@ -6718,11 +6760,11 @@ async function test(testingContext) {
         [
             UserSmartWalletV7.options.address,
             tester.addressTwo,
-            '1',
+            "1",
             true,
             0,
             constants.NULL_BYTES_32,
-            messageHashSignature + messageHashUserSignature.slice(2) + 'aa'
+            messageHashSignature + messageHashUserSignature.slice(2) + "aa"
         ],
         false
     );
@@ -6735,7 +6777,7 @@ async function test(testingContext) {
         [
             UserSmartWalletV7.options.address,
             tester.addressTwo,
-            '1',
+            "1",
             true,
             0,
             constants.NULL_BYTES_32,
@@ -6752,7 +6794,7 @@ async function test(testingContext) {
         [
             UserSmartWalletV7.options.address,
             tester.addressTwo,
-            '1',
+            "1",
             true,
             0,
             constants.NULL_BYTES_32,
@@ -6769,7 +6811,7 @@ async function test(testingContext) {
         [
             UserSmartWalletV7.options.address,
             tester.addressTwo,
-            '1',
+            "1",
             true,
             0,
             constants.NULL_BYTES_32,
@@ -6789,7 +6831,7 @@ async function test(testingContext) {
         [UserSmartWalletV7.options.address, tester.addressTwo],
         true,
         value => {
-            assert.strictEqual(value, '1');
+            assert.strictEqual(value, "1");
         }
     );
 
