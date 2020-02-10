@@ -25,17 +25,18 @@ import "../../helpers/SmartWalletRevertReasonHelperV1.sol";
  * @author 0age
  * @notice The V7 implementation for the Dharma smart wallet is a non-custodial,
  * meta-transaction-enabled wallet with helper functions to facilitate lending
- * funds through Dharma Dai and Dharma USDC (which in turn use CompoundV2), and
- * with a security backstop provided by Dharma Labs prior to making withdrawals.
- * It adds support for Dharma Dai and Dharma USDC, which wrap the respective
- * cTokens and mint and redeem them internally as interest-bearing collateral.
- * It contains methods to support account recovery, escape hatch functionality,
- * and generic actions, including in an atomic batch. The smart wallet instances
- * utilizing this implementation are deployed through the Dharma Smart Wallet
- * Factory via `CREATE2`, which allows for their address to be known ahead of
- * time, and any Dai or USDC that has already been sent into that address will
- * automatically be deposited into the respective Dharma Token upon deployment
- * of the new smart wallet instance.
+ * funds through Dharma Dai and Dharma USD Coin (which in turn use CompoundV2),
+ * and with an added security backstop provided by Dharma Labs prior to making
+ * withdrawals. It adds support for Dharma Dai and Dharma USD Coin - they employ
+ * the respective cTokens as backing tokens and mint and redeem them internally
+ * as interest-bearing collateral. This implementation also contains methods to
+ * support account recovery, escape hatch functionality, and generic actions,
+ * including in an atomic batch. The smart wallet instances utilizing this
+ * implementation are deployed through the Dharma Smart Wallet Factory via
+ * `CREATE2`, which allows for their address to be known ahead of time, and any
+ * Dai or USDC that has already been sent into that address will automatically
+ * be deposited into the respective Dharma Token upon deployment of the new
+ * smart wallet instance.
  */
 contract DharmaSmartWalletImplementationV7 is
   DharmaSmartWalletImplementationV1Interface,
@@ -126,6 +127,7 @@ contract DharmaSmartWalletImplementationV7 is
     0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 // mainnet
   );
 
+  // The "revert reason helper" contains a collection of revert reason strings.
   SmartWalletRevertReasonHelperV1 internal constant _REVERT_REASON_HELPER = (
     SmartWalletRevertReasonHelperV1(0xE24257338d0c15f3Dd00Ed59fcA9e50CfB167bA8)
   );
@@ -145,10 +147,10 @@ contract DharmaSmartWalletImplementationV7 is
 
   /**
    * @notice In the initializer, set up the initial user signing key, set
-   * approval on the Dharma Dai and Dharma USDC contracts, and deposit any Dai
-   * or USDC already at this address to receive dDai or dUSDC. Note that this
-   * initializer is only callable while the smart wallet instance is still in
-   * the contract creation phase.
+   * approval on the Dharma Dai and Dharma USD Coin contracts, and deposit any
+   * Dai or USDC already at this address to receive dDai or dUSDC. Note that
+   * this initializer is only callable while the smart wallet instance is still
+   * in the contract creation phase.
    * @param userSigningKey address The initial user signing key for the smart
    * wallet.
    */
@@ -180,7 +182,7 @@ contract DharmaSmartWalletImplementationV7 is
 
   /**
    * @notice Deposit all Dai and USDC currently residing at this address and
-   * receive Dharma Dai or Dharma USDC in return. Note that "repay" is not
+   * receive Dharma Dai or Dharma USD Coin in return. Note that "repay" is not
    * currently implemented, though it may be in a future implementation. If some
    * step of this function fails, the function itself will still succeed, but an
    * `ExternalError` with information on what went wrong will be emitted.
@@ -344,8 +346,8 @@ contract DharmaSmartWalletImplementationV7 is
   /**
    * @notice Withdraw USDC to a provided recipient address by redeeming the
    * underlying USDC from the dUSDC contract and transferring it to recipient.
-   * All USDC in Dharma USDC and in the smart wallet itself can be withdrawn by
-   * providing an amount of uint256(-1) or 0xfff...fff. This function can be
+   * All USDC in Dharma USD Coin and in the smart wallet itself can be withdrawn
+   * by providing an amount of uint256(-1) or 0xfff...fff. This function can be
    * called directly by the account set as the global key on the Dharma Key
    * Registry, or by any relayer that provides a signed message from the same
    * keyholder. The nonce used for the signature must match the current nonce on
@@ -505,7 +507,7 @@ contract DharmaSmartWalletImplementationV7 is
 
   /**
    * @notice Allow a signatory to increment the nonce at any point. The current
-   * nonce needs to be provided as an argument to the a signature so as not to
+   * nonce needs to be provided as an argument to the signature so as not to
    * enable griefing attacks. All arguments can be omitted if called directly.
    * No value is returned from this function - it will either succeed or revert.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
@@ -540,11 +542,12 @@ contract DharmaSmartWalletImplementationV7 is
 
   /**
    * @notice Perform a generic call to another contract. Note that accounts with
-   * no code may not be specified, nor may the smart wallet itself. In order to
-   * increment the nonce and invalidate the signatures, a call to this function
-   * with a valid target, signatutes, and gas will always succeed. To determine
-   * whether the call made as part of the action was successful or not, either
-   * the return values or the `CallSuccess` or `CallFailure` event can be used.
+   * no code may not be specified, nor may the smart wallet itself or the escape
+   * hatch registry. In order to increment the nonce and invalidate the
+   * signatures, a call to this function with a valid target, signatutes, and
+   * gas will always succeed. To determine whether the call made as part of the
+   * action was successful or not, either the return values or the `CallSuccess`
+   * or `CallFailure` event can be used.
    * @param to address The contract to call.
    * @param data bytes The calldata to provide when making the call.
    * @param minimumActionGas uint256 The minimum amount of gas that must be
@@ -604,7 +607,7 @@ contract DharmaSmartWalletImplementationV7 is
 
   /**
    * @notice Allow signatory to set a new user signing key. The current nonce
-   * needs to be provided as an argument to the a signature so as not to enable
+   * needs to be provided as an argument to the signature so as not to enable
    * griefing attacks. No value is returned from this function - it will either
    * succeed or revert.
    * @param userSigningKey address The new user signing key to set on this smart
@@ -998,7 +1001,7 @@ contract DharmaSmartWalletImplementationV7 is
    * will be used, which means that it will only be valid for the next action
    * taken.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * custom actions in V6 include Cancel (0), SetUserSigningKey (1),
+   * custom actions in V7 include Cancel (0), SetUserSigningKey (1),
    * DAIWithdrawal (10), USDCWithdrawal (5), ETHWithdrawal (6),
    * SetEscapeHatch (7), RemoveEscapeHatch (8), and DisableEscapeHatch (9).
    * @param amount uint256 The amount to withdraw for Withdrawal actions. This
@@ -1270,7 +1273,7 @@ contract DharmaSmartWalletImplementationV7 is
         // Note: while the call succeeded, the action may still have "failed".
         emit CallSuccess(
           actionID,
-          !externalOk, // if another call failed this will have been rolled back
+          !externalOk, // If another call failed this will have been rolled back
           nonce,
           currentCall.to,
           currentCall.data,
@@ -1504,9 +1507,9 @@ contract DharmaSmartWalletImplementationV7 is
    * to be conditionally performed after the deposit.
    * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
    * @param balance uint256 The amount of the asset to deposit. Note that an
-   * attempt to deposit "dust" (i.e. very small amounts) may result in 0 dTokens
-   * being minted, or in fewer dTokens being minted than is implied by the
-   * current exchange rate (due to lack of sufficient precision on the tokens).
+   * attempt to deposit "dust" (i.e. very small amounts) may result in fewer
+   * dTokens being minted than is implied by the current exchange rate due to a
+   * lack of sufficient precision on the tokens in question.
    */
   function _depositDharmaToken(AssetType asset, uint256 balance) internal {
     // Only perform a deposit if the balance is at least .001 Dai or USDC.
@@ -1686,7 +1689,7 @@ contract DharmaSmartWalletImplementationV7 is
    * errors, which can be guarded against by supplying a minimum action gas
    * requirement).
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V6 include Cancel (0), SetUserSigningKey (1), Generic (2),
+   * actions in V7 include Cancel (0), SetUserSigningKey (1), Generic (2),
    * GenericAtomicBatch (3), DAIWithdrawal (10), USDCWithdrawal (5),
    * ETHWithdrawal (6), SetEscapeHatch (7), RemoveEscapeHatch (8), and
    * DisableEscapeHatch (9).
@@ -1979,7 +1982,7 @@ contract DharmaSmartWalletImplementationV7 is
    * is derived by prefixing (according to EIP-191 0x45) and hashing an actionID
    * returned from `getCustomActionID`.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V6 include Cancel (0), SetUserSigningKey (1), Generic (2),
+   * actions in V7 include Cancel (0), SetUserSigningKey (1), Generic (2),
    * GenericAtomicBatch (3), DAIWithdrawal (10), USDCWithdrawal (5),
    * ETHWithdrawal (6), SetEscapeHatch (7), RemoveEscapeHatch (8), and
    * DisableEscapeHatch (9).
@@ -2031,7 +2034,7 @@ contract DharmaSmartWalletImplementationV7 is
    * when reconstructing an action ID during protected function execution based
    * on the supplied parameters.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * actions in V6 include Cancel (0), SetUserSigningKey (1), Generic (2),
+   * actions in V7 include Cancel (0), SetUserSigningKey (1), Generic (2),
    * GenericAtomicBatch (3), DAIWithdrawal (10), USDCWithdrawal (5),
    * ETHWithdrawal (6), SetEscapeHatch (7), RemoveEscapeHatch (8), and
    * DisableEscapeHatch (9).
@@ -2130,7 +2133,7 @@ contract DharmaSmartWalletImplementationV7 is
    * "custom" action type (i.e. is not a generic action type) and to construct
    * the "arguments" input to an actionID based on that action type.
    * @param action uint8 The type of action, designated by it's index. Valid
-   * custom actions in V6 include Cancel (0), SetUserSigningKey (1),
+   * custom actions in V7 include Cancel (0), SetUserSigningKey (1),
    * DAIWithdrawal (10), USDCWithdrawal (5), ETHWithdrawal (6),
    * SetEscapeHatch (7), RemoveEscapeHatch (8), and DisableEscapeHatch (9).
    * @param amount uint256 The amount to withdraw for Withdrawal actions. This
