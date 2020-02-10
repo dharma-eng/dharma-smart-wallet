@@ -156,7 +156,7 @@ class Tester {
             }
         );
 
-        await this.setupDeployedContracst();
+        await this.setupDeployedContracts();
     }
 
     async setupNewDefaultAddress(newPrivateKey) {
@@ -924,7 +924,13 @@ class Tester {
         );
     }
 
-    async setupDeployedContracst() {
+    newDeployer(artifact) {
+        let deployer = new web3.eth.Contract(artifact.abi);
+        deployer.options.data = artifact.bytecode;
+        return deployer;
+    }
+
+    async setupDeployedContracts() {
         this.DharmaUpgradeBeaconController = new web3.eth.Contract(
             DharmaUpgradeBeaconControllerArtifact.abi,
             constants.UPGRADE_BEACON_CONTROLLER_ADDRESS
@@ -947,13 +953,6 @@ class Tester {
             DharmaAccountRecoveryManagerV2Artifact.abi,
             constants.ACCOUNT_RECOVERY_MANAGER_V2_ADDRESS
         );
-
-        /*
-        const DharmaKeyRegistryV1 = new web3.eth.Contract(
-          DharmaKeyRegistryV1Artifact.abi,
-          constants.KEY_REGISTRY_ADDRESS
-        )
-        */
 
         this.DharmaKeyRegistryV2 = new web3.eth.Contract(
             DharmaKeyRegistryV2Artifact.abi,
@@ -1060,209 +1059,144 @@ class Tester {
         );
 
         this.SAI = new web3.eth.Contract(
-            IERC20Artifact.abi,
-            constants.SAI_MAINNET_ADDRESS
+            IERC20Artifact.abi, constants.SAI_MAINNET_ADDRESS
         );
 
         this.DAI = new web3.eth.Contract(
-            IERC20Artifact.abi,
-            constants.DAI_MAINNET_ADDRESS
+            IERC20Artifact.abi, constants.DAI_MAINNET_ADDRESS
         );
 
         this.USDC = new web3.eth.Contract(
-            IERC20Artifact.abi,
-            constants.USDC_MAINNET_ADDRESS
+            IERC20Artifact.abi, constants.USDC_MAINNET_ADDRESS
         );
 
         this.CSAI = new web3.eth.Contract(
-            IERC20Artifact.abi,
-            constants.CSAI_MAINNET_ADDRESS
+            IERC20Artifact.abi, constants.CSAI_MAINNET_ADDRESS
         );
 
         this.CSAI_MINT = new web3.eth.Contract(
-            CTokenInterfaceArtifact.abi,
-            constants.CSAI_MAINNET_ADDRESS
+            CTokenInterfaceArtifact.abi, constants.CSAI_MAINNET_ADDRESS
         );
 
         this.CDAI = new web3.eth.Contract(
-            IERC20Artifact.abi,
-            constants.CDAI_MAINNET_ADDRESS
+            IERC20Artifact.abi, constants.CDAI_MAINNET_ADDRESS
         );
 
         this.CUSDC = new web3.eth.Contract(
-            IERC20Artifact.abi,
-            constants.CUSDC_MAINNET_ADDRESS
+            IERC20Artifact.abi, constants.CUSDC_MAINNET_ADDRESS
         );
 
-        this.BadBeaconDeployer = new web3.eth.Contract(BadBeaconArtifact.abi);
-        this.BadBeaconDeployer.options.data = BadBeaconArtifact.bytecode;
+        this.BadBeaconDeployer = this.newDeployer(BadBeaconArtifact);
 
-        this.BadBeaconTwoDeployer = new web3.eth.Contract(
-            BadBeaconTwoArtifact.abi
-        );
-        this.BadBeaconTwoDeployer.options.data = BadBeaconTwoArtifact.bytecode;
+        this.BadBeaconTwoDeployer = this.newDeployer(BadBeaconTwoArtifact);
 
-        this.AdharmaSmartWalletImplementationDeployer = new web3.eth.Contract(
-            AdharmaSmartWalletImplementationArtifact.abi
+        this.AdharmaSmartWalletImplementationDeployer = this.newDeployer(
+            AdharmaSmartWalletImplementationArtifact
         );
-        this.AdharmaSmartWalletImplementationDeployer.options.data =
-            AdharmaSmartWalletImplementationArtifact.bytecode;
 
-        this.DharmaSmartWalletImplementationV6Deployer = new web3.eth.Contract(
-            DharmaSmartWalletImplementationV6Artifact.abi
+        this.DharmaSmartWalletImplementationV6Deployer = this.newDeployer(
+            DharmaSmartWalletImplementationV6Artifact
         );
-        this.DharmaSmartWalletImplementationV6Deployer.options.data =
-            DharmaSmartWalletImplementationV6Artifact.bytecode;
 
-        this.DharmaSmartWalletImplementationV7Deployer = new web3.eth.Contract(
-            DharmaSmartWalletImplementationV7Artifact.abi
+        this.DharmaSmartWalletImplementationV7Deployer = this.newDeployer(
+            DharmaSmartWalletImplementationV7Artifact
         );
-        this.DharmaSmartWalletImplementationV7Deployer.options.data =
-            DharmaSmartWalletImplementationV7Artifact.bytecode;
 
-        this.AdharmaKeyRingImplementationDeployer = new web3.eth.Contract(
-            AdharmaKeyRingImplementationArtifact.abi
+        this.AdharmaKeyRingImplementationDeployer = this.newDeployer(
+            AdharmaKeyRingImplementationArtifact
         );
-        this.AdharmaKeyRingImplementationDeployer.options.data =
-            AdharmaKeyRingImplementationArtifact.bytecode;
 
-        this.DharmaKeyRingImplementationV1Deployer = new web3.eth.Contract(
-            DharmaKeyRingImplementationV1Artifact.abi
+        this.DharmaKeyRingImplementationV1Deployer = this.newDeployer(
+            DharmaKeyRingImplementationV1Artifact
         );
-        this.DharmaKeyRingImplementationV1Deployer.options.data =
-            DharmaKeyRingImplementationV1Artifact.bytecode;
 
-        this.UpgradeBeaconImplementationCheckDeployer = new web3.eth.Contract(
-            UpgradeBeaconImplementationCheckArtifact.abi
+        this.UpgradeBeaconImplementationCheckDeployer = this.newDeployer(
+            UpgradeBeaconImplementationCheckArtifact
         );
-        this.UpgradeBeaconImplementationCheckDeployer.options.data =
-            UpgradeBeaconImplementationCheckArtifact.bytecode;
 
-        this.TimelockEdgecaseTesterDeployer = new web3.eth.Contract(
-            TimelockEdgecaseTesterArtifact.abi
+        this.TimelockEdgecaseTesterDeployer = this.newDeployer(
+            TimelockEdgecaseTesterArtifact
         );
-        this.TimelockEdgecaseTesterDeployer.options.data =
-            TimelockEdgecaseTesterArtifact.bytecode;
 
-        this.DharmaUpgradeBeaconControllerDeployer = new web3.eth.Contract(
-            DharmaUpgradeBeaconControllerArtifact.abi
+        this.DharmaUpgradeBeaconControllerDeployer = this.newDeployer(
+            DharmaUpgradeBeaconControllerArtifact
         );
-        this.DharmaUpgradeBeaconControllerDeployer.options.data =
-            DharmaUpgradeBeaconControllerArtifact.bytecode;
 
-        this.DharmaUpgradeBeaconDeployer = new web3.eth.Contract(
-            DharmaUpgradeBeaconArtifact.abi
+        this.DharmaUpgradeBeaconDeployer = this.newDeployer(
+            DharmaUpgradeBeaconArtifact
         );
-        this.DharmaUpgradeBeaconDeployer.options.data =
-            DharmaUpgradeBeaconArtifact.bytecode;
 
-        this.DharmaKeyRingUpgradeBeaconDeployer = new web3.eth.Contract(
-            DharmaKeyRingUpgradeBeaconArtifact.abi
+        this.DharmaKeyRingUpgradeBeaconDeployer = this.newDeployer(
+            DharmaKeyRingUpgradeBeaconArtifact
         );
-        this.DharmaKeyRingUpgradeBeaconDeployer.options.data =
-            DharmaKeyRingUpgradeBeaconArtifact.bytecode;
 
-        this.DharmaUpgradeBeaconEnvoyDeployer = new web3.eth.Contract(
-            DharmaUpgradeBeaconEnvoyArtifact.abi
+        this.DharmaUpgradeBeaconEnvoyDeployer = this.newDeployer(
+            DharmaUpgradeBeaconEnvoyArtifact
         );
-        this.DharmaUpgradeBeaconEnvoyDeployer.options.data =
-            DharmaUpgradeBeaconEnvoyArtifact.bytecode;
 
-        this.DharmaUpgradeBeaconControllerManagerDeployer = new web3.eth.Contract(
-            DharmaUpgradeBeaconControllerManagerArtifact.abi
+        this.DharmaUpgradeBeaconControllerManagerDeployer = this.newDeployer(
+            DharmaUpgradeBeaconControllerManagerArtifact
         );
-        this.DharmaUpgradeBeaconControllerManagerDeployer.options.data =
-            DharmaUpgradeBeaconControllerManagerArtifact.bytecode;
 
-        this.UpgradeBeaconProxyV1Deployer = new web3.eth.Contract(
-            UpgradeBeaconProxyV1Artifact.abi
+        this.UpgradeBeaconProxyV1Deployer = this.newDeployer(
+            UpgradeBeaconProxyV1Artifact
         );
-        this.UpgradeBeaconProxyV1Deployer.options.data =
-            UpgradeBeaconProxyV1Artifact.bytecode;
 
-        this.KeyRingUpgradeBeaconProxyV1Deployer = new web3.eth.Contract(
-            KeyRingUpgradeBeaconProxyV1Artifact.abi
+        this.KeyRingUpgradeBeaconProxyV1Deployer = this.newDeployer(
+            KeyRingUpgradeBeaconProxyV1Artifact
         );
-        this.KeyRingUpgradeBeaconProxyV1Deployer.options.data =
-            KeyRingUpgradeBeaconProxyV1Artifact.bytecode;
 
-        this.DharmaKeyRegistryV2Deployer = new web3.eth.Contract(
-            DharmaKeyRegistryV2Artifact.abi
+        this.DharmaKeyRegistryV2Deployer = this.newDeployer(
+            DharmaKeyRegistryV2Artifact
         );
-        this.DharmaKeyRegistryV2Deployer.options.data =
-            DharmaKeyRegistryV2Artifact.bytecode;
 
-        this.DharmaSmartWalletFactoryV1Deployer = new web3.eth.Contract(
-            DharmaSmartWalletFactoryV1Artifact.abi
+        this.DharmaSmartWalletFactoryV1Deployer = this.newDeployer(
+            DharmaSmartWalletFactoryV1Artifact
         );
-        this.DharmaSmartWalletFactoryV1Deployer.options.data =
-            DharmaSmartWalletFactoryV1Artifact.bytecode;
 
-        this.DharmaSmartWalletFactoryV2Deployer = new web3.eth.Contract(
-            DharmaSmartWalletFactoryV2Artifact.abi
+        this.DharmaSmartWalletFactoryV2Deployer = this.newDeployer(
+            DharmaSmartWalletFactoryV2Artifact
         );
-        this.DharmaSmartWalletFactoryV2Deployer.options.data =
-            DharmaSmartWalletFactoryV2Artifact.bytecode;
 
-        this.DharmaKeyRingFactoryV1Deployer = new web3.eth.Contract(
-            DharmaKeyRingFactoryV1Artifact.abi
+        this.DharmaKeyRingFactoryV1Deployer = this.newDeployer(
+            DharmaKeyRingFactoryV1Artifact
         );
-        this.DharmaKeyRingFactoryV1Deployer.options.data =
-            DharmaKeyRingFactoryV1Artifact.bytecode;
 
-        this.DharmaKeyRingFactoryV2Deployer = new web3.eth.Contract(
-            DharmaKeyRingFactoryV2Artifact.abi
+        this.DharmaKeyRingFactoryV2Deployer = this.newDeployer(
+            DharmaKeyRingFactoryV2Artifact
         );
-        this.DharmaKeyRingFactoryV2Deployer.options.data =
-            DharmaKeyRingFactoryV2Artifact.bytecode;
 
-        this.DharmaKeyRingFactoryV3Deployer = new web3.eth.Contract(
-            DharmaKeyRingFactoryV3Artifact.abi
+        this.DharmaKeyRingFactoryV3Deployer = this.newDeployer(
+            DharmaKeyRingFactoryV3Artifact
         );
-        this.DharmaKeyRingFactoryV3Deployer.options.data =
-            DharmaKeyRingFactoryV3Artifact.bytecode;
 
-        this.MockDharmaKeyRingFactoryDeployer = new web3.eth.Contract(
-            MockDharmaKeyRingFactoryArtifact.abi
+        this.MockDharmaKeyRingFactoryDeployer = this.newDeployer(
+            MockDharmaKeyRingFactoryArtifact
         );
-        this.MockDharmaKeyRingFactoryDeployer.options.data =
-            MockDharmaKeyRingFactoryArtifact.bytecode;
 
-        this.DharmaAccountRecoveryManagerV2Deployer = new web3.eth.Contract(
-            DharmaAccountRecoveryManagerV2Artifact.abi
+        this.DharmaAccountRecoveryManagerV2Deployer = this.newDeployer(
+            DharmaAccountRecoveryManagerV2Artifact
         );
-        this.DharmaAccountRecoveryManagerV2Deployer.options.data =
-            DharmaAccountRecoveryManagerV2Artifact.bytecode;
 
-        this.DharmaUpgradeMultisigDeployer = new web3.eth.Contract(
-            DharmaUpgradeMultisigArtifact.abi
+        this.DharmaUpgradeMultisigDeployer = this.newDeployer(
+            DharmaUpgradeMultisigArtifact
         );
-        this.DharmaUpgradeMultisigDeployer.options.data =
-            DharmaUpgradeMultisigArtifact.bytecode;
 
-        this.DharmaAccountRecoveryMultisigDeployer = new web3.eth.Contract(
-            DharmaAccountRecoveryMultisigArtifact.abi
+        this.DharmaAccountRecoveryMultisigDeployer = this.newDeployer(
+            DharmaAccountRecoveryMultisigArtifact
         );
-        this.DharmaAccountRecoveryMultisigDeployer.options.data =
-            DharmaAccountRecoveryMultisigArtifact.bytecode;
 
-        this.DharmaAccountRecoveryOperatorMultisigDeployer = new web3.eth.Contract(
-            DharmaAccountRecoveryOperatorMultisigArtifact.abi
+        this.DharmaAccountRecoveryOperatorMultisigDeployer = this.newDeployer(
+            DharmaAccountRecoveryOperatorMultisigArtifact
         );
-        this.DharmaAccountRecoveryOperatorMultisigDeployer.options.data =
-            DharmaAccountRecoveryOperatorMultisigArtifact.bytecode;
 
-        this.DharmaKeyRegistryMultisigDeployer = new web3.eth.Contract(
-            DharmaKeyRegistryMultisigArtifact.abi
+        this.DharmaKeyRegistryMultisigDeployer = this.newDeployer(
+            DharmaKeyRegistryMultisigArtifact
         );
-        this.DharmaKeyRegistryMultisigDeployer.options.data =
-            DharmaKeyRegistryMultisigArtifact.bytecode;
 
-        this.DharmaEscapeHatchRegistryDeployer = new web3.eth.Contract(
-            DharmaEscapeHatchRegistryArtifact.abi
+        this.DharmaEscapeHatchRegistryDeployer = this.newDeployer(
+            DharmaEscapeHatchRegistryArtifact
         );
-        this.DharmaEscapeHatchRegistryDeployer.options.data =
-            DharmaEscapeHatchRegistryArtifact.bytecode;
     }
 }
 
