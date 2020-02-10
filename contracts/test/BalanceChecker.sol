@@ -1,6 +1,8 @@
 pragma solidity 0.5.11;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "../../interfaces/CTokenInterface.sol";
+import "../../interfaces/DTokenInterface.sol";
 
 
 /**
@@ -40,15 +42,15 @@ contract BalanceChecker {
   );
 
   function getBalances(address wallet) external view returns (
-  	uint256 dDaiBalance,
-  	uint256 dUSDCBalance,
-  	uint256 daiBalance,
-  	uint256 usdcBalance,
-  	uint256 saiBalance,
-  	uint256 cSaiBalance,
-  	uint256 cDaiBalance,
-  	uint256 cUSDCBalance,
-  	uint256 etherBalance
+    uint256 dDaiBalance,
+    uint256 dUSDCBalance,
+    uint256 daiBalance,
+    uint256 usdcBalance,
+    uint256 saiBalance,
+    uint256 cSaiBalance,
+    uint256 cDaiBalance,
+    uint256 cUSDCBalance,
+    uint256 etherBalance
   ) {
     dDaiBalance = _DDAI.balanceOf(wallet);
     dUSDCBalance = _DUSDC.balanceOf(wallet);
@@ -59,5 +61,29 @@ contract BalanceChecker {
     cDaiBalance = _CDAI.balanceOf(wallet);
     cUSDCBalance = _CUSDC.balanceOf(wallet);
     etherBalance = wallet.balance;
+  }
+
+  function getUnderlyingBalances(address wallet) external returns (
+    uint256 dDaiExchangeRate,
+    uint256 dUSDCExchangeRate,
+    uint256 cSaiExchangeRate,
+    uint256 cDaiExchangeRate,
+    uint256 cUSDCExchangeRate,
+    uint256 dDaiBalanceUnderlying,
+    uint256 dUSDCBalanceUnderlying,
+    uint256 cSaiBalanceUnderlying,
+    uint256 cDaiBalanceUnderlying,
+    uint256 cUSDCBalanceUnderlying
+  ) {
+    dDaiExchangeRate = DTokenInterface(address(_DDAI)).exchangeRateCurrent();
+    dUSDCExchangeRate = DTokenInterface(address(_DUSDC)).exchangeRateCurrent();
+    cSaiExchangeRate = CTokenInterface(address(_CSAI)).exchangeRateCurrent();
+    cDaiExchangeRate = CTokenInterface(address(_CDAI)).exchangeRateCurrent();
+    cUSDCExchangeRate = CTokenInterface(address(_CUSDC)).exchangeRateCurrent();
+    dDaiBalanceUnderlying = DTokenInterface(address(_DDAI)).balanceOfUnderlying(wallet);
+    dUSDCBalanceUnderlying = DTokenInterface(address(_DUSDC)).balanceOfUnderlying(wallet);
+    cSaiBalanceUnderlying = CTokenInterface(address(_CSAI)).balanceOfUnderlying(wallet);
+    cDaiBalanceUnderlying = CTokenInterface(address(_CDAI)).balanceOfUnderlying(wallet);
+    cUSDCBalanceUnderlying = CTokenInterface(address(_CUSDC)).balanceOfUnderlying(wallet);
   }
 }

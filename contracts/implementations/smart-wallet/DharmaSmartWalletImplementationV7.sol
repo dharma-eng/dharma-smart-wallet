@@ -6,7 +6,6 @@ pragma experimental ABIEncoderV2;
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "../../../interfaces/DharmaSmartWalletImplementationV0Interface.sol";
 import "../../../interfaces/DharmaSmartWalletImplementationV1Interface.sol";
 import "../../../interfaces/DharmaSmartWalletImplementationV3Interface.sol";
 import "../../../interfaces/DharmaSmartWalletImplementationV4Interface.sol";
@@ -39,7 +38,6 @@ import "../../helpers/SmartWalletRevertReasonHelperV1.sol";
  * of the new smart wallet instance.
  */
 contract DharmaSmartWalletImplementationV7 is
-  DharmaSmartWalletImplementationV0Interface,
   DharmaSmartWalletImplementationV1Interface,
   DharmaSmartWalletImplementationV3Interface,
   DharmaSmartWalletImplementationV4Interface,
@@ -907,21 +905,26 @@ contract DharmaSmartWalletImplementationV7 is
   }
 
   /**
-   * @notice Retrieve the Dai and USDC balances held by the smart wallet, both
-   * directly and held in Dharma Dai and Dharma USD Coin.
-   * @return The Dai balance, the USDC balance, the underlying Dai balance of
-   * the dDai balance, and the underlying USDC balance of the dUSDC balance.
+   * @notice View function to retrieve the Dai and USDC balances held by the
+   * smart wallet, both directly and held in Dharma Dai and Dharma USD Coin, as
+   * well as the Ether balance (the underlying dEther balance will always return
+   * zero in this implementation, as there is no dEther yet).
+   * @return The Dai balance, the USDC balance, the Ether balance, the
+   * underlying Dai balance of the dDai balance, and the underlying USDC balance
+   * of the dUSDC balance (zero will always be returned as the underlying Ether
+   * balance of the dEther balance in this implementation).
    */
-  function getBalances() external returns (
+  function getBalances() external view returns (
     uint256 daiBalance,
     uint256 usdcBalance,
-    uint256 etherBalance, // always returns 0
+    uint256 etherBalance,
     uint256 dDaiUnderlyingDaiBalance,
     uint256 dUsdcUnderlyingUsdcBalance,
     uint256 dEtherUnderlyingEtherBalance // always returns 0
   ) {
     daiBalance = _DAI.balanceOf(address(this));
     usdcBalance = _USDC.balanceOf(address(this));
+    etherBalance = address(this).balance;
     dDaiUnderlyingDaiBalance = _DDAI.balanceOfUnderlying(address(this));
     dUsdcUnderlyingUsdcBalance = _DUSDC.balanceOfUnderlying(address(this));
   }

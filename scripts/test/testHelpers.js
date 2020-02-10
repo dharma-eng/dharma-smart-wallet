@@ -783,6 +783,51 @@ class Tester {
         }
     }
 
+    async withBalanceCheck(account, initial, final, test, testArgs) {
+        // Get the initial balances.
+        const initialBalances = await this.getBalances(account);
+        const initialBalancesSet = new Set(Object.keys(initialBalances));
+
+        //console.log(initialBalances)
+
+        const initialSet = new Set(Object.keys(initial));
+        const finalSet = new Set(Object.keys(final));
+
+        // Initial and final sets must both have the same balance checks.
+        assert.strictEqual(initialSet.size, finalSet.size);
+        assert.strictEqual(
+            initialSet.size, (new Set([...initialSet, ...finalSet])).size
+        );
+
+        // Ensure that all the specified balance checks are actually returned.
+        assert.strictEqual(
+            (new Set([...initialSet].filter(
+                x => !initialBalancesSet.has(x))
+            )).size,
+            0
+        );
+
+        // Get specified keys from balance check and compare to expected values.
+        const balanceChecks = [...(new Set([...initialSet].filter(
+            x => initialBalancesSet.has(x)
+        )))];
+
+        for (const balance of balanceChecks) {
+            assert.strictEqual(initial[balance], initialBalances[balance]);
+        }
+
+        // Run the test.
+        await test.bind(this)(...testArgs);
+
+        // Get the final balances.
+        const finalBalances = await this.getBalances(account);
+        const fiinalBalancesSet = new Set(Object.keys(finalBalances));
+
+        for (const balance of balanceChecks) {
+            assert.strictEqual(final[balance], finalBalances[balance]);
+        }    
+    }
+
     async getBalances(account) {
         const balances = await this.BalanceChecker.methods.getBalances(account)
             .call()
@@ -791,26 +836,43 @@ class Tester {
                 process.exit(1);
             });
 
+        const underlyingBalances = await this.BalanceChecker.methods.getUnderlyingBalances(account)
+            .call()
+            .catch(error => {
+                console.error(error);
+                process.exit(1);
+            });
+
         return {
-          account,
-          dDai: parseFloat(web3.utils.fromWei(balances.dDaiBalance, 'gwei')) * 10,
-          dUSDC: parseFloat(web3.utils.fromWei(balances.dUSDCBalance, 'gwei')) * 10,
-          dai: parseFloat(web3.utils.fromWei(balances.daiBalance, 'ether')),
-          usdc: parseFloat(web3.utils.fromWei(balances.usdcBalance, 'mwei')),
-          sai: parseFloat(web3.utils.fromWei(balances.saiBalance, 'ether')),
-          cSai: parseFloat(web3.utils.fromWei(balances.cSaiBalance, 'gwei')) * 10,
-          cDai: parseFloat(web3.utils.fromWei(balances.cDaiBalance, 'gwei')) * 10,
-          cUSDC: parseFloat(web3.utils.fromWei(balances.cUSDCBalance, 'gwei')) * 10,
-          ether: parseFloat(web3.utils.fromWei(balances.etherBalance, 'ether')),
-          dDaiRaw: balances.dDaiBalance,
-          dUSDCRaw: balances.dUSDCBalance,
-          daiRaw: balances.daiBalance,
-          usdcRaw: balances.usdcBalance,
-          saiRaw: balances.saiBalance,
-          cSaiRaw: balances.cSaiBalance,
-          cDaiRaw: balances.cDaiBalance,
-          cUSDCRaw: balances.cUSDCBalance,
-          etherRaw: balances.etherBalance
+            account,
+            dDai: parseFloat(web3.utils.fromWei(balances.dDaiBalance, 'gwei')) * 10,
+            dUSDC: parseFloat(web3.utils.fromWei(balances.dUSDCBalance, 'gwei')) * 10,
+            dai: parseFloat(web3.utils.fromWei(balances.daiBalance, 'ether')),
+            usdc: parseFloat(web3.utils.fromWei(balances.usdcBalance, 'mwei')),
+            sai: parseFloat(web3.utils.fromWei(balances.saiBalance, 'ether')),
+            cSai: parseFloat(web3.utils.fromWei(balances.cSaiBalance, 'gwei')) * 10,
+            cDai: parseFloat(web3.utils.fromWei(balances.cDaiBalance, 'gwei')) * 10,
+            cUSDC: parseFloat(web3.utils.fromWei(balances.cUSDCBalance, 'gwei')) * 10,
+            ether: parseFloat(web3.utils.fromWei(balances.etherBalance, 'ether')),
+            dDaiUnderlying: parseFloat(web3.utils.fromWei(underlyingBalances.dDaiBalanceUnderlying, 'ether')),
+            dUSDCUnderlying: parseFloat(web3.utils.fromWei(underlyingBalances.dUSDCBalanceUnderlying, 'mwei')),
+            cSaiUnderlying: parseFloat(web3.utils.fromWei(underlyingBalances.cSaiBalanceUnderlying, 'ether')),
+            cDaiUnderlying: parseFloat(web3.utils.fromWei(underlyingBalances.cDaiBalanceUnderlying, 'ether')),
+            cUSDCUnderlying: parseFloat(web3.utils.fromWei(underlyingBalances.cUSDCBalanceUnderlying, 'mwei')),
+            dDaiRaw: balances.dDaiBalance,
+            dUSDCRaw: balances.dUSDCBalance,
+            daiRaw: balances.daiBalance,
+            usdcRaw: balances.usdcBalance,
+            saiRaw: balances.saiBalance,
+            cSaiRaw: balances.cSaiBalance,
+            cDaiRaw: balances.cDaiBalance,
+            cUSDCRaw: balances.cUSDCBalance,
+            etherRaw: balances.etherBalance,
+            dDaiUnderlyingRaw: underlyingBalances.dDaiBalanceUnderlying,
+            dUSDCUnderlyingRaw: underlyingBalances.dUSDCBalanceUnderlying,
+            cSaiUnderlyingRaw: underlyingBalances.cSaiBalanceUnderlying,
+            cDaiUnderlyingRaw: underlyingBalances.cDaiBalanceUnderlying,
+            cUSDCUnderlyingRaw: underlyingBalances.cUSDCBalanceUnderlying
         };
     }
 

@@ -3527,16 +3527,49 @@ async function test(testingContext) {
         7
     );
 
-    await tester.runTest(
-        "V7 UserSmartWallet can get balances",
-        UserSmartWalletV7,
-        "getBalances",
-        "call",
-        [],
-        true,
-        value => {
-            //console.log(value)
-        }
+    const startingBalance = {
+        dDai: 0,
+        dUSDC: 0,
+        dai: 0,
+        usdc: 0,
+        dDaiUnderlying: 0,
+        dUSDCUnderlying: 0,
+        etherRaw: '99999999999999998'
+    }
+
+    await tester.withBalanceCheck(
+        UserSmartWalletV7.options.address,
+        startingBalance,
+        startingBalance,
+        tester.runTest,
+        [
+            "V7 UserSmartWallet can get balances",
+            UserSmartWalletV7,
+            "getBalances",
+            "call",
+            [],
+            true,
+            values => {
+                assert.strictEqual(
+                    values.daiBalance, startingBalance.dai.toString()
+                );
+                assert.strictEqual(
+                    values.usdcBalance, startingBalance.usdc.toString()
+                );
+                assert.strictEqual(
+                    values.etherBalance, startingBalance.etherRaw
+                );
+                assert.strictEqual(
+                    values.dDaiUnderlyingDaiBalance,
+                    startingBalance.dDaiUnderlying.toString()
+                );
+                assert.strictEqual(
+                    values.dUsdcUnderlyingUsdcBalance,
+                    startingBalance.dUSDCUnderlying.toString()
+                );
+                assert.strictEqual(values.dEtherUnderlyingEtherBalance, '0');
+            }
+        ]
     );
 
     await tester.runTest(
@@ -3733,64 +3766,40 @@ async function test(testingContext) {
         constants.USDC_WHALE_ADDRESS
     );
 
-    await tester.runTest(
-        "V7 UserSmartWallet can get a generic action ID",
-        UserSmartWalletV7,
-        "getNextGenericActionID",
-        "call",
+    const preDepositBalance = {
+        dai: 100,
+        usdc: 100,
+        dDaiUnderlying: 0,
+        dUSDCUnderlying: 0
+    }
+
+    const postDepositBalance = {
+        dai: 0,
+        usdc: 0,
+        dDaiUnderlying: 100,
+        dUSDCUnderlying: 100
+    }
+
+    await tester.withBalanceCheck(
+        UserSmartWalletV7.options.address,
+        preDepositBalance,
+        postDepositBalance,
+        tester.runTest,
         [
-            tester.DAI.options.address,
-            tester.DAI.methods
-                .approve(tester.CDAI.options.address, 0)
-                .encodeABI(),
-            0
-        ],
-        true,
-        value => {
-            customActionId = value;
-        }
-    );
-
-    executeActionSignature = tester.signHashedPrefixedHexString(
-        customActionId,
-        tester.address
-    );
-
-    executeActionUserSignature = tester.signHashedPrefixedHexString(
-        customActionId,
-        tester.addressTwo
-    );
-
-    await tester.runTest(
-        "V7 UserSmartWallet can call executeAction",
-        UserSmartWalletV7,
-        "executeAction",
-        "send",
-        [
-            tester.DAI.options.address,
-            tester.DAI.methods
-                .approve(tester.CDAI.options.address, 0)
-                .encodeABI(),
-            0,
-            executeActionUserSignature,
-            executeActionSignature
+            "V7 user smart wallet can trigger repayAndDeposit to deposit all new funds",
+            UserSmartWalletV7,
+            "repayAndDeposit",
+            "send",
+            [],
+            true,
+            receipt => {
+                // TODO: validate
+            }
         ]
-    );
+    )
 
     await tester.runTest(
-        "V7 user smart wallet can trigger repayAndDeposit to deposit all new funds",
-        UserSmartWalletV7,
-        "repayAndDeposit",
-        "send",
-        [],
-        true,
-        receipt => {
-            // TODO: validate
-        }
-    );
-
-    await tester.runTest(
-        "Dai Whale can deposit dai into the V7 smart wallet",
+        "Dai Whale can deposit dai into the V7 smart wallet again",
         tester.DAI,
         "transfer",
         "send",
@@ -4295,7 +4304,7 @@ async function test(testingContext) {
         "call",
         [
             5, // USDCWithdrawal,
-            "100000",
+            "1000000",
             tester.address,
             0
         ],
@@ -4315,24 +4324,54 @@ async function test(testingContext) {
         tester.addressTwo
     );
 
-    await tester.runTest(
-        "V7 UserSmartWallet relay can call with two signatures to withdraw USDC",
-        UserSmartWalletV7,
-        "withdrawUSDC",
-        "send",
+    const preUSDCWithdrawalBalance = {
+        dUSDCUnderlying: 100
+    }
+
+    const postUSDCWithdrawalBalance = {
+        dUSDCUnderlying: 99
+    }
+
+    const recipientUSDCBalance = (await tester.getBalances(tester.address)).usdc;
+
+    const preUSDCWithdrawalRecipientBalance = {
+        usdc: recipientUSDCBalance
+    }
+
+    const postUSDCWithdrawalRecipientBalance = {
+        usdc: recipientUSDCBalance + 1
+    }
+
+    await tester.withBalanceCheck(
+        UserSmartWalletV7.options.address,
+        preUSDCWithdrawalBalance,
+        postUSDCWithdrawalBalance,
+        tester.withBalanceCheck,
         [
-            "100000",
             tester.address,
-            0,
-            usdcUserWithdrawalSignature,
-            usdcWithdrawalSignature
-        ],
-        true,
-        receipt => {
-            // TODO: verify logs
-            //console.log(receipt)
-        },
-        tester.originalAddress
+            preUSDCWithdrawalRecipientBalance,
+            postUSDCWithdrawalRecipientBalance,
+            tester.runTest,
+            [
+                "V7 UserSmartWallet relay can call with two signatures to withdraw USDC",
+                UserSmartWalletV7,
+                "withdrawUSDC",
+                "send",
+                [
+                    "1000000",
+                    tester.address,
+                    0,
+                    usdcUserWithdrawalSignature,
+                    usdcWithdrawalSignature
+                ],
+                true,
+                receipt => {
+                    // TODO: verify logs
+                    //console.log(receipt)
+                },
+                tester.originalAddress
+            ]
+        ]
     );
 
     await tester.runTest(
@@ -6210,8 +6249,6 @@ async function test(testingContext) {
         tester.address
     );
 
-
-
     await tester.runTest(
         "V7 UserSmartWallet escape hatch account can call escape again",
         UserSmartWalletV7,
@@ -6372,6 +6409,8 @@ async function test(testingContext) {
         "send",
         [web3.utils.toWei('100', 'ether')]
     );
+
+    // console.log(await tester.getBalances(tester.address));
 
     await tester.runTest(
         "cSai can be sent to V7 UserSmartWallet",
