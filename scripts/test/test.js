@@ -6611,6 +6611,27 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
+        `Call to isValidSignature with insufficient data fails`,
+        UserSmartWalletV7,
+        "isValidSignature",
+        "call",
+        ["0x", "0x"],
+        false
+    );
+
+    await tester.runTest(
+        `Call to isValidSignature with 32-bytes of data has no context`,
+        UserSmartWalletV7,
+        "isValidSignature",
+        "call",
+        [
+            "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+            "0x"
+        ],
+        false
+    );
+
+    await tester.runTest(
         `Check allowance is not set before meta-tx`,
         tester.DUSDC,
         "allowance",
@@ -6652,6 +6673,60 @@ async function test(testingContext) {
     const messageHashUserSignature = tester.signHashedPrefixedHexString(
         messageHash,
         tester.addressTwo
+    );
+
+    const messageHashBadSignature = '0xaaaaaaaa' + messageHashSignature.slice(10)
+    const messageHashBadUserSignature = '0xaaaaaaaa' + messageHashUserSignature.slice(10)
+
+    await tester.runTest(
+        `dUSDC allowance is not modifiable via meta-transaction with bad signature length`,
+        tester.DUSDC_META,
+        "modifyAllowanceViaMetaTransaction",
+        "send",
+        [
+            UserSmartWalletV7.options.address,
+            tester.addressTwo,
+            '1',
+            true,
+            0,
+            constants.NULL_BYTES_32,
+            messageHashSignature + messageHashUserSignature.slice(2) + 'aa'
+        ],
+        false
+    );
+
+    await tester.runTest(
+        `dUSDC allowance is not modifiable via meta-transaction with bad Dharma signature`,
+        tester.DUSDC_META,
+        "modifyAllowanceViaMetaTransaction",
+        "send",
+        [
+            UserSmartWalletV7.options.address,
+            tester.addressTwo,
+            '1',
+            true,
+            0,
+            constants.NULL_BYTES_32,
+            messageHashBadSignature + messageHashUserSignature.slice(2)
+        ],
+        false
+    );
+
+    await tester.runTest(
+        `dUSDC allowance is not modifiable via meta-transaction with bad user signature`,
+        tester.DUSDC_META,
+        "modifyAllowanceViaMetaTransaction",
+        "send",
+        [
+            UserSmartWalletV7.options.address,
+            tester.addressTwo,
+            '1',
+            true,
+            0,
+            constants.NULL_BYTES_32,
+            messageHashSignature + messageHashBadUserSignature.slice(2)
+        ],
+        false
     );
 
     await tester.runTest(
