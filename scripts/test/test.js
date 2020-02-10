@@ -3534,8 +3534,8 @@ async function test(testingContext) {
         usdc: 0,
         dDaiUnderlying: 0,
         dUSDCUnderlying: 0,
-        etherRaw: '99999999999999998'
-    }
+        etherRaw: "99999999999999998"
+    };
 
     await tester.withBalanceCheck(
         UserSmartWalletV7.options.address,
@@ -3551,13 +3551,16 @@ async function test(testingContext) {
             true,
             values => {
                 assert.strictEqual(
-                    values.daiBalance, startingBalance.dai.toString()
+                    values.daiBalance,
+                    startingBalance.dai.toString()
                 );
                 assert.strictEqual(
-                    values.usdcBalance, startingBalance.usdc.toString()
+                    values.usdcBalance,
+                    startingBalance.usdc.toString()
                 );
                 assert.strictEqual(
-                    values.etherBalance, startingBalance.etherRaw
+                    values.etherBalance,
+                    startingBalance.etherRaw
                 );
                 assert.strictEqual(
                     values.dDaiUnderlyingDaiBalance,
@@ -3567,7 +3570,7 @@ async function test(testingContext) {
                     values.dUsdcUnderlyingUsdcBalance,
                     startingBalance.dUSDCUnderlying.toString()
                 );
-                assert.strictEqual(values.dEtherUnderlyingEtherBalance, '0');
+                assert.strictEqual(values.dEtherUnderlyingEtherBalance, "0");
             }
         ]
     );
@@ -3771,14 +3774,14 @@ async function test(testingContext) {
         usdc: 100,
         dDaiUnderlying: 0,
         dUSDCUnderlying: 0
-    }
+    };
 
     const postDepositBalance = {
         dai: 0,
         usdc: 0,
         dDaiUnderlying: 100,
         dUSDCUnderlying: 100
-    }
+    };
 
     await tester.withBalanceCheck(
         UserSmartWalletV7.options.address,
@@ -3796,7 +3799,7 @@ async function test(testingContext) {
                 // TODO: validate
             }
         ]
-    )
+    );
 
     await tester.runTest(
         "Dai Whale can deposit dai into the V7 smart wallet again",
@@ -4326,21 +4329,22 @@ async function test(testingContext) {
 
     const preUSDCWithdrawalBalance = {
         dUSDCUnderlying: 100
-    }
+    };
 
     const postUSDCWithdrawalBalance = {
         dUSDCUnderlying: 99
-    }
+    };
 
-    const recipientUSDCBalance = (await tester.getBalances(tester.address)).usdc;
+    const recipientUSDCBalance = (await tester.getBalances(tester.address))
+        .usdc;
 
     const preUSDCWithdrawalRecipientBalance = {
         usdc: recipientUSDCBalance
-    }
+    };
 
     const postUSDCWithdrawalRecipientBalance = {
         usdc: recipientUSDCBalance + 1
-    }
+    };
 
     await tester.withBalanceCheck(
         UserSmartWalletV7.options.address,
@@ -4556,7 +4560,7 @@ async function test(testingContext) {
         "call",
         [
             10, // DaiWithdrawal
-            "1000000000000000",
+            "1000000000000000000",
             tester.address,
             0
         ],
@@ -4576,24 +4580,54 @@ async function test(testingContext) {
         tester.addressTwo
     );
 
-    await tester.runTest(
-        "V7 UserSmartWallet relay can call with signature to withdraw dai",
-        UserSmartWalletV7,
-        "withdrawDai",
-        "send",
+    const preDAIWithdrawalBalance = {
+        dDaiUnderlying: 200
+    };
+
+    const postDAIWithdrawalBalance = {
+        dDaiUnderlying: 199
+    };
+
+    const recipientDAIBalance = (await tester.getBalances(tester.address)).dai;
+
+    const preDAIWithdrawalRecipientBalance = {
+        dai: recipientDAIBalance
+    };
+
+    const postDAIWithdrawalRecipientBalance = {
+        dai: recipientDAIBalance + 1
+    };
+
+    await tester.withBalanceCheck(
+        UserSmartWalletV7.options.address,
+        preDAIWithdrawalBalance,
+        postDAIWithdrawalBalance,
+        tester.withBalanceCheck,
         [
-            "1000000000000000",
             tester.address,
-            0,
-            daiUserWithdrawalSignature,
-            daiWithdrawalSignature
-        ],
-        true,
-        receipt => {
-            // TODO: verify logs
-            //console.log(receipt.events)
-        },
-        tester.originalAddress
+            preDAIWithdrawalRecipientBalance,
+            postDAIWithdrawalRecipientBalance,
+            tester.runTest,
+            [
+                "V7 UserSmartWallet relay can call with two signatures to withdraw DAI",
+                UserSmartWalletV7,
+                "withdrawDai",
+                "send",
+                [
+                    "1000000000000000000",
+                    tester.address,
+                    0,
+                    daiUserWithdrawalSignature,
+                    daiWithdrawalSignature
+                ],
+                true,
+                receipt => {
+                    // TODO: verify logs
+                    //console.log(receipt)
+                },
+                tester.originalAddress
+            ]
+        ]
     );
 
     await tester.runTest(
@@ -6380,16 +6414,12 @@ async function test(testingContext) {
         tester.SAI,
         "approve",
         "send",
-        [tester.CSAI.options.address, web3.utils.toWei('100', 'ether')]
+        [tester.CSAI.options.address, web3.utils.toWei("100", "ether")]
     );
 
-    await tester.runTest(
-        "mint cSai",
-        tester.CSAI_MINT,
-        "mint",
-        "send",
-        [web3.utils.toWei('100', 'ether')]
-    );
+    await tester.runTest("mint cSai", tester.CSAI_MINT, "mint", "send", [
+        web3.utils.toWei("100", "ether")
+    ]);
 
     // console.log(await tester.getBalances(tester.address));
 
@@ -6401,7 +6431,9 @@ async function test(testingContext) {
         [UserSmartWalletV7.options.address, web3.utils.toWei("1", "gwei")]
     );
 
-    const walletBalance = await tester.getBalances(UserSmartWalletV7.options.address);
+    const walletBalance = await tester.getBalances(
+        UserSmartWalletV7.options.address
+    );
     assert.strictEqual(walletBalance.cSai, 10.0);
 
     await tester.runTest(
