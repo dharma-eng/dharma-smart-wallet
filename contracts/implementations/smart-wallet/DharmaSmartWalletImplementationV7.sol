@@ -127,7 +127,7 @@ contract DharmaSmartWalletImplementationV7 is
   );
 
   SmartWalletRevertReasonHelperV1 internal constant _REVERT_REASON_HELPER = (
-    SmartWalletRevertReasonHelperV1(0x13821c0129FB9e2CC16dE2660783Ff4E4861e92d)
+    SmartWalletRevertReasonHelperV1(0xE24257338d0c15f3Dd00Ed59fcA9e50CfB167bA8)
   );
 
   // Compound returns a value of 0 to indicate success, or lack of an error.
@@ -1107,7 +1107,10 @@ contract DharmaSmartWalletImplementationV7 is
    * supplied data. The data must be ABI encoded as (bytes32, bytes), where the
    * first bytes32 parameter represents the hash digest for validating the
    * supplied signatures and the second bytes parameter contains context for the
-   * requested validation.
+   * requested validation. The two signatures are packed together, with the one
+   * from Dharma coming first and that from the user coming second - this is so
+   * that, in future versions, multiple user signatures may be supplied if the
+   * associated key ring requires them.
    * @param data bytes The data used to validate the signature.
    * @param signatures bytes The two signatures, each 65 bytes - one from the
    * owner (using ERC-1271 as well if the user signing key is a contract) and
@@ -1121,13 +1124,15 @@ contract DharmaSmartWalletImplementationV7 is
     // Get message hash digest and any additional context from data argument.
     bytes32 digest;
     bytes memory context;
+
     if (data.length == 32) {
       digest = abi.decode(data, (bytes32));
     } else {
+      require(data.length >= 64, _revertReason(30));
       (digest, context) = abi.decode(data, (bytes32, bytes));
     }
 
-    // Get user signature & Dharma signature from combined signatures argument.
+    // Get Dharma signature & user signature from combined signatures argument.
     require(signatures.length == 130, _revertReason(11));
     bytes memory signaturesInMemory = signatures;
     bytes32 r;
@@ -1138,14 +1143,14 @@ contract DharmaSmartWalletImplementationV7 is
       s := mload(add(signaturesInMemory, 0x40))
       v := byte(0, mload(add(signaturesInMemory, 0x60)))
     }
-    bytes memory userSignature = abi.encodePacked(r, s, v);
+    bytes memory dharmaSignature = abi.encodePacked(r, s, v);
 
     assembly {
       r := mload(add(signaturesInMemory, 0x61))
       s := mload(add(signaturesInMemory, 0x81))
       v := byte(0, mload(add(signaturesInMemory, 0xa1)))
     }
-    bytes memory dharmaSignature = abi.encodePacked(r, s, v);
+    bytes memory userSignature = abi.encodePacked(r, s, v);
 
     // Validate user signature with `SignatureVerification` as the action type.
     require(
@@ -2199,7 +2204,7 @@ contract DharmaSmartWalletImplementationV7 is
       revertReason = abi.decode(revertReasonBytes, (string));
     } else {
       // Simply return the default, with no revert reason.
-      revertReason = _revertReason(30);
+      revertReason = _revertReason(uint256(-1));
     }
   }
 

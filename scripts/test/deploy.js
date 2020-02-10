@@ -133,18 +133,18 @@ async function test(testingContext) {
     }
 
     /*
-  console.log(
-    swapMetadataHash(
-      DharmaSmartWalletImplementationV7Artifact.bytecode,
-      constants.DHARMA_SMART_WALLET_IMPLEMENTATION_V7_METADATA
-    ),
-    web3.utils.keccak256(swapMetadataHash(
-      DharmaSmartWalletImplementationV7Artifact.bytecode,
-      constants.DHARMA_SMART_WALLET_IMPLEMENTATION_V7_METADATA
-    ), {encoding: 'hex'})
-  )
-  process.exit(0)
-  */
+    console.log(
+        swapMetadataHash(
+            DharmaSmartWalletImplementationV7Artifact.bytecode,
+            constants.DHARMA_SMART_WALLET_IMPLEMENTATION_V7_METADATA
+        ),
+        web3.utils.keccak256(swapMetadataHash(
+            DharmaSmartWalletImplementationV7Artifact.bytecode,
+            constants.DHARMA_SMART_WALLET_IMPLEMENTATION_V7_METADATA
+        ), {encoding: 'hex'})
+    )
+    process.exit(0)
+    */
 
     const DharmaUpgradeBeaconController = new web3.eth.Contract(
         DharmaUpgradeBeaconControllerArtifact.abi,

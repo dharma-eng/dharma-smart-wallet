@@ -1148,6 +1148,27 @@ class Tester {
             IERC20Artifact.abi, constants.CUSDC_MAINNET_ADDRESS
         );
 
+        this.DDAI = new web3.eth.Contract(
+            IERC20Artifact.abi, constants.DDAI_MAINNET_ADDRESS
+        );
+
+        this.DUSDC = new web3.eth.Contract(
+            IERC20Artifact.abi, constants.DUSDC_MAINNET_ADDRESS
+        );
+
+        const MetaABI = [
+            {"constant":false,"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"},{"internalType":"bool","name":"increase","type":"bool"},{"internalType":"uint256","name":"expiration","type":"uint256"},{"internalType":"bytes32","name":"salt","type":"bytes32"},{"internalType":"bytes","name":"signatures","type":"bytes"}],"name":"modifyAllowanceViaMetaTransaction","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},
+            {"constant":true,"inputs":[{"internalType":"bytes4","name":"functionSelector","type":"bytes4"},{"internalType":"bytes","name":"arguments","type":"bytes"},{"internalType":"uint256","name":"expiration","type":"uint256"},{"internalType":"bytes32","name":"salt","type":"bytes32"}],"name":"getMetaTransactionMessageHash","outputs":[{"internalType":"bytes32","name":"messageHash","type":"bytes32"},{"internalType":"bool","name":"valid","type":"bool"}],"payable":false,"stateMutability":"view","type":"function"}
+        ]
+
+        this.DDAI_META = new web3.eth.Contract(
+            MetaABI, constants.DDAI_MAINNET_ADDRESS
+        );
+
+        this.DUSDC_META = new web3.eth.Contract(
+            MetaABI, constants.DUSDC_MAINNET_ADDRESS
+        );
+
         this.BadBeaconDeployer = this.newDeployer(BadBeaconArtifact);
 
         this.BadBeaconTwoDeployer = this.newDeployer(BadBeaconTwoArtifact);

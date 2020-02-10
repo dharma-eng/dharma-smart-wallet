@@ -4461,25 +4461,6 @@ async function test(testingContext) {
         tester.originalAddress
     );
 
-    /* TODO: get this working manually
-  const withdrawalMessage = (
-    UserSmartWallet.options.address +  // smart wallet address
-    constants.NULL_BYTES_32.slice(2) + // smart wallet version
-    address.slice(2) +                 // user dharma key
-    address.slice(2) +                 // dharma key registry key
-    '5'.padStart(64, '0') +            // nonce
-    constants.NULL_BYTES_32.slice(2) + // minimum gas
-    '04' +                             // action type
-    'f'.padStart(64, 'f') +            // amount
-    address.slice(2)                   // recipient
-  )
-
-  const saiWithdrawalSignature = tester.signHashedPrefixedHashedHexString(
-    withdrawalMessage,
-    address
-  )
-  */
-
     await tester.runTest(
         "V7 UserSmartWallet can get a Dai withdrawal custom action ID",
         UserSmartWalletV7,
@@ -6629,6 +6610,81 @@ async function test(testingContext) {
         tester.originalAddress
     );
 
+    await tester.runTest(
+        `Check allowance is not set before meta-tx`,
+        tester.DUSDC,
+        "allowance",
+        "call",
+        [UserSmartWalletV7.options.address, tester.addressTwo],
+        true,
+        value => {
+            assert.strictEqual(value, '0');
+        }
+    );
+
+    let messageHash;
+    await tester.runTest(
+        `Get message hash for meta-transaction approval`,
+        tester.DUSDC_META,
+        "getMetaTransactionMessageHash",
+        "call",
+        [
+            "0x2d657fa5", // `modifyAllowanceViaMetaTransaction`
+            web3.eth.abi.encodeParameters(
+                ["address", "address", "uint256", "bool"],
+                [UserSmartWalletV7.options.address, tester.addressTwo, '1', true]
+            ),
+            0, // No expiration
+            constants.NULL_BYTES_32 // no salt
+        ],
+        true,
+        values => {
+            assert.ok(values.valid);
+            messageHash = values.messageHash;
+        }
+    );
+
+    const messageHashSignature = tester.signHashedPrefixedHexString(
+        messageHash,
+        tester.address
+    );
+
+    const messageHashUserSignature = tester.signHashedPrefixedHexString(
+        messageHash,
+        tester.addressTwo
+    );
+
+    await tester.runTest(
+        `dUSDC allowance is modifiable via meta-transaction`,
+        tester.DUSDC_META,
+        "modifyAllowanceViaMetaTransaction",
+        "send",
+        [
+            UserSmartWalletV7.options.address,
+            tester.addressTwo,
+            '1',
+            true,
+            0,
+            constants.NULL_BYTES_32,
+            messageHashSignature + messageHashUserSignature.slice(2)
+        ],
+        true,
+        receipt => {
+            // TODO: validate
+        }
+    );
+
+    await tester.runTest(
+        `Check allowance is set after meta-tx`,
+        tester.DUSDC,
+        "allowance",
+        "call",
+        [UserSmartWalletV7.options.address, tester.addressTwo],
+        true,
+        value => {
+            assert.strictEqual(value, '1');
+        }
+    );
 
     // Initiate account recovery
     await tester.runTest(

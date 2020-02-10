@@ -44,6 +44,7 @@ contract SmartWalletRevertReasonHelperV1 {
     if (code == 27) return "Invalid `to` parameter - cannot supply the address of this contract.";
     if (code == 28) return "Invalid `to` parameter - cannot supply the Dharma Escape Hatch Registry.";
     if (code == 29) return "Invalid custom action type.";
+    if (code == 30) return "Insufficient data supplied.";
     return "(no revert reason)";
   }
 }
