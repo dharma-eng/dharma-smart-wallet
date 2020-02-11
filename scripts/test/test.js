@@ -31,6 +31,9 @@ const DharmaKeyRingImplementationV1Artifact = require("../../build/contracts/Dha
 
 const contractNames = Object.assign({}, constants.CONTRACT_NAMES);
 
+const ONE = web3.utils.toBN("1");
+const ZERO = web3.utils.toBN("0");
+
 async function test(testingContext) {
     const tester = new Tester(testingContext);
     await tester.init();
@@ -5693,7 +5696,7 @@ async function test(testingContext) {
         [
             6, // ETHWithdrawal,
             "1",
-            targetWalletAddress,
+            tester.address,
             0
         ],
         true,
@@ -5712,24 +5715,57 @@ async function test(testingContext) {
         tester.addressTwo
     );
 
-    await tester.runTest(
-        "V7 UserSmartWallet relay cannot withdraw eth to a non-payable account",
-        UserSmartWalletV7,
-        "withdrawEther",
-        "send",
+    const preETHwithdrawalBalance = {
+        etherRaw: "99999999999999996"
+    };
+
+    const postETHWithdrawalBalance = {
+        etherRaw: "99999999999999995"
+    };
+
+    const recipientETHBalance = (await tester.getBalances(tester.address))
+        .etherRaw;
+
+    const preETHWithdrawalRecipientBalance = {
+        etherRaw: recipientETHBalance
+    };
+
+    const recipientBalance = web3.utils.toBN(recipientETHBalance).add(ONE);
+
+    const postETHWithdrawalRecipientBalance = {
+        etherRaw: recipientBalance.toString()
+    };
+
+    await tester.withBalanceCheck(
+        UserSmartWalletV7.options.address,
+        preETHwithdrawalBalance,
+        postETHWithdrawalBalance,
+        tester.withBalanceCheck,
         [
-            "1",
-            targetWalletAddress,
-            0,
-            ethUserWithdrawalSignature,
-            ethWithdrawalSignature
-        ],
-        true,
-        receipt => {
-            // TODO: verify logs
-            //console.log(receipt)
-        },
-        tester.originalAddress
+            tester.address,
+            preETHWithdrawalRecipientBalance,
+            postETHWithdrawalRecipientBalance,
+            tester.runTest,
+            [
+                "V7 UserSmartWallet relay can call with two signatures to withdraw ETH",
+                UserSmartWalletV7,
+                "withdrawEther",
+                "send",
+                [
+                    "1",
+                    tester.address,
+                    0,
+                    ethUserWithdrawalSignature,
+                    ethWithdrawalSignature
+                ],
+                true,
+                receipt => {
+                    // TODO: verify logs
+                    //console.log(receipt)
+                },
+                tester.originalAddress
+            ]
+        ]
     );
 
     await tester.runTest(
@@ -6251,17 +6287,85 @@ async function test(testingContext) {
         tester.originalAddress
     );
 
-    await tester.runTest(
-        "V7 UserSmartWallet escape hatch account can call escape",
-        UserSmartWalletV7,
-        "escape",
-        "send",
-        [],
-        true,
-        receipt => {
-            // TODO: verify logs
-        },
+    const allPreEscapeBalances = await tester.getBalances(
+        UserSmartWalletV7.options.address
+    );
+    const preEscapeBalances = {
+        dDai: allPreEscapeBalances.dDai,
+        dUSDC: allPreEscapeBalances.dUSDC,
+        dai: allPreEscapeBalances.dai,
+        usdc: allPreEscapeBalances.usdc,
+        sai: allPreEscapeBalances.sai,
+        cDai: allPreEscapeBalances.cDai,
+        cUSDC: allPreEscapeBalances.cUSDC,
+        cSai: allPreEscapeBalances.cSai
+        // TODO: test raw balances
+    };
+
+    const postEscapeBalances = {
+        dDai: 0,
+        dUSDC: 0,
+        dai: 0,
+        usdc: 0,
+        sai: 0,
+        cDai: 0,
+        cUSDC: 0,
+        cSai: 0
+    };
+
+    const allRecipientPreEscapeBalances = await tester.getBalances(
         tester.address
+    );
+    const recipientPreEscapeBalances = {
+        dDai: allRecipientPreEscapeBalances.dDai,
+        dUSDC: allRecipientPreEscapeBalances.dUSDC,
+        dai: allRecipientPreEscapeBalances.dai,
+        usdc: allRecipientPreEscapeBalances.usdc,
+        sai: allRecipientPreEscapeBalances.sai,
+        cDai: allRecipientPreEscapeBalances.cDai,
+        cUSDC: allRecipientPreEscapeBalances.cUSDC,
+        cSai: allRecipientPreEscapeBalances.cSai
+        // TODO: test raw balances
+    };
+    let recipientPostEscapeBalances = {};
+
+    // Add all pre-escape balances, to recipient current balances
+    for (let token of Object.keys(preEscapeBalances)) {
+        recipientPostEscapeBalances[token] =
+            preEscapeBalances[token] + recipientPreEscapeBalances[token];
+    }
+
+    // Correct dToken and underlying values since dTokens get converted to underlying.
+    recipientPostEscapeBalances["dai"] =
+        recipientPostEscapeBalances["dai"] + preEscapeBalances["dDai"];
+    recipientPostEscapeBalances["usdc"] =
+        recipientPostEscapeBalances["usdc"] + preEscapeBalances["dUSDC"];
+    recipientPostEscapeBalances["dDai"] = 0;
+    recipientPostEscapeBalances["dUSDC"] = 0;
+
+    await tester.withBalanceCheck(
+        UserSmartWalletV7.options.address,
+        preEscapeBalances,
+        postEscapeBalances,
+        tester.withBalanceCheck,
+        [
+            tester.address,
+            recipientPreEscapeBalances,
+            recipientPostEscapeBalances,
+            tester.runTest,
+            [
+                "V7 UserSmartWallet escape hatch account can call escape",
+                UserSmartWalletV7,
+                "escape",
+                "send",
+                [],
+                true,
+                receipt => {
+                    // TODO: verify logs
+                },
+                tester.address
+            ]
+        ]
     );
 
     await tester.runTest(
@@ -6470,17 +6574,44 @@ async function test(testingContext) {
         [UserSmartWalletV7.options.address, web3.utils.toWei("1", "mwei")]
     );
 
-    await tester.runTest(
-        "V7 UserSmartWallet relay can trigger cDai to dDai migration",
-        UserSmartWalletV7,
-        "migrateCDaiToDDai",
-        "send",
-        [],
-        true,
-        receipt => {
-            // TODO: verify logs
-        },
-        tester.originalAddress
+    let allPreMigrationBalances = await tester.getBalances(
+        UserSmartWalletV7.options.address
+    );
+
+    const dDaiUnderlyingRaw = web3.utils.toBN(
+        allPreMigrationBalances.dDaiUnderlyingRaw
+    );
+    const cDaiUnderlyingRaw = web3.utils.toBN(
+        allPreMigrationBalances.cDaiUnderlyingRaw
+    );
+    let preMigrationBalances = {
+        dDaiUnderlyingRaw: dDaiUnderlyingRaw.toString(),
+        cDaiUnderlyingRaw: cDaiUnderlyingRaw.toString()
+    };
+
+    const postDDaiUnderlyingRaw = dDaiUnderlyingRaw.add(cDaiUnderlyingRaw);
+    let postMigrationBalances = {
+        dDaiUnderlyingRaw: postDDaiUnderlyingRaw.toString(),
+        cDaiUnderlyingRaw: ZERO.toString()
+    };
+
+    await tester.withBalanceCheck(
+        UserSmartWalletV7.options.address,
+        preMigrationBalances,
+        postMigrationBalances,
+        tester.runTest,
+        [
+            "V7 UserSmartWallet relay can trigger cDai to dDai migration",
+            UserSmartWalletV7,
+            "migrateCDaiToDDai",
+            "send",
+            [],
+            true,
+            receipt => {
+                // TODO: verify logs
+            },
+            tester.originalAddress
+        ]
     );
 
     await tester.runTest(
@@ -6512,17 +6643,44 @@ async function test(testingContext) {
         [UserSmartWalletV7.options.address, web3.utils.toWei("1", "lovelace")]
     );
 
-    await tester.runTest(
-        "V7 UserSmartWallet relay can trigger cUSDC to dUSDC migration",
-        UserSmartWalletV7,
-        "migrateCUSDCToDUSDC",
-        "send",
-        [],
-        true,
-        receipt => {
-            // TODO: verify logs
-        },
-        tester.originalAddress
+    allPreMigrationBalances = await tester.getBalances(
+        UserSmartWalletV7.options.address
+    );
+
+    const dUSDCUnderlyingRaw = web3.utils.toBN(
+        allPreMigrationBalances.dUSDCUnderlyingRaw
+    );
+    const cUSDCUnderlyingRaw = web3.utils.toBN(
+        allPreMigrationBalances.cUSDCUnderlyingRaw
+    );
+    preMigrationBalances = {
+        dUSDCUnderlyingRaw: dUSDCUnderlyingRaw.toString(),
+        cUSDCUnderlyingRaw: cUSDCUnderlyingRaw.toString()
+    };
+
+    const postDUSDCUnderlyingRaw = dUSDCUnderlyingRaw.add(cUSDCUnderlyingRaw);
+    postMigrationBalances = {
+        dUSDCUnderlyingRaw: postDUSDCUnderlyingRaw.toString(),
+        cUSDCUnderlyingRaw: ZERO.toString()
+    };
+
+    await tester.withBalanceCheck(
+        UserSmartWalletV7.options.address,
+        preMigrationBalances,
+        postMigrationBalances,
+        tester.runTest,
+        [
+            "V7 UserSmartWallet relay can trigger cDai to dDai migration",
+            UserSmartWalletV7,
+            "migrateCUSDCToDUSDC",
+            "send",
+            [],
+            true,
+            receipt => {
+                // TODO: verify logs
+            },
+            tester.originalAddress
+        ]
     );
 
     await tester.runTest(
@@ -6671,7 +6829,7 @@ async function test(testingContext) {
         [UserSmartWalletV7.options.address, tester.addressTwo],
         true,
         value => {
-            assert.strictEqual(value, '0');
+            assert.strictEqual(value, "0");
         }
     );
 
@@ -6685,7 +6843,12 @@ async function test(testingContext) {
             "0x2d657fa5", // `modifyAllowanceViaMetaTransaction`
             web3.eth.abi.encodeParameters(
                 ["address", "address", "uint256", "bool"],
-                [UserSmartWalletV7.options.address, tester.addressTwo, '1', true]
+                [
+                    UserSmartWalletV7.options.address,
+                    tester.addressTwo,
+                    "1",
+                    true
+                ]
             ),
             0, // No expiration
             constants.NULL_BYTES_32 // no salt
@@ -6707,8 +6870,10 @@ async function test(testingContext) {
         tester.addressTwo
     );
 
-    const messageHashBadSignature = '0xaaaaaaaa' + messageHashSignature.slice(10)
-    const messageHashBadUserSignature = '0xaaaaaaaa' + messageHashUserSignature.slice(10)
+    const messageHashBadSignature =
+        "0xaaaaaaaa" + messageHashSignature.slice(10);
+    const messageHashBadUserSignature =
+        "0xaaaaaaaa" + messageHashUserSignature.slice(10);
 
     await tester.runTest(
         `dUSDC allowance is not modifiable via meta-transaction with bad signature length`,
@@ -6718,11 +6883,11 @@ async function test(testingContext) {
         [
             UserSmartWalletV7.options.address,
             tester.addressTwo,
-            '1',
+            "1",
             true,
             0,
             constants.NULL_BYTES_32,
-            messageHashSignature + messageHashUserSignature.slice(2) + 'aa'
+            messageHashSignature + messageHashUserSignature.slice(2) + "aa"
         ],
         false
     );
@@ -6735,7 +6900,7 @@ async function test(testingContext) {
         [
             UserSmartWalletV7.options.address,
             tester.addressTwo,
-            '1',
+            "1",
             true,
             0,
             constants.NULL_BYTES_32,
@@ -6752,7 +6917,7 @@ async function test(testingContext) {
         [
             UserSmartWalletV7.options.address,
             tester.addressTwo,
-            '1',
+            "1",
             true,
             0,
             constants.NULL_BYTES_32,
@@ -6769,7 +6934,7 @@ async function test(testingContext) {
         [
             UserSmartWalletV7.options.address,
             tester.addressTwo,
-            '1',
+            "1",
             true,
             0,
             constants.NULL_BYTES_32,
@@ -6789,7 +6954,7 @@ async function test(testingContext) {
         [UserSmartWalletV7.options.address, tester.addressTwo],
         true,
         value => {
-            assert.strictEqual(value, '1');
+            assert.strictEqual(value, "1");
         }
     );
 
