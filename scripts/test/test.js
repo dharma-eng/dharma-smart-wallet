@@ -6541,17 +6541,69 @@ async function test(testingContext) {
     assert.strictEqual(walletBalance.cSai, 10.0);
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can trigger cSai to dDai migration",
+        "V7 UserSmartWallet can get next generic action ID",
         UserSmartWalletV7,
-        "migrateCSaiToDDai",
-        "send",
-        [],
+        "getNextGenericActionID",
+        "call",
+        [tester.address, "0x", 0],
         true,
-        receipt => {
-            // TODO: verify logs
-        },
-        tester.originalAddress
+        value => {
+            genericActionID = value;
+        }
     );
+
+    let allPreMigrationBalances = await tester.getBalances(
+        UserSmartWalletV7.options.address
+    );
+
+    let dDaiUnderlyingRaw = web3.utils.toBN(
+        allPreMigrationBalances.dDaiUnderlyingRaw
+    );
+    let cSaiUnderlyingRaw = web3.utils.toBN(
+        allPreMigrationBalances.cSaiUnderlyingRaw
+    );
+    let preMigrationBalances = {
+        dDaiUnderlyingRaw: dDaiUnderlyingRaw.toString(),
+        cSaiUnderlyingRaw: cSaiUnderlyingRaw.toString()
+    };
+
+    let postDDaiUnderlyingRaw = dDaiUnderlyingRaw.add(cSaiUnderlyingRaw);
+    let postMigrationBalances = {
+        dDaiUnderlyingRaw: postDDaiUnderlyingRaw.toString(),
+        cSaiUnderlyingRaw: ZERO.toString()
+    };
+
+    await tester.withBalanceCheck(
+        UserSmartWalletV7.options.address,
+        preMigrationBalances,
+        postMigrationBalances,
+        tester.runTest,
+        [
+            "V7 UserSmartWallet relay can trigger cSai to dDai migration",
+            UserSmartWalletV7,
+            "migrateCSaiToDDai",
+            "send",
+            [],
+            true,
+            receipt => {
+                // TODO: verify logs
+            },
+            tester.originalAddress
+        ]
+    );
+
+    // await tester.runTest(
+    //     "V7 UserSmartWallet relay can trigger cSai to dDai migration",
+    //     UserSmartWalletV7,
+    //     "migrateCSaiToDDai",
+    //     "send",
+    //     [],
+    //     true,
+    //     receipt => {
+    //         // TODO: verify logs
+    //     },
+    //     tester.originalAddress
+    // );
 
     await tester.runTest(
         "V7 UserSmartWallet relay can trigger cSai to dDai migration again (no-op)",
@@ -6574,23 +6626,23 @@ async function test(testingContext) {
         [UserSmartWalletV7.options.address, web3.utils.toWei("1", "mwei")]
     );
 
-    let allPreMigrationBalances = await tester.getBalances(
+    allPreMigrationBalances = await tester.getBalances(
         UserSmartWalletV7.options.address
     );
 
-    const dDaiUnderlyingRaw = web3.utils.toBN(
+    dDaiUnderlyingRaw = web3.utils.toBN(
         allPreMigrationBalances.dDaiUnderlyingRaw
     );
-    const cDaiUnderlyingRaw = web3.utils.toBN(
+    let cDaiUnderlyingRaw = web3.utils.toBN(
         allPreMigrationBalances.cDaiUnderlyingRaw
     );
-    let preMigrationBalances = {
+    preMigrationBalances = {
         dDaiUnderlyingRaw: dDaiUnderlyingRaw.toString(),
         cDaiUnderlyingRaw: cDaiUnderlyingRaw.toString()
     };
 
-    const postDDaiUnderlyingRaw = dDaiUnderlyingRaw.add(cDaiUnderlyingRaw);
-    let postMigrationBalances = {
+    postDDaiUnderlyingRaw = dDaiUnderlyingRaw.add(cDaiUnderlyingRaw);
+    postMigrationBalances = {
         dDaiUnderlyingRaw: postDDaiUnderlyingRaw.toString(),
         cDaiUnderlyingRaw: ZERO.toString()
     };
@@ -6612,6 +6664,27 @@ async function test(testingContext) {
             },
             tester.originalAddress
         ]
+    );
+
+    await tester.runTest(
+        "Small amount of cDai can be sent to V7 UserSmartWallet",
+        tester.CDAI,
+        "transfer",
+        "send",
+        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "wei")]
+    );
+
+    await tester.runTest(
+        "V7 UserSmartWallet cDai to dDai migration fails with a small amount of cDai",
+        UserSmartWalletV7,
+        "migrateCDaiToDDai",
+        "send",
+        [],
+        false,
+        receipt => {
+            // TODO: verify logs
+        },
+        tester.originalAddress
     );
 
     await tester.runTest(
