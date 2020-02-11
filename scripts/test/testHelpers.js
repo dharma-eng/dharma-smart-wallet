@@ -822,7 +822,7 @@ class Tester {
         const fiinalBalancesSet = new Set(Object.keys(finalBalances));
 
         for (const balance of balanceChecks) {
-            assert.strictEqual(final[balance], finalBalances[balance]);
+            assert.strictEqual(finalBalances[balance], final[balance]);
         }
     }
 

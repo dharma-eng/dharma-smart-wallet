@@ -6286,17 +6286,85 @@ async function test(testingContext) {
         tester.originalAddress
     );
 
-    await tester.runTest(
-        "V7 UserSmartWallet escape hatch account can call escape",
-        UserSmartWalletV7,
-        "escape",
-        "send",
-        [],
-        true,
-        receipt => {
-            // TODO: verify logs
-        },
+    const allPreEscapeBalances = await tester.getBalances(
+        UserSmartWalletV7.options.address
+    );
+    const preEscapeBalances = {
+        dDai: allPreEscapeBalances.dDai,
+        dUSDC: allPreEscapeBalances.dUSDC,
+        dai: allPreEscapeBalances.dai,
+        usdc: allPreEscapeBalances.usdc,
+        sai: allPreEscapeBalances.sai,
+        cDai: allPreEscapeBalances.cDai,
+        cUSDC: allPreEscapeBalances.cUSDC,
+        cSai: allPreEscapeBalances.cSai
+        // TODO: test raw balances
+    };
+
+    const postEscapeBalances = {
+        dDai: 0,
+        dUSDC: 0,
+        dai: 0,
+        usdc: 0,
+        sai: 0,
+        cDai: 0,
+        cUSDC: 0,
+        cSai: 0
+    };
+
+    const allRecipientPreEscapeBalances = await tester.getBalances(
         tester.address
+    );
+    const recipientPreEscapeBalances = {
+        dDai: allRecipientPreEscapeBalances.dDai,
+        dUSDC: allRecipientPreEscapeBalances.dUSDC,
+        dai: allRecipientPreEscapeBalances.dai,
+        usdc: allRecipientPreEscapeBalances.usdc,
+        sai: allRecipientPreEscapeBalances.sai,
+        cDai: allRecipientPreEscapeBalances.cDai,
+        cUSDC: allRecipientPreEscapeBalances.cUSDC,
+        cSai: allRecipientPreEscapeBalances.cSai
+        // TODO: test raw balances
+    };
+    let recipientPostEscapeBalances = {};
+
+    // Add all pre-escape balances, to recipient current balances
+    for (let token of Object.keys(preEscapeBalances)) {
+        recipientPostEscapeBalances[token] =
+            preEscapeBalances[token] + recipientPreEscapeBalances[token];
+    }
+
+    // Correct dToken and underlying values since dTokens get converted to underlying.
+    recipientPostEscapeBalances["dai"] =
+        recipientPostEscapeBalances["dai"] + preEscapeBalances["dDai"];
+    recipientPostEscapeBalances["usdc"] =
+        recipientPostEscapeBalances["usdc"] + preEscapeBalances["dUSDC"];
+    recipientPostEscapeBalances["dDai"] = 0;
+    recipientPostEscapeBalances["dUSDC"] = 0;
+
+    await tester.withBalanceCheck(
+        UserSmartWalletV7.options.address,
+        preEscapeBalances,
+        postEscapeBalances,
+        tester.withBalanceCheck,
+        [
+            tester.address,
+            recipientPreEscapeBalances,
+            recipientPostEscapeBalances,
+            tester.runTest,
+            [
+                "V7 UserSmartWallet escape hatch account can call escape",
+                UserSmartWalletV7,
+                "escape",
+                "send",
+                [],
+                true,
+                receipt => {
+                    // TODO: verify logs
+                },
+                tester.address
+            ]
+        ]
     );
 
     await tester.runTest(
