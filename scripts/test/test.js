@@ -6724,18 +6724,18 @@ async function test(testingContext) {
     dDaiUnderlyingRaw = web3.utils.toBN(
         allPreMigrationBalances.dDaiUnderlyingRaw
     );
-    cDaiUnderlyingRaw = web3.utils.toBN(
-        allPreMigrationBalances.cDaiUnderlyingRaw
+    cSaiUnderlyingRaw = web3.utils.toBN(
+        allPreMigrationBalances.cSaiUnderlyingRaw
     );
     preMigrationBalances = {
         dDaiUnderlyingRaw: dDaiUnderlyingRaw.toString(),
-        cDaiUnderlyingRaw: cDaiUnderlyingRaw.toString()
+        cSaiUnderlyingRaw: cSaiUnderlyingRaw.toString()
     };
 
-    postDDaiUnderlyingRaw = dDaiUnderlyingRaw.add(cDaiUnderlyingRaw);
+    postDDaiUnderlyingRaw = dDaiUnderlyingRaw.add(cSaiUnderlyingRaw);
     postMigrationBalances = {
         dDaiUnderlyingRaw: postDDaiUnderlyingRaw.toString(),
-        cDaiUnderlyingRaw: ZERO.toString()
+        cSaiUnderlyingRaw: ZERO.toString()
     };
 
     await tester.withBalanceCheck(
@@ -6744,9 +6744,9 @@ async function test(testingContext) {
         postMigrationBalances,
         tester.runTest,
         [
-            "V7 UserSmartWallet relay can trigger cDai to dDai migration after allowance is 0",
+            "V7 UserSmartWallet relay can trigger cSai to dDai migration",
             UserSmartWalletV7,
-            "migrateCDaiToDDai",
+            "migrateCSaiToDDai",
             "send",
             [],
             true,
