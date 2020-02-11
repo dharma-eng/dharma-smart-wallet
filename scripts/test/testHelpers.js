@@ -819,7 +819,6 @@ class Tester {
 
         // Get the final balances.
         const finalBalances = await this.getBalances(account);
-        const fiinalBalancesSet = new Set(Object.keys(finalBalances));
 
         for (const balance of balanceChecks) {
             assert.strictEqual(finalBalances[balance], final[balance]);
