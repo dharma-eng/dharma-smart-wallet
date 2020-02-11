@@ -6667,7 +6667,7 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "Smal amount of cDai can be sent to V7 UserSmartWallet",
+        "Small amount of cDai can be sent to V7 UserSmartWallet",
         tester.CDAI,
         "transfer",
         "send",
