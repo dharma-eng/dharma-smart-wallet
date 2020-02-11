@@ -788,32 +788,30 @@ class Tester {
         const initialBalances = await this.getBalances(account);
         const initialBalancesSet = new Set(Object.keys(initialBalances));
 
-        //console.log(initialBalances)
-
         const initialSet = new Set(Object.keys(initial));
         const finalSet = new Set(Object.keys(final));
 
         // Initial and final sets must both have the same balance checks.
         assert.strictEqual(initialSet.size, finalSet.size);
         assert.strictEqual(
-            initialSet.size, (new Set([...initialSet, ...finalSet])).size
+            initialSet.size,
+            new Set([...initialSet, ...finalSet]).size
         );
 
         // Ensure that all the specified balance checks are actually returned.
         assert.strictEqual(
-            (new Set([...initialSet].filter(
-                x => !initialBalancesSet.has(x))
-            )).size,
+            new Set([...initialSet].filter(x => !initialBalancesSet.has(x)))
+                .size,
             0
         );
 
         // Get specified keys from balance check and compare to expected values.
-        const balanceChecks = [...(new Set([...initialSet].filter(
-            x => initialBalancesSet.has(x)
-        )))];
+        const balanceChecks = [
+            ...new Set([...initialSet].filter(x => initialBalancesSet.has(x)))
+        ];
 
         for (const balance of balanceChecks) {
-            assert.strictEqual(initial[balance], initialBalances[balance]);
+            assert.strictEqual(initialBalances[balance], initial[balance]);
         }
 
         // Run the test.
@@ -824,19 +822,21 @@ class Tester {
         const fiinalBalancesSet = new Set(Object.keys(finalBalances));
 
         for (const balance of balanceChecks) {
-            assert.strictEqual(final[balance], finalBalances[balance]);
-        }    
+            assert.strictEqual(finalBalances[balance], final[balance]);
+        }
     }
 
     async getBalances(account) {
-        const balances = await this.BalanceChecker.methods.getBalances(account)
+        const balances = await this.BalanceChecker.methods
+            .getBalances(account)
             .call()
             .catch(error => {
                 console.error(error);
                 process.exit(1);
             });
 
-        const underlyingBalances = await this.BalanceChecker.methods.getUnderlyingBalances(account)
+        const underlyingBalances = await this.BalanceChecker.methods
+            .getUnderlyingBalances(account)
             .call()
             .catch(error => {
                 console.error(error);
@@ -845,20 +845,57 @@ class Tester {
 
         return {
             account,
-            dDai: parseFloat(web3.utils.fromWei(balances.dDaiBalance, 'gwei')) * 10,
-            dUSDC: parseFloat(web3.utils.fromWei(balances.dUSDCBalance, 'gwei')) * 10,
-            dai: parseFloat(web3.utils.fromWei(balances.daiBalance, 'ether')),
-            usdc: parseFloat(web3.utils.fromWei(balances.usdcBalance, 'mwei')),
-            sai: parseFloat(web3.utils.fromWei(balances.saiBalance, 'ether')),
-            cSai: parseFloat(web3.utils.fromWei(balances.cSaiBalance, 'gwei')) * 10,
-            cDai: parseFloat(web3.utils.fromWei(balances.cDaiBalance, 'gwei')) * 10,
-            cUSDC: parseFloat(web3.utils.fromWei(balances.cUSDCBalance, 'gwei')) * 10,
-            ether: parseFloat(web3.utils.fromWei(balances.etherBalance, 'ether')),
-            dDaiUnderlying: parseFloat(web3.utils.fromWei(underlyingBalances.dDaiBalanceUnderlying, 'ether')),
-            dUSDCUnderlying: parseFloat(web3.utils.fromWei(underlyingBalances.dUSDCBalanceUnderlying, 'mwei')),
-            cSaiUnderlying: parseFloat(web3.utils.fromWei(underlyingBalances.cSaiBalanceUnderlying, 'ether')),
-            cDaiUnderlying: parseFloat(web3.utils.fromWei(underlyingBalances.cDaiBalanceUnderlying, 'ether')),
-            cUSDCUnderlying: parseFloat(web3.utils.fromWei(underlyingBalances.cUSDCBalanceUnderlying, 'mwei')),
+            dDai:
+                parseFloat(web3.utils.fromWei(balances.dDaiBalance, "gwei")) *
+                10,
+            dUSDC:
+                parseFloat(web3.utils.fromWei(balances.dUSDCBalance, "gwei")) *
+                10,
+            dai: parseFloat(web3.utils.fromWei(balances.daiBalance, "ether")),
+            usdc: parseFloat(web3.utils.fromWei(balances.usdcBalance, "mwei")),
+            sai: parseFloat(web3.utils.fromWei(balances.saiBalance, "ether")),
+            cSai:
+                parseFloat(web3.utils.fromWei(balances.cSaiBalance, "gwei")) *
+                10,
+            cDai:
+                parseFloat(web3.utils.fromWei(balances.cDaiBalance, "gwei")) *
+                10,
+            cUSDC:
+                parseFloat(web3.utils.fromWei(balances.cUSDCBalance, "gwei")) *
+                10,
+            ether: parseFloat(
+                web3.utils.fromWei(balances.etherBalance, "ether")
+            ),
+            dDaiUnderlying: parseFloat(
+                web3.utils.fromWei(
+                    underlyingBalances.dDaiBalanceUnderlying,
+                    "ether"
+                )
+            ),
+            dUSDCUnderlying: parseFloat(
+                web3.utils.fromWei(
+                    underlyingBalances.dUSDCBalanceUnderlying,
+                    "mwei"
+                )
+            ),
+            cSaiUnderlying: parseFloat(
+                web3.utils.fromWei(
+                    underlyingBalances.cSaiBalanceUnderlying,
+                    "ether"
+                )
+            ),
+            cDaiUnderlying: parseFloat(
+                web3.utils.fromWei(
+                    underlyingBalances.cDaiBalanceUnderlying,
+                    "ether"
+                )
+            ),
+            cUSDCUnderlying: parseFloat(
+                web3.utils.fromWei(
+                    underlyingBalances.cUSDCBalanceUnderlying,
+                    "mwei"
+                )
+            ),
             dDaiRaw: balances.dDaiBalance,
             dUSDCRaw: balances.dUSDCBalance,
             daiRaw: balances.daiBalance,
@@ -1121,52 +1158,117 @@ class Tester {
         );
 
         this.SAI = new web3.eth.Contract(
-            IERC20Artifact.abi, constants.SAI_MAINNET_ADDRESS
+            IERC20Artifact.abi,
+            constants.SAI_MAINNET_ADDRESS
         );
 
         this.DAI = new web3.eth.Contract(
-            IERC20Artifact.abi, constants.DAI_MAINNET_ADDRESS
+            IERC20Artifact.abi,
+            constants.DAI_MAINNET_ADDRESS
         );
 
         this.USDC = new web3.eth.Contract(
-            IERC20Artifact.abi, constants.USDC_MAINNET_ADDRESS
+            IERC20Artifact.abi,
+            constants.USDC_MAINNET_ADDRESS
         );
 
         this.CSAI = new web3.eth.Contract(
-            IERC20Artifact.abi, constants.CSAI_MAINNET_ADDRESS
+            IERC20Artifact.abi,
+            constants.CSAI_MAINNET_ADDRESS
         );
 
         this.CSAI_MINT = new web3.eth.Contract(
-            CTokenInterfaceArtifact.abi, constants.CSAI_MAINNET_ADDRESS
+            CTokenInterfaceArtifact.abi,
+            constants.CSAI_MAINNET_ADDRESS
         );
 
         this.CDAI = new web3.eth.Contract(
-            IERC20Artifact.abi, constants.CDAI_MAINNET_ADDRESS
+            IERC20Artifact.abi,
+            constants.CDAI_MAINNET_ADDRESS
         );
 
         this.CUSDC = new web3.eth.Contract(
-            IERC20Artifact.abi, constants.CUSDC_MAINNET_ADDRESS
+            IERC20Artifact.abi,
+            constants.CUSDC_MAINNET_ADDRESS
         );
 
         this.DDAI = new web3.eth.Contract(
-            IERC20Artifact.abi, constants.DDAI_MAINNET_ADDRESS
+            IERC20Artifact.abi,
+            constants.DDAI_MAINNET_ADDRESS
         );
 
         this.DUSDC = new web3.eth.Contract(
-            IERC20Artifact.abi, constants.DUSDC_MAINNET_ADDRESS
+            IERC20Artifact.abi,
+            constants.DUSDC_MAINNET_ADDRESS
         );
 
         const MetaABI = [
-            {"constant":false,"inputs":[{"internalType":"address","name":"owner","type":"address"},{"internalType":"address","name":"spender","type":"address"},{"internalType":"uint256","name":"value","type":"uint256"},{"internalType":"bool","name":"increase","type":"bool"},{"internalType":"uint256","name":"expiration","type":"uint256"},{"internalType":"bytes32","name":"salt","type":"bytes32"},{"internalType":"bytes","name":"signatures","type":"bytes"}],"name":"modifyAllowanceViaMetaTransaction","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},
-            {"constant":true,"inputs":[{"internalType":"bytes4","name":"functionSelector","type":"bytes4"},{"internalType":"bytes","name":"arguments","type":"bytes"},{"internalType":"uint256","name":"expiration","type":"uint256"},{"internalType":"bytes32","name":"salt","type":"bytes32"}],"name":"getMetaTransactionMessageHash","outputs":[{"internalType":"bytes32","name":"messageHash","type":"bytes32"},{"internalType":"bool","name":"valid","type":"bool"}],"payable":false,"stateMutability":"view","type":"function"}
-        ]
+            {
+                constant: false,
+                inputs: [
+                    { internalType: "address", name: "owner", type: "address" },
+                    {
+                        internalType: "address",
+                        name: "spender",
+                        type: "address"
+                    },
+                    { internalType: "uint256", name: "value", type: "uint256" },
+                    { internalType: "bool", name: "increase", type: "bool" },
+                    {
+                        internalType: "uint256",
+                        name: "expiration",
+                        type: "uint256"
+                    },
+                    { internalType: "bytes32", name: "salt", type: "bytes32" },
+                    { internalType: "bytes", name: "signatures", type: "bytes" }
+                ],
+                name: "modifyAllowanceViaMetaTransaction",
+                outputs: [
+                    { internalType: "bool", name: "success", type: "bool" }
+                ],
+                payable: false,
+                stateMutability: "nonpayable",
+                type: "function"
+            },
+            {
+                constant: true,
+                inputs: [
+                    {
+                        internalType: "bytes4",
+                        name: "functionSelector",
+                        type: "bytes4"
+                    },
+                    { internalType: "bytes", name: "arguments", type: "bytes" },
+                    {
+                        internalType: "uint256",
+                        name: "expiration",
+                        type: "uint256"
+                    },
+                    { internalType: "bytes32", name: "salt", type: "bytes32" }
+                ],
+                name: "getMetaTransactionMessageHash",
+                outputs: [
+                    {
+                        internalType: "bytes32",
+                        name: "messageHash",
+                        type: "bytes32"
+                    },
+                    { internalType: "bool", name: "valid", type: "bool" }
+                ],
+                payable: false,
+                stateMutability: "view",
+                type: "function"
+            }
+        ];
 
         this.DDAI_META = new web3.eth.Contract(
-            MetaABI, constants.DDAI_MAINNET_ADDRESS
+            MetaABI,
+            constants.DDAI_MAINNET_ADDRESS
         );
 
         this.DUSDC_META = new web3.eth.Contract(
-            MetaABI, constants.DUSDC_MAINNET_ADDRESS
+            MetaABI,
+            constants.DUSDC_MAINNET_ADDRESS
         );
 
         this.BadBeaconDeployer = this.newDeployer(BadBeaconArtifact);
