@@ -6592,19 +6592,6 @@ async function test(testingContext) {
         ]
     );
 
-    // await tester.runTest(
-    //     "V7 UserSmartWallet relay can trigger cSai to dDai migration",
-    //     UserSmartWalletV7,
-    //     "migrateCSaiToDDai",
-    //     "send",
-    //     [],
-    //     true,
-    //     receipt => {
-    //         // TODO: verify logs
-    //     },
-    //     tester.originalAddress
-    // );
-
     await tester.runTest(
         "V7 UserSmartWallet relay can trigger cSai to dDai migration again (no-op)",
         UserSmartWalletV7,
@@ -6711,8 +6698,20 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "cDai can be sent to V7 UserSmartWallet",
-        tester.CDAI,
+        "Check DAI allowance from DDAI is 0",
+        tester.DAI,
+        "allowance",
+        "call",
+        [UserSmartWalletV7.options.address, tester.DDAI.options.address],
+        true,
+        value => {
+            assert.strictEqual(value, ZERO.toString());
+        }
+    );
+
+    await tester.runTest(
+        "cSai can be sent to V7 UserSmartWallet",
+        tester.CSAI,
         "transfer",
         "send",
         [UserSmartWalletV7.options.address, web3.utils.toWei("1", "mwei")]
