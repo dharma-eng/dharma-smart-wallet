@@ -6592,19 +6592,6 @@ async function test(testingContext) {
         ]
     );
 
-    // await tester.runTest(
-    //     "V7 UserSmartWallet relay can trigger cSai to dDai migration",
-    //     UserSmartWalletV7,
-    //     "migrateCSaiToDDai",
-    //     "send",
-    //     [],
-    //     true,
-    //     receipt => {
-    //         // TODO: verify logs
-    //     },
-    //     tester.originalAddress
-    // );
-
     await tester.runTest(
         "V7 UserSmartWallet relay can trigger cSai to dDai migration again (no-op)",
         UserSmartWalletV7,
@@ -6656,6 +6643,110 @@ async function test(testingContext) {
             "V7 UserSmartWallet relay can trigger cDai to dDai migration",
             UserSmartWalletV7,
             "migrateCDaiToDDai",
+            "send",
+            [],
+            true,
+            receipt => {
+                // TODO: verify logs
+            },
+            tester.originalAddress
+        ]
+    );
+
+    await tester.runTest(
+        "V7 UserSmartWallet can get a generic action ID",
+        UserSmartWalletV7,
+        "getNextGenericActionID",
+        "call",
+        [
+            tester.DAI.options.address,
+            tester.DAI.methods
+                .approve(tester.DDAI.options.address, 0)
+                .encodeABI(),
+            0
+        ],
+        true,
+        value => {
+            customActionId = value;
+        }
+    );
+
+    executeActionSignature = tester.signHashedPrefixedHexString(
+        customActionId,
+        tester.address
+    );
+
+    executeActionUserSignature = tester.signHashedPrefixedHexString(
+        customActionId,
+        tester.addressTwo
+    );
+
+    await tester.runTest(
+        "V7 UserSmartWallet can call executeAction",
+        UserSmartWalletV7,
+        "executeAction",
+        "send",
+        [
+            tester.DAI.options.address,
+            tester.DAI.methods
+                .approve(tester.DDAI.options.address, 0)
+                .encodeABI(),
+            0,
+            executeActionUserSignature,
+            executeActionSignature
+        ]
+    );
+
+    await tester.runTest(
+        "Check DAI allowance from DDAI is 0",
+        tester.DAI,
+        "allowance",
+        "call",
+        [UserSmartWalletV7.options.address, tester.DDAI.options.address],
+        true,
+        value => {
+            assert.strictEqual(value, ZERO.toString());
+        }
+    );
+
+    await tester.runTest(
+        "cSai can be sent to V7 UserSmartWallet",
+        tester.CSAI,
+        "transfer",
+        "send",
+        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "mwei")]
+    );
+
+    allPreMigrationBalances = await tester.getBalances(
+        UserSmartWalletV7.options.address
+    );
+
+    dDaiUnderlyingRaw = web3.utils.toBN(
+        allPreMigrationBalances.dDaiUnderlyingRaw
+    );
+    cSaiUnderlyingRaw = web3.utils.toBN(
+        allPreMigrationBalances.cSaiUnderlyingRaw
+    );
+    preMigrationBalances = {
+        dDaiUnderlyingRaw: dDaiUnderlyingRaw.toString(),
+        cSaiUnderlyingRaw: cSaiUnderlyingRaw.toString()
+    };
+
+    postDDaiUnderlyingRaw = dDaiUnderlyingRaw.add(cSaiUnderlyingRaw);
+    postMigrationBalances = {
+        dDaiUnderlyingRaw: postDDaiUnderlyingRaw.toString(),
+        cSaiUnderlyingRaw: ZERO.toString()
+    };
+
+    await tester.withBalanceCheck(
+        UserSmartWalletV7.options.address,
+        preMigrationBalances,
+        postMigrationBalances,
+        tester.runTest,
+        [
+            "V7 UserSmartWallet relay can trigger cSai to dDai migration",
+            UserSmartWalletV7,
+            "migrateCSaiToDDai",
             "send",
             [],
             true,
