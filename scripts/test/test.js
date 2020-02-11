@@ -32,6 +32,7 @@ const DharmaKeyRingImplementationV1Artifact = require("../../build/contracts/Dha
 const contractNames = Object.assign({}, constants.CONTRACT_NAMES);
 
 const ONE = web3.utils.toBN("1");
+const ZERO = web3.utils.toBN("0");
 
 async function test(testingContext) {
     const tester = new Tester(testingContext);
@@ -6573,17 +6574,44 @@ async function test(testingContext) {
         [UserSmartWalletV7.options.address, web3.utils.toWei("1", "mwei")]
     );
 
-    await tester.runTest(
-        "V7 UserSmartWallet relay can trigger cDai to dDai migration",
-        UserSmartWalletV7,
-        "migrateCDaiToDDai",
-        "send",
-        [],
-        true,
-        receipt => {
-            // TODO: verify logs
-        },
-        tester.originalAddress
+    let allPreMigrationBalances = await tester.getBalances(
+        UserSmartWalletV7.options.address
+    );
+
+    const dDaiUnderlyingRaw = web3.utils.toBN(
+        allPreMigrationBalances.dDaiUnderlyingRaw
+    );
+    const cDaiUnderlyingRaw = web3.utils.toBN(
+        allPreMigrationBalances.cDaiUnderlyingRaw
+    );
+    let preMigrationBalances = {
+        dDaiUnderlyingRaw: dDaiUnderlyingRaw.toString(),
+        cDaiUnderlyingRaw: cDaiUnderlyingRaw.toString()
+    };
+
+    const postDDaiUnderlyingRaw = dDaiUnderlyingRaw.add(cDaiUnderlyingRaw);
+    let postMigrationBalances = {
+        dDaiUnderlyingRaw: postDDaiUnderlyingRaw.toString(),
+        cDaiUnderlyingRaw: ZERO.toString()
+    };
+
+    await tester.withBalanceCheck(
+        UserSmartWalletV7.options.address,
+        preMigrationBalances,
+        postMigrationBalances,
+        tester.runTest,
+        [
+            "V7 UserSmartWallet relay can trigger cDai to dDai migration",
+            UserSmartWalletV7,
+            "migrateCDaiToDDai",
+            "send",
+            [],
+            true,
+            receipt => {
+                // TODO: verify logs
+            },
+            tester.originalAddress
+        ]
     );
 
     await tester.runTest(
@@ -6615,17 +6643,44 @@ async function test(testingContext) {
         [UserSmartWalletV7.options.address, web3.utils.toWei("1", "lovelace")]
     );
 
-    await tester.runTest(
-        "V7 UserSmartWallet relay can trigger cUSDC to dUSDC migration",
-        UserSmartWalletV7,
-        "migrateCUSDCToDUSDC",
-        "send",
-        [],
-        true,
-        receipt => {
-            // TODO: verify logs
-        },
-        tester.originalAddress
+    allPreMigrationBalances = await tester.getBalances(
+        UserSmartWalletV7.options.address
+    );
+
+    const dUSDCUnderlyingRaw = web3.utils.toBN(
+        allPreMigrationBalances.dUSDCUnderlyingRaw
+    );
+    const cUSDCUnderlyingRaw = web3.utils.toBN(
+        allPreMigrationBalances.cUSDCUnderlyingRaw
+    );
+    preMigrationBalances = {
+        dUSDCUnderlyingRaw: dUSDCUnderlyingRaw.toString(),
+        cUSDCUnderlyingRaw: cUSDCUnderlyingRaw.toString()
+    };
+
+    const postDUSDCUnderlyingRaw = dUSDCUnderlyingRaw.add(cUSDCUnderlyingRaw);
+    postMigrationBalances = {
+        dUSDCUnderlyingRaw: postDUSDCUnderlyingRaw.toString(),
+        cUSDCUnderlyingRaw: ZERO.toString()
+    };
+
+    await tester.withBalanceCheck(
+        UserSmartWalletV7.options.address,
+        preMigrationBalances,
+        postMigrationBalances,
+        tester.runTest,
+        [
+            "V7 UserSmartWallet relay can trigger cDai to dDai migration",
+            UserSmartWalletV7,
+            "migrateCUSDCToDUSDC",
+            "send",
+            [],
+            true,
+            receipt => {
+                // TODO: verify logs
+            },
+            tester.originalAddress
+        ]
     );
 
     await tester.runTest(
