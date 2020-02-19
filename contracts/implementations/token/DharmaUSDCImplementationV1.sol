@@ -65,7 +65,7 @@ contract DharmaUSDCImplementationV1 is DharmaTokenV1 {
     uint256 reserves = _CUSDC.totalReserves();
     uint256 reserveFactor = _CUSDC.reserveFactorMantissa();
 
-    // Get accumulated borrow interest via interest rate model and block delta.
+    // Get the current borrow rate from the latest cUSDC interest rate model.
     (uint256 err, uint256 borrowRate) = interestRateModel.getBorrowRate(
       cash, borrows, reserves
     );
@@ -73,26 +73,25 @@ contract DharmaUSDCImplementationV1 is DharmaTokenV1 {
       err == _COMPOUND_SUCCESS, "Interest Rate Model borrow rate check failed."
     );
 
+    // Get accumulated borrow interest via borrows, borrow rate, & block delta.
     uint256 interest = borrowRate.mul(blockDelta).mul(borrows) / _SCALING_FACTOR;
 
     // Update total borrows and reserves using calculated accumulated interest.
     borrows = borrows.add(interest);
     reserves = reserves.add(reserveFactor.mul(interest) / _SCALING_FACTOR);
 
-    // Get "underlying": (cash + borrows - reserves)
+    // Get "underlying" via (cash + borrows - reserves).
     uint256 underlying = (cash.add(borrows)).sub(reserves);
 
-    // Determine cUSDC exchange rate: underlying / total supply
+    // Determine cUSDC exchange rate via underlying / total supply.
     exchangeRate = (underlying.mul(_SCALING_FACTOR)).div(_CUSDC.totalSupply());
 
     // Get "borrows per" by dividing total borrows by underlying and scaling up.
-    uint256 borrowsPer = (
-      borrows.mul(_SCALING_FACTOR_SQUARED)
-    ).div(underlying);
+    uint256 borrowsPer = (borrows.mul(_SCALING_FACTOR)).div(underlying);
 
-    // Supply rate is borrow interest * (1 - reserveFactor) * borrowsPer
+    // Supply rate is borrow rate * (1 - reserveFactor) * borrowsPer.
     supplyRate = (
-      interest.mul(_SCALING_FACTOR.sub(reserveFactor)).mul(borrowsPer)
+      borrowRate.mul(_SCALING_FACTOR.sub(reserveFactor)).mul(borrowsPer)
     ) / _SCALING_FACTOR_SQUARED;
   }
 
