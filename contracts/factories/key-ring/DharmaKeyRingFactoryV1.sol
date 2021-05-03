@@ -1,4 +1,4 @@
-pragma solidity 0.5.11;
+pragma solidity 0.5.17;
 
 import "../../proxies/key-ring/KeyRingUpgradeBeaconProxyV1.sol";
 import "../../../interfaces/DharmaKeyRingFactoryV1Interface.sol";

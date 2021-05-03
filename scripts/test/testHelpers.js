@@ -20,7 +20,7 @@ const DharmaSmartWalletFactoryV1Artifact = require("../../build/contracts/Dharma
 const DharmaSmartWalletFactoryV2Artifact = require("../../build/contracts/DharmaSmartWalletFactoryV2.json");
 
 const DharmaSmartWalletImplementationV6Artifact = require("../../build/contracts/DharmaSmartWalletImplementationV6.json");
-const DharmaSmartWalletImplementationV7Artifact = require("../../build/contracts/DharmaSmartWalletImplementationV7.json");
+const DharmaSmartWalletImplementationV16Artifact = require("../../build/contracts/DharmaSmartWalletImplementationV16.json");
 
 const DharmaKeyRingImplementationV1Artifact = require("../../build/contracts/DharmaKeyRingImplementationV1.json");
 const DharmaKeyRingFactoryV1Artifact = require("../../build/contracts/DharmaKeyRingFactoryV1.json");
@@ -1282,8 +1282,8 @@ class Tester {
             DharmaSmartWalletImplementationV6Artifact
         );
 
-        this.DharmaSmartWalletImplementationV7Deployer = this.newDeployer(
-            DharmaSmartWalletImplementationV7Artifact
+        this.DharmaSmartWalletImplementationV16Deployer = this.newDeployer(
+            DharmaSmartWalletImplementationV16Artifact
         );
 
         this.AdharmaKeyRingImplementationDeployer = this.newDeployer(

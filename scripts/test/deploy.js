@@ -66,7 +66,8 @@ const DharmaTestingMultisigArtifact = require("../../build/contracts/DharmaTesti
 //const DharmaSmartWalletImplementationV4Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV4.json')
 //const DharmaSmartWalletImplementationV5Artifact = require('../../build/contracts/DharmaSmartWalletImplementationV5.json')
 const DharmaSmartWalletImplementationV6Artifact = require("../../build/contracts/DharmaSmartWalletImplementationV6.json");
-const DharmaSmartWalletImplementationV7Artifact = require("../../build/contracts/DharmaSmartWalletImplementationV7.json");
+//const DharmaSmartWalletImplementationV7Artifact = require("../../build/contracts/DharmaSmartWalletImplementationV7.json");
+const DharmaSmartWalletImplementationV16Artifact = require("../../build/contracts/DharmaSmartWalletImplementationV16.json");
 
 //const DharmaKeyRingImplementationV0Artifact = require('../../build/contracts/DharmaKeyRingImplementationV0.json')
 const DharmaKeyRingImplementationV1Artifact = require("../../build/contracts/DharmaKeyRingImplementationV1.json");
@@ -393,8 +394,8 @@ async function test(testingContext) {
         DharmaSmartWalletImplementationV6Artifact
     );
 
-    const DharmaSmartWalletImplementationV7Deployer = newContractAndSwapMetadataHash(
-        DharmaSmartWalletImplementationV7Artifact
+    const DharmaSmartWalletImplementationV16Deployer = newContractAndSwapMetadataHash(
+        DharmaSmartWalletImplementationV16Artifact
     );
 
     const DharmaDaiInitializerDeployer = new web3.eth.Contract(

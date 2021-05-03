@@ -1,4 +1,4 @@
-pragma solidity 0.5.11;
+pragma solidity 0.5.17;
 
 import "../../proxies/smart-wallet/UpgradeBeaconProxyV1.sol";
 import "../../../interfaces/DharmaSmartWalletFactoryV2Interface.sol";

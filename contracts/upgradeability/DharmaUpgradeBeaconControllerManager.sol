@@ -1,4 +1,4 @@
-pragma solidity 0.5.11;
+pragma solidity 0.5.17;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../helpers/TwoStepOwnable.sol";

@@ -25,7 +25,7 @@ const AdharmaSmartWalletImplementationArtifact = require("../../build/contracts/
 const AdharmaKeyRingImplementationArtifact = require("../../build/contracts/AdharmaKeyRingImplementation.json");
 
 const DharmaSmartWalletImplementationV6Artifact = require("../../build/contracts/DharmaSmartWalletImplementationV6.json");
-const DharmaSmartWalletImplementationV7Artifact = require("../../build/contracts/DharmaSmartWalletImplementationV7.json");
+const DharmaSmartWalletImplementationV16Artifact = require("../../build/contracts/DharmaSmartWalletImplementationV16.json");
 
 const DharmaKeyRingImplementationV1Artifact = require("../../build/contracts/DharmaKeyRingImplementationV1.json");
 
@@ -104,9 +104,9 @@ async function test(testingContext) {
         "deploy"
     );
 
-    const DharmaSmartWalletImplementationV7 = await tester.runTest(
-        `DharmaSmartWalletImplementationV7 contract deployment`,
-        tester.DharmaSmartWalletImplementationV7Deployer,
+    const DharmaSmartWalletImplementationV16 = await tester.runTest(
+        `DharmaSmartWalletImplementationV16 contract deployment`,
+        tester.DharmaSmartWalletImplementationV16Deployer,
         "",
         "deploy"
     );
@@ -496,8 +496,8 @@ async function test(testingContext) {
         targetWalletAddress
     );
 
-    const UserSmartWalletV7 = new web3.eth.Contract(
-        DharmaSmartWalletImplementationV7Artifact.abi,
+    const UserSmartWalletV16 = new web3.eth.Contract(
+        DharmaSmartWalletImplementationV16Artifact.abi,
         targetWalletAddress
     );
 
@@ -3523,8 +3523,8 @@ async function test(testingContext) {
 
     await testPerformingUpgrade(
         tester,
-        DharmaSmartWalletImplementationV7, // new implementation
-        UserSmartWalletV7,
+        DharmaSmartWalletImplementationV16, // new implementation
+        UserSmartWalletV16,
         tester.DharmaUpgradeBeaconController,
         tester.DharmaUpgradeBeacon.options.address,
         7
@@ -3541,13 +3541,13 @@ async function test(testingContext) {
     };
 
     await tester.withBalanceCheck(
-        UserSmartWalletV7.options.address,
+        UserSmartWalletV16.options.address,
         startingBalance,
         startingBalance,
         tester.runTest,
         [
-            "V7 UserSmartWallet can get balances",
-            UserSmartWalletV7,
+            "V16 UserSmartWallet can get balances",
+            UserSmartWalletV16,
             "getBalances",
             "call",
             [],
@@ -3579,16 +3579,16 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet secondary can call to cancel",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet secondary can call to cancel",
+        UserSmartWalletV16,
         "cancel",
         "send",
         [0, "0x"]
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet nonce is now set to original + 1",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet nonce is now set to original + 1",
+        UserSmartWalletV16,
         "getNonce",
         "call",
         [],
@@ -3599,8 +3599,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get next custom action ID to set a user signing key",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get next custom action ID to set a user signing key",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -3621,8 +3621,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can set a new user signing key with signatures",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can set a new user signing key with signatures",
+        UserSmartWalletV16,
         "setUserSigningKey",
         "send",
         [tester.addressTwo, 0, "0x", setUserSigningKeyDharmaSignature],
@@ -3632,8 +3632,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet has the new user signing key set",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet has the new user signing key set",
+        UserSmartWalletV16,
         "getUserSigningKey",
         "call",
         [],
@@ -3644,8 +3644,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get next custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get next custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -3661,8 +3661,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get custom action ID and it matches next action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get custom action ID and it matches next action ID",
+        UserSmartWalletV16,
         "getCustomActionID",
         "call",
         [
@@ -3679,8 +3679,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get next generic action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get next generic action ID",
+        UserSmartWalletV16,
         "getNextGenericActionID",
         "call",
         [tester.address, "0x", 0],
@@ -3691,8 +3691,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get generic action ID and it matches next action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get generic action ID and it matches next action ID",
+        UserSmartWalletV16,
         "getGenericActionID",
         "call",
         [tester.address, "0x", parseInt(originalNonce) + 2, 0],
@@ -3704,7 +3704,7 @@ async function test(testingContext) {
 
     await tester.runTest(
         "UserSmartWallet calls to atomic methods revert",
-        UserSmartWalletV7,
+        UserSmartWalletV16,
         "_withdrawDaiAtomic",
         "send",
         ["1", tester.address],
@@ -3721,7 +3721,7 @@ async function test(testingContext) {
     });
 
     await tester.runTest(
-        "Dai Whale can deposit Dai into the V7 smart wallet",
+        "Dai Whale can deposit Dai into the V16 smart wallet",
         tester.DAI,
         "transfer",
         "send",
@@ -3747,7 +3747,7 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "USDC Whale can deposit usdc into the V7 smart wallet",
+        "USDC Whale can deposit usdc into the V16 smart wallet",
         tester.USDC,
         "transfer",
         "send",
@@ -3787,13 +3787,13 @@ async function test(testingContext) {
     };
 
     await tester.withBalanceCheck(
-        UserSmartWalletV7.options.address,
+        UserSmartWalletV16.options.address,
         preDepositBalance,
         postDepositBalance,
         tester.runTest,
         [
-            "V7 user smart wallet can trigger repayAndDeposit to deposit all new funds",
-            UserSmartWalletV7,
+            "V16 user smart wallet can trigger repayAndDeposit to deposit all new funds",
+            UserSmartWalletV16,
             "repayAndDeposit",
             "send",
             [],
@@ -3805,7 +3805,7 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "Dai Whale can deposit dai into the V7 smart wallet again",
+        "Dai Whale can deposit dai into the V16 smart wallet again",
         tester.DAI,
         "transfer",
         "send",
@@ -3831,8 +3831,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a generic action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a generic action ID",
+        UserSmartWalletV16,
         "getNextGenericActionID",
         "call",
         [constants.ESCAPE_HATCH_REGISTRY_ADDRESS, "0x", 0],
@@ -3853,8 +3853,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet cannot call executeAction and target Escape Hatch Registry",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet cannot call executeAction and target Escape Hatch Registry",
+        UserSmartWalletV16,
         "executeAction",
         "send",
         [
@@ -3868,8 +3868,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a generic action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a generic action ID",
+        UserSmartWalletV16,
         "getNextGenericActionID",
         "call",
         [
@@ -3896,8 +3896,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can call executeAction",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can call executeAction",
+        UserSmartWalletV16,
         "executeAction",
         "send",
         [
@@ -3912,8 +3912,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 user smart wallet repayAndDeposit can still deposit without approval",
-        UserSmartWalletV7,
+        "V16 user smart wallet repayAndDeposit can still deposit without approval",
+        UserSmartWalletV16,
         "repayAndDeposit",
         "send",
         [],
@@ -3924,8 +3924,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a generic action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a generic action ID",
+        UserSmartWalletV16,
         "getNextGenericActionID",
         "call",
         [
@@ -3952,8 +3952,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can call executeAction",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can call executeAction",
+        UserSmartWalletV16,
         "executeAction",
         "send",
         [
@@ -3968,8 +3968,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 user smart wallet repayAndDeposit can deposit with approval added back",
-        UserSmartWalletV7,
+        "V16 user smart wallet repayAndDeposit can deposit with approval added back",
+        UserSmartWalletV16,
         "repayAndDeposit",
         "send",
         [],
@@ -3980,8 +3980,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 user smart wallet can trigger repayAndDeposit even with no funds",
-        UserSmartWalletV7,
+        "V16 user smart wallet can trigger repayAndDeposit even with no funds",
+        UserSmartWalletV16,
         "repayAndDeposit",
         "send",
         [],
@@ -3992,8 +3992,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get custom action ID and it matches next action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get custom action ID and it matches next action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4019,8 +4019,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet cannot set the null address as a new user signing key",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet cannot set the null address as a new user signing key",
+        UserSmartWalletV16,
         "setUserSigningKey",
         "send",
         [
@@ -4035,8 +4035,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get next custom action ID to set a user signing key",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get next custom action ID to set a user signing key",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4053,7 +4053,7 @@ async function test(testingContext) {
 
     await tester.runTest(
         "UserSmartWallet can get the nonce",
-        UserSmartWalletV7,
+        UserSmartWalletV16,
         "getNonce",
         "call",
         [],
@@ -4064,8 +4064,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get custom action ID and it matches next action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get custom action ID and it matches next action ID",
+        UserSmartWalletV16,
         "getCustomActionID",
         "call",
         [
@@ -4092,8 +4092,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can set a new user signing key with signatures",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can set a new user signing key with signatures",
+        UserSmartWalletV16,
         "setUserSigningKey",
         "send",
         [
@@ -4108,8 +4108,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get next custom action ID to cancel",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get next custom action ID to cancel",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4126,7 +4126,7 @@ async function test(testingContext) {
 
     await tester.runTest(
         "UserSmartWallet can get the nonce",
-        UserSmartWalletV7,
+        UserSmartWalletV16,
         "getNonce",
         "call",
         [],
@@ -4137,8 +4137,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get custom action ID and it matches next action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get custom action ID and it matches next action ID",
+        UserSmartWalletV16,
         "getCustomActionID",
         "call",
         [
@@ -4160,8 +4160,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet secondary can cancel using a signature",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet secondary can cancel using a signature",
+        UserSmartWalletV16,
         "cancel",
         "send",
         [0, cancelUserSignature],
@@ -4172,7 +4172,7 @@ async function test(testingContext) {
 
     await tester.runTest(
         "UserSmartWallet nonce is incremented after cancelling",
-        UserSmartWalletV7,
+        UserSmartWalletV16,
         "getNonce",
         "call",
         [],
@@ -4183,8 +4183,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet secondary cannot call to withdraw dai without primary",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet secondary cannot call to withdraw dai without primary",
+        UserSmartWalletV16,
         "withdrawDai",
         "send",
         ["1000000000000000000", tester.address, 0, "0x", "0x"],
@@ -4192,8 +4192,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet secondary cannot call to withdraw usdc without primary",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet secondary cannot call to withdraw usdc without primary",
+        UserSmartWalletV16,
         "withdrawUSDC",
         "send",
         [1, tester.address, 0, "0x", "0x"],
@@ -4201,8 +4201,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet secondary can no longer call to set userSigningKey without primary",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet secondary can no longer call to set userSigningKey without primary",
+        UserSmartWalletV16,
         "setUserSigningKey",
         "send",
         [tester.address, 0, "0x", "0x"],
@@ -4210,8 +4210,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a USDC withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a USDC withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4237,8 +4237,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        'V7 UserSmartWallet relay cannot withdraw "dust" USDC',
-        UserSmartWalletV7,
+        'V16 UserSmartWallet relay cannot withdraw "dust" USDC',
+        UserSmartWalletV16,
         "withdrawUSDC",
         "send",
         [
@@ -4257,8 +4257,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a USDC withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a USDC withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4284,8 +4284,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot withdraw USDC to null address",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot withdraw USDC to null address",
+        UserSmartWalletV16,
         "withdrawUSDC",
         "send",
         [
@@ -4304,8 +4304,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a USDC withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a USDC withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4350,7 +4350,7 @@ async function test(testingContext) {
     };
 
     await tester.withBalanceCheck(
-        UserSmartWalletV7.options.address,
+        UserSmartWalletV16.options.address,
         preUSDCWithdrawalBalance,
         postUSDCWithdrawalBalance,
         tester.withBalanceCheck,
@@ -4360,8 +4360,8 @@ async function test(testingContext) {
             postUSDCWithdrawalRecipientBalance,
             tester.runTest,
             [
-                "V7 UserSmartWallet relay can call with two signatures to withdraw USDC",
-                UserSmartWalletV7,
+                "V16 UserSmartWallet relay can call with two signatures to withdraw USDC",
+                UserSmartWalletV16,
                 "withdrawUSDC",
                 "send",
                 [
@@ -4382,8 +4382,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a USDC withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a USDC withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4409,8 +4409,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot call with bad signature to withdraw USDC",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot call with bad signature to withdraw USDC",
+        UserSmartWalletV16,
         "withdrawUSDC",
         "send",
         [
@@ -4429,8 +4429,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet cannot call with bad user signature to withdraw USDC",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet cannot call with bad user signature to withdraw USDC",
+        UserSmartWalletV16,
         "withdrawUSDC",
         "send",
         [
@@ -4449,8 +4449,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can call with two signatures to withdraw max USDC",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay can call with two signatures to withdraw max USDC",
+        UserSmartWalletV16,
         "withdrawUSDC",
         "send",
         [
@@ -4469,8 +4469,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a Dai withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a Dai withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4496,8 +4496,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        'V7 UserSmartWallet relay cannot withdraw "dust" dai',
-        UserSmartWalletV7,
+        'V16 UserSmartWallet relay cannot withdraw "dust" dai',
+        UserSmartWalletV16,
         "withdrawDai",
         "send",
         [
@@ -4513,8 +4513,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a Dai withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a Dai withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4540,8 +4540,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot withdraw dai to null address",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot withdraw dai to null address",
+        UserSmartWalletV16,
         "withdrawDai",
         "send",
         [
@@ -4557,8 +4557,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a Dai withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a Dai withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4602,7 +4602,7 @@ async function test(testingContext) {
     };
 
     await tester.withBalanceCheck(
-        UserSmartWalletV7.options.address,
+        UserSmartWalletV16.options.address,
         preDAIWithdrawalBalance,
         postDAIWithdrawalBalance,
         tester.withBalanceCheck,
@@ -4612,8 +4612,8 @@ async function test(testingContext) {
             postDAIWithdrawalRecipientBalance,
             tester.runTest,
             [
-                "V7 UserSmartWallet relay can call with two signatures to withdraw DAI",
-                UserSmartWalletV7,
+                "V16 UserSmartWallet relay can call with two signatures to withdraw DAI",
+                UserSmartWalletV16,
                 "withdrawDai",
                 "send",
                 [
@@ -4634,8 +4634,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        'V7 UserSmartWallet cannot get a non-custom "custom" next action ID',
-        UserSmartWalletV7,
+        'V16 UserSmartWallet cannot get a non-custom "custom" next action ID',
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4648,8 +4648,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        'V7 UserSmartWallet cannot get a non-custom "custom" action ID',
-        UserSmartWalletV7,
+        'V16 UserSmartWallet cannot get a non-custom "custom" action ID',
+        UserSmartWalletV16,
         "getCustomActionID",
         "call",
         [
@@ -4663,8 +4663,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a Dai withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a Dai withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4690,8 +4690,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot call with bad signature to withdraw dai",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot call with bad signature to withdraw dai",
+        UserSmartWalletV16,
         "withdrawDai",
         "send",
         [
@@ -4710,8 +4710,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot call with bad user signature to withdraw dai",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot call with bad user signature to withdraw dai",
+        UserSmartWalletV16,
         "withdrawDai",
         "send",
         [
@@ -4730,8 +4730,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can call with signature to withdraw sai",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay can call with signature to withdraw sai",
+        UserSmartWalletV16,
         "withdrawDai",
         "send",
         [
@@ -4749,8 +4749,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a Ether withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a Ether withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4776,8 +4776,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot to withdraw ether with no amount",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot to withdraw ether with no amount",
+        UserSmartWalletV16,
         "withdrawEther",
         "send",
         [
@@ -4795,8 +4795,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a Ether withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a Ether withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4822,8 +4822,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot to withdraw ether with no recipient",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot to withdraw ether with no recipient",
+        UserSmartWalletV16,
         "withdrawEther",
         "send",
         [
@@ -4841,8 +4841,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a Ether withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a Ether withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4868,8 +4868,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot call with bad signature to withdraw eth",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot call with bad signature to withdraw eth",
+        UserSmartWalletV16,
         "withdrawEther",
         "send",
         [
@@ -4888,8 +4888,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot call with bad user signature to withdraw eth",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot call with bad user signature to withdraw eth",
+        UserSmartWalletV16,
         "withdrawEther",
         "send",
         [
@@ -4908,8 +4908,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can call with signature to withdraw ether",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay can call with signature to withdraw ether",
+        UserSmartWalletV16,
         "withdrawEther",
         "send",
         [
@@ -4927,8 +4927,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a Ether withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a Ether withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -4954,8 +4954,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot call with bad signature to withdraw eth",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot call with bad signature to withdraw eth",
+        UserSmartWalletV16,
         "withdrawEther",
         "send",
         [
@@ -4974,8 +4974,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot call with bad user signature to withdraw eth",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot call with bad user signature to withdraw eth",
+        UserSmartWalletV16,
         "withdrawEther",
         "send",
         [
@@ -4994,8 +4994,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can call with signature to withdraw ether",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay can call with signature to withdraw ether",
+        UserSmartWalletV16,
         "withdrawEther",
         "send",
         [
@@ -5013,8 +5013,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet cancel reverts with bad signature",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet cancel reverts with bad signature",
+        UserSmartWalletV16,
         "cancel",
         "send",
         [0, "0x"],
@@ -5024,8 +5024,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet calls revert if insufficient action gas is supplied",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet calls revert if insufficient action gas is supplied",
+        UserSmartWalletV16,
         "cancel",
         "send",
         [constants.FULL_APPROVAL, "0x"],
@@ -5033,16 +5033,16 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet calls succeed if sufficient non-zero action gas supplied",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet calls succeed if sufficient non-zero action gas supplied",
+        UserSmartWalletV16,
         "cancel",
         "send",
         ["1", "0x"]
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a cancel custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a cancel custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -5063,8 +5063,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can cancel using a signature",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can cancel using a signature",
+        UserSmartWalletV16,
         "cancel",
         "send",
         ["0", cancelSignature],
@@ -5074,8 +5074,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet calls to atomic methods revert",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet calls to atomic methods revert",
+        UserSmartWalletV16,
         "_withdrawDaiAtomic",
         "send",
         ["1", tester.address],
@@ -5083,8 +5083,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet calls to recover from random address revert",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet calls to recover from random address revert",
+        UserSmartWalletV16,
         "recover",
         "send",
         [tester.address],
@@ -5092,7 +5092,7 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "DharmaSmartWalletFactoryV1 can deploy a V7 smart wallet using a Dharma Key",
+        "DharmaSmartWalletFactoryV1 can deploy a V16 smart wallet using a Dharma Key",
         DharmaSmartWalletFactoryV1,
         "newSmartWallet",
         "send",
@@ -5129,8 +5129,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a generic action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a generic action ID",
+        UserSmartWalletV16,
         "getNextGenericActionID",
         "call",
         [
@@ -5157,8 +5157,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet cannot call executeAction and target a non-contract",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet cannot call executeAction and target a non-contract",
+        UserSmartWalletV16,
         "executeAction",
         "send",
         [
@@ -5174,12 +5174,12 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet cannot call executeAction and target itself",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet cannot call executeAction and target itself",
+        UserSmartWalletV16,
         "executeAction",
         "send",
         [
-            UserSmartWalletV7.options.address,
+            UserSmartWalletV16.options.address,
             tester.USDC.methods
                 .approve(tester.CUSDC.options.address, 0)
                 .encodeABI(),
@@ -5191,8 +5191,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can call executeAction",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can call executeAction",
+        UserSmartWalletV16,
         "executeAction",
         "send",
         [
@@ -5207,8 +5207,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get the next generic batch action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get the next generic batch action ID",
+        UserSmartWalletV16,
         "getNextGenericAtomicBatchActionID",
         "call",
         [
@@ -5228,7 +5228,7 @@ async function test(testingContext) {
 
     await tester.runTest(
         "UserSmartWallet can get the nonce",
-        UserSmartWalletV7,
+        UserSmartWalletV16,
         "getNonce",
         "call",
         [],
@@ -5239,8 +5239,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet generic batch action ID with nonce matches next ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet generic batch action ID with nonce matches next ID",
+        UserSmartWalletV16,
         "getGenericAtomicBatchActionID",
         "call",
         [
@@ -5270,8 +5270,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can call executeActionWithAtomicBatchCalls",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can call executeActionWithAtomicBatchCalls",
+        UserSmartWalletV16,
         "executeActionWithAtomicBatchCalls",
         "send",
         [
@@ -5315,7 +5315,7 @@ async function test(testingContext) {
 
     await tester.runTest(
         "new user smart wallet can trigger repayAndDeposit to deposit all new funds",
-        UserSmartWalletV7,
+        UserSmartWalletV16,
         "repayAndDeposit",
         "send",
         [],
@@ -5372,8 +5372,8 @@ async function test(testingContext) {
         }
     );
 
-    const BlacklistedUserSmartWalletV7 = new web3.eth.Contract(
-        DharmaSmartWalletImplementationV7Artifact.abi,
+    const BlacklistedUserSmartWalletV16 = new web3.eth.Contract(
+        DharmaSmartWalletImplementationV16Artifact.abi,
         targetBlacklistAddress
     );
 
@@ -5429,7 +5429,7 @@ async function test(testingContext) {
 
     await tester.runTest(
         "blacklisted smart wallet will not approve USDC during repayAndDeposit",
-        BlacklistedUserSmartWalletV7,
+        BlacklistedUserSmartWalletV16,
         "repayAndDeposit",
         "send",
         [],
@@ -5463,8 +5463,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a USDC withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a USDC withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -5490,8 +5490,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet attempt to withdraw max USDC when paused causes ExternalError",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet attempt to withdraw max USDC when paused causes ExternalError",
+        UserSmartWalletV16,
         "withdrawUSDC",
         "send",
         [
@@ -5511,7 +5511,7 @@ async function test(testingContext) {
 
     await tester.runTest(
         "smart wallet will not approve USDC when paused during repayAndDeposit",
-        BlacklistedUserSmartWalletV7,
+        BlacklistedUserSmartWalletV16,
         "repayAndDeposit",
         "send",
         [],
@@ -5535,7 +5535,7 @@ async function test(testingContext) {
 
     await tester.runTest(
         "unblacklisted, unpaused smart wallet approves USDC during repayAndDeposit",
-        BlacklistedUserSmartWalletV7,
+        BlacklistedUserSmartWalletV16,
         "repayAndDeposit",
         "send",
         [],
@@ -5547,8 +5547,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -5574,8 +5574,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay call to withdraw USDC to blacklisted address",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay call to withdraw USDC to blacklisted address",
+        UserSmartWalletV16,
         "withdrawUSDC",
         "send",
         [
@@ -5595,14 +5595,14 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a USDC withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a USDC withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
             5, // USDCWithdrawal,
             constants.FULL_APPROVAL,
-            UserSmartWalletV7.options.address,
+            UserSmartWalletV16.options.address,
             0
         ],
         true,
@@ -5622,13 +5622,13 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay call to withdraw USDC to itself",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay call to withdraw USDC to itself",
+        UserSmartWalletV16,
         "withdrawUSDC",
         "send",
         [
             constants.FULL_APPROVAL,
-            UserSmartWalletV7.options.address,
+            UserSmartWalletV16.options.address,
             0,
             usdcUserWithdrawalSignature,
             usdcWithdrawalSignature
@@ -5641,8 +5641,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a blacklisted USDC withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -5668,8 +5668,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay call to withdraw USDC to blacklisted address",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay call to withdraw USDC to blacklisted address",
+        UserSmartWalletV16,
         "withdrawUSDC",
         "send",
         [
@@ -5689,8 +5689,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a Ether withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a Ether withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -5737,7 +5737,7 @@ async function test(testingContext) {
     };
 
     await tester.withBalanceCheck(
-        UserSmartWalletV7.options.address,
+        UserSmartWalletV16.options.address,
         preETHwithdrawalBalance,
         postETHWithdrawalBalance,
         tester.withBalanceCheck,
@@ -5747,8 +5747,8 @@ async function test(testingContext) {
             postETHWithdrawalRecipientBalance,
             tester.runTest,
             [
-                "V7 UserSmartWallet relay can call with two signatures to withdraw ETH",
-                UserSmartWalletV7,
+                "V16 UserSmartWallet relay can call with two signatures to withdraw ETH",
+                UserSmartWalletV16,
                 "withdrawEther",
                 "send",
                 [
@@ -5782,21 +5782,21 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "DharmaSmartWalletFactoryV1 can deploy a V7 smart wallet using a contract key",
+        "DharmaSmartWalletFactoryV1 can deploy a V16 smart wallet using a contract key",
         DharmaSmartWalletFactoryV1,
         "newSmartWallet",
         "send",
         [targetWalletAddress]
     );
 
-    const UserSmartWalletV7Two = new web3.eth.Contract(
-        DharmaSmartWalletImplementationV7Artifact.abi,
+    const UserSmartWalletV16Two = new web3.eth.Contract(
+        DharmaSmartWalletImplementationV16Artifact.abi,
         targetWalletAddressTwo
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet cancel reverts with bad contract signature",
-        UserSmartWalletV7Two,
+        "V16 UserSmartWallet cancel reverts with bad contract signature",
+        UserSmartWalletV16Two,
         "cancel",
         "send",
         [0, "0x"],
@@ -5806,8 +5806,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a generic action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a generic action ID",
+        UserSmartWalletV16,
         "getNextGenericActionID",
         "call",
         [
@@ -5834,8 +5834,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can call executeAction",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can call executeAction",
+        UserSmartWalletV16,
         "executeAction",
         "send",
         [
@@ -5850,8 +5850,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a Dai withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a Dai withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -5877,8 +5877,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot withdraw to the null address",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot withdraw to the null address",
+        UserSmartWalletV16,
         "withdrawDai",
         "send",
         [
@@ -5897,8 +5897,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a Dai withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a Dai withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -5924,8 +5924,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot withdraw too much dai",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot withdraw too much dai",
+        UserSmartWalletV16,
         "withdrawDai",
         "send",
         [
@@ -5944,8 +5944,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a USDC withdrawal custom action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a USDC withdrawal custom action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -5971,8 +5971,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can call with two signatures to withdraw USDC",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay can call with two signatures to withdraw USDC",
+        UserSmartWalletV16,
         "withdrawUSDC",
         "send",
         [
@@ -5991,8 +5991,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get next generic batch action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get next generic batch action ID",
+        UserSmartWalletV16,
         "getNextGenericAtomicBatchActionID",
         "call",
         [
@@ -6026,8 +6026,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet bad executeActionWithAtomicBatchCalls emits CallFailure",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet bad executeActionWithAtomicBatchCalls emits CallFailure",
+        UserSmartWalletV16,
         "executeActionWithAtomicBatchCalls",
         "send",
         [
@@ -6053,8 +6053,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a generic action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a generic action ID",
+        UserSmartWalletV16,
         "getNextGenericActionID",
         "call",
         [
@@ -6081,8 +6081,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can call executeAction to enter dai market",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can call executeAction to enter dai market",
+        UserSmartWalletV16,
         "executeAction",
         "send",
         [
@@ -6123,14 +6123,14 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can trigger repayAndDeposit to deposit all new funds",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can trigger repayAndDeposit to deposit all new funds",
+        UserSmartWalletV16,
         "repayAndDeposit"
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a generic action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a generic action ID",
+        UserSmartWalletV16,
         "getNextGenericActionID",
         "call",
         [
@@ -6157,8 +6157,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can call executeAction to perform a borrow",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can call executeAction to perform a borrow",
+        UserSmartWalletV16,
         "executeAction",
         "send",
         [
@@ -6178,8 +6178,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get an escape hatch action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get an escape hatch action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -6205,8 +6205,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot set an escape hatch with no account",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot set an escape hatch with no account",
+        UserSmartWalletV16,
         "setEscapeHatch",
         "send",
         [
@@ -6223,8 +6223,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get an escape hatch action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get an escape hatch action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -6250,8 +6250,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet cannot call escape before escape hatch is set",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet cannot call escape before escape hatch is set",
+        UserSmartWalletV16,
         "escape",
         "send",
         [],
@@ -6262,8 +6262,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can set an escape hatch",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay can set an escape hatch",
+        UserSmartWalletV16,
         "setEscapeHatch",
         "send",
         [tester.address, 0, escapeHatchUserSignature, escapeHatchSignature],
@@ -6275,8 +6275,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet non-escape hatch account cannot call escape",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet non-escape hatch account cannot call escape",
+        UserSmartWalletV16,
         "escape",
         "send",
         [],
@@ -6288,7 +6288,7 @@ async function test(testingContext) {
     );
 
     const allPreEscapeBalances = await tester.getBalances(
-        UserSmartWalletV7.options.address
+        UserSmartWalletV16.options.address
     );
     const preEscapeBalances = {
         dDai: allPreEscapeBalances.dDai,
@@ -6344,7 +6344,7 @@ async function test(testingContext) {
     recipientPostEscapeBalances["dUSDC"] = 0;
 
     await tester.withBalanceCheck(
-        UserSmartWalletV7.options.address,
+        UserSmartWalletV16.options.address,
         preEscapeBalances,
         postEscapeBalances,
         tester.withBalanceCheck,
@@ -6354,8 +6354,8 @@ async function test(testingContext) {
             recipientPostEscapeBalances,
             tester.runTest,
             [
-                "V7 UserSmartWallet escape hatch account can call escape",
-                UserSmartWalletV7,
+                "V16 UserSmartWallet escape hatch account can call escape",
+                UserSmartWalletV16,
                 "escape",
                 "send",
                 [],
@@ -6369,8 +6369,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet escape hatch account can call escape again",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet escape hatch account can call escape again",
+        UserSmartWalletV16,
         "escape",
         "send",
         [],
@@ -6382,8 +6382,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get an escape hatch action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get an escape hatch action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -6409,8 +6409,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can remove an escape hatch",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay can remove an escape hatch",
+        UserSmartWalletV16,
         "removeEscapeHatch",
         "send",
         [0, escapeHatchUserSignature, escapeHatchSignature],
@@ -6422,8 +6422,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet cannot call escape once escape hatch is removed",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet cannot call escape once escape hatch is removed",
+        UserSmartWalletV16,
         "escape",
         "send",
         [],
@@ -6434,8 +6434,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get an escape hatch action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get an escape hatch action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -6461,8 +6461,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can disable the escape hatch",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay can disable the escape hatch",
+        UserSmartWalletV16,
         "permanentlyDisableEscapeHatch",
         "send",
         [0, escapeHatchUserSignature, escapeHatchSignature],
@@ -6474,8 +6474,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get an escape hatch action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get an escape hatch action ID",
+        UserSmartWalletV16,
         "getNextCustomActionID",
         "call",
         [
@@ -6501,8 +6501,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay cannot set an escape hatch once disabled",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay cannot set an escape hatch once disabled",
+        UserSmartWalletV16,
         "setEscapeHatch",
         "send",
         [tester.address, 0, escapeHatchUserSignature, escapeHatchSignature],
@@ -6528,21 +6528,21 @@ async function test(testingContext) {
     // console.log(await tester.getBalances(tester.address));
 
     await tester.runTest(
-        "cSai can be sent to V7 UserSmartWallet",
+        "cSai can be sent to V16 UserSmartWallet",
         tester.CSAI,
         "transfer",
         "send",
-        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "gwei")]
+        [UserSmartWalletV16.options.address, web3.utils.toWei("1", "gwei")]
     );
 
     const walletBalance = await tester.getBalances(
-        UserSmartWalletV7.options.address
+        UserSmartWalletV16.options.address
     );
     assert.strictEqual(walletBalance.cSai, 10.0);
 
     await tester.runTest(
-        "V7 UserSmartWallet can get next generic action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get next generic action ID",
+        UserSmartWalletV16,
         "getNextGenericActionID",
         "call",
         [tester.address, "0x", 0],
@@ -6553,7 +6553,7 @@ async function test(testingContext) {
     );
 
     let allPreMigrationBalances = await tester.getBalances(
-        UserSmartWalletV7.options.address
+        UserSmartWalletV16.options.address
     );
 
     let dDaiUnderlyingRaw = web3.utils.toBN(
@@ -6574,13 +6574,13 @@ async function test(testingContext) {
     };
 
     await tester.withBalanceCheck(
-        UserSmartWalletV7.options.address,
+        UserSmartWalletV16.options.address,
         preMigrationBalances,
         postMigrationBalances,
         tester.runTest,
         [
-            "V7 UserSmartWallet relay can trigger cSai to dDai migration",
-            UserSmartWalletV7,
+            "V16 UserSmartWallet relay can trigger cSai to dDai migration",
+            UserSmartWalletV16,
             "migrateCSaiToDDai",
             "send",
             [],
@@ -6593,8 +6593,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can trigger cSai to dDai migration again (no-op)",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay can trigger cSai to dDai migration again (no-op)",
+        UserSmartWalletV16,
         "migrateCSaiToDDai",
         "send",
         [],
@@ -6606,15 +6606,15 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "cDai can be sent to V7 UserSmartWallet",
+        "cDai can be sent to V16 UserSmartWallet",
         tester.CDAI,
         "transfer",
         "send",
-        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "mwei")]
+        [UserSmartWalletV16.options.address, web3.utils.toWei("1", "mwei")]
     );
 
     allPreMigrationBalances = await tester.getBalances(
-        UserSmartWalletV7.options.address
+        UserSmartWalletV16.options.address
     );
 
     dDaiUnderlyingRaw = web3.utils.toBN(
@@ -6635,13 +6635,13 @@ async function test(testingContext) {
     };
 
     await tester.withBalanceCheck(
-        UserSmartWalletV7.options.address,
+        UserSmartWalletV16.options.address,
         preMigrationBalances,
         postMigrationBalances,
         tester.runTest,
         [
-            "V7 UserSmartWallet relay can trigger cDai to dDai migration",
-            UserSmartWalletV7,
+            "V16 UserSmartWallet relay can trigger cDai to dDai migration",
+            UserSmartWalletV16,
             "migrateCDaiToDDai",
             "send",
             [],
@@ -6654,8 +6654,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can get a generic action ID",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can get a generic action ID",
+        UserSmartWalletV16,
         "getNextGenericActionID",
         "call",
         [
@@ -6682,8 +6682,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet can call executeAction",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet can call executeAction",
+        UserSmartWalletV16,
         "executeAction",
         "send",
         [
@@ -6702,7 +6702,7 @@ async function test(testingContext) {
         tester.DAI,
         "allowance",
         "call",
-        [UserSmartWalletV7.options.address, tester.DDAI.options.address],
+        [UserSmartWalletV16.options.address, tester.DDAI.options.address],
         true,
         value => {
             assert.strictEqual(value, ZERO.toString());
@@ -6710,15 +6710,15 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "cSai can be sent to V7 UserSmartWallet",
+        "cSai can be sent to V16 UserSmartWallet",
         tester.CSAI,
         "transfer",
         "send",
-        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "mwei")]
+        [UserSmartWalletV16.options.address, web3.utils.toWei("1", "mwei")]
     );
 
     allPreMigrationBalances = await tester.getBalances(
-        UserSmartWalletV7.options.address
+        UserSmartWalletV16.options.address
     );
 
     dDaiUnderlyingRaw = web3.utils.toBN(
@@ -6739,13 +6739,13 @@ async function test(testingContext) {
     };
 
     await tester.withBalanceCheck(
-        UserSmartWalletV7.options.address,
+        UserSmartWalletV16.options.address,
         preMigrationBalances,
         postMigrationBalances,
         tester.runTest,
         [
-            "V7 UserSmartWallet relay can trigger cSai to dDai migration",
-            UserSmartWalletV7,
+            "V16 UserSmartWallet relay can trigger cSai to dDai migration",
+            UserSmartWalletV16,
             "migrateCSaiToDDai",
             "send",
             [],
@@ -6758,16 +6758,16 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "Small amount of cDai can be sent to V7 UserSmartWallet",
+        "Small amount of cDai can be sent to V16 UserSmartWallet",
         tester.CDAI,
         "transfer",
         "send",
-        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "wei")]
+        [UserSmartWalletV16.options.address, web3.utils.toWei("1", "wei")]
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet cDai to dDai migration fails with a small amount of cDai",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet cDai to dDai migration fails with a small amount of cDai",
+        UserSmartWalletV16,
         "migrateCDaiToDDai",
         "send",
         [],
@@ -6779,16 +6779,16 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "cDai can be sent to V7 UserSmartWallet again",
+        "cDai can be sent to V16 UserSmartWallet again",
         tester.CDAI,
         "transfer",
         "send",
-        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "mwei")]
+        [UserSmartWalletV16.options.address, web3.utils.toWei("1", "mwei")]
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can trigger cDai to dDai migration again",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay can trigger cDai to dDai migration again",
+        UserSmartWalletV16,
         "migrateCDaiToDDai",
         "send",
         [],
@@ -6800,15 +6800,15 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "cUSDC can be sent to V7 UserSmartWallet",
+        "cUSDC can be sent to V16 UserSmartWallet",
         tester.CUSDC,
         "transfer",
         "send",
-        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "lovelace")]
+        [UserSmartWalletV16.options.address, web3.utils.toWei("1", "lovelace")]
     );
 
     allPreMigrationBalances = await tester.getBalances(
-        UserSmartWalletV7.options.address
+        UserSmartWalletV16.options.address
     );
 
     const dUSDCUnderlyingRaw = web3.utils.toBN(
@@ -6829,13 +6829,13 @@ async function test(testingContext) {
     };
 
     await tester.withBalanceCheck(
-        UserSmartWalletV7.options.address,
+        UserSmartWalletV16.options.address,
         preMigrationBalances,
         postMigrationBalances,
         tester.runTest,
         [
-            "V7 UserSmartWallet relay can trigger cDai to dDai migration",
-            UserSmartWalletV7,
+            "V16 UserSmartWallet relay can trigger cDai to dDai migration",
+            UserSmartWalletV16,
             "migrateCUSDCToDUSDC",
             "send",
             [],
@@ -6848,8 +6848,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can trigger cUSDC to dUSDC migration again (no-op)",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay can trigger cUSDC to dUSDC migration again (no-op)",
+        UserSmartWalletV16,
         "migrateCUSDCToDUSDC",
         "send",
         [],
@@ -6861,11 +6861,11 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "Sai Whale can deposit sai into the V7 user smart wallet",
+        "Sai Whale can deposit sai into the V16 user smart wallet",
         tester.SAI,
         "transfer",
         "send",
-        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "ether")],
+        [UserSmartWalletV16.options.address, web3.utils.toWei("1", "ether")],
         true,
         receipt => {
             if (testingContext !== "coverage") {
@@ -6875,7 +6875,7 @@ async function test(testingContext) {
                 );
                 assert.strictEqual(
                     receipt.events.Transfer.returnValues.to,
-                    UserSmartWalletV7.options.address
+                    UserSmartWalletV16.options.address
                 );
                 assert.strictEqual(
                     receipt.events.Transfer.returnValues.value,
@@ -6887,11 +6887,11 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "Dai Whale can deposit dai into the V7 user smart wallet",
+        "Dai Whale can deposit dai into the V16 user smart wallet",
         tester.DAI,
         "transfer",
         "send",
-        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "ether")],
+        [UserSmartWalletV16.options.address, web3.utils.toWei("1", "ether")],
         true,
         receipt => {
             if (testingContext !== "coverage") {
@@ -6901,7 +6901,7 @@ async function test(testingContext) {
                 );
                 assert.strictEqual(
                     receipt.events.Transfer.returnValues.to,
-                    UserSmartWalletV7.options.address
+                    UserSmartWalletV16.options.address
                 );
                 assert.strictEqual(
                     receipt.events.Transfer.returnValues.value,
@@ -6913,11 +6913,11 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "USDC Whale can deposit usdc into the V7 user smart wallet",
+        "USDC Whale can deposit usdc into the V16 user smart wallet",
         tester.USDC,
         "transfer",
         "send",
-        [UserSmartWalletV7.options.address, web3.utils.toWei("1", "lovelace")],
+        [UserSmartWalletV16.options.address, web3.utils.toWei("1", "lovelace")],
         true,
         receipt => {
             if (testingContext !== "coverage") {
@@ -6927,7 +6927,7 @@ async function test(testingContext) {
                 );
                 assert.strictEqual(
                     receipt.events.Transfer.returnValues.to,
-                    UserSmartWalletV7.options.address
+                    UserSmartWalletV16.options.address
                 );
                 assert.strictEqual(
                     receipt.events.Transfer.returnValues.value,
@@ -6939,8 +6939,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can trigger sai to dai migration",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay can trigger sai to dai migration",
+        UserSmartWalletV16,
         "migrateSaiToDai",
         "send",
         [],
@@ -6952,8 +6952,8 @@ async function test(testingContext) {
     );
 
     await tester.runTest(
-        "V7 UserSmartWallet relay can trigger sai to dai migration again (no-op)",
-        UserSmartWalletV7,
+        "V16 UserSmartWallet relay can trigger sai to dai migration again (no-op)",
+        UserSmartWalletV16,
         "migrateSaiToDai",
         "send",
         [],
@@ -6966,7 +6966,7 @@ async function test(testingContext) {
 
     await tester.runTest(
         `Call to isValidSignature with insufficient data fails`,
-        UserSmartWalletV7,
+        UserSmartWalletV16,
         "isValidSignature",
         "call",
         ["0x", "0x"],
@@ -6975,7 +6975,7 @@ async function test(testingContext) {
 
     await tester.runTest(
         `Call to isValidSignature with 32-bytes of data has no context`,
-        UserSmartWalletV7,
+        UserSmartWalletV16,
         "isValidSignature",
         "call",
         [
@@ -6990,7 +6990,7 @@ async function test(testingContext) {
         tester.DUSDC,
         "allowance",
         "call",
-        [UserSmartWalletV7.options.address, tester.addressTwo],
+        [UserSmartWalletV16.options.address, tester.addressTwo],
         true,
         value => {
             assert.strictEqual(value, "0");
@@ -7008,7 +7008,7 @@ async function test(testingContext) {
             web3.eth.abi.encodeParameters(
                 ["address", "address", "uint256", "bool"],
                 [
-                    UserSmartWalletV7.options.address,
+                    UserSmartWalletV16.options.address,
                     tester.addressTwo,
                     "1",
                     true
@@ -7045,7 +7045,7 @@ async function test(testingContext) {
         "modifyAllowanceViaMetaTransaction",
         "send",
         [
-            UserSmartWalletV7.options.address,
+            UserSmartWalletV16.options.address,
             tester.addressTwo,
             "1",
             true,
@@ -7062,7 +7062,7 @@ async function test(testingContext) {
         "modifyAllowanceViaMetaTransaction",
         "send",
         [
-            UserSmartWalletV7.options.address,
+            UserSmartWalletV16.options.address,
             tester.addressTwo,
             "1",
             true,
@@ -7079,7 +7079,7 @@ async function test(testingContext) {
         "modifyAllowanceViaMetaTransaction",
         "send",
         [
-            UserSmartWalletV7.options.address,
+            UserSmartWalletV16.options.address,
             tester.addressTwo,
             "1",
             true,
@@ -7096,7 +7096,7 @@ async function test(testingContext) {
         "modifyAllowanceViaMetaTransaction",
         "send",
         [
-            UserSmartWalletV7.options.address,
+            UserSmartWalletV16.options.address,
             tester.addressTwo,
             "1",
             true,
@@ -7115,7 +7115,7 @@ async function test(testingContext) {
         tester.DUSDC,
         "allowance",
         "call",
-        [UserSmartWalletV7.options.address, tester.addressTwo],
+        [UserSmartWalletV16.options.address, tester.addressTwo],
         true,
         value => {
             assert.strictEqual(value, "1");
@@ -7129,7 +7129,7 @@ async function test(testingContext) {
         "initiateAccountRecovery",
         "send",
         [
-            UserSmartWalletV7.options.address,
+            UserSmartWalletV16.options.address,
             tester.originalAddress,
             0 // extraTime in seconds
         ],
@@ -7145,7 +7145,7 @@ async function test(testingContext) {
         tester.DharmaAccountRecoveryManagerV2,
         "recover",
         "send",
-        [UserSmartWalletV7.options.address, tester.originalAddress],
+        [UserSmartWalletV16.options.address, tester.originalAddress],
         false
     );
 
@@ -7158,7 +7158,7 @@ async function test(testingContext) {
         tester.DharmaAccountRecoveryManagerV2,
         "recover",
         "send",
-        [UserSmartWalletV7.options.address, tester.originalAddress],
+        [UserSmartWalletV16.options.address, tester.originalAddress],
         true,
         receipt => {
             // TODO: verify
@@ -9546,7 +9546,7 @@ async function test(testingContext) {
         tester.DharmaKeyRingUpgradeBeaconController,
         tester.DharmaUpgradeBeacon.options.address,
         AdharmaSmartWalletImplementation.options.address,
-        DharmaSmartWalletImplementationV7.options.address,
+        DharmaSmartWalletImplementationV16.options.address,
         DharmaKeyRingImplementationV1.options.address
     );
 

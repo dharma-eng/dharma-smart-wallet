@@ -1,4 +1,4 @@
-pragma solidity 0.5.11; // optimization runs: 200, evm version: petersburg
+pragma solidity 0.5.17; // optimization runs: 200, evm version: petersburg
 
 import "../helpers/Timelocker.sol";
 import "../helpers/TwoStepOwnable.sol";
