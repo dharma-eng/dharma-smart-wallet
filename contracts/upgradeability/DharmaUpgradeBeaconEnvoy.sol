@@ -25,10 +25,18 @@ contract DharmaUpgradeBeaconEnvoy is DharmaUpgradeBeaconEnvoyInterface {
     (bool ok, bytes memory returnData) = beacon.staticcall("");
 
     // Revert if underlying staticcall reverts, passing along revert message.
-    require(ok, string(returnData));
+    if (!ok) {
+      assembly {
+        returndatacopy(0, 0, returndatasize())
+        revert(0, returndatasize())
+      }
+    }
 
     // Ensure that the data returned from the beacon is the correct length.
-    require(returnData.length == 32, "Return data must be exactly 32 bytes.");
+    require(
+      returnData.length == 32,
+      "DharmaUpgradeBeaconEnvoy#getImplementation: Return data must be exactly 32 bytes."
+    );
 
     // Decode the address from the returned data and return it to the caller.
     implementation = abi.decode(returnData, (address));

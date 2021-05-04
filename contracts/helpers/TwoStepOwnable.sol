@@ -60,7 +60,7 @@ contract TwoStepOwnable {
   function transferOwnership(address newOwner) public onlyOwner {
     require(
       newOwner != address(0),
-      "TwoStepOwnable: new potential owner is the zero address."
+      "TwoStepOwnable#transferOwnership: new potential owner is the zero address."
     );
 
     _newPotentialOwner = newOwner;
@@ -81,7 +81,7 @@ contract TwoStepOwnable {
   function acceptOwnership() public {
     require(
       msg.sender == _newPotentialOwner,
-      "TwoStepOwnable: current owner must set caller as new potential owner."
+      "TwoStepOwnable#acceptOwnership: current owner must set caller as new potential owner."
     );
 
     delete _newPotentialOwner;

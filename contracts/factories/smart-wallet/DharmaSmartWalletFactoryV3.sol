@@ -1,20 +1,32 @@
 pragma solidity 0.8.4;
 
-import "../../proxies/smart-wallet/UpgradeBeaconProxyV1.sol";
+import "../../proxies/UpgradeBeaconProxyV1.sol";
 import "../../../interfaces/DharmaSmartWalletFactoryV1Interface.sol";
 import "../../../interfaces/DharmaSmartWalletInitializer.sol";
 
 
 /**
- * @title DharmaSmartWalletFactoryV1
+ * @title DharmaSmartWalletFactoryV3
  * @author 0age
  * @notice This contract deploys new Dharma Smart Wallet instances as "Upgrade
  * Beacon" proxies that reference a shared implementation contract specified by
  * the Dharma Upgrade Beacon contract.
  */
-contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
+contract DharmaSmartWalletFactoryV3 is DharmaSmartWalletFactoryV1Interface {
+  // Store the upgrade beacon used by the proxies as a constant.
+  address private immutable _UPGRADE_BEACON;
+
   // Use Dharma Smart Wallet initializer to construct initialization calldata.
-  DharmaSmartWalletInitializer private _initializer;
+  bytes4 private immutable _INITIALIZE;
+
+  constructor(address upgradeBeacon) {
+    // Set the upgrade beacon that will be used by the proxies.
+    _UPGRADE_BEACON = upgradeBeacon;
+
+    // set the initializer function selector as a constant.
+    DharmaSmartWalletInitializer _initializer;
+    _INITIALIZE = _initializer.initialize.selector;
+  }
 
   /**
    * @notice Deploy a new smart wallet address using the provided user signing
@@ -28,7 +40,7 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
   ) external override returns (address wallet) {
     // Get initialization calldata from initialize selector & user signing key.
     bytes memory initializationCalldata = abi.encodeWithSelector(
-      _initializer.initialize.selector,
+      _INITIALIZE,
       userSigningKey
     );
 
@@ -52,7 +64,7 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
   ) external view override returns (address wallet) {
     // Get initialization calldata from initialize selector & user signing key.
     bytes memory initializationCalldata = abi.encodeWithSelector(
-      _initializer.initialize.selector,
+      _INITIALIZE,
       userSigningKey
     );
 
@@ -73,7 +85,10 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
     // Place creation code and constructor args of new proxy instance in memory.
     bytes memory initCode = abi.encodePacked(
       type(UpgradeBeaconProxyV1).creationCode,
-      abi.encode(initializationCalldata)
+      abi.encode(
+        _UPGRADE_BEACON,
+        initializationCalldata
+      )
     );
 
     // Get salt to use during deployment using the supplied initialization code.
@@ -81,13 +96,13 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
 
     // Deploy the new upgrade beacon proxy contract using `CREATE2`.
     assembly {
-      let encoded_data := add(0x20, initCode) // load initialization code.
-      let encoded_size := mload(initCode)     // load the init code's length.
-      upgradeBeaconProxyInstance := create2(  // call `CREATE2` w/ 4 arguments.
-        callvalue(),                            // forward any supplied endowment.
-        encoded_data,                         // pass in initialization code.
-        encoded_size,                         // pass in init code's length.
-        salt                                  // pass in the salt value.
+      let encoded_data := add(32, initCode)  // load initialization code.
+      let encoded_size := mload(initCode)    // load the init code's length.
+      upgradeBeaconProxyInstance := create2( // call `CREATE2` w/ 4 arguments.
+        callvalue(),                         // forward any supplied endowment.
+        encoded_data,                        // pass in initialization code.
+        encoded_size,                        // pass in init code's length.
+        salt                                 // pass in the salt value.
       )
 
       // Pass along failure message and revert if contract deployment fails.
@@ -114,7 +129,10 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
     // Place creation code and constructor args of the proxy instance in memory.
     bytes memory initCode = abi.encodePacked(
       type(UpgradeBeaconProxyV1).creationCode,
-      abi.encode(initializationCalldata)
+      abi.encode(
+        _UPGRADE_BEACON,
+        initializationCalldata
+      )
     );
 
     // Get target address using the constructed initialization code.

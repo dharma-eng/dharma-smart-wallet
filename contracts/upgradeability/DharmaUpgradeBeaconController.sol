@@ -1,6 +1,8 @@
 pragma solidity 0.8.4; // optimization runs: 200, evm version: petersburg
 
 import "../../interfaces/DharmaUpgradeBeaconEnvoyInterface.sol";
+import "../helpers/TwoStepOwnable.sol";
+import "./DharmaUpgradeBeaconEnvoy.sol";
 
 
 /**
@@ -14,13 +16,7 @@ import "../../interfaces/DharmaUpgradeBeaconEnvoyInterface.sol";
  * method - `upgrade`. Timelocks or other upgrade conditions will be managed by
  * the owner of this contract.
  */
-contract DharmaUpgradeBeaconController {
-  // Fire an event whenever ownership of this contract changes.
-  event OwnershipTransferred(
-    address indexed previousOwner,
-    address indexed newOwner
-  );
-
+contract DharmaUpgradeBeaconController is TwoStepOwnable {
   // Fire an event any time a new implementation is set on an upgrade beacon.
   event Upgraded(
     address indexed upgradeBeacon,
@@ -30,41 +26,34 @@ contract DharmaUpgradeBeaconController {
     bytes32 newImplementationCodeHash
   );
 
-  // Store address of owner - ownership modeled after OpenZeppelin's `Ownable`.
-  address private _owner;
-
   // Store a mapping of the implementation code hash at the time of the last
   // upgrade for each beacon. This can be used by calling contracts to verify
   // that the implementation has not been altered since it was initially set.
   mapping(address => bytes32) private _codeHashAtLastUpgrade;
 
   // The Upgrade Beacon Envoy is used to check the implementation of a beacon.
-  DharmaUpgradeBeaconEnvoyInterface private constant _UPGRADE_BEACON_ENVOY = (
-    DharmaUpgradeBeaconEnvoyInterface(
-      0x000000000067503c398F4c9652530DBC4eA95C02
-    )
-  );
+  DharmaUpgradeBeaconEnvoyInterface private immutable _UPGRADE_BEACON_ENVOY;
 
   /**
    * @notice In the constructor, set the transaction submitter as the initial
    * owner of this contract and verify the runtime code of the referenced
    * upgrade beacon envoy.
+   * @param envoy The address of the envoy.
    */
-  constructor() public {
-    // Set the transaction submitter as the initial owner of this contract.
-    _owner = tx.origin;
-    emit OwnershipTransferred(address(0), tx.origin);
+  constructor(address envoy) public {
+    require(
+      envoy != address(0),
+      "DharmaUpgradeBeaconController#constructor: No envoy address supplied."
+    );
 
     // Ensure the upgrade beacon envoy has the expected runtime code.
-    address envoy = address(_UPGRADE_BEACON_ENVOY);
-    bytes32 envoyCodeHash;
-    assembly { envoyCodeHash := extcodehash(envoy)}
+    bytes32 envoyCodeHash = envoy.codehash;
     require(
-      envoyCodeHash == bytes32(
-        0x7332d06692fd32b21bdd8b8b7a0a3f0de5cf549668cbc4498fc6cfaa453f1176
-      ),
-      "Upgrade Beacon Envoy runtime code is incorrect."
+      envoyCodeHash == keccak256(type(DharmaUpgradeBeaconEnvoy).runtimeCode),
+      "DharmaUpgradeBeaconController#constructor: envoy runtime code is incorrect."
     );
+
+    _UPGRADE_BEACON_ENVOY = DharmaUpgradeBeaconEnvoyInterface(envoy);
   }
 
   /**
@@ -92,27 +81,6 @@ contract DharmaUpgradeBeaconController {
 
     // Update the upgrade beacon with the new implementation address.
     _update(beacon, implementation);
-  }
-
-  /**
-   * @notice Transfers ownership of the contract to a new account (`newOwner`).
-   * This function may only be called by the owner of this contract.
-   * @param newOwner Address of the new owner to set.
-   */
-  function transferOwnership(address newOwner) external onlyOwner {
-    require(newOwner != address(0), "Ownable: new owner is the zero address");
-    emit OwnershipTransferred(_owner, newOwner);
-    _owner = newOwner;
-  }
-
-  /**
-   * @notice Transfers ownership of the contract to the null account, thereby
-   * preventing it from being used to perform upgrades in the future. This
-   * function may only be called by the owner of this contract.
-   */
-  function renounceOwnership() external onlyOwner {
-    emit OwnershipTransferred(_owner, address(0));
-    _owner = address(0);
   }
 
   /**
@@ -150,30 +118,6 @@ contract DharmaUpgradeBeaconController {
   }
 
   /**
-   * @notice Returns the address of the current owner.
-   * @return The address of the owner.
-   */
-  function owner() external view returns (address) {
-    return _owner;
-  }
-
-  /**
-   * @notice Returns true if the caller is the current owner.
-   * @return True if the caller is the current owner, else false.
-   */
-  function isOwner() external view returns (bool) {
-    return msg.sender == _owner;
-  }
-
-  /**
-   * @notice Throws if called by any account other than the owner.
-   */
-  modifier onlyOwner() {
-    require(msg.sender == _owner, "Ownable: caller is not the owner");
-    _;
-  }
-
-  /**
    * @notice Private function to perform an update to a given upgrade beacon and
    * determine the runtime code hash of both the old and the new implementation.
    * The latest code hash for the new implementation of the given beacon will be
@@ -188,8 +132,7 @@ contract DharmaUpgradeBeaconController {
     address oldImplementation = _UPGRADE_BEACON_ENVOY.getImplementation(beacon);
 
     // Get the runtime code hash for the current implementation.
-    bytes32 oldImplementationCodeHash;
-    assembly { oldImplementationCodeHash := extcodehash(oldImplementation) }
+    bytes32 oldImplementationCodeHash = oldImplementation.codehash;
 
     // Call into beacon and supply address of new implementation to update it.
     (bool success,) = beacon.call(abi.encode(implementation));
@@ -206,8 +149,7 @@ contract DharmaUpgradeBeaconController {
     address newImplementation = _UPGRADE_BEACON_ENVOY.getImplementation(beacon);
 
     // Get the runtime code hash for the new implementation.
-    bytes32 newImplementationCodeHash;
-    assembly { newImplementationCodeHash := extcodehash(newImplementation) }
+    bytes32 newImplementationCodeHash = newImplementation.codehash;
 
     // Set runtime code hash of the new implementation for the given beacon.
     _codeHashAtLastUpgrade[beacon] = newImplementationCodeHash;
