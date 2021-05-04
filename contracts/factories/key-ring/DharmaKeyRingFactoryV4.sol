@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.4;
 
-import "../../proxies/key-ring/KeyRingUpgradeBeaconProxyV1.sol";
+import "../../proxies/UpgradeBeaconProxyV1.sol";
 import "../../../interfaces/DharmaKeyRingFactoryV2Interface.sol";
 import "../../../interfaces/DharmaKeyRingInitializer.sol";
 import "../../../interfaces/DharmaKeyRingImplementationV0Interface.sol";
@@ -270,7 +270,7 @@ contract DharmaKeyRingFactoryV4 is DharmaKeyRingFactoryV2Interface {
   ) private returns (address upgradeBeaconProxyInstance) {
     // Place creation code and constructor args of new proxy instance in memory.
     bytes memory initCode = abi.encodePacked(
-      type(KeyRingUpgradeBeaconProxyV1).creationCode,
+      type(UpgradeBeaconProxyV1).creationCode,
       abi.encode(_UPGRADE_BEACON, initializationCalldata)
     );
 
@@ -326,7 +326,7 @@ contract DharmaKeyRingFactoryV4 is DharmaKeyRingFactoryV2Interface {
   ) private view returns (address target) {
     // Place creation code and constructor args of the proxy instance in memory.
     bytes memory initCode = abi.encodePacked(
-      type(KeyRingUpgradeBeaconProxyV1).creationCode,
+      type(UpgradeBeaconProxyV1).creationCode,
       abi.encode(_UPGRADE_BEACON, initializationCalldata)
     );
 
