@@ -1,4 +1,4 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
 
 /**
@@ -24,15 +24,15 @@ contract UpgradeBeaconProxyV1 {
    * @param initializationCalldata Calldata to supply when performing the
    * initialization delegatecall.
    */
-  constructor(bytes memory initializationCalldata) public payable {
+  constructor(bytes memory initializationCalldata) payable {
     // Delegatecall into the implementation, supplying initialization calldata.
     (bool ok, ) = _implementation().delegatecall(initializationCalldata);
 
     // Revert and include revert data if delegatecall to implementation reverts.
     if (!ok) {
       assembly {
-        returndatacopy(0, 0, returndatasize)
-        revert(0, returndatasize)
+        returndatacopy(0, 0, returndatasize())
+        revert(0, returndatasize())
       }
     }
   }
@@ -41,7 +41,7 @@ contract UpgradeBeaconProxyV1 {
    * @notice In the fallback, delegate execution to the implementation set on
    * the upgrade beacon.
    */
-  function () external payable {
+  fallback () external payable {
     // Delegate execution to implementation contract provided by upgrade beacon.
     _delegate(_implementation());
   }
@@ -76,19 +76,19 @@ contract UpgradeBeaconProxyV1 {
       // Copy msg.data. We take full control of memory in this inline assembly
       // block because it will not return to Solidity code. We overwrite the
       // Solidity scratch pad at memory position 0.
-      calldatacopy(0, 0, calldatasize)
+      calldatacopy(0, 0, calldatasize())
 
       // Delegatecall to the implementation, supplying calldata and gas.
       // Out and outsize are set to zero - instead, use the return buffer.
-      let result := delegatecall(gas, implementation, 0, calldatasize, 0, 0)
+      let result := delegatecall(gas(), implementation, 0, calldatasize(), 0, 0)
 
       // Copy the returned data from the return buffer.
-      returndatacopy(0, 0, returndatasize)
+      returndatacopy(0, 0, returndatasize())
 
       switch result
       // Delegatecall returns 0 on error.
-      case 0 { revert(0, returndatasize) }
-      default { return(0, returndatasize) }
+      case 0 { revert(0, returndatasize()) }
+      default { return(0, returndatasize()) }
     }
   }
 }

@@ -1,4 +1,4 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
 import "../../proxies/key-ring/KeyRingUpgradeBeaconProxyV1.sol";
 import "../../../interfaces/DharmaKeyRingFactoryV2Interface.sol";
@@ -65,11 +65,11 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
    * keyring - if a keyring contract is already deployed to this address, the
    * deployment step will be skipped (supply the null address for this argument
    * to force a deployment of a new key ring).
-   * @return The address of the new key ring.
+   * @return keyRing - the address of the new key ring.
    */
   function newKeyRing(
     address userSigningKey, address targetKeyRing
-  ) external returns (address keyRing) {
+  ) external override returns (address keyRing) {
     // Deploy and initialize a keyring if needed and emit a corresponding event.
     keyRing = _deployNewKeyRingIfNeeded(userSigningKey, targetKeyRing);
   }
@@ -87,14 +87,14 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
    * as an argument to `takeAdminAction` on the newly-deployed keyring.
    * @param signature bytes A signature approving the addition of the second key
    * that has been signed by the first key.
-   * @return The address of the new key ring.
+   * @return keyRing - the address of the new key ring.
    */
   function newKeyRingAndAdditionalKey(
     address userSigningKey,
     address targetKeyRing,
     address additionalSigningKey,
     bytes calldata signature
-  ) external returns (address keyRing) {
+  ) external override returns (address keyRing) {
     // Deploy and initialize a keyring if needed and emit a corresponding event.
     keyRing = _deployNewKeyRingIfNeeded(userSigningKey, targetKeyRing);
 
@@ -131,8 +131,8 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
    * returned for the smart wallet from the Dharma Key Registry. A unique hash
    * returned from `getCustomActionID` on the smart wallet is prefixed and
    * hashed to create the signed message.
-   * @return The address of the new key ring and the success status of the
-   * withdrawal.
+   * @return keyRing - the address of the new key ring
+   * @return withdrawalSuccess - the success status of the withdrawal.
    */
   function newKeyRingAndDaiWithdrawal(
     address userSigningKey,
@@ -143,7 +143,7 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
     uint256 minimumActionGas,
     bytes calldata userSignature,
     bytes calldata dharmaSignature
-  ) external returns (address keyRing, bool withdrawalSuccess) {
+  ) external override returns (address keyRing, bool withdrawalSuccess) {
     // Declare the interface for the supplied smart wallet.
     DharmaSmartWalletImplementationV0Interface wallet = (
       DharmaSmartWalletImplementationV0Interface(smartWallet)
@@ -189,8 +189,8 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
    * returned for the smart wallet from the Dharma Key Registry. A unique hash
    * returned from `getCustomActionID` on the smart wallet is prefixed and
    * hashed to create the signed message.
-   * @return The address of the new key ring and the success status of the
-   * withdrawal.
+   * @return keyRing - The address of the new key ring
+   * @return withdrawalSuccess - success status of the withdrawal.
    */
   function newKeyRingAndUSDCWithdrawal(
     address userSigningKey,
@@ -201,7 +201,7 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
     uint256 minimumActionGas,
     bytes calldata userSignature,
     bytes calldata dharmaSignature
-  ) external returns (address keyRing, bool withdrawalSuccess) {
+  ) external override returns (address keyRing, bool withdrawalSuccess) {
     // Declare the interface for the supplied smart wallet.
     DharmaSmartWalletImplementationV0Interface wallet = (
       DharmaSmartWalletImplementationV0Interface(smartWallet)
@@ -228,11 +228,11 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
    * be returned if a particular user signing key has been used before.
    * @param userSigningKey address The user signing key, supplied as a
    * constructor argument.
-   * @return The future address of the next key ring.
+   * @return targetKeyRing - the future address of the next key ring.
    */
   function getNextKeyRing(
     address userSigningKey
-  ) external view returns (address targetKeyRing) {
+  ) external view override returns (address targetKeyRing) {
     // Ensure that a user signing key has been provided.
     require(userSigningKey != address(0), "No user signing key supplied.");
 
@@ -252,11 +252,11 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
    * @param keyRing address The yet-to-be-deployed keyring address.
    * @param additionalUserSigningKey address The additional user signing key to
    * add.
-   * @return The adminActionID that will be prefixed, hashed, and signed.
+   * @return adminActionID - the adminActionID that will be prefixed, hashed, and signed.
    */
   function getFirstKeyRingAdminActionID(
     address keyRing, address additionalUserSigningKey
-  ) external view returns (bytes32 adminActionID) {
+  ) external view override returns (bytes32 adminActionID) {
     adminActionID = keccak256(
       abi.encodePacked(
         keyRing, _getKeyRingVersion(), uint256(0), additionalUserSigningKey
@@ -278,7 +278,7 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
    * address and deploy it if there is a match. Otherwise, it will revert before
    * attempting to deploy. Passing the null address will deploy a key ring to
    * whatever address is available.
-   * @return The address of the new key ring, or of the supplied key ring if one
+   * @return keyRing - the address of the new key ring, or of the supplied key ring if one
    * already exists at the supplied address.
    */
   function _deployNewKeyRingIfNeeded(
@@ -316,7 +316,7 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
         let encoded_data := add(32, initCode) // load initialization code.
         let encoded_size := mload(initCode)   // load the init code's length.
         keyRing := create2(                   // call `CREATE2` w/ 4 arguments.
-          callvalue,                          // forward any supplied endowment.
+          callvalue(),                          // forward any supplied endowment.
           encoded_data,                       // pass in initialization code.
           encoded_size,                       // pass in init code's length.
           salt                                // pass in the salt value.
@@ -324,8 +324,8 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
 
         // Pass along failure message and revert if contract deployment fails.
         if iszero(keyRing) {
-          returndatacopy(0, 0, returndatasize)
-          revert(0, returndatasize)
+          returndatacopy(0, 0, returndatasize())
+          revert(0, returndatasize())
         }
       }
 
@@ -362,7 +362,7 @@ contract DharmaKeyRingFactoryV3 is DharmaKeyRingFactoryV2Interface {
    * @param initializationCalldata bytes The calldata that will be supplied to
    * the `DELEGATECALL` from the deployed contract to the implementation set on
    * the upgrade beacon during contract creation.
-   * @return The address of the next upgrade beacon proxy contract with the
+   * @return target - the address of the next upgrade beacon proxy contract with the
    * given initialization calldata.
    */
   function _computeNextAddress(

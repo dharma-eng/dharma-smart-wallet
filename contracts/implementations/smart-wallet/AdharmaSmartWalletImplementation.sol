@@ -1,4 +1,4 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
 import "../../../interfaces/MinimalEscapeHatchRegistryInterface.sol";
 
@@ -28,13 +28,13 @@ contract AdharmaSmartWalletImplementation {
   );
 
   // The smart wallet can receive funds, though it is inadvisable.
-  function () external payable {}
+  fallback () external payable {}
 
   // Keep the initializer function on the contract in case a smart wallet has
   // not yet been deployed but the account still contains funds.
   function initialize(address key) external {
     // Ensure that this function is only callable during contract construction.
-    assembly { if extcodesize(address) { revert(0, 0) } }
+    assembly { if extcodesize(address()) { revert(0, 0) } }
 
     // Ensure that a key is set on this smart wallet.
     require(key != address(0), "No key provided.");
@@ -60,7 +60,7 @@ contract AdharmaSmartWalletImplementation {
     require(msg.sender == authority, "Caller prohibited.");
 
     // Perform the call, forwarding all gas and supplying given value and data.
-    (ok, returnData) = to.call.value(amount)(data);
+    (ok, returnData) = to.call{value: amount}(data);
 
     // Revert and pass along the revert reason if the call reverted.
     require(ok, string(returnData));

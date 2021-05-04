@@ -1,4 +1,4 @@
-pragma solidity 0.5.17; // optimization runs: 65536, version: petersburg
+pragma solidity 0.8.4; // optimization runs: 65536, version: petersburg
 
 
 /**
@@ -48,8 +48,8 @@ contract IndestructibleRegistry {
    * as indestructible.
    * @param target address The contract to check for potential registration as
    * an indestructible contract.
-   * @return A boolean signifying successful registration as an indestructable
-   * contract.
+   * @return registeredAsIndestructible - a boolean signifying successful
+   * registration as an indestructable contract.
    */
   function isRegisteredAsIndestructible(
     address target
@@ -62,8 +62,8 @@ contract IndestructibleRegistry {
    * whether it is potentially destructible or not. The call will revert if no
    * code exists at the supplied target.
    * @param target address The contract to check for potential destructibility.
-   * @return A boolean signifying whether or not the target contract is
-   * potentially destructible.
+   * @return potentiallyDestructible - a boolean signifying whether or not the
+   * target contract is potentially destructible.
    */
   function isPotentiallyDestructible(
     address target

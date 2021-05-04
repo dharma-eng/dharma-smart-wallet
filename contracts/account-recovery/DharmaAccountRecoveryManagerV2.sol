@@ -1,6 +1,5 @@
-pragma solidity 0.5.17; // optimization runs: 200, evm version: petersburg
+pragma solidity 0.8.4; // optimization runs: 200, evm version: petersburg
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../helpers/TimelockerV2.sol";
 import "../helpers/TwoStepOwnable.sol";
 import "../../interfaces/DharmaAccountRecoveryManagerInterface.sol";
@@ -53,7 +52,6 @@ contract DharmaAccountRecoveryManagerV2 is
   TimelockerModifiersInterface,
   TwoStepOwnable,
   TimelockerV2 {
-  using SafeMath for uint256;
 
   // Maintain a role status mapping with assigned accounts and paused states.
   mapping(uint256 => RoleStatus) private _roles;
@@ -66,7 +64,7 @@ contract DharmaAccountRecoveryManagerV2 is
    * submitter and initial minimum timelock interval and default timelock
    * expiration values.
    */
-  constructor() public {
+  constructor() {
     // Set initial minimum timelock interval values.
     _setInitialTimelockInterval(this.modifyTimelockInterval.selector, 2 weeks);
     _setInitialTimelockInterval(
@@ -96,7 +94,7 @@ contract DharmaAccountRecoveryManagerV2 is
    */
   function initiateAccountRecovery(
     address smartWallet, address userSigningKey, uint256 extraTime
-  ) external onlyOwnerOr(Role.OPERATOR) {
+  ) external override onlyOwnerOr(Role.OPERATOR) {
     require(smartWallet != address(0), "No smart wallet address provided.");
     require(userSigningKey != address(0), "No new user signing key provided.");
 
@@ -114,7 +112,7 @@ contract DharmaAccountRecoveryManagerV2 is
    */
   function recover(
     address smartWallet, address newUserSigningKey
-  ) external onlyOwnerOr(Role.RECOVERER) {
+  ) external override onlyOwnerOr(Role.RECOVERER) {
     require(smartWallet != address(0), "No smart wallet address provided.");
     require(
       newUserSigningKey != address(0),
@@ -135,7 +133,7 @@ contract DharmaAccountRecoveryManagerV2 is
 
     // Attempt to get current signing key - a failure should not block recovery.
     address oldUserSigningKey;
-    (bool ok, bytes memory data) = smartWallet.call.gas(gasleft() / 2)(
+    (bool ok, bytes memory data) = smartWallet.call{gas: gasleft() / 2}(
       abi.encodeWithSelector(walletInterface.getUserSigningKey.selector)
     );
     if (ok && data.length == 32) {
@@ -162,7 +160,7 @@ contract DharmaAccountRecoveryManagerV2 is
    */
   function initiateAccountRecoveryDisablement(
     address smartWallet, uint256 extraTime
-  ) external onlyOwnerOr(Role.OPERATOR) {
+  ) external override onlyOwnerOr(Role.OPERATOR) {
     require(smartWallet != address(0), "No smart wallet address provided.");
 
     // Set the timelock and emit a `TimelockInitiated` event.
@@ -182,7 +180,7 @@ contract DharmaAccountRecoveryManagerV2 is
    */
   function disableAccountRecovery(
     address smartWallet
-  ) external onlyOwnerOr(Role.DISABLER) {
+  ) external override onlyOwnerOr(Role.DISABLER) {
     require(smartWallet != address(0), "No smart wallet address provided.");
 
     // Ensure that the timelock has been set and is completed.
@@ -204,7 +202,7 @@ contract DharmaAccountRecoveryManagerV2 is
    */
   function cancelAccountRecovery(
     address smartWallet, address userSigningKey
-  ) external onlyOwnerOr(Role.CANCELLER) {
+  ) external override onlyOwnerOr(Role.CANCELLER) {
     require(smartWallet != address(0), "No smart wallet address provided.");
     require(userSigningKey != address(0), "No user signing key provided.");
 
@@ -226,7 +224,7 @@ contract DharmaAccountRecoveryManagerV2 is
    */
   function cancelAccountRecoveryDisablement(
     address smartWallet
-  ) external onlyOwnerOr(Role.CANCELLER) {
+  ) external override onlyOwnerOr(Role.CANCELLER) {
     require(smartWallet != address(0), "No smart wallet address provided.");
 
     // Expire account recovery disablement timelock in question if one exists.
@@ -245,7 +243,7 @@ contract DharmaAccountRecoveryManagerV2 is
    * @param role The role to pause. Permitted roles are operator (0),
    * recoverer (1), canceller (2), disabler (3), and pauser (4).
    */
-  function pause(Role role) external onlyOwnerOr(Role.PAUSER) {
+  function pause(Role role) external override onlyOwnerOr(Role.PAUSER) {
     RoleStatus storage storedRoleStatus = _roles[uint256(role)];
     require(!storedRoleStatus.paused, "Role in question is already paused.");
     storedRoleStatus.paused = true;
@@ -258,7 +256,7 @@ contract DharmaAccountRecoveryManagerV2 is
    * @param role The role to pause. Permitted roles are operator (0),
    * recoverer (1), canceller (2), disabler (3), and pauser (4).
    */
-  function unpause(Role role) external onlyOwner {
+  function unpause(Role role) external override onlyOwner {
     RoleStatus storage storedRoleStatus = _roles[uint256(role)];
     require(storedRoleStatus.paused, "Role in question is already unpaused.");
     storedRoleStatus.paused = false;
@@ -276,7 +274,7 @@ contract DharmaAccountRecoveryManagerV2 is
    */
   function initiateModifyTimelockInterval(
     bytes4 functionSelector, uint256 newTimelockInterval, uint256 extraTime
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -310,7 +308,7 @@ contract DharmaAccountRecoveryManagerV2 is
    */
   function modifyTimelockInterval(
     bytes4 functionSelector, uint256 newTimelockInterval
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -333,7 +331,7 @@ contract DharmaAccountRecoveryManagerV2 is
    */
   function initiateModifyTimelockExpiration(
     bytes4 functionSelector, uint256 newTimelockExpiration, uint256 extraTime
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -373,7 +371,7 @@ contract DharmaAccountRecoveryManagerV2 is
    */
   function modifyTimelockExpiration(
     bytes4 functionSelector, uint256 newTimelockExpiration
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -393,7 +391,7 @@ contract DharmaAccountRecoveryManagerV2 is
    * operator (0), recoverer (1), canceller (2), disabler (3), and pauser (4).
    * @param account The account to set as the designated role bearer.
    */
-  function setRole(Role role, address account) external onlyOwner {
+  function setRole(Role role, address account) external override onlyOwner {
     require(account != address(0), "Must supply an account.");
     _setRole(role, account);
   }
@@ -406,7 +404,7 @@ contract DharmaAccountRecoveryManagerV2 is
    * are operator (0), recoverer (1), canceller (2), disabler (3), and
    * pauser (4).
    */
-  function removeRole(Role role) external onlyOwner {
+  function removeRole(Role role) external override onlyOwner {
     _setRole(role, address(0));
   }
 
@@ -414,12 +412,12 @@ contract DharmaAccountRecoveryManagerV2 is
    * @notice External view function to check whether a given smart wallet has
    * disabled account recovery by opting out.
    * @param smartWallet Address of the smart wallet to check.
-   * @return A boolean indicating if account recovery has been disabled for the
+   * @return hasDisabledAccountRecovery - a boolean indicating if account recovery has been disabled for the
    * wallet in question.
    */
   function accountRecoveryDisabled(
     address smartWallet
-  ) external view returns (bool hasDisabledAccountRecovery) {
+  ) external view override returns (bool hasDisabledAccountRecovery) {
     // Determine if the wallet in question has opted out of account recovery.
     hasDisabledAccountRecovery = _accountRecoveryDisabled[smartWallet];
   }
@@ -432,10 +430,10 @@ contract DharmaAccountRecoveryManagerV2 is
    * functions directly.
    * @param role The role to check the pause status on. Permitted roles are
    * operator (0), recoverer (1), canceller (2), disabler (3), and pauser (4).
-   * @return A boolean to indicate if the functionality associated with the role
+   * @return paused - a boolean to indicate if the functionality associated with the role
    * in question is currently paused.
    */
-  function isPaused(Role role) external view returns (bool paused) {
+  function isPaused(Role role) external view override returns (bool paused) {
     paused = _isPaused(role);
   }
 
@@ -444,9 +442,9 @@ contract DharmaAccountRecoveryManagerV2 is
    * role holder.
    * @param role The role to check for. Permitted roles are operator (0),
    * recoverer (1), canceller (2), disabler (3), and pauser (4).
-   * @return A boolean indicating if the caller has the specified role.
+   * @return hasRole - a boolean indicating if the caller has the specified role.
    */
-  function isRole(Role role) external view returns (bool hasRole) {
+  function isRole(Role role) external view override returns (bool hasRole) {
     hasRole = _isRole(role);
   }
 
@@ -454,10 +452,10 @@ contract DharmaAccountRecoveryManagerV2 is
    * @notice External view function to check the account currently holding the
    * operator role. The operator can initiate timelocks for account recovery and
    * account recovery disablement.
-   * @return The address of the current operator, or the null address if none is
+   * @return operator - the address of the current operator, or the null address if none is
    * set.
    */
-  function getOperator() external view returns (address operator) {
+  function getOperator() external view override returns (address operator) {
     operator = _roles[uint256(Role.OPERATOR)].account;
   }
 
@@ -466,10 +464,10 @@ contract DharmaAccountRecoveryManagerV2 is
    * recoverer role. The recoverer can trigger smart wallet account recovery in
    * the event that a timelock has been initiated and is complete and not yet
    * expired.
-   * @return The address of the current recoverer, or the null address if none
+   * @return recoverer - the address of the current recoverer, or the null address if none
    * is set.
    */
-  function getRecoverer() external view returns (address recoverer) {
+  function getRecoverer() external view override returns (address recoverer) {
     recoverer = _roles[uint256(Role.RECOVERER)].account;
   }
 
@@ -477,10 +475,10 @@ contract DharmaAccountRecoveryManagerV2 is
    * @notice External view function to check the account currently holding the
    * canceller role. The canceller can expire a timelock related to account
    * recovery or account recovery disablement prior to its execution.
-   * @return The address of the current canceller, or the null address if none
+   * @return canceller - the address of the current canceller, or the null address if none
    * is set.
    */
-  function getCanceller() external view returns (address canceller) {
+  function getCanceller() external view override returns (address canceller) {
     canceller = _roles[uint256(Role.CANCELLER)].account;
   }
 
@@ -489,10 +487,10 @@ contract DharmaAccountRecoveryManagerV2 is
    * disabler role. The disabler can trigger permanent smart wallet account
    * recovery disablement in the event that a timelock has been initiated and is
    * complete and not yet expired.
-   * @return The address of the current disabler, or the null address if none is
+   * @return disabler - the address of the current disabler, or the null address if none is
    * set.
    */
-  function getDisabler() external view returns (address disabler) {
+  function getDisabler() external view override returns (address disabler) {
     disabler = _roles[uint256(Role.DISABLER)].account;
   }
 
@@ -501,10 +499,10 @@ contract DharmaAccountRecoveryManagerV2 is
    * pauser role. The pauser can pause any role from taking its standard action,
    * though the owner will still be able to call the associated function in the
    * interim and is the only entity able to unpause the given role once paused.
-   * @return The address of the current pauser, or the null address if none is
+   * @return pauser - the address of the current pauser, or the null address if none is
    * set.
    */
-  function getPauser() external view returns (address pauser) {
+  function getPauser() external view override returns (address pauser) {
     pauser = _roles[uint256(Role.PAUSER)].account;
   }
 
@@ -529,7 +527,7 @@ contract DharmaAccountRecoveryManagerV2 is
    * role holder.
    * @param role The role to check for. Permitted roles are operator (0),
    * recoverer (1), canceller (2), disabler (3), and pauser (4).
-   * @return A boolean indicating if the caller has the specified role.
+   * @return hasRole - a boolean indicating if the caller has the specified role.
    */
   function _isRole(Role role) internal view returns (bool hasRole) {
     hasRole = msg.sender == _roles[uint256(role)].account;
@@ -540,7 +538,7 @@ contract DharmaAccountRecoveryManagerV2 is
    * not.
    * @param role The role to check for. Permitted roles are operator (0),
    * recoverer (1), canceller (2), disabler (3), and pauser (4).
-   * @return A boolean indicating if the specified role is paused or not.
+   * @return paused - a boolean indicating if the specified role is paused or not.
    */
   function _isPaused(Role role) internal view returns (bool paused) {
     paused = _roles[uint256(role)].paused;

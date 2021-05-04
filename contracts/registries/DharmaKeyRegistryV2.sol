@@ -1,6 +1,6 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../helpers/TwoStepOwnable.sol";
 import "../../interfaces/DharmaKeyRegistryInterface.sol";
 
@@ -36,7 +36,7 @@ contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
    * @notice In the constructor, set the initial global key and the initial
    * owner to tx.origin.
    */
-  constructor() public {
+  constructor() {
     // Initially set the global key to the account of the transaction submitter.
     _registerGlobalKey(tx.origin);
   }
@@ -53,7 +53,7 @@ contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
    */
   function setGlobalKey(
     address globalKey, bytes calldata signature
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that the provided global key is not the null address.
     require(globalKey != address(0), "A global key must be supplied.");
 
@@ -86,7 +86,7 @@ contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
    */
   function setSpecificKey(
     address account, address specificKey
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that the key has not been used previously.
     require(!_usedKeys[specificKey], "Key has been used previously.");
 
@@ -104,9 +104,9 @@ contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
    * @notice Get the public key associated with the caller of this function. If
    * a specific key is set for the caller, it will be returned; otherwise, the
    * global key will be returned.
-   * @return The public key to use for the caller.
+   * @return key - the public key to use for the caller.
    */
-  function getKey() external view returns (address key) {
+  function getKey() external view override returns (address key) {
     // Retrieve the specific key, if any, for the caller.
     key = _specificKeys[msg.sender];
 
@@ -121,9 +121,9 @@ contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
    * specific key is set for the account, it will be returned; otherwise, the
    * global key will be returned.
    * @param account address The account to find the public key for.
-   * @return The public key to use for the provided account.
+   * @return key - the public key to use for the provided account.
    */
-  function getKeyForUser(address account) external view returns (address key) {
+  function getKeyForUser(address account) external view override returns (address key) {
     // Retrieve the specific key, if any, for the specified account.
     key = _specificKeys[account];
 
@@ -135,9 +135,9 @@ contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
 
   /**
    * @notice Get the global public key.
-   * @return The global public key.
+   * @return globalKey - the global public key.
    */
-  function getGlobalKey() external view returns (address globalKey) {
+  function getGlobalKey() external view override returns (address globalKey) {
     // Retrieve and return the global key.
     globalKey = _globalKey;
   }
@@ -146,11 +146,11 @@ contract DharmaKeyRegistryV2 is TwoStepOwnable, DharmaKeyRegistryInterface {
    * @notice Get the specific public key associated with the supplied account.
    * The call will revert if a specific public key is not set for the account.
    * @param account address The account to find the specific public key for.
-   * @return The specific public key set on the provided account, if one exists.
+   * @return specificKey - the specific public key set on the provided account, if one exists.
    */
   function getSpecificKey(
     address account
-  ) external view returns (address specificKey) {
+  ) external view override returns (address specificKey) {
     // Retrieve the specific key, if any, for the account.
     specificKey = _specificKeys[account];
 

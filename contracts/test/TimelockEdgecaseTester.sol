@@ -1,7 +1,6 @@
-pragma solidity 0.5.17; // optimization runs: 200, evm version: petersburg
+pragma solidity 0.8.4; // optimization runs: 200, evm version: petersburg
 
 import "../helpers/Timelocker.sol";
-
 
 /**
  * @title TimelockEdgecaseTester
@@ -27,7 +26,7 @@ contract TimelockEdgecaseTester is Timelocker {
    * @notice In the constructor, choose one of three edge cases that will cause
    * Timelocker to revert.
    */
-  constructor(uint8 edgecase) public {
+  constructor(uint8 edgecase) {
     if (edgecase == 0) {
       // Set insane initial minimum timelock interval value.
       _setInitialTimelockInterval(

@@ -1,4 +1,4 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
 import "../../proxies/smart-wallet/UpgradeBeaconProxyV1.sol";
 import "../../../interfaces/DharmaSmartWalletFactoryV2Interface.sol";
@@ -42,7 +42,7 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
    * @notice In the constructor, ensure that the initialize selector constant
    * and smart wallet instance runtime code hash are both correct.
    */
-  constructor() public {
+  constructor() {
     DharmaSmartWalletImplementationV0Interface initializer;
     require(
       initializer.initialize.selector == _INITIALIZE_SELECTOR,
@@ -66,11 +66,11 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
    * new smart wallet - if a smart wallet contract is already deployed to this
    * address, the deployment step will be skipped (supply the null address for
    * this argument to force a deployment of a new smart wallet).
-   * @return The address of the new smart wallet.
+   * @return wallet - the address of the new smart wallet.
    */
   function newSmartWallet(
     address userSigningKey, address targetSmartWallet
-  ) external returns (address wallet) {
+  ) external override returns (address wallet) {
     // Deploy a new smart wallet if needed and emit a corresponding event.
     wallet = _deployNewSmartWalletIfNeeded(userSigningKey, targetSmartWallet);
   }
@@ -101,7 +101,7 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
    * returned for the smart wallet from the Dharma Key Registry. A unique hash
    * returned from `getFirstCustomActionID` is prefixed and hashed to create the
    * signed message.
-   * @return The address of the new smart wallet.
+   * @return wallet - the address of the new smart wallet.
    */
   function newSmartWalletAndNewUserSigningKey(
     address userSigningKey,
@@ -110,7 +110,7 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
     uint256 minimumActionGas,
     bytes calldata userSignature,
     bytes calldata dharmaSignature
-  ) external returns (address wallet) {
+  ) external override returns (address wallet) {
     // Deploy a new smart wallet if needed and emit a corresponding event.
     wallet = _deployNewSmartWalletIfNeeded(userSigningKey, targetSmartWallet);
 
@@ -140,14 +140,14 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
    * or the public key returned for the smart wallet from the Dharma Key
    * Registry. A unique hash returned from `getFirstCustomActionID` is prefixed
    * and hashed to create the signed message.
-   * @return The address of the new smart wallet.
+   * @return wallet - the address of the new smart wallet.
    */
   function newSmartWalletAndCancel(
     address userSigningKey,
     address targetSmartWallet,
     uint256 minimumActionGas,
     bytes calldata signature
-  ) external returns (address wallet) {
+  ) external override returns (address wallet) {
     // Deploy a new smart wallet if needed and emit a corresponding event.
     wallet = _deployNewSmartWalletIfNeeded(userSigningKey, targetSmartWallet);
 
@@ -163,11 +163,11 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
    * will be returned if a particular user signing key has been used before.
    * @param userSigningKey address The user signing key, supplied as a
    * constructor argument.
-   * @return The future address of the next smart wallet.
+   * @return wallet - the future address of the next smart wallet.
    */
   function getNextSmartWallet(
     address userSigningKey
-  ) external view returns (address wallet) {
+  ) external view override returns (address wallet) {
     // Get initialization calldata from initialize selector & user signing key.
     bytes memory initializationCalldata = abi.encodeWithSelector(
       _INITIALIZE_SELECTOR, userSigningKey
@@ -196,7 +196,7 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
    * provided to the call to the smart wallet - be aware that additional gas
    * must still be included to account for the cost of overhead incurred up
    * until the start of the call to the smart wallet.
-   * @return The action ID, which will need to be prefixed, hashed and signed in
+   * @return actionID - The action ID, which will need to be prefixed, hashed and signed in
    * order to construct a valid signature.
    */
   function getFirstSmartWalletCustomActionID(
@@ -254,7 +254,7 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
    * key will be deployed to this address and deploy it if there is a match.
    * Otherwise, it will revert before attempting to deploy. Passing the null
    * address will deploy a smart wallet to whatever address is available.
-   * @return The address of the new smart wallet, or of the supplied smart
+   * @return smartWallet - the address of the new smart wallet, or of the supplied smart
    * wallet if one already exists at the supplied address.
    */
   function _deployNewSmartWalletIfNeeded(
@@ -292,7 +292,7 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
         let encoded_data := add(32, initCode) // load initialization code.
         let encoded_size := mload(initCode)   // load the init code's length.
         smartWallet := create2(               // call `CREATE2` w/ 4 arguments.
-          callvalue,                          // forward any supplied endowment.
+          callvalue(),                          // forward any supplied endowment.
           encoded_data,                       // pass in initialization code.
           encoded_size,                       // pass in init code's length.
           salt                                // pass in the salt value.
@@ -300,8 +300,8 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
 
         // Pass along failure message and revert if contract deployment fails.
         if iszero(smartWallet) {
-          returndatacopy(0, 0, returndatasize)
-          revert(0, returndatasize)
+          returndatacopy(0, 0, returndatasize())
+          revert(0, returndatasize())
         }
       }
 
@@ -324,7 +324,7 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
    * @param initializationCalldata bytes The calldata that will be supplied to
    * the `DELEGATECALL` from the deployed contract to the implementation set on
    * the upgrade beacon during contract creation.
-   * @return The address of the next upgrade beacon proxy contract with the
+   * @return target - the address of the next upgrade beacon proxy contract with the
    * given initialization calldata.
    */
   function _computeNextAddress(
@@ -417,7 +417,7 @@ contract DharmaSmartWalletFactoryV2 is DharmaSmartWalletFactoryV2Interface {
    * wallet from the Dharma Key Registry. This key can be set for each specific
    * smart wallet - if none has been set, a global fallback key will be used.
    * @param smartWallet address The smart wallet address to get the key for.
-   * @return The address of the Dharma signing key, or public key corresponding
+   * @return dharmaSigningKey - the address of the Dharma signing key, or public key corresponding
    * to the secondary signer.
    */
   function _getDharmaSigningKey(address smartWallet) private view returns (

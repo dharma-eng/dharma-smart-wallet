@@ -5,7 +5,7 @@
     "author": "Dharma Labs",
     "license": "MIT",
     "dependencies": {
-        "@openzeppelin/contracts": "2.3.0",
+        "@openzeppelin/contracts": "4.1.0",
         "ethereumjs-util": "6.1.0",
         "ethlint": "1.2.5",
         "ganache-cli": "6.7.0",
@@ -17,6 +17,13 @@
         "web3": "1.2.1"
     },
     "devDependencies": {
+        "@nomiclabs/hardhat-ethers": "^2.0.2",
+        "@nomiclabs/hardhat-waffle": "^2.0.1",
+        "chai": "^4.3.4",
+        "dotenv": "^8.2.0",
+        "ethereum-waffle": "^3.3.0",
+        "ethers": "^5.1.4",
+        "hardhat": "^2.2.1",
         "husky": "^4.2.1",
         "lint-staged": "^9.2.1",
         "prettier": "1.16.4",

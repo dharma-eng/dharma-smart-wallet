@@ -1,6 +1,5 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../../interfaces/TimelockerModifiersInterface.sol";
 import "../../interfaces/TimelockerInterface.sol";
 
@@ -29,7 +28,6 @@ import "../../interfaces/TimelockerInterface.sol";
  * the original completion time.
  */
 contract TimelockerV2 is TimelockerInterface {
-  using SafeMath for uint256;
 
   // Implement a timelock for each function and set of arguments.
   mapping(bytes4 => mapping(bytes32 => Timelock)) private _timelocks;
@@ -57,7 +55,7 @@ contract TimelockerV2 is TimelockerInterface {
    * @notice In the constructor, confirm that selectors specified as constants
    * are correct.
    */
-  constructor() internal {
+  constructor() {
     TimelockerModifiersInterface modifiers;
 
     bytes4 targetModifyInterval = modifiers.modifyTimelockInterval.selector;
@@ -78,12 +76,15 @@ contract TimelockerV2 is TimelockerInterface {
    * arguments has completed.
    * @param functionSelector Function to be called.
    * @param arguments The abi-encoded arguments of the function to be called.
-   * @return A boolean indicating if the timelock exists or not and the time at
-   * which the timelock completes if it does exist.
+   * @return exists - a boolean indicating if the timelock exists
+   * @return completed -  a boolean indicating if the timelock has completed
+   * @return expired -  a boolean indicating if the timelock has expired
+   * @return completionTime - time at which the timelock completed
+   * @return expirationTime - time at which the timelock expired
    */
   function getTimelock(
     bytes4 functionSelector, bytes memory arguments
-  ) public view returns (
+  ) public view override returns (
     bool exists,
     bool completed,
     bool expired,
@@ -100,11 +101,11 @@ contract TimelockerV2 is TimelockerInterface {
    * @notice View function to check the current minimum timelock interval on a
    * given function.
    * @param functionSelector Function to retrieve the timelock interval for.
-   * @return The current minimum timelock interval for the given function.
+   * @return defaultTimelockInterval - the current minimum timelock interval for the given function.
    */
   function getDefaultTimelockInterval(
     bytes4 functionSelector
-  ) public view returns (uint256 defaultTimelockInterval) {
+  ) public view override returns (uint256 defaultTimelockInterval) {
     defaultTimelockInterval = _getDefaultTimelockInterval(functionSelector);
   }
 
@@ -112,11 +113,11 @@ contract TimelockerV2 is TimelockerInterface {
    * @notice View function to check the current default timelock expiration on a
    * given function.
    * @param functionSelector Function to retrieve the timelock expiration for.
-   * @return The current default timelock expiration for the given function.
+   * @return defaultTimelockExpiration - the current default timelock expiration for the given function.
    */
   function getDefaultTimelockExpiration(
     bytes4 functionSelector
-  ) public view returns (uint256 defaultTimelockExpiration) {
+  ) public view override returns (uint256 defaultTimelockExpiration) {
     defaultTimelockExpiration = _getDefaultTimelockExpiration(functionSelector);
   }
 
@@ -179,12 +180,10 @@ contract TimelockerV2 is TimelockerInterface {
     // Get timelock using current time, inverval for timelock ID, & extra time.
     uint256 timelock = uint256(
       _timelockDefaults[functionSelector].interval
-    ).add(now).add(extraTime);
+    ) + block.timestamp + extraTime;
 
     // Get expiration time using timelock duration plus default expiration time.
-    uint256 expiration = timelock.add(
-      uint256(_timelockDefaults[functionSelector].expiration)
-    );
+    uint256 expiration = timelock + uint256(_timelockDefaults[functionSelector].expiration);
 
     // Get the current timelock, if one exists.
     Timelock storage timelockStorage = _timelocks[functionSelector][timelockID];
@@ -281,7 +280,7 @@ contract TimelockerV2 is TimelockerInterface {
     bytes4 functionSelector, uint256 newTimelockInterval
   ) internal {
     // Ensure that this function is only callable during contract construction.
-    assembly { if extcodesize(address) { revert(0, 0) } }
+    assembly { if extcodesize(address()) { revert(0, 0) } }
 
     // Set the timelock interval and emit a `TimelockIntervalModified` event.
     _setTimelockIntervalPrivate(functionSelector, newTimelockInterval);
@@ -299,7 +298,7 @@ contract TimelockerV2 is TimelockerInterface {
     bytes4 functionSelector, uint256 newTimelockExpiration
   ) internal {
     // Ensure that this function is only callable during contract construction.
-    assembly { if extcodesize(address) { revert(0, 0) } }
+    assembly { if extcodesize(address()) { revert(0, 0) } }
 
     // Set the timelock interval and emit a `TimelockExpirationModified` event.
     _setTimelockExpirationPrivate(functionSelector, newTimelockExpiration);
@@ -330,7 +329,7 @@ contract TimelockerV2 is TimelockerInterface {
     require(currentTimelock != 0, "No timelock found for the given arguments.");
 
     // Ensure that the timelock has not already expired.
-    require(expiration > now, "Timelock has already expired.");
+    require(expiration > block.timestamp, "Timelock has already expired.");
 
     // Mark the timelock as expired.
     timelock.expires = uint128(0);
@@ -352,8 +351,11 @@ contract TimelockerV2 is TimelockerInterface {
    * function and arguments has completed.
    * @param functionSelector Function to be called.
    * @param arguments The abi-encoded arguments of the function to be called.
-   * @return A boolean indicating if the timelock exists or not and the time at
-   * which the timelock completes if it does exist.
+   * @return exists - a boolean indicating if the timelock exists
+   * @return completed -  a boolean indicating if the timelock has completed
+   * @return expired -  a boolean indicating if the timelock has expired
+   * @return completionTime - time at which the timelock completed
+   * @return expirationTime - time at which the timelock expired
    */
   function _getTimelock(
     bytes4 functionSelector, bytes memory arguments
@@ -371,15 +373,15 @@ contract TimelockerV2 is TimelockerInterface {
     completionTime = uint256(_timelocks[functionSelector][timelockID].complete);
     exists = completionTime != 0;
     expirationTime = uint256(_timelocks[functionSelector][timelockID].expires);
-    completed = exists && now > completionTime;
-    expired = exists && now > expirationTime;
+    completed = exists && block.timestamp > completionTime;
+    expired = exists && block.timestamp > expirationTime;
   }
 
   /**
    * @notice Internal view function to check the current minimum timelock
    * interval on a given function.
    * @param functionSelector Function to retrieve the timelock interval for.
-   * @return The current minimum timelock interval for the given function.
+   * @return defaultTimelockInterval - the current minimum timelock interval for the given function.
    */
   function _getDefaultTimelockInterval(
     bytes4 functionSelector
@@ -393,7 +395,7 @@ contract TimelockerV2 is TimelockerInterface {
    * @notice Internal view function to check the current default timelock
    * expiration on a given function.
    * @param functionSelector Function to retrieve the timelock expiration for.
-   * @return The current default timelock expiration for the given function.
+   * @return defaultTimelockExpiration - the current default timelock expiration for the given function.
    */
   function _getDefaultTimelockExpiration(
     bytes4 functionSelector
@@ -424,11 +426,11 @@ contract TimelockerV2 is TimelockerInterface {
 
     // Ensure that the timelock is set and has completed.
     require(
-      currentTimelock != 0 && currentTimelock <= now, "Timelock is incomplete."
+      currentTimelock != 0 && currentTimelock <= block.timestamp, "Timelock is incomplete."
     );
 
     // Ensure that the timelock has not expired.
-    require(expiration > now, "Timelock has expired.");
+    require(expiration > block.timestamp, "Timelock has expired.");
 
     // Clear out the existing timelock so that it cannot be reused.
     delete _timelocks[functionSelector][timelockID];

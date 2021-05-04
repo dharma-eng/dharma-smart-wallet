@@ -1,4 +1,4 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
 import "../../interfaces/DharmaUpgradeBeaconEnvoyInterface.sol";
 
@@ -20,7 +20,7 @@ contract DharmaUpgradeBeaconEnvoy is DharmaUpgradeBeaconEnvoyInterface {
    */
   function getImplementation(
     address beacon
-  ) external view returns (address implementation) {
+  ) external view override returns (address implementation) {
     // Perform the staticcall into the supplied upgrade beacon.
     (bool ok, bytes memory returnData) = beacon.staticcall("");
 

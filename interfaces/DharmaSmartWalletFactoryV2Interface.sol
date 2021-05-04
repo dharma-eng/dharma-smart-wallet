@@ -1,4 +1,4 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
 import "./DharmaSmartWalletImplementationV0Interface.sol";
 
@@ -31,11 +31,12 @@ interface DharmaSmartWalletFactoryV2Interface {
     address userSigningKey
   ) external view returns (address wallet);
 
-  function getFirstSmartWalletCustomActionID(
-    address smartWallet,
-    DharmaSmartWalletImplementationV0Interface.ActionType action,
-    uint256 amount,
-    address recipient,
-    uint256 minimumActionGas
-  ) external view returns (bytes32 actionID);
+  // Note: Not implemented
+//  function getFirstSmartWalletCustomActionID(
+//    address smartWallet,
+//    DharmaSmartWalletImplementationV0Interface.ActionType action,
+//    uint256 amount,
+//    address recipient,
+//    uint256 minimumActionGas
+//  ) external view returns (bytes32 actionID);
 }

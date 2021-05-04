@@ -2,7 +2,7 @@
  *Submitted for verification at Etherscan.io on 2021-04-06
 */
 
-pragma solidity 0.5.17; // optimization runs: 200, evm version: istanbul
+pragma solidity 0.8.4; // optimization runs: 200, evm version: istanbul
 pragma experimental ABIEncoderV2;
 
 
@@ -339,12 +339,12 @@ contract Etherized is EtherizedInterface {
 
   function triggerEtherTransfer(
     address payable target, uint256 amount
-  ) external returns (bool success) {
+  ) external override returns (bool success) {
     if (msg.sender != _ETHERIZER) {
       revert("Etherized: only callable by Etherizer");
     }
 
-    (success, ) = target.call.value(amount)("");
+    (success, ) = target.call{value:amount}("");
     if (!success) {
       assembly {
         returndatacopy(0, 0, returndatasize())
@@ -449,7 +449,7 @@ contract DharmaSmartWalletImplementationV16 is
   /**
    * @notice Accept Ether in the fallback.
    */
-  function () external payable {}
+  fallback () external payable {}
 
   /**
    * @notice In the initializer, set up the initial user signing key. Note that
@@ -458,9 +458,9 @@ contract DharmaSmartWalletImplementationV16 is
    * @param userSigningKey address The initial user signing key for the smart
    * wallet.
    */
-  function initialize(address userSigningKey) external {
+  function initialize(address userSigningKey) external override {
     // Ensure that this function is only callable during contract construction.
-    assembly { if extcodesize(address) { revert(0, 0) } }
+    assembly { if extcodesize(address()) { revert(0, 0) } }
 
     // Set up the user's signing key and emit a corresponding event.
     _setUserSigningKey(userSigningKey);
@@ -469,14 +469,14 @@ contract DharmaSmartWalletImplementationV16 is
   /**
    * @notice Redeem all Dharma Dai held by this account for Dai.
    */
-  function redeemAllDDai() external {
+  function redeemAllDDai() external override {
     _withdrawMaxFromDharmaToken(AssetType.DAI);
   }
 
   /**
    * @notice Redeem all Dharma USD Coin held by this account for USDC.
    */
-  function redeemAllDUSDC() external {
+  function redeemAllDUSDC() external override {
     _withdrawMaxFromDharmaToken(AssetType.USDC);
   }
 
@@ -498,7 +498,7 @@ contract DharmaSmartWalletImplementationV16 is
    * returned for this account from the Dharma Key Registry. A unique hash
    * returned from `getCustomActionID` is prefixed and hashed to create the
    * signed message.
-   * @return True if the transfer succeeded, otherwise false.
+   * @return ok - true if the transfer succeeded, otherwise false.
    */
   function withdrawEther(
     uint256 amount,
@@ -506,7 +506,7 @@ contract DharmaSmartWalletImplementationV16 is
     uint256 minimumActionGas,
     bytes calldata userSignature,
     bytes calldata dharmaSignature
-  ) external returns (bool ok) {
+  ) external override returns (bool ok) {
     // Ensure caller and/or supplied signatures are valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.ETHWithdrawal,
@@ -548,7 +548,7 @@ contract DharmaSmartWalletImplementationV16 is
   function cancel(
     uint256 minimumActionGas,
     bytes calldata signature
-  ) external {
+  ) external override {
     // Get the current nonce.
     uint256 nonceToCancel = _nonce;
 
@@ -591,7 +591,7 @@ contract DharmaSmartWalletImplementationV16 is
     uint256 minimumActionGas,
     bytes calldata userSignature,
     bytes calldata dharmaSignature
-  ) external {
+  ) external override {
     // Ensure caller and/or supplied signatures are valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.SetUserSigningKey,
@@ -633,7 +633,7 @@ contract DharmaSmartWalletImplementationV16 is
     uint256 minimumActionGas,
     bytes calldata userSignature,
     bytes calldata dharmaSignature
-  ) external {
+  ) external override {
     // Ensure caller and/or supplied signatures are valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.SetEscapeHatch,
@@ -675,7 +675,7 @@ contract DharmaSmartWalletImplementationV16 is
     uint256 minimumActionGas,
     bytes calldata userSignature,
     bytes calldata dharmaSignature
-  ) external {
+  ) external override {
     // Ensure caller and/or supplied signatures are valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.RemoveEscapeHatch,
@@ -712,7 +712,7 @@ contract DharmaSmartWalletImplementationV16 is
     uint256 minimumActionGas,
     bytes calldata userSignature,
     bytes calldata dharmaSignature
-  ) external {
+  ) external override {
     // Ensure caller and/or supplied signatures are valid and increment nonce.
     _validateActionAndIncrementNonce(
       ActionType.DisableEscapeHatch,
@@ -734,7 +734,7 @@ contract DharmaSmartWalletImplementationV16 is
    * will be emitted. No value is returned from this function - it will either
    * succeed or revert.
    */
-  function escape(address token) external {
+  function escape(address token) external override {
     // Get the escape hatch account, if one exists, for this account.
     (bool exists, address escapeHatch) = _ESCAPE_HATCH_REGISTRY.getEscapeHatch();
 
@@ -753,7 +753,7 @@ contract DharmaSmartWalletImplementationV16 is
       uint256 balance = address(this).balance;
       if (balance > 0) {
         // Attempt to transfer any Ether to caller and emit an appropriate event.
-        _transferETH(msg.sender, balance);
+        _transferETH(payable(msg.sender), balance);
       }
     } else {
       // Attempt to transfer all tokens to the caller.
@@ -773,7 +773,7 @@ contract DharmaSmartWalletImplementationV16 is
    * @param newUserSigningKey address The new user signing key to set on this
    * smart wallet.
    */
-  function recover(address newUserSigningKey) external {
+  function recover(address newUserSigningKey) external override {
     // Only Account Recovery Manager or the escape hatch may call this function.
     if (msg.sender != _ACCOUNT_RECOVERY_MANAGER) {
         // Get the escape hatch account, if one exists, for this account.
@@ -797,7 +797,7 @@ contract DharmaSmartWalletImplementationV16 is
     _setUserSigningKey(newUserSigningKey);
   }
 
-  function setApproval(address token, uint256 amount) external {
+  function setApproval(address token, uint256 amount) external override {
     // Only the Trade Bot contract may call this function.
     if (msg.sender != _TRADE_BOT) {
       revert(_revertReason(34));
@@ -809,9 +809,9 @@ contract DharmaSmartWalletImplementationV16 is
   /**
    * @notice View function for getting the current user signing key for the
    * smart wallet.
-   * @return The current user signing key.
+   * @return userSigningKey - the current user signing key.
    */
-  function getUserSigningKey() external view returns (address userSigningKey) {
+  function getUserSigningKey() external view override returns (address userSigningKey) {
     userSigningKey = _userSigningKey;
   }
 
@@ -819,9 +819,9 @@ contract DharmaSmartWalletImplementationV16 is
    * @notice View function for getting the current nonce of the smart wallet.
    * This nonce is incremented whenever an action is taken that requires a
    * signature and/or a specific caller.
-   * @return The current nonce.
+   * @return nonce - the current nonce.
    */
-  function getNonce() external view returns (uint256 nonce) {
+  function getNonce() external view override returns (uint256 nonce) {
     nonce = _nonce;
   }
 
@@ -846,7 +846,7 @@ contract DharmaSmartWalletImplementationV16 is
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
    * function call.
-   * @return The action ID, which will need to be prefixed, hashed and signed in
+   * @return actionID - the action ID, which will need to be prefixed, hashed and signed in
    * order to construct a valid signature.
    */
   function getNextCustomActionID(
@@ -854,7 +854,7 @@ contract DharmaSmartWalletImplementationV16 is
     uint256 amount,
     address recipient,
     uint256 minimumActionGas
-  ) external view returns (bytes32 actionID) {
+  ) external view override returns (bytes32 actionID) {
     // Determine the actionID - this serves as a signature hash for an action.
     actionID = _getActionID(
       action,
@@ -888,7 +888,7 @@ contract DharmaSmartWalletImplementationV16 is
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
    * function call.
-   * @return The action ID, which will need to be prefixed, hashed and signed in
+   * @return actionID - the action ID, which will need to be prefixed, hashed and signed in
    * order to construct a valid signature.
    */
   function getCustomActionID(
@@ -897,7 +897,7 @@ contract DharmaSmartWalletImplementationV16 is
     address recipient,
     uint256 nonce,
     uint256 minimumActionGas
-  ) external view returns (bytes32 actionID) {
+  ) external view override returns (bytes32 actionID) {
     // Determine the actionID - this serves as a signature hash for an action.
     actionID = _getActionID(
       action,
@@ -924,12 +924,12 @@ contract DharmaSmartWalletImplementationV16 is
    * @param signatures bytes The two signatures, each 65 bytes - one from the
    * owner (using ERC-1271 as well if the user signing key is a contract) and
    * one from the Dharma Key Registry.
-   * @return The 4-byte magic value to signify a valid signature in ERC-1271, if
+   * @return magicValue - the 4-byte magic value to signify a valid signature in ERC-1271, if
    * the signatures are both valid.
    */
   function isValidSignature(
     bytes calldata data, bytes calldata signatures
-  ) external view returns (bytes4 magicValue) {
+  ) external view override returns (bytes4 magicValue) {
     // Get message hash digest and any additional context from data argument.
     bytes32 digest;
     bytes memory context;
@@ -1037,7 +1037,7 @@ contract DharmaSmartWalletImplementationV16 is
   /**
    * @notice View function for getting the current Dharma Smart Wallet
    * implementation contract address set on the upgrade beacon.
-   * @return The current Dharma Smart Wallet implementation contract.
+   * @return implementation - the current Dharma Smart Wallet implementation contract.
    */
   function getImplementation() external view returns (address implementation) {
     (bool ok, bytes memory returnData) = address(
@@ -1053,9 +1053,9 @@ contract DharmaSmartWalletImplementationV16 is
 
   /**
    * @notice Pure function for getting the current Dharma Smart Wallet version.
-   * @return The current Dharma Smart Wallet version.
+   * @return version - the current Dharma Smart Wallet version.
    */
-  function getVersion() external pure returns (uint256 version) {
+  function getVersion() external pure override returns (uint256 version) {
     version = _DHARMA_SMART_WALLET_VERSION;
   }
 
@@ -1089,7 +1089,7 @@ contract DharmaSmartWalletImplementationV16 is
    * returned for this account from the Dharma Key Registry. A unique hash
    * returned from `getCustomActionID` is prefixed and hashed to create the
    * signed message.
-   * @return An array of structs signifying the status of each call, as well as
+   * @return ok and returnData - an array of structs signifying the status of each call, as well as
    * any data returned from that call. Calls that are not executed will return
    * empty data.
    */
@@ -1098,7 +1098,7 @@ contract DharmaSmartWalletImplementationV16 is
     uint256 minimumActionGas,
     bytes memory userSignature,
     bytes memory dharmaSignature
-  ) public returns (bool[] memory ok, bytes[] memory returnData) {
+  ) public override returns (bool[] memory ok, bytes[] memory returnData) {
     // Ensure that each `to` address is a contract and is not this contract.
     for (uint256 i = 0; i < calls.length; i++) {
       if (calls[i].value == 0) {
@@ -1190,7 +1190,7 @@ contract DharmaSmartWalletImplementationV16 is
    * external one) due to an ABIEncoderV2 `UnimplementedFeatureError`.
    * @param calls Call[] A struct containing the target, value, and calldata to
    * provide when making each call.
-   * @return An array of structs signifying the status of each call, as well as
+   * @return callResults - an array of structs signifying the status of each call, as well as
    * any data returned from that call. Calls that are not executed will return
    * empty data. If any of the calls fail, the array will be returned as revert
    * data.
@@ -1206,9 +1206,9 @@ contract DharmaSmartWalletImplementationV16 is
 
     for (uint256 i = 0; i < calls.length; i++) {
       // Perform low-level call and set return values using result.
-      (bool ok, bytes memory returnData) = calls[i].to.call.value(
+      (bool ok, bytes memory returnData) = calls[i].to.call{value:
         uint256(calls[i].value)
-      )(calls[i].data);
+      }(calls[i].data);
       callResults[i] = CallReturn({ok: ok, returnData: returnData});
       if (!ok) {
         // Exit early - any calls after the first failed call will not execute.
@@ -1256,7 +1256,7 @@ contract DharmaSmartWalletImplementationV16 is
    * returned for this account from the Dharma Key Registry. A unique hash
    * returned from `getCustomActionID` is prefixed and hashed to create the
    * signed message.
-   * @return An array of structs signifying the status of each call, as well as
+   * @return callResults - an array of structs signifying the status of each call, as well as
    * any data returned from that call. Calls that are not executed will return
    * empty data.
    */
@@ -1265,7 +1265,7 @@ contract DharmaSmartWalletImplementationV16 is
     uint256 minimumActionGas,
     bytes memory userSignature,
     bytes memory dharmaSignature
-  ) public returns (AdvancedCallReturn[] memory callResults) {
+  ) public override returns (AdvancedCallReturn[] memory callResults) {
     // Ensure that each `to` address is a contract and is not this contract.
     for (uint256 i = 0; i < calls.length; i++) {
       if (calls[i].value == 0) {
@@ -1354,7 +1354,7 @@ contract DharmaSmartWalletImplementationV16 is
    * calldata to provide when making each call, along with call index, data size
    * and data offset of any returndata to insert into subsequent calls as value
    * or calldata.
-   * @return An array of structs signifying the status of each call, as well as
+   * @return callResults - an array of structs signifying the status of each call, as well as
    * any data returned from that call. Calls that are not executed will return
    * empty data. If any of the calls fail, the array will be returned as revert
    * data.
@@ -1377,7 +1377,7 @@ contract DharmaSmartWalletImplementationV16 is
       uint256 callIndex;
 
       // Perform low-level call and set return values using result.
-      (bool ok, bytes memory returnData) = a.to.call.value(callValue)(callData);
+      (bool ok, bytes memory returnData) = a.to.call{value:callValue}(callData);
       callResults[i] = AdvancedCallReturn({
           ok: ok,
           returnData: returnData,
@@ -1463,13 +1463,13 @@ contract DharmaSmartWalletImplementationV16 is
    * simulated up until a failing call is encountered).
    * @param calls Call[] A struct containing the target, value, and calldata to
    * provide when making each call.
-   * @return An array of structs signifying the status of each call, as well as
+   * @return ok and returnData - an array of structs signifying the status of each call, as well as
    * any data returned from that call. Calls that are not executed will return
    * empty data.
    */
   function simulateActionWithAtomicBatchCalls(
     Call[] memory calls
-  ) public /* view */ returns (bool[] memory ok, bytes[] memory returnData) {
+  ) public /* view */ override returns (bool[] memory ok, bytes[] memory returnData) {
     // Ensure that each `to` address is a contract and is not this contract.
     for (uint256 i = 0; i < calls.length; i++) {
       if (calls[i].value == 0) {
@@ -1523,7 +1523,7 @@ contract DharmaSmartWalletImplementationV16 is
    * the end of execution — in other words, this call always reverts.
    * @param calls Call[] A struct containing the target, value, and calldata to
    * provide when making each call.
-   * @return An array of structs signifying the status of each call, as well as
+   * @return callResults - an array of structs signifying the status of each call, as well as
    * any data returned from that call. Calls that are not executed will return
    * empty data. If any of the calls fail, the array will be returned as revert
    * data.
@@ -1538,9 +1538,9 @@ contract DharmaSmartWalletImplementationV16 is
 
     for (uint256 i = 0; i < calls.length; i++) {
       // Perform low-level call and set return values using result.
-      (bool ok, bytes memory returnData) = calls[i].to.call.value(
+      (bool ok, bytes memory returnData) = calls[i].to.call{value:
         uint256(calls[i].value)
-      )(calls[i].data);
+      }(calls[i].data);
       callResults[i] = CallReturn({ok: ok, returnData: returnData});
       if (!ok) {
         // Exit early - any calls after the first failed call will not execute.
@@ -1555,7 +1555,7 @@ contract DharmaSmartWalletImplementationV16 is
 
   function simulateAdvancedActionWithAtomicBatchCalls(
     AdvancedCall[] memory calls
-  ) public /* view */ returns (AdvancedCallReturn[] memory callResults) {
+  ) public /* view */ override returns (AdvancedCallReturn[] memory callResults) {
     // Ensure that each `to` address is a contract and is not this contract.
     for (uint256 i = 0; i < calls.length; i++) {
       if (calls[i].value == 0) {
@@ -1617,7 +1617,7 @@ contract DharmaSmartWalletImplementationV16 is
       uint256 callIndex;
 
       // Perform low-level call and set return values using result.
-      (bool ok, bytes memory returnData) = a.to.call.value(callValue)(callData);
+      (bool ok, bytes memory returnData) = a.to.call{value:callValue}(callData);
       callResults[i] = AdvancedCallReturn({
           ok: ok,
           returnData: returnData,
@@ -1712,13 +1712,13 @@ contract DharmaSmartWalletImplementationV16 is
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
    * function call.
-   * @return The action ID, which will need to be prefixed, hashed and signed in
+   * @return actionID - the action ID, which will need to be prefixed, hashed and signed in
    * order to construct a valid signature.
    */
   function getNextGenericAtomicBatchActionID(
     Call[] memory calls,
     uint256 minimumActionGas
-  ) public view returns (bytes32 actionID) {
+  ) public view override returns (bytes32 actionID) {
     // Determine the actionID - this serves as a signature hash for an action.
     actionID = _getActionID(
       ActionType.GenericAtomicBatch,
@@ -1733,7 +1733,7 @@ contract DharmaSmartWalletImplementationV16 is
   function getNextAdvancedGenericAtomicBatchActionID(
     AdvancedCall[] memory calls,
     uint256 minimumActionGas
-  ) public view returns (bytes32 actionID) {
+  ) public view override returns (bytes32 actionID) {
     // Determine the actionID - this serves as a signature hash for an action.
     actionID = _getActionID(
       ActionType.AdvancedGenericAtomicBatch,
@@ -1764,14 +1764,14 @@ contract DharmaSmartWalletImplementationV16 is
    * provided to this call - be aware that additional gas must still be included
    * to account for the cost of overhead incurred up until the start of this
    * function call.
-   * @return The action ID, which will need to be prefixed, hashed and signed in
+   * @return actionID - the action ID, which will need to be prefixed, hashed and signed in
    * order to construct a valid signature.
    */
   function getGenericAtomicBatchActionID(
     Call[] memory calls,
     uint256 nonce,
     uint256 minimumActionGas
-  ) public view returns (bytes32 actionID) {
+  ) public view override returns (bytes32 actionID) {
     // Determine the actionID - this serves as a signature hash for an action.
     actionID = _getActionID(
       ActionType.GenericAtomicBatch,
@@ -1787,7 +1787,7 @@ contract DharmaSmartWalletImplementationV16 is
     AdvancedCall[] memory calls,
     uint256 nonce,
     uint256 minimumActionGas
-  ) public view returns (bytes32 actionID) {
+  ) public view override returns (bytes32 actionID) {
     // Determine the actionID - this serves as a signature hash for an action.
     actionID = _getActionID(
       ActionType.AdvancedGenericAtomicBatch,
@@ -1869,7 +1869,7 @@ contract DharmaSmartWalletImplementationV16 is
    * @param suppressRevert bool A boolean indicating whether reverts should be
    * suppressed or not. Used by the escape hatch so that a problematic transfer
    * will not block the rest of the call from executing.
-   * @return True if tokens were successfully transferred or if there is no
+   * @return success - true if tokens were successfully transferred or if there is no
    * balance, else false.
    */
   function _transferMax(
@@ -1882,7 +1882,7 @@ contract DharmaSmartWalletImplementationV16 is
       balance = token.balanceOf(address(this));
     } else {
       // Try to retrieve current token balance for this account with 1/2 gas.
-      (bool ok, bytes memory data) = address(token).call.gas(gasleft() / 2)(
+      (bool ok, bytes memory data) = address(token).call{gas:gasleft() / 2}(
         abi.encodeWithSelector(token.balanceOf.selector, address(this))
       );
 
@@ -1901,7 +1901,7 @@ contract DharmaSmartWalletImplementationV16 is
         success = token.transfer(recipient, balance);
       } else {
         // Attempt transfer with 1/2 gas, allow reverts, and return call status.
-        (success, ) = address(token).call.gas(gasleft() / 2)(
+        (success, ) = address(token).call{gas:gasleft() / 2}(
           abi.encodeWithSelector(token.transfer.selector, recipient, balance)
         );
       }
@@ -1918,13 +1918,13 @@ contract DharmaSmartWalletImplementationV16 is
    * `ExternalError` event.
    * @param recipient address payable The account that will receive the Ether.
    * @param amount uint256 The amount of Ether to transfer.
-   * @return True if Ether was successfully transferred, else false.
+   * @return success - true if Ether was successfully transferred, else false.
    */
   function _transferETH(
     address payable recipient, uint256 amount
   ) internal returns (bool success) {
     // Attempt to transfer any Ether to caller and emit an event if it fails.
-    (success, ) = recipient.call.gas(_ETH_TRANSFER_GAS).value(amount)("");
+    (success, ) = recipient.call{gas: _ETH_TRANSFER_GAS, value: amount}("");
     if (!success) {
       emit ExternalError(recipient, _revertReason(18));
     } else {
@@ -1960,7 +1960,7 @@ contract DharmaSmartWalletImplementationV16 is
    * returned for this account from the Dharma Key Registry. A unique hash
    * returned from `getCustomActionID` is prefixed and hashed to create the
    * signed message.
-   * @return The nonce of the current action (prior to incrementing it).
+   * @return actionID actionNonce - The nonce of the current action (prior to incrementing it).
    */
   function _validateActionAndIncrementNonce(
     ActionType action,
@@ -2049,7 +2049,7 @@ contract DharmaSmartWalletImplementationV16 is
    * @param ok bool A boolean representing whether the call returned or
    * reverted.
    * @param data bytes The data provided by the returned or reverted call.
-   * @return True if the interaction was successful, otherwise false. This will
+   * @return success - true if the interaction was successful, otherwise false. This will
    * be used to determine if subsequent steps in the action should be attempted
    * or not, specifically a transfer following a withdrawal.
    */
@@ -2163,7 +2163,7 @@ contract DharmaSmartWalletImplementationV16 is
    * set for this account in storage slot zero, `_userSigningKey`. If the user
    * signing key is not a contract, ecrecover will be used; otherwise, ERC1271
    * will be used.
-   * @return A boolean representing the validity of the supplied user signature.
+   * @return valid - a boolean representing the validity of the supplied user signature.
    */
   function _validateUserSignature(
     bytes32 messageHash,
@@ -2190,7 +2190,7 @@ contract DharmaSmartWalletImplementationV16 is
    * @notice Internal view function to get the Dharma signing key for the smart
    * wallet from the Dharma Key Registry. This key can be set for each specific
    * smart wallet - if none has been set, a global fallback key will be used.
-   * @return The address of the Dharma signing key, or public key corresponding
+   * @return dharmaSigningKey - the address of the Dharma signing key, or public key corresponding
    * to the secondary signer.
    */
   function _getDharmaSigningKey() internal view returns (
@@ -2220,7 +2220,7 @@ contract DharmaSmartWalletImplementationV16 is
    * function call.
    * @param dharmaSigningKey address The address of the secondary key, or public
    * key corresponding to the secondary signer.
-   * @return The action ID, which will need to be prefixed, hashed and signed in
+   * @return actionID - the action ID, which will need to be prefixed, hashed and signed in
    * order to construct a valid signature.
    */
   function _getActionID(
@@ -2260,7 +2260,7 @@ contract DharmaSmartWalletImplementationV16 is
    * @param asset uint256 The ID of the asset, either Dai (0) or USDC (1).
    * @param functionSelector bytes4 The function selector that was called on the
    * corresponding dToken of the asset type.
-   * @return The dToken address, it's name, and the name of the called function.
+   * @return account name functionName - The dToken address, it's name, and the name of the called function.
    */
   function _getDharmaTokenDetails(
     AssetType asset,
@@ -2328,7 +2328,7 @@ contract DharmaSmartWalletImplementationV16 is
    * @param recipient address The account to transfer withdrawn funds to or the
    * new user signing key. This value is ignored for Cancel, RemoveEscapeHatch,
    * and DisableEscapeHatch action types.
-   * @return A bytes array containing the arguments that will be provided as
+   * @return arguments - a bytes array containing the arguments that will be provided as
    * a component of the inputs when constructing a custom action ID.
    */
   function _validateCustomActionTypeAndGetArguments(
@@ -2373,7 +2373,7 @@ contract DharmaSmartWalletImplementationV16 is
    * @notice Internal pure function to decode revert reasons. The revert reason
    * prefix is removed and the remaining string argument is decoded.
    * @param revertData bytes The raw data supplied alongside the revert.
-   * @return The decoded revert reason string.
+   * @return revertReason - the decoded revert reason string.
    */
   function _decodeRevertReason(
     bytes memory revertData
@@ -2381,10 +2381,10 @@ contract DharmaSmartWalletImplementationV16 is
     // Solidity prefixes revert reason with 0x08c379a0 -> Error(string) selector
     if (
       revertData.length > 68 && // prefix (4) + position (32) + length (32)
-      revertData[0] == byte(0x08) &&
-      revertData[1] == byte(0xc3) &&
-      revertData[2] == byte(0x79) &&
-      revertData[3] == byte(0xa0)
+      revertData[0] == bytes1(0x08) &&
+      revertData[1] == bytes1(0xc3) &&
+      revertData[2] == bytes1(0x79) &&
+      revertData[3] == bytes1(0xa0)
     ) {
       // Get the revert reason without the prefix from the revert data.
       bytes memory revertReasonBytes = new bytes(revertData.length - 4);
@@ -2396,7 +2396,7 @@ contract DharmaSmartWalletImplementationV16 is
       revertReason = abi.decode(revertReasonBytes, (string));
     } else {
       // Simply return the default, with no revert reason.
-      revertReason = _revertReason(uint256(-1));
+      revertReason = _revertReason(type(uint256).max);
     }
   }
 
@@ -2404,7 +2404,7 @@ contract DharmaSmartWalletImplementationV16 is
    * @notice Internal pure function call the revert reason helper contract,
    * supplying a revert "code" and receiving back a revert reason string.
    * @param code uint256 The code for the revert reason.
-   * @return The revert reason string.
+   * @return reason - the revert reason string.
    */
   function _revertReason(
     uint256 code

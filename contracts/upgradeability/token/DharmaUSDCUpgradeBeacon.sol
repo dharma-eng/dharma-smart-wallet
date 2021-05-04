@@ -1,4 +1,4 @@
-pragma solidity 0.5.17; // optimization runs: 200, evm version: petersburg
+pragma solidity 0.8.4; // optimization runs: 200, evm version: petersburg
 
 
 /**
@@ -22,7 +22,7 @@ contract DharmaUSDCUpgradeBeacon {
    * Note that this requires inline assembly, as Solidity fallback functions do
    * not natively take arguments or return values.
    */
-  function () external {
+  fallback () external {
     // Return implementation address for all callers other than the controller.
     if (msg.sender != _CONTROLLER) {
       // Load implementation from storage slot zero into memory and return it.

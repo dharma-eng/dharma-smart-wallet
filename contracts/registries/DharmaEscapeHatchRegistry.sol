@@ -1,4 +1,4 @@
-pragma solidity 0.5.17; // optimization runs: 200, evm version: petersburg
+pragma solidity 0.8.4; // optimization runs: 200, evm version: petersburg
 
 import "../../interfaces/DharmaEscapeHatchRegistryInterface.sol";
 
@@ -30,9 +30,9 @@ contract DharmaEscapeHatchRegistry is DharmaEscapeHatchRegistryInterface {
    * will be returned in the event that no escape hatch is set for the caller,
    * and so the caller must appropriately handle this outcome if they elect to
    * use the fallback in place of the `getEscapeHatch` view function.
-   * @return The address of the escape hatch or the null address if none is set.
+   * returns the address of the escape hatch or the null address if none is set.
    */
-  function () external {
+  fallback () external {
     // Get the caller's escape hatch account or the null address if none is set.
     address escapeHatch = _escapeHatches[msg.sender].escapeHatch;
 
@@ -53,7 +53,7 @@ contract DharmaEscapeHatchRegistry is DharmaEscapeHatchRegistryInterface {
    * modified.
    * @param escapeHatch address The account to set as the escape hatch.
    */
-  function setEscapeHatch(address escapeHatch) external {
+  function setEscapeHatch(address escapeHatch) external override {
     // Ensure that an escape hatch address has been supplied.
     require(escapeHatch != address(0), "Must supply an escape hatch address.");
 
@@ -68,7 +68,7 @@ contract DharmaEscapeHatchRegistry is DharmaEscapeHatchRegistryInterface {
    * `EscapeHatchModified` event will be emitted if an escape hatch account was
    * currently assigned.
    */
-  function removeEscapeHatch() external {
+  function removeEscapeHatch() external override {
     // Remove escape hatch (do not disable it) and emit an event if modified.
     _modifyEscapeHatch(address(0), false);
   }
@@ -81,7 +81,7 @@ contract DharmaEscapeHatchRegistry is DharmaEscapeHatchRegistryInterface {
    * event will be emitted, as well as an `EscapeHatchModified` event if an
    * escape hatch account was currently assigned.
    */
-  function permanentlyDisableEscapeHatch() external {
+  function permanentlyDisableEscapeHatch() external override {
     // Remove the escape hatch and disable it, emitting corresponding events.
     _modifyEscapeHatch(address(0), true);
   }
@@ -89,10 +89,11 @@ contract DharmaEscapeHatchRegistry is DharmaEscapeHatchRegistryInterface {
    /**
    * @notice View function to determine whether a caller has an escape hatch
    * account set, and if so to get the address of the escape hatch in question.
-   * @return A boolean signifying whether the caller has an escape hatch set, as
-   * well as the address of the escape hatch if one exists.
+   * @return exists - a boolean signifying whether the designated smart wallet has an
+   * escape hatch set
+   * @return escapeHatch - address of the escape hatch if one exists
    */
-  function getEscapeHatch() external view returns (
+  function getEscapeHatch() external view override returns (
     bool exists, address escapeHatch
   ) {
     escapeHatch = _escapeHatches[msg.sender].escapeHatch;
@@ -104,12 +105,13 @@ contract DharmaEscapeHatchRegistry is DharmaEscapeHatchRegistryInterface {
    * escape hatch account set, and if so to get the address of the escape hatch
    * in question.
    * @param smartWallet address The smart wallet to check for an escape hatch.
-   * @return A boolean signifying whether the designated smart wallet has an
-   * escape hatch set, as well as the address of the escape hatch if one exists.
+   * @return exists - a boolean signifying whether the designated smart wallet has an
+   * escape hatch set
+   * @return escapeHatch - address of the escape hatch if one exists
    */
   function getEscapeHatchForSmartWallet(
     address smartWallet
-  ) external view returns (bool exists, address escapeHatch) {
+  ) external view override returns (bool exists, address escapeHatch) {
     // Ensure that a smart wallet address has been supplied.
     require(smartWallet != address(0), "Must supply a smart wallet address.");
 
@@ -122,12 +124,12 @@ contract DharmaEscapeHatchRegistry is DharmaEscapeHatchRegistryInterface {
    * permanently opted out of the escape hatch mechanism.
    * @param smartWallet address The smart wallet to check for escape hatch
    * mechanism disablement.
-   * @return A boolean signifying whether the designated smart wallet has
+   * @return disabled - a boolean signifying whether the designated smart wallet has
    * disabled the escape hatch mechanism or not.
    */
   function hasDisabledEscapeHatchForSmartWallet(
     address smartWallet
-  ) external view returns (bool disabled) {
+  ) external view override returns (bool disabled) {
     // Ensure that a smart wallet address has been supplied.
     require(smartWallet != address(0), "Must supply a smart wallet address.");
 

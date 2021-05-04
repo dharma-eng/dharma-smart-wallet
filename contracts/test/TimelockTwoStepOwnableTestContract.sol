@@ -1,4 +1,4 @@
-pragma solidity 0.5.17; // optimization runs: 200, evm version: petersburg
+pragma solidity 0.8.4; // optimization runs: 200, evm version: petersburg
 
 import "../helpers/Timelocker.sol";
 import "../helpers/TwoStepOwnable.sol";
@@ -22,7 +22,7 @@ contract TimelockTwoStepOwnableTestContract is TwoStepOwnable, Timelocker {
    * submitter and initial minimum timelock interval and default timelock
    * expiration values.
    */
-  constructor() public {
+  constructor() {
     // Set initial minimum timelock interval values.
     _setInitialTimelockInterval(this.test.selector, 5); // 5 seconds
 

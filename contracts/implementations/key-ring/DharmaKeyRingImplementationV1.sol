@@ -1,6 +1,6 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../../../interfaces/DharmaKeyRingImplementationV0Interface.sol";
 import "../../../interfaces/ERC1271.sol";
 
@@ -70,7 +70,7 @@ contract DharmaKeyRingImplementationV1 is
     uint8[] calldata keyTypes // must all be 3 (Dual) for V1
   ) external {
     // Ensure that this function is only callable during contract construction.
-    assembly { if extcodesize(address) { revert(0, 0) } }
+    assembly { if extcodesize(address()) { revert(0, 0) } }
 
     // V1 only allows setting a singly Dual key with thresholds both set to 1.
     require(keys.length == 1, "Must supply exactly one key in V1.");
@@ -104,7 +104,7 @@ contract DharmaKeyRingImplementationV1 is
    */
   function takeAdminAction(
     AdminActionType adminActionType, uint160 argument, bytes calldata signatures
-  ) external {
+  ) external override {
     // Only Admin Action Type 6 (AddDualKey) is supported in V1.
     require(
       adminActionType == AdminActionType.AddDualKey,
@@ -139,12 +139,12 @@ contract DharmaKeyRingImplementationV1 is
    * bytes32 parameter is used to validate the supplied signature.
    * @param data bytes The data used to validate the signature.
    * @param signature bytes A signature from an existing key on the key ring.
-   * @return The 4-byte magic value to signify a valid signature in ERC-1271, if
+   * @return magicValue - the 4-byte magic value to signify a valid signature in ERC-1271, if
    * the signature is valid.
    */
   function isValidSignature(
     bytes calldata data, bytes calldata signature
-  ) external view returns (bytes4 magicValue) {
+  ) external view override returns (bytes4 magicValue) {
     (bytes32 hash, , ) = abi.decode(data, (bytes32, uint8, bytes));
 
     _verifySignature(hash, signature);
@@ -158,11 +158,11 @@ contract DharmaKeyRingImplementationV1 is
    * @param adminActionType uint8 Unused in V1, as only action type 6 is valid.
    * @param argument uint160 The signing address to add to the key ring.
    * @param nonce uint256 The nonce to use when deriving the message hash.
-   * @return The message hash to sign.
+   * @return adminActionID - the message hash to sign.
    */
   function getAdminActionID(
     AdminActionType adminActionType, uint160 argument, uint256 nonce
-  ) external view returns (bytes32 adminActionID) {
+  ) external view override returns (bytes32 adminActionID) {
     adminActionType;
     adminActionID = _getAdminActionID(argument, nonce);
   }
@@ -173,20 +173,20 @@ contract DharmaKeyRingImplementationV1 is
    * using the current nonce of the key ring.
    * @param adminActionType uint8 Unused in V1, as only action type 6 is valid.
    * @param argument uint160 The signing address to add to the key ring.
-   * @return The message hash to sign.
+   * @return adminActionID - the message hash to sign.
    */
   function getNextAdminActionID(
     AdminActionType adminActionType, uint160 argument
-  ) external view returns (bytes32 adminActionID) {
+  ) external view override returns (bytes32 adminActionID) {
     adminActionType;
     adminActionID = _getAdminActionID(argument, _nonce);
   }
 
   /**
    * @notice Pure function for getting the current Dharma Key Ring version.
-   * @return The current Dharma Key Ring version.
+   * @return version - the current Dharma Key Ring version.
    */
-  function getVersion() external pure returns (uint256 version) {
+  function getVersion() external pure override returns (uint256 version) {
     version = _DHARMA_KEY_RING_VERSION;
   }
 
@@ -194,9 +194,10 @@ contract DharmaKeyRingImplementationV1 is
    * @notice View function for getting the current number of both standard and
    * admin keys that are set on the Dharma Key Ring. For V1, these should be the
    * same value as one another.
-   * @return The number of standard and admin keys set on the Dharma Key Ring.
+   * @return standardKeyCount - the number of standard and set on the Dharma Key Ring.
+   * @return adminKeyCount - the number of admin keys set on the Dharma Key Ring.
    */
-  function getKeyCount() external view returns (
+  function getKeyCount() external view override returns (
     uint256 standardKeyCount, uint256 adminKeyCount
   ) {
     AdditionalKeyCount memory additionalKeyCount = _additionalKeyCounts;
@@ -209,11 +210,12 @@ contract DharmaKeyRingImplementationV1 is
    * address. For V1, these should both be true, or both be false (i.e. the key
    * is not set).
    * @param key address An account to check for key type information.
-   * @return Booleans for standard and admin key status for the given address.
+   * @return standard - booleans for standard
+   * @return admin - admin key status for the given address.
    */
   function getKeyType(
     address key
-  ) external view returns (bool standard, bool admin) {
+  ) external view override returns (bool standard, bool admin) {
     KeyType keyType = _keys[uint160(key)];
     standard = (keyType == KeyType.Standard || keyType == KeyType.Dual);
     admin = (keyType == KeyType.Admin || keyType == KeyType.Dual);
@@ -221,9 +223,9 @@ contract DharmaKeyRingImplementationV1 is
 
   /**
    * @notice View function for getting the current nonce of the Dharma Key Ring.
-   * @return The current nonce set on the Dharma Key Ring.
+   * @return nonce - the current nonce set on the Dharma Key Ring.
    */
-  function getNonce() external returns (uint256 nonce) {
+  function getNonce() external override returns (uint256 nonce) {
     nonce = _nonce;
   }
 
@@ -233,7 +235,7 @@ contract DharmaKeyRingImplementationV1 is
    * ring.
    * @param argument uint160 The signing address to add to the key ring.
    * @param nonce uint256 The nonce to use when deriving the adminActionID.
-   * @return The message hash to sign.
+   * @return adminActionID - the message hash to sign.
    */
   function _getAdminActionID(
     uint160 argument, uint256 nonce

@@ -1,4 +1,4 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
 import "../../proxies/smart-wallet/UpgradeBeaconProxyV1.sol";
 import "../../../interfaces/DharmaSmartWalletFactoryV1Interface.sol";
@@ -21,11 +21,11 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
    * key.
    * @param userSigningKey address The user signing key, supplied as a
    * constructor argument.
-   * @return The address of the new smart wallet.
+   * @return wallet - the address of the new smart wallet.
    */
   function newSmartWallet(
     address userSigningKey
-  ) external returns (address wallet) {
+  ) external override returns (address wallet) {
     // Get initialization calldata from initialize selector & user signing key.
     bytes memory initializationCalldata = abi.encodeWithSelector(
       _initializer.initialize.selector,
@@ -45,11 +45,11 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
    * will be returned if a particular user signing key has been used before.
    * @param userSigningKey address The user signing key, supplied as a
    * constructor argument.
-   * @return The future address of the next smart wallet.
+   * @return wallet - the future address of the next smart wallet.
    */
   function getNextSmartWallet(
     address userSigningKey
-  ) external view returns (address wallet) {
+  ) external view override returns (address wallet) {
     // Get initialization calldata from initialize selector & user signing key.
     bytes memory initializationCalldata = abi.encodeWithSelector(
       _initializer.initialize.selector,
@@ -65,7 +65,7 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
    * @param initializationCalldata bytes The calldata that will be supplied to
    * the `DELEGATECALL` from the deployed contract to the implementation set on
    * the upgrade beacon during contract creation.
-   * @return The address of the newly-deployed upgrade beacon proxy.
+   * @return upgradeBeaconProxyInstance - the address of the newly-deployed upgrade beacon proxy.
    */
   function _deployUpgradeBeaconProxyInstance(
     bytes memory initializationCalldata
@@ -84,7 +84,7 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
       let encoded_data := add(0x20, initCode) // load initialization code.
       let encoded_size := mload(initCode)     // load the init code's length.
       upgradeBeaconProxyInstance := create2(  // call `CREATE2` w/ 4 arguments.
-        callvalue,                            // forward any supplied endowment.
+        callvalue(),                            // forward any supplied endowment.
         encoded_data,                         // pass in initialization code.
         encoded_size,                         // pass in init code's length.
         salt                                  // pass in the salt value.
@@ -92,8 +92,8 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
 
       // Pass along failure message and revert if contract deployment fails.
       if iszero(upgradeBeaconProxyInstance) {
-        returndatacopy(0, 0, returndatasize)
-        revert(0, returndatasize)
+        returndatacopy(0, 0, returndatasize())
+        revert(0, returndatasize())
       }
     }
   }
@@ -105,7 +105,7 @@ contract DharmaSmartWalletFactoryV1 is DharmaSmartWalletFactoryV1Interface {
    * @param initializationCalldata bytes The calldata that will be supplied to
    * the `DELEGATECALL` from the deployed contract to the implementation set on
    * the upgrade beacon during contract creation.
-   * @return The address of the next upgrade beacon proxy contract with the
+   * @return target - the address of the next upgrade beacon proxy contract with the
    * given initialization calldata.
    */
   function _computeNextAddress(

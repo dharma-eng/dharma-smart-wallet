@@ -1,11 +1,11 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
 
 /**
  * @title BadBeacon
  */
 contract BadBeacon {
-  function () external {
+  fallback () external {
     revert("This is not a working upgrade beacon.");
   }
 }

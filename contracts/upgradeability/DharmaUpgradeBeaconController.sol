@@ -1,4 +1,4 @@
-pragma solidity 0.5.17; // optimization runs: 200, evm version: petersburg
+pragma solidity 0.8.4; // optimization runs: 200, evm version: petersburg
 
 import "../../interfaces/DharmaUpgradeBeaconEnvoyInterface.sol";
 
@@ -197,8 +197,8 @@ contract DharmaUpgradeBeaconController {
     // Revert with message on failure (i.e. if the beacon is somehow incorrect).
     if (!success) {
       assembly {
-        returndatacopy(0, 0, returndatasize)
-        revert(0, returndatasize)
+        returndatacopy(0, 0, returndatasize())
+        revert(0, returndatasize())
       }
     }
 

@@ -1,6 +1,5 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../../interfaces/TimelockerModifiersInterface.sol";
 
 
@@ -24,7 +23,6 @@ import "../../interfaces/TimelockerModifiersInterface.sol";
  * `getDefaultTimelockExpiration`.
  */
 contract Timelocker {
-  using SafeMath for uint256;
 
   // Fire an event any time a timelock is initiated.
   event TimelockInitiated(
@@ -86,7 +84,7 @@ contract Timelocker {
    * @notice In the constructor, confirm that selectors specified as constants
    * are correct.
    */
-  constructor() internal {
+  constructor() {
     TimelockerModifiersInterface modifiers;
 
     bytes4 targetModifyInterval = modifiers.modifyTimelockInterval.selector;
@@ -107,8 +105,11 @@ contract Timelocker {
    * arguments has completed.
    * @param functionSelector function to be called.
    * @param arguments The abi-encoded arguments of the function to be called.
-   * @return A boolean indicating if the timelock exists or not and the time at
-   * which the timelock completes if it does exist.
+   * @return exists - a boolean indicating if the timelock exists
+   * @return completed -  a boolean indicating if the timelock has completed
+   * @return expired -  a boolean indicating if the timelock has expired
+   * @return completionTime - time at which the timelock completed
+   * @return expirationTime - time at which the timelock expired
    */
   function getTimelock(
     bytes4 functionSelector, bytes memory arguments
@@ -126,15 +127,15 @@ contract Timelocker {
     completionTime = uint256(_timelocks[functionSelector][timelockID].complete);
     exists = completionTime != 0;
     expirationTime = uint256(_timelocks[functionSelector][timelockID].expires);
-    completed = exists && now > completionTime;
-    expired = exists && now > expirationTime;
+    completed = exists && block.timestamp > completionTime;
+    expired = exists && block.timestamp > expirationTime;
   }
 
   /**
    * @notice View function to check the current minimum timelock interval on a
    * given function.
    * @param functionSelector function to retrieve the timelock interval for.
-   * @return The current minimum timelock interval for the given function.
+   * @return defaultTimelockInterval - the current minimum timelock interval for the given function.
    */
   function getDefaultTimelockInterval(
     bytes4 functionSelector
@@ -148,7 +149,7 @@ contract Timelocker {
    * @notice View function to check the current default timelock expiration on a
    * given function.
    * @param functionSelector function to retrieve the timelock expiration for.
-   * @return The current default timelock expiration for the given function.
+   * @return defaultTimelockExpiration - the current default timelock expiration for the given function.
    */
   function getDefaultTimelockExpiration(
     bytes4 functionSelector
@@ -217,12 +218,10 @@ contract Timelocker {
     // Get timelock using current time, inverval for timelock ID, & extra time.
     uint256 timelock = uint256(
       _timelockDefaults[functionSelector].interval
-    ).add(now).add(extraTime);
+    ) + block.timestamp + extraTime;
 
     // Get expiration time using timelock duration plus default expiration time.
-    uint256 expiration = timelock.add(
-      uint256(_timelockDefaults[functionSelector].expiration)
-    );
+    uint256 expiration = timelock + uint256(_timelockDefaults[functionSelector].expiration);
 
     // Get the current timelock, if one exists.
     Timelock storage timelockStorage = _timelocks[functionSelector][timelockID];
@@ -319,7 +318,7 @@ contract Timelocker {
     bytes4 functionSelector, uint256 newTimelockInterval
   ) internal {
     // Ensure that this function is only callable during contract construction.
-    assembly { if extcodesize(address) { revert(0, 0) } }
+    assembly { if extcodesize(address()) { revert(0, 0) } }
 
     // Set the timelock interval and emit a `TimelockIntervalModified` event.
     _setTimelockIntervalPrivate(functionSelector, newTimelockInterval);
@@ -337,7 +336,7 @@ contract Timelocker {
     bytes4 functionSelector, uint256 newTimelockExpiration
   ) internal {
     // Ensure that this function is only callable during contract construction.
-    assembly { if extcodesize(address) { revert(0, 0) } }
+    assembly { if extcodesize(address()) { revert(0, 0) } }
 
     // Set the timelock interval and emit a `TimelockExpirationModified` event.
     _setTimelockExpirationPrivate(functionSelector, newTimelockExpiration);
@@ -375,11 +374,11 @@ contract Timelocker {
 
     // Ensure that the timelock is set and has completed.
     require(
-      currentTimelock != 0 && currentTimelock <= now, "Timelock is incomplete."
+      currentTimelock != 0 && currentTimelock <= block.timestamp, "Timelock is incomplete."
     );
 
     // Ensure that the timelock has not expired.
-    require(expiration > now, "Timelock has expired.");
+    require(expiration > block.timestamp, "Timelock has expired.");
 
     // Clear out the existing timelock so that it cannot be reused.
     delete _timelocks[functionSelector][timelockID];

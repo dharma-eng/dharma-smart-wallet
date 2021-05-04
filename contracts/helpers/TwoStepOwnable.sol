@@ -1,4 +1,4 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
 
 /**
@@ -26,7 +26,7 @@ contract TwoStepOwnable {
   /**
    * @dev Initialize contract by setting transaction submitter as initial owner.
    */
-  constructor() internal {
+  constructor() {
     _owner = tx.origin;
     emit OwnershipTransferred(address(0), _owner);
   }

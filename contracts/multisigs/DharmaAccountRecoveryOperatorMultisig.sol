@@ -1,4 +1,4 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
 
 /**
@@ -108,7 +108,7 @@ contract DharmaAccountRecoveryOperatorMultisig {
 
     // Add the hash to the mapping of used hashes and execute the transaction.
     _usedHashes[rawHash] = true;
-    (success, returnData) = _DESTINATION.call.gas(gasLimit)(data);
+    (success, returnData) = _DESTINATION.call{gas:gasLimit}(data);
   }
 
   function _getHash(

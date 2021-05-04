@@ -1,5 +1,4 @@
-pragma solidity ^0.5.2;
-
+pragma solidity 0.8.4;
 
 /**
  * @title MockCodeCheck

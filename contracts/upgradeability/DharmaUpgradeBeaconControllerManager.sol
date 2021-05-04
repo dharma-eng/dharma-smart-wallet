@@ -1,6 +1,5 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "../helpers/TwoStepOwnable.sol";
 import "../helpers/Timelocker.sol";
 import "../../interfaces/UpgradeBeaconControllerInterface.sol";
@@ -55,7 +54,6 @@ contract DharmaUpgradeBeaconControllerManager is
   TimelockerModifiersInterface,
   TwoStepOwnable,
   Timelocker {
-  using SafeMath for uint256;
 
   // Store prior implementation addresses for each controller + beacon pair.
   mapping(address => mapping (address => PriorImplementation[])) private _implementations;
@@ -110,7 +108,7 @@ contract DharmaUpgradeBeaconControllerManager is
    * runtime bytecode to be altered from the point of the deployment of this
    * contract.
    */
-  constructor() public {
+  constructor() {
     // Declare variable in order to put constants on the stack for hash checks.
     address extcodehashTarget;
 
@@ -223,7 +221,7 @@ contract DharmaUpgradeBeaconControllerManager is
 
     // Set the initial owner as the initial heartbeater and trigger a heartbeat.
     _heartbeater = tx.origin;
-    _lastHeartbeat = now;
+    _lastHeartbeat = block.timestamp;
   }
 
   /**
@@ -243,7 +241,7 @@ contract DharmaUpgradeBeaconControllerManager is
     address beacon,
     address implementation,
     uint256 extraTime
-  ) external onlyOwner {
+  ) external override onlyOwner {
     require(controller != address(0), "Must specify a controller address.");
 
     require(beacon != address(0), "Must specify a beacon address.");
@@ -281,7 +279,7 @@ contract DharmaUpgradeBeaconControllerManager is
    */
   function upgrade(
     address controller, address beacon, address implementation
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that the timelock has been set and is completed.
     _enforceTimelock(abi.encode(controller, beacon, implementation));
 
@@ -303,7 +301,7 @@ contract DharmaUpgradeBeaconControllerManager is
    */
   function agreeToAcceptControllerOwnership(
     address controller, bool willAcceptOwnership
-  ) external {
+  ) external override {
     require(controller != address(0), "Must specify a controller address.");
 
     // Register whether or not the new owner is willing to accept ownership.
@@ -320,7 +318,7 @@ contract DharmaUpgradeBeaconControllerManager is
    */
   function initiateTransferControllerOwnership(
     address controller, address newOwner, uint256 extraTime
-  ) external onlyOwner {
+  ) external override onlyOwner {
     require(controller != address(0), "No controller address provided.");
 
     require(newOwner != address(0), "No new owner address provided.");
@@ -347,7 +345,7 @@ contract DharmaUpgradeBeaconControllerManager is
    */
   function transferControllerOwnership(
     address controller, address newOwner
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that the new owner has confirmed that it can accept ownership.
     require(
       _willAcceptOwnership[controller][newOwner],
@@ -366,16 +364,16 @@ contract DharmaUpgradeBeaconControllerManager is
    * may trigger the Adharma Contingency and force an upgrade to any controlled
    * upgrade beacon.
    */
-  function heartbeat() external {
+  function heartbeat() external override {
     require(msg.sender == _heartbeater, "Must be called from the heartbeater.");
-    _lastHeartbeat = now;
+    _lastHeartbeat = block.timestamp;
   }
 
   /**
    * @notice Set a new heartbeater.
    * @param heartbeater address to designate as the heartbeating address.
    */
-  function newHeartbeater(address heartbeater) external onlyOwner {
+  function newHeartbeater(address heartbeater) external override onlyOwner {
     require(heartbeater != address(0), "Must specify a heartbeater address.");
     _heartbeater = heartbeater;
   }
@@ -389,7 +387,7 @@ contract DharmaUpgradeBeaconControllerManager is
    * part of the same transaction.
    * @param armed Boolean that signifies the desired armed status.
    */
-  function armAdharmaContingency(bool armed) external {
+  function armAdharmaContingency(bool armed) external override {
     // Non-owners can only call if 90 days have passed since the last heartbeat.
     _ensureCallerIsOwnerOrDeadmansSwitchActivated();
 
@@ -406,7 +404,7 @@ contract DharmaUpgradeBeaconControllerManager is
    * controllers. It will simultaneously upgrade the Smart Wallet and the Key
    * Ring implementations to their designated contingency implementations.
    */
-  function activateAdharmaContingency() external {
+  function activateAdharmaContingency() external override {
     // Non-owners can only call if 90 days have passed since the last heartbeat.
     _ensureCallerIsOwnerOrDeadmansSwitchActivated();
 
@@ -426,7 +424,7 @@ contract DharmaUpgradeBeaconControllerManager is
     _adharma = AdharmaContingency({
       armed: false,
       activated: true,
-      activationTime: now
+      activationTime: block.timestamp
     });
 
     // Trigger upgrades on both beacons to the Adharma implementation contracts.
@@ -461,7 +459,7 @@ contract DharmaUpgradeBeaconControllerManager is
    */
   function rollback(
     address controller, address beacon, uint256 index
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that there is an implementation address to roll back to.
     require(
       _implementations[controller][beacon].length > index,
@@ -502,7 +500,7 @@ contract DharmaUpgradeBeaconControllerManager is
    */
   function blockRollback(
     address controller, address beacon, uint256 index
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that there is an implementation address to roll back to.
     require(
       _implementations[controller][beacon].length > index,
@@ -530,7 +528,7 @@ contract DharmaUpgradeBeaconControllerManager is
    */
   function exitAdharmaContingency(
     address smartWalletImplementation, address keyRingImplementation
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that the Adharma Contingency is currently active.
     require(
       _adharma.activated, "Adharma Contingency is not currently activated."
@@ -538,7 +536,7 @@ contract DharmaUpgradeBeaconControllerManager is
 
     // Ensure that at least 48 hours has elapsed since the contingency commenced.
     require(
-      now > _adharma.activationTime + 48 hours,
+      block.timestamp > _adharma.activationTime + 48 hours,
       "Cannot exit contingency with a new upgrade until 48 hours have elapsed."
     );
 
@@ -572,7 +570,7 @@ contract DharmaUpgradeBeaconControllerManager is
    */
   function initiateModifyTimelockInterval(
     bytes4 functionSelector, uint256 newTimelockInterval, uint256 extraTime
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -606,7 +604,7 @@ contract DharmaUpgradeBeaconControllerManager is
    */
   function modifyTimelockInterval(
     bytes4 functionSelector, uint256 newTimelockInterval
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -629,7 +627,7 @@ contract DharmaUpgradeBeaconControllerManager is
    */
   function initiateModifyTimelockExpiration(
     bytes4 functionSelector, uint256 newTimelockExpiration, uint256 extraTime
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -669,7 +667,7 @@ contract DharmaUpgradeBeaconControllerManager is
    */
   function modifyTimelockExpiration(
     bytes4 functionSelector, uint256 newTimelockExpiration
-  ) external onlyOwner {
+  ) external override onlyOwner {
     // Ensure that a function selector is specified (no 0x00000000 selector).
     require(
       functionSelector != bytes4(0),
@@ -689,11 +687,11 @@ contract DharmaUpgradeBeaconControllerManager is
    * implementations.
    * @param beacon address of upgrade beacon that the implementations were set
    * on.
-   * @return The total number of prior implementations.
+   * @return totalPriorImplementations - the total number of prior implementations.
    */
   function getTotalPriorImplementations(
     address controller, address beacon
-  ) external view returns (uint256 totalPriorImplementations) {
+  ) external view override returns (uint256 totalPriorImplementations) {
     // Get the total number of prior implementation contracts.
     totalPriorImplementations = _implementations[controller][beacon].length;
   }
@@ -706,12 +704,13 @@ contract DharmaUpgradeBeaconControllerManager is
    * implementation.
    * @param beacon address of upgrade beacon that the implementation was set on.
    * @param index uint256 the index of the implementation.
-   * @return The address of the prior implementation if one exists and a boolean
-   * representing whether or not the prior implementation can be rolled back to.
+   * @return priorImplementation - the address of the prior implementation, if one exists
+   * @return rollbackAllowed - a boolean representing whether or not the prior implementation
+   * can be rolled back to.
    */
   function getPriorImplementation(
     address controller, address beacon, uint256 index
-  ) external view returns (address priorImplementation, bool rollbackAllowed) {
+  ) external view override returns (address priorImplementation, bool rollbackAllowed) {
     // Ensure that there is an implementation address with the given index.
     require(
       _implementations[controller][beacon].length > index,
@@ -735,7 +734,7 @@ contract DharmaUpgradeBeaconControllerManager is
    * smart wallet and key ring implementations can be performed by the owner
    * after 48 hours has elapsed in the contingency state.
    */
-  function contingencyStatus() external view returns (
+  function contingencyStatus() external view override returns (
     bool armed, bool activated, uint256 activationTime
   ) {
     AdharmaContingency memory adharma = _adharma;
@@ -748,10 +747,12 @@ contract DharmaUpgradeBeaconControllerManager is
   /**
    * @notice Determine if the deadman's switch has expired and get the time at
    * which it is set to expire (i.e. 90 days from the last heartbeat).
-   * @return A boolean signifying whether the upgrade beacon controller is in an
    * expired state, as well as the expiration time.
+   * @return expired - a boolean signifying whether the upgrade beacon controller is in an
+   * expired state
+   * @return expirationTime -- expiration time signifying when the state will become expired.
    */
-  function heartbeatStatus() external view returns (
+  function heartbeatStatus() external view override returns (
     bool expired, uint256 expirationTime
   ) {
     (expired, expirationTime) = _heartbeatStatus();
@@ -761,14 +762,12 @@ contract DharmaUpgradeBeaconControllerManager is
    * @notice Internal view function to determine if the deadman's switch has
    * expired and to get the time at which it is set to expire (i.e. 90 days from
    * the last heartbeat).
-   * @return A boolean signifying whether the upgrade beacon controller is in an
-   * expired state, as well as the expiration time.
    */
   function _heartbeatStatus() internal view returns (
     bool expired, uint256 expirationTime
   ) {
     expirationTime = _lastHeartbeat + 90 days;
-    expired = now > expirationTime;
+    expired = block.timestamp > expirationTime;
   }
 
   /**
@@ -829,7 +828,7 @@ contract DharmaUpgradeBeaconControllerManager is
     }
 
     // Reset the heartbeat to the current time.
-    _lastHeartbeat = now;
+    _lastHeartbeat = block.timestamp;
   }
 
   /**

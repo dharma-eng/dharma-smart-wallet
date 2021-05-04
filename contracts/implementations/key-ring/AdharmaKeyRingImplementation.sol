@@ -1,4 +1,4 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
 
 /**
@@ -59,7 +59,7 @@ contract AdharmaKeyRingImplementation {
     uint8[] calldata keyTypes // 1: standard, 2: admin, 3: dual
   ) external {
     // Ensure that this function is only callable during contract construction.
-    assembly { if extcodesize(address) { revert(0, 0) } }
+    assembly { if extcodesize(address()) { revert(0, 0) } }
 
     uint128 adminKeys;
     uint128 executorKeys;
@@ -134,6 +134,6 @@ contract AdharmaKeyRingImplementation {
       "Only Admin or Dual key holders can call this function."
     );
 
-    (ok, returnData) = to.call.value(value)(data);
+    (ok, returnData) = to.call{value: value}(data);
   }
 }

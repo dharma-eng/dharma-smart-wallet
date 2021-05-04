@@ -1,4 +1,4 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
 
 /**
@@ -49,7 +49,7 @@ contract CodeHashCache {
    * @param target address The contract to retrieve the runtime code hash for,
    * which will be compared against the runtime code hash that was initially
    * registered for that contract.
-   * @return A boolean signifying that the target contract's runtime code has
+   * @return codeHashMatchesRegisteredCodeHash - a boolean signifying that the target contract's runtime code has
    * not been altered since it was initially registered.
    */
   function matchesRegisteredCodeHash(
@@ -75,7 +75,7 @@ contract CodeHashCache {
    * registered for the target.
    * @param target address The contract to retrieve the registered runtime code
    * hash for.
-   * @return The runtime code hash registered for the target contract. Returns
+   * @return registeredCodeHash - the runtime code hash registered for the target contract. Returns
    * bytes32(0) if there runtime code hash has been registered for the target.
    */
   function getRegisteredCodeHash(

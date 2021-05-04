@@ -1,4 +1,4 @@
-pragma solidity 0.5.17;
+pragma solidity 0.8.4;
 
 
 /**
@@ -118,7 +118,7 @@ contract DharmaUpgradeMultisig {
 
     // Increment the nonce and execute the transaction.
     _nonce++;
-    (success, returnData) = _DESTINATION.call.gas(gasLimit)(data);
+    (success, returnData) = _DESTINATION.call{gas:gasLimit}(data);
   }
 
   function _getHash(
