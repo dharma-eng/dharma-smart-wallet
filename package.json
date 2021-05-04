@@ -22,6 +22,7 @@
         "chai": "^4.3.4",
         "dotenv": "^8.2.0",
         "ethereum-waffle": "^3.3.0",
+        "ethereumjs-util": "^6.1.0",
         "ethers": "^5.1.4",
         "hardhat": "^2.2.1",
         "husky": "^4.2.1",
