@@ -2,6 +2,7 @@
  *Submitted for verification at Etherscan.io on 2021-04-06
 */
 
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.4; // optimization runs: 200, evm version: istanbul
 pragma experimental ABIEncoderV2;
 
