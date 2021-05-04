@@ -405,9 +405,7 @@ contract DharmaSmartWalletImplementationV16 is
   uint256 internal constant _DHARMA_SMART_WALLET_VERSION = 16;
 
   // DharmaKeyRegistryV2 holds a public key for verifying meta-transactions.
-  DharmaKeyRegistryInterface internal constant _DHARMA_KEY_REGISTRY = (
-    DharmaKeyRegistryInterface(0x000000000D38df53b45C5733c7b34000dE0BDF52)
-  );
+  DharmaKeyRegistryInterface internal immutable _DHARMA_KEY_REGISTRY;
 
   // Account recovery is facilitated using a hard-coded recovery manager,
   // controlled by Dharma and implementing appropriate timelocks.
@@ -451,6 +449,15 @@ contract DharmaSmartWalletImplementationV16 is
    * @notice Accept Ether in the fallback.
    */
   fallback () external payable {}
+
+  constructor(address keyRegistry) {
+    require(
+      keyRegistry != address(0),
+      "DharmaSmartWalletImplementationV16#constructor: No keyRegistry address supplied."
+    );
+
+    _DHARMA_KEY_REGISTRY = DharmaKeyRegistryInterface(keyRegistry);
+  }
 
   /**
    * @notice In the initializer, set up the initial user signing key. Note that

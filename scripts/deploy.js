@@ -27,6 +27,12 @@ async function deploy(name, args = [], signerCallBack = signerCallbackDefault) {
 }
 
 async function run(signerCallback = signerCallbackDefault) {
+    // TODO: use env file when deploying contracts to production environment.
+    const signer = await getSigner();
+
+    // deploy key-registry
+    const dharmaKeyRegistry = await deploy("DharmaKeyRegistryV2");
+
     // deploy envoy
     const dharmaUpgradeBeaconEnvoy = await deploy("DharmaUpgradeBeaconEnvoy");
 
@@ -62,7 +68,8 @@ async function run(signerCallback = signerCallbackDefault) {
 
     // deploy implementation: smart-wallet (v16), key-ring (v1)
     const dharmaSmartWalletImplementation = await deploy(
-        "DharmaSmartWalletImplementationV16"
+        "DharmaSmartWalletImplementationV16",
+        [dharmaKeyRegistry.address]
     );
 
     const dharmaKeyRingImplementation = await deploy(
@@ -87,17 +94,10 @@ async function run(signerCallback = signerCallbackDefault) {
     await signerCallback(upgradeDharmaKeyRingBeaconTransaction);
 
     // deploy key-ring instance
-    const signer = await getSigner();
-
     const userSigningAddress = ethers.utils.getAddress(signer.address);
     const targetKeyRing = await dharmaKeyRingFactory.callStatic.getNextKeyRing(
         userSigningAddress
     );
-
-    console.log({
-        userSigningAddress,
-        targetKeyRing
-    });
 
     const newKeyRingTransaction = await dharmaKeyRingFactory.populateTransaction.newKeyRing(
         userSigningAddress,
