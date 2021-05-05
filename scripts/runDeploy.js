@@ -176,13 +176,22 @@ const tx = async (connection, { to = null, value = 0, data }) => {
 };
 
 async function signerCallbackLedger(transaction) {
-    console.log({ transaction });
+    const from = await signer.getAddress();
 
-    const txn = await signer.sendTransaction({
+    const tx = {
         ...transaction,
+        from,
         chainId
-    });
-    return txn.wait();
+    };
+
+    const expectedResult = await provider.call(tx);
+    console.log({ transaction: tx, expectedResult });
+
+    const txn = await signer.sendTransaction(tx);
+    console.log({ txn });
+    const receipt = await txn.wait();
+    console.log({ receipt });
+    return receipt;
 }
 
 async function runDeploy() {
