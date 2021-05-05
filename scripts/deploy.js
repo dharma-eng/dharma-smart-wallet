@@ -75,57 +75,77 @@ async function run(signerCallback = signerCallbackDefault) {
     // TODO: use env file when deploying contracts to production environment.
     // Set up signer
     const { signer } = await getSigner();
-    const jsonRPCsigners = await ethers.getSigners();
-    const jsonRPCSigner = jsonRPCsigners[0];
-    await jsonRPCSigner.sendTransaction({
-        to: signer.address,
-        value: ethers.utils.parseEther("100")
-    });
+    // const jsonRPCsigners = await ethers.getSigners();
+    // const jsonRPCSigner = jsonRPCsigners[0];
+    // await jsonRPCSigner.sendTransaction({
+    //     to: signer.address,
+    //     value: ethers.utils.parseEther("100")
+    // });
 
     // deploy key-registry
-    const dharmaKeyRegistry = await deploy("DharmaKeyRegistryV2");
-
-    // deploy envoy
-    const dharmaUpgradeBeaconEnvoy = await deploy("DharmaUpgradeBeaconEnvoy");
-
-    // deploy upgrade-beacon-controllers
-    const dharmaSmartWalletUpgradeBeaconController = await deploy(
-        "DharmaUpgradeBeaconController",
-        [dharmaUpgradeBeaconEnvoy.address]
+    const dharmaKeyRegistry = await deploy(
+        "DharmaKeyRegistryV2",
+        [],
+        signerCallback
     );
-
-    const dharmaKeyRingBeaconController = await deploy(
-        "DharmaUpgradeBeaconController",
-        [dharmaUpgradeBeaconEnvoy.address]
-    );
-
-    // deploy upgrade-beacon: smart-wallet, key-ring
-    const dharmaSmartWalletUpgradeBeacon = await deploy("DharmaUpgradeBeacon", [
-        dharmaSmartWalletUpgradeBeaconController.address
-    ]);
-
-    const dharmaKeyRingBeacon = await deploy("DharmaUpgradeBeacon", [
-        dharmaKeyRingBeaconController.address
-    ]);
-
-    // deploy factory: smart-wallet (v3), key-ring (v4)
-    const dharmaSmartWalletFactory = await deploy(
-        "DharmaSmartWalletFactoryV3",
-        [dharmaSmartWalletUpgradeBeacon.address]
-    );
-
-    const dharmaKeyRingFactory = await deploy("DharmaKeyRingFactoryV4", [
-        dharmaKeyRingBeacon.address
-    ]);
 
     // deploy implementation: smart-wallet (v16), key-ring (v1)
     const dharmaSmartWalletImplementation = await deploy(
         "DharmaSmartWalletImplementationV16",
-        [dharmaKeyRegistry.address]
+        [dharmaKeyRegistry.address],
+        signerCallback
     );
 
     const dharmaKeyRingImplementation = await deploy(
-        "DharmaKeyRingImplementationV1"
+        "DharmaKeyRingImplementationV1",
+        [],
+        signerCallback
+    );
+
+    // deploy envoy
+    const dharmaUpgradeBeaconEnvoy = await deploy(
+        "DharmaUpgradeBeaconEnvoy",
+        [],
+        signerCallback
+    );
+
+    // deploy upgrade-beacon-controllers
+    const dharmaSmartWalletUpgradeBeaconController = await deploy(
+        "DharmaUpgradeBeaconController",
+        [dharmaUpgradeBeaconEnvoy.address],
+        signerCallback
+    );
+
+    const dharmaKeyRingBeaconController = await deploy(
+        "DharmaUpgradeBeaconController",
+        [dharmaUpgradeBeaconEnvoy.address],
+        signerCallback
+    );
+
+    // deploy upgrade-beacon: smart-wallet, key-ring
+    const dharmaSmartWalletUpgradeBeacon = await deploy(
+        "DharmaUpgradeBeacon",
+        [dharmaSmartWalletUpgradeBeaconController.address],
+        signerCallback
+    );
+
+    const dharmaKeyRingBeacon = await deploy(
+        "DharmaUpgradeBeacon",
+        [dharmaKeyRingBeaconController.address],
+        signerCallback
+    );
+
+    // deploy factory: smart-wallet (v3), key-ring (v4)
+    const dharmaSmartWalletFactory = await deploy(
+        "DharmaSmartWalletFactoryV3",
+        [dharmaSmartWalletUpgradeBeacon.address],
+        signerCallback
+    );
+
+    const dharmaKeyRingFactory = await deploy(
+        "DharmaKeyRingFactoryV4",
+        [dharmaKeyRingBeacon.address],
+        signerCallback
     );
 
     // set dharma-smart-wallet implementation
@@ -172,4 +192,6 @@ async function run(signerCallback = signerCallbackDefault) {
     );
 }
 
-run();
+module.exports = {
+    run
+};
