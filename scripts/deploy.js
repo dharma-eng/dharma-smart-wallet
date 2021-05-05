@@ -176,6 +176,18 @@ async function run(signerCallback = signerCallbackDefault) {
         ethers.utils.getAddress(targetKeyRing)
     );
 
+    // deploy deployment-helper
+    const dharmaDeploymentHelper = await deploy(
+        "DharmaDeploymentHelperV2",
+        [
+            dharmaSmartWalletFactory.address, // smartWalletFactory
+            dharmaKeyRingFactory.address, // keyRingFactory
+            dharmaKeyRegistry.address, // keyRegistry
+            dharmaSmartWalletUpgradeBeacon.address // smartWalletUpgradeBeacon
+        ],
+        signerCallback
+    );
+
     const newKeyRingReceipt = await signerCallback(newKeyRingTransaction);
 
     // deploy smart-wallet instance
