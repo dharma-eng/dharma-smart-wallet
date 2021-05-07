@@ -195,12 +195,12 @@ async function run(signerCallback = signerCallbackDefault) {
         targetKeyRing
     );
 
-    const newSmartWalletRingTransaction = await dharmaSmartWalletFactory.populateTransaction.newSmartWallet(
+    const newSmartWalletTransaction = await dharmaSmartWalletFactory.populateTransaction.newSmartWallet(
         userSigningAddress
     );
 
     const newSmartWalletReceipt = await signerCallback(
-        newSmartWalletRingTransaction
+        newSmartWalletTransaction
     );
 }
 

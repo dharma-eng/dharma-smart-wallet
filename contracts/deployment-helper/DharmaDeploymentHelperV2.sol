@@ -167,7 +167,7 @@ contract DharmaDeploymentHelperV2 {
     // Only deploy if a smart wallet doesn't already exist at expected address.
     uint256 size;
     assembly { size := extcodesize(expectedKeyRing) }
-    if (size != 0) {
+    if (size == 0) {
       require(
         _KEYRING_FACTORY.getNextKeyRing(initialSigningKey) == expectedKeyRing,
         "Key ring to be deployed does not match expected key ring."
@@ -189,7 +189,7 @@ contract DharmaDeploymentHelperV2 {
     // Only deploy if a smart wallet doesn't already exist at expected address.
     bytes32 size;
     assembly { size := extcodesize(expectedSmartWallet) }
-    if (size != 0) {
+    if (size == 0) {
       require(
         _WALLET_FACTORY.getNextSmartWallet(userSigningKey) == expectedSmartWallet,
         "Smart wallet to be deployed does not match expected smart wallet."
