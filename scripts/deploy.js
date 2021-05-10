@@ -75,12 +75,12 @@ async function run(signerCallback = signerCallbackDefault) {
     // TODO: use env file when deploying contracts to production environment.
     // Set up signer
     const { signer } = await getSigner();
-    // const jsonRPCsigners = await ethers.getSigners();
-    // const jsonRPCSigner = jsonRPCsigners[0];
-    // await jsonRPCSigner.sendTransaction({
-    //     to: signer.address,
-    //     value: ethers.utils.parseEther("100")
-    // });
+    const jsonRPCsigners = await ethers.getSigners();
+    const jsonRPCSigner = jsonRPCsigners[0];
+    await jsonRPCSigner.sendTransaction({
+        to: signer.address,
+        value: ethers.utils.parseEther("100")
+    });
 
     // deploy key-registry
     const dharmaKeyRegistry = await deploy(
@@ -89,10 +89,17 @@ async function run(signerCallback = signerCallbackDefault) {
         signerCallback
     );
 
+    // deploy revert reason helper
+    const revertReasonHelper = await deploy(
+        "SmartWalletRevertReasonHelperV3",
+        [],
+        signerCallback
+    );
+
     // deploy implementation: smart-wallet (v16), key-ring (v1)
     const dharmaSmartWalletImplementation = await deploy(
         "DharmaSmartWalletImplementationV16",
-        [dharmaKeyRegistry.address],
+        [dharmaKeyRegistry.address, revertReasonHelper.address],
         signerCallback
     );
 

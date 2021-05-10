@@ -429,9 +429,7 @@ contract DharmaSmartWalletImplementationV16 is
   );
 
   // The "revert reason helper" contains a collection of revert reason strings.
-  RevertReasonHelperInterface internal constant _REVERT_REASON_HELPER = (
-    RevertReasonHelperInterface(0xFc96814Ec38f6c19161f8Db168574099DaE06f2B)
-  );
+  RevertReasonHelperInterface internal immutable _REVERT_REASON_HELPER;
 
   // The "Trade Bot" enables limit orders using unordered meta-transactions.
   address internal constant _TRADE_BOT = address(
@@ -446,17 +444,24 @@ contract DharmaSmartWalletImplementationV16 is
   uint256 private constant _ETH_TRANSFER_GAS = 4999;
 
   /**
-   * @notice Accept Ether in the fallback.
+   * @notice Accept Ether.
    */
-  fallback () external payable {}
+  receive() external payable {}
 
-  constructor(address keyRegistry) {
+  constructor(address keyRegistry, address revertReasonHelper) {
     require(
       keyRegistry != address(0),
       "DharmaSmartWalletImplementationV16#constructor: No keyRegistry address supplied."
     );
 
     _DHARMA_KEY_REGISTRY = DharmaKeyRegistryInterface(keyRegistry);
+
+    require(
+      revertReasonHelper != address(0),
+      "DharmaSmartWalletImplementationV16#constructor: No revertReasonHelper address supplied."
+    );
+
+    _REVERT_REASON_HELPER = RevertReasonHelperInterface(revertReasonHelper);
   }
 
   /**
@@ -2341,7 +2346,7 @@ contract DharmaSmartWalletImplementationV16 is
    */
   function _validateCustomActionTypeAndGetArguments(
     ActionType action, uint256 amount, address recipient
-  ) internal pure returns (bytes memory arguments) {
+  ) internal view returns (bytes memory arguments) {
     // Ensure that the action type is a valid custom action type.
     bool validActionType = (
       action == ActionType.Cancel ||
@@ -2385,7 +2390,7 @@ contract DharmaSmartWalletImplementationV16 is
    */
   function _decodeRevertReason(
     bytes memory revertData
-  ) internal pure returns (string memory revertReason) {
+  ) internal view returns (string memory revertReason) {
     // Solidity prefixes revert reason with 0x08c379a0 -> Error(string) selector
     if (
       revertData.length > 68 && // prefix (4) + position (32) + length (32)
@@ -2416,7 +2421,7 @@ contract DharmaSmartWalletImplementationV16 is
    */
   function _revertReason(
     uint256 code
-  ) internal pure returns (string memory reason) {
+  ) internal view returns (string memory reason) {
     reason = _REVERT_REASON_HELPER.reason(code);
   }
 }
