@@ -209,6 +209,19 @@ async function run(signerCallback = signerCallbackDefault) {
     const newSmartWalletReceipt = await signerCallback(
         newSmartWalletTransaction
     );
+
+    // deploy helper contracts
+    const AccountWatcher = await deploy("AccountWatcher", [], signerCallback);
+
+    const EthHelper = await deploy("EthHelper", [], signerCallback);
+
+    const MeterMaid = await deploy("MeterMaid", [], signerCallback);
+
+    const WalletSummarizer = await deploy(
+        "WalletSummarizer",
+        [],
+        signerCallback
+    );
 }
 
 module.exports = {
