@@ -5,7 +5,7 @@
     "author": "Dharma Labs",
     "license": "MIT",
     "dependencies": {
-        "@openzeppelin/contracts": "2.3.0",
+        "@openzeppelin/contracts": "4.7.2",
         "ethereumjs-util": "6.1.0",
         "ethlint": "1.2.5",
         "ganache-cli": "6.7.0",
